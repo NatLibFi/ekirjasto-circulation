@@ -77,7 +77,20 @@ Most distributions will offer Python packages. On Arch Linux, the following comm
 pacman -S python
 ```
 
-#### pyenv
+You need to install dependencies: https://devguide.python.org/getting-started/setup-building/#build-dependencies
+
+Enable Source Packages:
+Uncomment a deb-src in `/etc/apt/sources.list` e.g. `jammy main`
+
+Install build dependencies:
+```sh
+$ sudo apt-get update
+$ sudo apt-get build-dep python3
+$ sudo apt-get install pkg-config
+$ sudo apt install libxmlsec1 libxmlsec1-dev
+```
+
+#### pyenv (Optional)
 
 [pyenv](https://github.com/pyenv/pyenv) pyenv lets you easily switch between multiple versions of Python. It can be
 [installed](https://github.com/pyenv/pyenv-installer) using the command `curl https://pyenv.run | bash`. You can then
