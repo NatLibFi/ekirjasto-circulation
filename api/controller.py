@@ -21,6 +21,7 @@ from sqlalchemy.orm import eagerload
 from sqlalchemy.orm.exc import NoResultFound
 
 from api.opds2 import OPDS2NavigationsAnnotator, OPDS2PublicationsAnnotator
+from api.opensearch_analytics_search import OpenSearchAnalyticsSearch
 from api.saml.controller import SAMLController
 from core.analytics import Analytics
 from core.app_server import ApplicationVersionController
@@ -252,7 +253,6 @@ class CirculationManager:
 
         worklist = kwargs.get("worklist")
         if worklist is not None:
-
             # Try to get the index controller. If it's not initialized
             # for any reason, don't run this check -- we have bigger
             # problems.
@@ -329,6 +329,9 @@ class CirculationManager:
         self.auth = Authenticator(self._db, libraries, self.analytics)
 
         self.setup_external_search()
+
+        # Finland
+        self.setup_opensearch_analytics_search()
 
         # Track the Lane configuration for each library by mapping its
         # short name to the top-level lane.
@@ -418,6 +421,31 @@ class CirculationManager:
         else:
             device_management = None
         return device_management
+
+    # Finland
+    @property
+    def opensearch_analytics_search(self):
+        """Retrieve or create a connection to the OpenSearch
+        analytics interface.
+
+        This is created lazily so that a failure to connect only
+        affects feeds that depend on the search engine, not the whole
+        circulation manager.
+        """
+        if not self._opensearch_analytics_search:
+            self.setup_opensearch_analytics_search()
+        return self._opensearch_analytics_search
+
+    # Finland
+    def setup_opensearch_analytics_search(self):
+        try:
+            self._opensearch_analytics_search = OpenSearchAnalyticsSearch(self._db)
+            self.opensearch_analytics_search_initialization_exception = None
+        except Exception as e:
+            self.log.error("Exception initializing search engine: %s", e)
+            self._opensearch_analytics_search = None
+            self.opensearch_analytics_search_initialization_exception = e
+        return self._opensearch_analytics_search
 
     @property
     def external_search(self):

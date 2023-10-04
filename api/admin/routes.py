@@ -2,7 +2,8 @@ from datetime import timedelta
 from functools import wraps
 
 import flask
-from flask import Response, make_response, redirect, url_for
+from flask import Response, make_response, redirect, url_for, request
+from api.opensearch_analytics_search import OpenSearchAnalyticsSearch
 from flask_pydantic_spec import FileResponse as SpecFileResponse
 from flask_pydantic_spec import Request as SpecRequest
 from flask_pydantic_spec import Response as SpecResponse
@@ -353,6 +354,37 @@ def stats():
         app.manager.admin_dashboard_controller.stats(stats_function=generate_statistics)
     )
     return statistics_response.api_dict()
+
+
+# Finland
+@library_route("/admin/events/terms")
+@returns_json_or_response_or_problem_detail
+@has_library
+@requires_admin
+def events_query_terms():
+    """Returns results from OpenSearch analytics events based on query parameters."""
+    return app.manager.opensearch_analytics_search.events(params=request.args)
+
+
+# Finland
+@library_route("/admin/events/histogram")
+@returns_json_or_response_or_problem_detail
+@has_library
+@requires_admin
+def events_query_histogram():
+    """Returns results from OpenSearch analytics based on query parameters
+    in histogram buckets for time series graphs"""
+    return app.manager.opensearch_analytics_search.events_histogram(params=request.args)
+
+
+# Finland
+@library_route("/admin/events/facets")
+@returns_json_or_response_or_problem_detail
+@has_library
+@requires_admin
+def events_get_facets():
+    """Returns all the available facets from OpenSearch analytics events."""
+    return app.manager.opensearch_analytics_search.get_facets()
 
 
 @app.route("/admin/libraries", methods=["GET", "POST"])

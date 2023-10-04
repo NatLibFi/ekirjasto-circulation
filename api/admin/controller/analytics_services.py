@@ -4,6 +4,7 @@ from flask import Response
 from api.admin.problem_details import *
 from api.google_analytics_provider import GoogleAnalyticsProvider
 from api.s3_analytics_provider import S3AnalyticsProvider
+from api.opensearch_analytics_provider import OpenSearchAnalyticsProvider
 from core.local_analytics_provider import LocalAnalyticsProvider
 from core.model import ExternalIntegration, ExternalIntegrationLink
 from core.s3 import S3UploaderConfiguration
@@ -20,6 +21,7 @@ class AnalyticsServicesController(SettingsController):
             GoogleAnalyticsProvider,
             LocalAnalyticsProvider,
             S3AnalyticsProvider,
+            OpenSearchAnalyticsProvider,
         ]
         self.protocols = self._get_integration_protocols(provider_apis)
         self.goal = ExternalIntegration.ANALYTICS_GOAL
