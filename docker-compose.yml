@@ -10,6 +10,7 @@ services:
     ports:
       - "6500:80"
     environment:
+      - TZ=Europe/Helsinki
       SIMPLIFIED_PRODUCTION_DATABASE: "postgresql://palace:test@pg:5432/circ"
 
   scripts:
@@ -18,11 +19,13 @@ services:
       dockerfile: docker/Dockerfile
       target: scripts
     environment:
+      - TZ=Europe/Helsinki
       SIMPLIFIED_PRODUCTION_DATABASE: "postgresql://palace:test@pg:5432/circ"
 
   pg:
     image: "postgres:12"
     environment:
+      - TZ=Europe/Helsinki
       POSTGRES_USER: palace
       POSTGRES_PASSWORD: test
       POSTGRES_DB: circ
@@ -33,6 +36,7 @@ services:
       - "9000:9000"
       - "9001:9001"
     environment:
+      - TZ=Europe/Helsinki
       MINIO_ROOT_USER: "palace"
       MINIO_ROOT_PASSWORD: "test123456789"
       MINIO_SCHEME: "http"
@@ -42,5 +46,6 @@ services:
       dockerfile: docker/Dockerfile.ci
       target: opensearch
     environment:
+      - TZ=Europe/Helsinki
       discovery.type: single-node
       DISABLE_SECURITY_PLUGIN: true
