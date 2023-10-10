@@ -24,7 +24,6 @@ RUN chmod +x /tini && \
     ca-certificates \
     curl \
     debconf-utils \
-	git \
     gnupg \
     net-tools \
     software-properties-common \
@@ -48,13 +47,10 @@ RUN chmod +x /tini && \
     groupadd -g 1000 node && \
     useradd -u 1000 -r -g node -d /home/node -s /bin/bash -c "Node image user" node && \
 	mkdir -p /opt/circulation/admin /root/.ssh/ && \
-	ssh-keyscan -H git.lingsoft.fi >> ~/.ssh/known_hosts && \
-#	git clone --branch=main ssh://git.lingsoft.fi/home/git/palace_circulation_admin_ui.git && \
     apt-get remove -y \
       apt-transport-https \
       apt-utils \
       debconf-utils \
-	  git \
       gnupg \
       software-properties-common \
 	  ssh \
@@ -67,7 +63,7 @@ RUN cd /opt/circulation/admin && \
 	npm install
 
 # Specify the port number the container should expose
-EXPOSE 43172
+EXPOSE 8080
 
 # Set up working dir
 WORKDIR /opt/circulation/admin
@@ -76,5 +72,6 @@ WORKDIR /opt/circulation/admin
 ENTRYPOINT ["/tini", "--"]
 
 # Actual command to start, can be overridden to start e.g. ASR API
-CMD ["node", "./server.js"]
+CMD ["npm", "run", "dev-server", "--", "--env=backend=webapp:6500"]
+
 
