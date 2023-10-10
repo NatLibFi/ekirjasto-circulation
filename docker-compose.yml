@@ -44,3 +44,8 @@ services:
     environment:
       discovery.type: single-node
       DISABLE_SECURITY_PLUGIN: true
+
+  admin:
+    build:
+      dockerfile: docker/Dockerfile.admin
+      target: admin
