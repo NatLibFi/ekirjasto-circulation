@@ -120,6 +120,11 @@ if TYPE_CHECKING:
         small_link_style,
     )
 
+# Finland:
+from flask import stream_with_context
+from openpyxl import Workbook
+from tempfile import NamedTemporaryFile
+
 
 def setup_admin_controllers(manager):
     """Set up all the controllers that will be used by the admin parts of the web app."""
@@ -1716,6 +1721,39 @@ class DashboardController(AdminCirculationManagerController):
 
         analytics_exporter = analytics_exporter or LocalAnalyticsExporter()
         data = analytics_exporter.export(
+            self._db, date_start, date_end, locations, library
+        )
+        return (
+            data,
+            date_start.strftime(date_format),
+            date_end_label.strftime(date_format),
+            library_short_name,
+        )
+
+    # Finland
+    # Copied and modified from bulk_circulation_events
+    def circulation_loan_statistics_excel(self):
+        date_format = "%Y-%m-%d"
+
+        def get_date(field):
+            today = date.today()
+            value = flask.request.args.get(field, None)
+            if not value:
+                return today
+            try:
+                return datetime.strptime(value, date_format).date()
+            except ValueError as e:
+                return today
+
+        date_start = get_date("date")
+        date_end_label = get_date("dateEnd")
+        date_end = date_end_label + timedelta(days=1)
+        locations = flask.request.args.get("locations", None)
+        library = getattr(flask.request, "library", None)
+        library_short_name = library.short_name if library else None
+
+        local_analytics_exporter = LocalAnalyticsExporter()
+        data = local_analytics_exporter.export_excel(
             self._db, date_start, date_end, locations, library
         )
         return (

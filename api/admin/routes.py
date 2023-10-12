@@ -336,6 +336,34 @@ def bulk_circulation_events():
     return response
 
 
+# Finland
+@library_route("/admin/circulation_loan_statistics_excel")
+@returns_json_or_response_or_problem_detail
+@allows_library
+@requires_admin
+def bulk_circulation_events_excel():
+    """Returns a JSON representation of all circulation events with optional
+    start and end times."""
+    (
+        data,
+        date,
+        date_end,
+        library,
+    ) = app.manager.admin_dashboard_controller.circulation_loan_statistics_excel()
+    if isinstance(data, ProblemDetail):
+        return data
+
+    response = Response(data)
+    response.headers[
+        "Content-Type"
+    ] = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    response.headers[
+        "Content-Disposition"
+    ] = f"attachment; filename=lainaukset_{library}_{date}_{date_end}.xlsx"
+
+    return response
+
+
 @library_route("/admin/circulation_events")
 @has_library
 @returns_json_or_response_or_problem_detail
