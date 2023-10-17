@@ -4,15 +4,22 @@
 
 FROM golang:1.17 AS builder
 
+ENV TZ=Europe/Helsinki
+
 LABEL maintainer="The Palace Project <info@thepalaceproject.org>"
 
-RUN go get -v github.com/readium/readium-lcp-server/lcpencrypt
+RUN go get -v github.com/readium/readium-lcp-server/lcpencrypt && \
+    echo Europe/Helsinki >/etc/timezone && \
+    ln -sf /usr/share/zoneinfo/Europe/Helsinki /etc/localtime && \
+    dpkg-reconfigure -f noninteractive tzdata
 
 ###############################################################################
 ## Base Image
 ###############################################################################
 
 FROM phusion/baseimage:focal-1.1.0 As base
+
+ENV TZ=Europe/Helsinki
 
 COPY --from=builder /go/bin/lcpencrypt /go/bin/lcpencrypt
 
@@ -31,6 +38,7 @@ COPY --chown=1000:1000 . /var/www/circulation
 
 FROM base as exec
 
+ENV TZ=Europe/Helsinki
 ENV SIMPLIFIED_DB_TASK "ignore"
 ENV SIMPLIFIED_SCRIPT_NAME ""
 
@@ -50,7 +58,7 @@ FROM base as scripts
 
 ENV SIMPLIFIED_DB_TASK "auto"
 # Set the local timezone in /docker/simplified_cron.sh
-ENV TZ=US/Eastern
+ENV TZ=Europe/Helsinki
 
 RUN /bin/bash -c "/ls_build/simplified_cron.sh \
       && rm -rf /ls_build && /bd_build/cleanup.sh"
@@ -65,12 +73,22 @@ CMD ["/sbin/my_init"]
 ###############################################################################
 
 FROM base as webapp
+ENV TZ=Europe/Helsinki
 
 ENV SIMPLIFIED_DB_TASK "ignore"
 
-RUN /bin/bash -c "/ls_build/nginx.sh \
-      && /ls_build/uwsgi.sh \
-      && rm -rf /ls_build && /bd_build/cleanup.sh"
+COPY docker/admin_dist.tar.gz /mnt/admin_dist.tar.gz
+
+RUN /bin/bash -c "/ls_build/nginx.sh && \
+      /ls_build/uwsgi.sh && \
+      rm -rf /ls_build && /bd_build/cleanup.sh && \
+	  apt-get install -y --no-install-recommends tar && \
+	  cd /var/www/circulation/api/admin && \
+	  tar xf /mnt/admin_dist.tar.gz && \
+	  chown -R simplified:simplified dist && \
+	  rm /mnt/admin_dist.tar.gz "
+
+COPY --chown=simplified:simplified docker/config.py_admin /var/www/circulation/api/admin/config.py
 
 VOLUME /var/log
 WORKDIR /home/simplified/circulation

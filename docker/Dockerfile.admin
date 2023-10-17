@@ -1,6 +1,6 @@
 FROM ubuntu:22.04 as admin
 
-LABEL maintainer="Joe Random <first.last@ellibs.com"
+LABEL maintainer="Joe Random <first.last@ellibs.com>"
 
 ARG BUILDENV=devz
 
@@ -14,20 +14,20 @@ RUN sed -i 's/http:\/\/archive\.ubuntu\.com\/ubuntu/http:\/\/mirrors.nic.funet.f
 ENV DEBIAN_FRONTEND noninteractive
 ENV TERM linux
 
-ENV TINI_VERSION v0.19.0
-ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
+#ENV TINI_VERSION v0.19.0
+#ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
 
-RUN chmod +x /tini && \
-    apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
     apt-utils \
     apt-transport-https \
     ca-certificates \
     curl \
     debconf-utils \
     gnupg \
+    gzip \
     net-tools \
     software-properties-common \
-	ssh \
+    tar \
     telnet \
     tzdata \
     wget  && \
@@ -46,32 +46,32 @@ RUN chmod +x /tini && \
     rm -rf /var/lib/apt/lists/* && \
     groupadd -g 1000 node && \
     useradd -u 1000 -r -g node -d /home/node -s /bin/bash -c "Node image user" node && \
-	mkdir -p /opt/circulation/admin /root/.ssh/ && \
     apt-get remove -y \
       apt-transport-https \
       apt-utils \
       debconf-utils \
       gnupg \
       software-properties-common \
-	  ssh \
       wget && \
-	apt-get autoremove -y 
+    apt-get autoremove -y 
 
 COPY palace_circulation_admin_ui /opt/circulation/admin
 
 RUN cd /opt/circulation/admin && \
-	npm install
+	npm install && \
+	mkdir -p /mnt/tarball && \
+	tar czvf /mnt/tarball/admin_dist.tar.gz dist
 
 # Specify the port number the container should expose
-EXPOSE 8080
+#EXPOSE 8080
 
 # Set up working dir
-WORKDIR /opt/circulation/admin
+#WORKDIR /opt/circulation/admin
 
 # Entrypoint is run prior to CMD
-ENTRYPOINT ["/tini", "--"]
+#ENTRYPOINT ["/tini", "--"]
 
 # Actual command to start, can be overridden to start e.g. ASR API
-CMD ["npm", "run", "dev-server", "--", "--env=backend=webapp:6500"]
+#CMD ["npm", "run", "dev-server", "--", "--env=backend=webapp:6500"]
 
 
