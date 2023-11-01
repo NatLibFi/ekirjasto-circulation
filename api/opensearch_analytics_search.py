@@ -159,7 +159,17 @@ class OpenSearchAnalyticsSearch:
         )
         aggs = {}
         aggs["events_per_interval"] = {
-            "date_histogram": {"field": "start", "interval": interval},
+            "date_histogram": {
+                "field": "start",
+                "interval": interval,
+                "min_doc_count": 0,
+                "missing": 0,
+                "time_zone": "Europe/Helsinki",
+                "extended_bounds": {
+                    "min": from_param if from_param else None,
+                    "max": f"{to_param}T23:59" if to_param else None,
+                },
+            },
             "aggs": {"type": {"terms": {"field": "type", "size": 100}}},
         }
 
