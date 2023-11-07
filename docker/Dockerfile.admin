@@ -59,7 +59,7 @@ COPY palace_circulation_admin_ui /opt/circulation/admin
 
 RUN cd /opt/circulation/admin && \
 	npm install && \
-	npm run test-finland && \
+	npm run test-finlandf && \
 	retval=$? && \
 	if [ $retval -ne 0 ]; then \
 	  echo "Admin UI test failed" && \
