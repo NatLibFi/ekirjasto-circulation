@@ -120,11 +120,6 @@ if TYPE_CHECKING:
         small_link_style,
     )
 
-# Finland:
-from flask import stream_with_context
-from openpyxl import Workbook
-from tempfile import NamedTemporaryFile
-
 
 def setup_admin_controllers(manager):
     """Set up all the controllers that will be used by the admin parts of the web app."""
@@ -575,6 +570,7 @@ class SignInController(AdminController):
     HEAD_TEMPLATE = """<head>
 <meta charset="utf8">
 <title>{app_name}</title>
+<link rel="shortcut icon" href="/images/favicon.ico">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&display=swap');
 </style>
