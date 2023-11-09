@@ -250,11 +250,39 @@ UNKNOWN_SAML_PROVIDER = pd(
     detail=_("The specified SAML provider name isn't one of the known providers."),
 )
 
+EKIRJASTO_PROVIDER_NOT_CONFIGURED = pd(
+    "http://librarysimplified.org/terms/problem/requested-provider-not-configured",
+    status_code=400,
+    title=_("Ekirjasto provider not configured."),
+    detail=_("Ekirjasto provider was not configured for the library"),
+)
+
 INVALID_SAML_BEARER_TOKEN = pd(
     "http://librarysimplified.org/terms/problem/credentials-invalid",
     status_code=401,
     title=_("Invalid SAML bearer token."),
     detail=_("The provided SAML bearer token couldn't be verified."),
+)
+
+INVALID_EKIRJASTO_BEARER_TOKEN = pd(
+    "http://librarysimplified.org/terms/problem/credentials-invalid",
+    status_code=401,
+    title=_("Invalid bearer token for ekirjasto authentication provider."),
+    detail=_("The provided bearer token couldn't be verified for ekirjasto authentication provider."),
+)
+
+MISSING_CREDENTIAL_ID_IN_EKIRJASTO_BEARER_TOKEN = pd(
+    "http://librarysimplified.org/terms/problem/credentials-invalid",
+    status_code=401,
+    title=_("Invalid bearer token for ekirjasto authentication provider."),
+    detail=_("The Credential id is missing in bearer token for ekirjasto authentication provider."),
+)
+
+EKIRJASTO_SESSION_TOKEN_NOT_FOUND = pd(
+    "http://librarysimplified.org/terms/problem/credentials-invalid",
+    status_code=400,
+    title=_("Session token for ekirjasto authentication provider was not found."),
+    detail=_("Session token is the token to authenticate against remote ekirjasto API."),
 )
 
 UNSUPPORTED_AUTHENTICATION_MECHANISM = pd(
