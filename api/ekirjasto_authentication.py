@@ -25,7 +25,7 @@ from api.problem_details import (
 )
 
 from api.util.patron import PatronUtility
-from .circulation_exceptions import RemoteInitiatedServerError
+from .circulation_exceptions import RemoteInitiatedServerError, RemotePatronCreationFailedException
 from core.analytics import Analytics
 from core.integration.settings import (
     ConfigurationFormItem,
@@ -38,7 +38,9 @@ from core.util.log import elapsed_time_logging
 from core.util.problem_detail import ProblemDetail
 from .problem_details import (
     EKIRJASTO_PROVIDER_NOT_CONFIGURED,
-    EKIRJASTO_SESSION_TOKEN_NOT_FOUND
+    EKIRJASTO_SESSION_TOKEN_NOT_FOUND,
+    EKIRJASTO_REMOTE_AUTHENTICATION_FAILED,
+    INVALID_EKIRJASTO_TOKEN
 )
 
 class EkirjastoController():
@@ -74,6 +76,8 @@ class EkirjastoController():
             patron, is_new, credential = self._authenticator.ekirjasto_provider.ekirjasto_authenticate(_db, request.authorization.token)
             if not isinstance(patron, Patron):
                 # Authentication was failed.
+                if patron == None:
+                    return EKIRJASTO_REMOTE_AUTHENTICATION_FAILED
                 return patron
             
             # Create a bearer token which we can give to the patron.
@@ -346,16 +350,34 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
             "role": "user",
             "sub": "12345678901234567890"
         }
+        
+        After OTP authentication seems to return:
+        {'username': 'johannes.ylonen+test1@indium.fi', 'exp': 1707333838913, 'verified': False}
         """
         
+        def _get_key_or_none(userinfo_json, key):
+            if key in userinfo_json:
+                return userinfo_json[key]
+            return None
+        
         # TODO: Check if more info is needed/available. E.g. blocked, fines, etc
-        return PatronData(
-            permanent_id=userinfo_json.sub,
-            authorization_identifier=userinfo_json.email,
-            external_type=userinfo_json.role,
-            personal_name=userinfo_json.name,
+        patrondata = PatronData(
+            permanent_id=_get_key_or_none(userinfo_json, "username"), # TODO: This must be some permanent like "sub"
+            authorization_identifier=_get_key_or_none(userinfo_json, "email"),
+            external_type=_get_key_or_none(userinfo_json, "role"),
+            personal_name=_get_key_or_none(userinfo_json, "name"),
+            email_address=_get_key_or_none(userinfo_json, "email"),
+            username=_get_key_or_none(userinfo_json, "username"),
             complete=True,
         )
+        
+        if patrondata.permanent_id == None:
+            # permanent_id is used to get the local Patron, we cannot proceed 
+            # if it is missing.
+            message = "Value for permanent_id is missing in remote user info."
+            raise RemotePatronCreationFailedException(message, self.__class__.__name__)
+        
+        return patrondata
 
     def _get_credential_expire_time(self, expires: int) -> datetime.datetime:
         """ Get the expire time to use for credential to set to expire time at 
@@ -367,7 +389,7 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
         :return: Datetime for the credential expiration.
         """
         # Set expire time to 75 % of the remaining duration, so we have enough time to refresh it.
-        now_seconds = utc_now().seconds
+        now_seconds = utc_now().timestamp()
         expires = (expires - now_seconds) * 0.75 + now_seconds
         return from_timestamp(expires)
         
@@ -420,10 +442,11 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
         headers = {'Authorization': f'Bearer {credential.credential}'}
         
         try:
-            response = requests.get(url, headers)
+            # TODO: Is this get or post
+            response = requests.post(url, headers=headers)
             
             # TODO: REMOVE ME
-            print("remote_refresh_credential content", response)
+            print("remote_refresh_credential content", response, response.content)
         except requests.exceptions.ConnectionError as e:
             raise RemoteInitiatedServerError(str(e), self.__class__.__name__)
         
@@ -431,11 +454,12 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
             # Do nothing if authentication fails, e.g. token expired.
             return False
         elif response.status_code != 200:
+            # TODO Log as warnign or similar.
             msg = "Got unexpected response code %d. Content: %s" % (
                 response.status_code,
-                content,
+                response.content,
             )
-            raise RemoteInitiatedServerError(msg, self.__class__.__name__)
+            return False
         else:
             try:
                 content = response.json()
@@ -445,8 +469,8 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
             except requests.exceptions.JSONDecodeError as e:
                 raise RemoteInitiatedServerError(str(e), self.__class__.__name__)
             
-            credential.credential = content.token
-            credential.expires = self._get_credential_expire_time(content.exp/1000)
+            credential.credential = content["token"]
+            credential.expires = self._get_credential_expire_time(content["exp"]/1000)
             return True
         
     def remote_patron_lookup(
@@ -490,24 +514,29 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
         
         url = self._ekirjasto_api_url + "/v1/auth/userinfo"
         headers = {'Authorization': f'Bearer {ekirjasto_token}'}
+        print("remote_patron_lookup headers", headers)
+        print("remote_patron_lookup url", url)
         
         try:
-            response = requests.get(url, headers)
+            response = requests.get(url, headers=headers)
             
             # TODO: REMOVE ME
-            print("remote_patron_lookup content", response)
+            print("remote_patron_lookup content", response, response.content)
+            print("remote_patron_lookup response.request.headers", response.request.headers)
+            print("remote_patron_lookup response.headers", response.headers)
         except requests.exceptions.ConnectionError as e:
             raise RemoteInitiatedServerError(str(e), self.__class__.__name__)
         
         if response.status_code == 401:
             # Do nothing if authentication fails, e.g. token expired.
-            return None
+            return INVALID_EKIRJASTO_TOKEN
         elif response.status_code != 200:
+            # TODO: log warning or something.
             msg = "Got unexpected response code %d. Content: %s" % (
                 response.status_code,
-                content,
+                response.content,
             )
-            raise RemoteInitiatedServerError(msg, self.__class__.__name__)
+            return None
         else:
             try:
                 content = response.json()
@@ -551,28 +580,18 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
             if an error occurs; None if the credentials are missing or wrong.
         """
         
-        # First, try to look up the Patron object in our database.
-        patron = None
-        patrondata = None
-        if (
-            isinstance(credential, Credential) 
-            and credential.expires >= utc_now()
-        ):
-            # We have still valid credential, no need to check remote. Though,
-            # patron may be updated from remote later in this function.
-            patron = credential.patron
-        else:
-            # Check credential / ekirjasto token with the remote source of truth.
-            patrondata = self.remote_authenticate(credential, ekirjasto_token)
-            
-            if patrondata is None or isinstance(patrondata, ProblemDetail):
-                # Either an error occurred or the credentials did not correspond to any patron.
-                return patrondata
-            
-            # At this point we know there is _some_ authenticated patron,
-            # but it might not correspond to a Patron in our database.
-            
-            patron = self.local_patron_lookup(_db, patrondata)
+        # Check credential / ekirjasto token with the remote source of truth.
+        patrondata = self.remote_authenticate(credential, ekirjasto_token)
+        
+        if patrondata is None or isinstance(patrondata, ProblemDetail):
+            # Either an error occurred or the credentials did not correspond to any patron.
+            return patrondata
+        
+        # At this point we know there is _some_ authenticated patron,
+        # but it might not correspond to a Patron in our database.
+        
+        # Try to look up the Patron object in our database.
+        patron = self.local_patron_lookup(_db, patrondata)
 
         if patron:
             # We found the patron! Now we need to make sure that the patron's
@@ -620,32 +639,17 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
             identify the patron more precisely. Or it may be None, in
             which case it's no help at all.
         """
-        lookups = []
-        if patrondata:
-            if patrondata.permanent_id:
-                # Permanent ID is the most reliable way of identifying
-                # a patron, since this is supposed to be an internal
-                # ID that never changes.
-                lookups.append(dict(external_identifier=patrondata.permanent_id))
-            if patrondata.username:
-                # Username is fairly reliable, since the patron
-                # generally has to decide to change it.
-                lookups.append(dict(username=patrondata.username))
-
-            if patrondata.authorization_identifier:
-                # Authorization identifiers change all the time so
-                # they're not terribly reliable.
-                lookups.append(
-                    dict(authorization_identifier=patrondata.authorization_identifier)
-                )
-
         patron = None
-        for lookup in lookups:
-            lookup["library_id"] = self.library_id
+        if patrondata and patrondata.permanent_id:
+            # Permanent ID is the most reliable way of identifying
+            # a patron, since this is supposed to be an internal
+            # ID that never changes.
+            lookup = dict(
+                external_identifier=patrondata.permanent_id,
+                library_id=self.library_id
+            )
+            
             patron = get_one(_db, Patron, **lookup)
-            if patron:
-                # We found them!
-                break
 
         return patron
 

@@ -271,6 +271,13 @@ INVALID_EKIRJASTO_BEARER_TOKEN = pd(
     detail=_("The provided bearer token couldn't be verified for ekirjasto authentication provider."),
 )
 
+INVALID_EKIRJASTO_TOKEN = pd(
+    "http://librarysimplified.org/terms/problem/credentials-invalid",
+    status_code=401,
+    title=_("Invalid ekirjasto token for ekirjasto API."),
+    detail=_("The provided ekirjasto token couldn't be verified for ekirjasto API."),
+)
+
 MISSING_CREDENTIAL_ID_IN_EKIRJASTO_BEARER_TOKEN = pd(
     "http://librarysimplified.org/terms/problem/credentials-invalid",
     status_code=401,
@@ -283,6 +290,13 @@ EKIRJASTO_SESSION_TOKEN_NOT_FOUND = pd(
     status_code=400,
     title=_("Session token for ekirjasto authentication provider was not found."),
     detail=_("Session token is the token to authenticate against remote ekirjasto API."),
+)
+
+EKIRJASTO_REMOTE_AUTHENTICATION_FAILED = pd(
+    "http://librarysimplified.org/terms/problem/credentials-invalid",
+    status_code=400,
+    title=_("Authentication with ekirjasto API failed."),
+    detail=_("Authentication with ekirjasto API failed, for unknown reason."),
 )
 
 UNSUPPORTED_AUTHENTICATION_MECHANISM = pd(
