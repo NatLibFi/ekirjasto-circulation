@@ -580,39 +580,12 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
             if an error occurs; None if the credentials are missing or wrong.
         """
         
-        """ 
-        TODO: Check if this needs to be done for not checking remote everytime.
-        # First, try to look up the Patron object in our database.
-        patron = None
-        patrondata = None
-        if (
-            isinstance(credential, Credential)
-            and credential.expires >= utc_now()
-        ):
-            # We have still valid credential, no need to check remote. Though,
-            # patron may be updated from remote later in this function.
-            patron = credential.patron
-        else:
-            # Check credential / ekirjasto token with the remote source of truth.
-            patrondata = self.remote_authenticate(credential, ekirjasto_token)   
-
-            if patrondata is None or isinstance(patrondata, ProblemDetail):
-                # Either an error occurred or the credentials did not correspond to any patron.
-                return patrondata
-
-            # At this point we know there is _some_ authenticated patron,
-            # but it might not correspond to a Patron in our database.
-
-            patron = self.local_patron_lookup(_db, patrondata)
-        """
-        """ START if always check remote """
         # Check credential / ekirjasto token with the remote source of truth.
         patrondata = self.remote_authenticate(credential, ekirjasto_token)
         
-        if patrondata is None or isinstance(patrondata, ProblemDetail):
+        if not isinstance(patrondata, PatronData):
             # Either an error occurred or the credentials did not correspond to any patron.
             return patrondata
-        """ END if always check remote """
         
         # At this point we know there is _some_ authenticated patron,
         # but it might not correspond to a Patron in our database.
@@ -621,47 +594,10 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
         patron = self.local_patron_lookup(_db, patrondata)
 
         if patron:
-            """ MORE if not checking remote everytime
-            # We found the patron! Now we need to make sure that the patron's
-            # information in the database is up-to-date.
-            # TODO: Check for patrondata.complete is not needed, because currently it is always complete
-            if PatronUtility.needs_external_sync(patron) or (patrondata and not patrondata.complete):
-                # We found the patron, but we need to sync their information with the
-                # remote source of truth.  We do this by calling remote_patron_lookup.
-                patrondata = self.remote_patron_lookup(credential, ekirjasto_token)
-                if not isinstance(patrondata, PatronData):
-                    # Something went wrong, we can't get the patron's information.
-                    # so we fail the authentication process.
-                    return patrondata
-
-            if patrondata:
-                # Apply the information we have to the patron.
-                patrondata.apply(patron)
-            """
-            """ MORE if always check remote """
-            # Apply the information we have to the patron.
+            # Apply the remote information we have to the patron.
             patrondata.apply(patron)
-            """ MORE if always check remote """
+            
             return patron
-
-        """ MORE if not checking remote everytime
-        # At this point we didn't find the patron, so we want to look up the patron
-        # with the remote, in case this allows us to find an existing patron, based
-        # on the information returned by the remote_patron_lookup.
-        # TODO: Check for patrondata.complete is not needed, because currently it is always complete
-        #       So this if could be removed altogether
-        if patrondata and not patrondata.complete:
-            patrondata = self.remote_patron_lookup(credential, ekirjasto_token)
-            if not isinstance(patrondata, PatronData):
-                # Something went wrong, we can't get the patron's information.
-                # so we fail the authentication process.
-                return patrondata
-            patron = self.local_patron_lookup(_db, patrondata)
-            if patron:
-                # We found the patron, so we apply the information we have to the patron and return it.
-                patrondata.apply(patron)
-                return patron
-        """
         
         # No Patron found from the database, but we've got remote information (PatronData).
         # Patron should be created through ekirjasto_authenticate.
@@ -701,7 +637,11 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
         """
         is_new = False
         
-        patron = self.authenticate(_db, None, ekirjasto_token)
+        with elapsed_time_logging(
+            log_method=self.logger().info,
+            message_prefix="authenticated_patron - ekirjasto_authenticate",
+        ):
+            patron = self.authenticate(_db, None, ekirjasto_token)
         
         if isinstance(patron, PatronData):
             # We didn't find the patron, but authentication to external truth was 
@@ -752,6 +692,9 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
             credential = get_one(
                 _db, Credential, data_source=datasource, id=authorization["credential_id"]
             )
+            
+            if credential == None:
+                return None
         else:
             return MISSING_CREDENTIAL_ID_IN_EKIRJASTO_BEARER_TOKEN
 
