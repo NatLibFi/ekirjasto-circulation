@@ -38,7 +38,6 @@ from core.util.log import elapsed_time_logging
 from core.util.problem_detail import ProblemDetail
 from .problem_details import (
     EKIRJASTO_PROVIDER_NOT_CONFIGURED,
-    EKIRJASTO_SESSION_TOKEN_NOT_FOUND,
     EKIRJASTO_REMOTE_AUTHENTICATION_FAILED,
     INVALID_EKIRJASTO_TOKEN
 )
@@ -71,7 +70,7 @@ class EkirjastoController():
         if self._authenticator.ekirjasto_provider:
             token = request.authorization.token
             if token is None:
-                return EKIRJASTO_SESSION_TOKEN_NOT_FOUND
+                return EKIRJASTO_REMOTE_AUTHENTICATION_FAILED
             
             patron, is_new, credential = self._authenticator.ekirjasto_provider.ekirjasto_authenticate(_db, request.authorization.token)
             if not isinstance(patron, Patron):

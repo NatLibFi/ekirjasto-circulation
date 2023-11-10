@@ -285,13 +285,6 @@ MISSING_CREDENTIAL_ID_IN_EKIRJASTO_BEARER_TOKEN = pd(
     detail=_("The Credential id is missing in bearer token for ekirjasto authentication provider."),
 )
 
-EKIRJASTO_SESSION_TOKEN_NOT_FOUND = pd(
-    "http://librarysimplified.org/terms/problem/credentials-invalid",
-    status_code=400,
-    title=_("Session token for ekirjasto authentication provider was not found."),
-    detail=_("Session token is the token to authenticate against remote ekirjasto API."),
-)
-
 EKIRJASTO_REMOTE_AUTHENTICATION_FAILED = pd(
     "http://librarysimplified.org/terms/problem/credentials-invalid",
     status_code=400,
