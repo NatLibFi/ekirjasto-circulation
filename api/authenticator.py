@@ -475,11 +475,14 @@ class LibraryAuthenticator:
             provider_token = auth.token
             try:
                 # Validate bearer token and get credential info.
-                _, credential_info = self.decode_bearer_token(auth.token)
+                provider_name, credential_info = self.decode_bearer_token(auth.token)
             except jwt.exceptions.InvalidTokenError as e:
                 return INVALID_EKIRJASTO_BEARER_TOKEN
+            if provider_name != self.ekirjasto_provider.label():
+                # The token must be for this provider.
+                return INVALID_EKIRJASTO_BEARER_TOKEN
             # Token from payload is actually a dictonary with info about the 
-            # Credential that keeps track of the provider token.
+            # Credential that keeps track of the valid ekirjasto token.
             provider_token = json.loads(credential_info)
         elif self.saml_providers_by_name and auth.type.lower() == "bearer":
             # The patron wants to use an
