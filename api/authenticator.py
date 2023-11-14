@@ -156,6 +156,9 @@ class Authenticator:
     @property
     def ekirjasto_provider(self) -> EkirjastoAuthenticationAPI:
         return self.invoke_authenticator_method("get_ekirjasto_provider")
+        
+    def validate_ekirjasto_bearer_token(self, *args, **kwargs):
+        return self.invoke_authenticator_method("validate_ekirjasto_bearer_token", *args, **kwargs)
 
 
 class LibraryAuthenticator:
@@ -327,6 +330,12 @@ class LibraryAuthenticator:
                     "SAML providers are configured, but secret for signing bearer tokens is not."
                 )
             )
+        if self.ekirjasto_provider and not self.bearer_token_signing_secret:
+            raise CannotLoadConfiguration(
+                _(
+                    "Ekirjasto provider is configured, but secret for signing bearer tokens is not."
+                )
+            )
 
     def register_provider(
         self,
@@ -472,18 +481,9 @@ class LibraryAuthenticator:
             if auth.token is None:
                 return INVALID_EKIRJASTO_BEARER_TOKEN
             provider = self.ekirjasto_provider
-            provider_token = auth.token
-            try:
-                # Validate bearer token and get credential info.
-                provider_name, credential_info = self.decode_bearer_token(auth.token)
-            except jwt.exceptions.InvalidTokenError as e:
-                return INVALID_EKIRJASTO_BEARER_TOKEN
-            if provider_name != self.ekirjasto_provider.label():
-                # The token must be for this provider.
-                return INVALID_EKIRJASTO_BEARER_TOKEN
-            # Token from payload is actually a dictonary with info about the 
-            # Credential that keeps track of the valid ekirjasto token.
-            provider_token = json.loads(credential_info)
+            provider_name, provider_token = self.validate_ekirjasto_bearer_token(auth.token)
+            if isinstance(provider_name, ProblemDetail):
+                return provider_name
         elif self.saml_providers_by_name and auth.type.lower() == "bearer":
             # The patron wants to use an
             # SAMLAuthenticationProvider. Figure out which one.
@@ -507,6 +507,20 @@ class LibraryAuthenticator:
         # We were unable to determine what was going on with the
         # Authenticate header.
         return UNSUPPORTED_AUTHENTICATION_MECHANISM
+
+    def validate_ekirjasto_bearer_token(self, token):
+        try:
+            # Validate bearer token and get credential info.
+            provider_name, provider_token = self.decode_bearer_token(token)
+        except jwt.exceptions.InvalidTokenError as e:
+            print("validate_ekirjasto_bearer_token1", e)
+            return INVALID_EKIRJASTO_BEARER_TOKEN, None
+        else:
+            print("validate_ekirjasto_bearer_token2", provider_name, self.ekirjasto_provider.label())
+            if provider_name != self.ekirjasto_provider.label():
+                # The token must be for this provider.
+                return INVALID_EKIRJASTO_BEARER_TOKEN, None
+        return provider_name, provider_token
 
     def get_credential_from_header(self, auth: Authorization) -> str | None:
         """Extract a password credential from a WWW-Authenticate header

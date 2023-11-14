@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime
 import json
+import jwt
 import logging
 import requests
 
@@ -19,10 +20,6 @@ from api.authentication.base import (
     AuthProviderSettings,
     PatronData,
 )
-from api.problem_details import (
-    UNSUPPORTED_AUTHENTICATION_MECHANISM,
-    MISSING_CREDENTIAL_ID_IN_EKIRJASTO_BEARER_TOKEN
-)
 
 from api.util.patron import PatronUtility
 from .circulation_exceptions import RemoteInitiatedServerError, RemotePatronCreationFailedException
@@ -37,6 +34,7 @@ from core.util.datetime_helpers import from_timestamp, utc_now
 from core.util.log import elapsed_time_logging
 from core.util.problem_detail import ProblemDetail
 from .problem_details import (
+    UNSUPPORTED_AUTHENTICATION_MECHANISM,
     EKIRJASTO_PROVIDER_NOT_CONFIGURED,
     EKIRJASTO_REMOTE_AUTHENTICATION_FAILED,
     INVALID_EKIRJASTO_TOKEN
@@ -58,6 +56,50 @@ class EkirjastoController():
         self._authenticator = authenticator
 
         self._logger = logging.getLogger(__name__)
+            
+    def _update_credential(self, _db, patron, ekirjasto_token):
+        """Create new or update credential in database for this patron.
+        The credential is only used to remember when the ekirjasto token expires.
+        It will not store the token itself.
+        """
+        
+        token_type = self._authenticator.ekirjasto_provider.token_type()
+        
+        datasource = DataSource.lookup(_db, self._authenticator.ekirjasto_provider.label(), autocreate=True)
+        credential = get_one(
+            _db, Credential, data_source=datasource, type=token_type, patron=patron
+        )
+        
+        expires = None
+        is_fresh = False
+        if credential == None or credential and credential.expires < utc_now():
+            # Attempt to refresh the ekirjasto token as it is probably soon expiring.
+            # Since last refresh the cerential was set to expire early, so the ekirjasto 
+            # token can be still valid for refresh.
+            ekirjasto_token, expires = self._authenticator.ekirjasto_provider.remote_refresh_token(ekirjasto_token)
+            
+            if isinstance(ekirjasto_token, ProblemDetail):
+                return ekirjasto_token, is_fresh
+            if ekirjasto_token == None or expires == None:
+                return ekirjasto_token, is_fresh
+            
+            is_fresh = True
+        
+        if credential == None:
+            # Create credential for the patron.
+            credential, _ = Credential.temporary_token_create(
+                _db,
+                datasource,
+                token_type,
+                patron,
+                datetime.timedelta(seconds=10)
+            )
+            credential.expires = expires
+        elif expires != None:
+            # Update credential with the new expire time.
+            credential.expires = expires
+            
+        return ekirjasto_token, is_fresh
     
     def authenticate(self, request, _db):
         """ Authenticate patron with ekirjasto API and return bearer token for 
@@ -69,24 +111,50 @@ class EkirjastoController():
         
         if self._authenticator.ekirjasto_provider:
             token = request.authorization.token
-            if token is None:
+            if token is None or len(token) == 0:
                 return EKIRJASTO_REMOTE_AUTHENTICATION_FAILED
             
-            patron, is_new, credential = self._authenticator.ekirjasto_provider.ekirjasto_authenticate(_db, request.authorization.token)
+            ekirjasto_token = None
+            bearer_token = None
+            try:
+                provider_name, ekirjasto_token = self._authenticator.validate_ekirjasto_bearer_token(token)
+                if isinstance(provider_name, ProblemDetail):
+                    # The provider_name might is ProblemDetail, indicating that the token 
+                    # is not valid. Still it might be ekirjasto_token (which is not JWT), 
+                    # so we can continue.
+                    ekirjasto_token = token
+                else:
+                    # Successful validation of a bearer token for circulation manager.
+                    bearer_token = token
+            except jwt.exceptions.DecodeError as e:
+                # It might be just an ekirjasto_token, it will be used to authenticate 
+                # with the remote ekirjasto API. We don't do anything further validation
+                # for it as it is valdiated with successful authentication.
+                ekirjasto_token = token
+                pass
+            
+            patron, is_new = self._authenticator.ekirjasto_provider.ekirjasto_authenticate(_db, ekirjasto_token)
             if not isinstance(patron, Patron):
                 # Authentication was failed.
                 if patron == None:
                     return EKIRJASTO_REMOTE_AUTHENTICATION_FAILED
+                # Return ProblemDetail
                 return patron
             
-            # Create a bearer token which we can give to the patron.
-            # This token will never expire, but the credential will. Credential
-            # is used to actually validate the authentication.
-            bearer_token = self._authenticator.create_bearer_token(
-                self._authenticator.ekirjasto_provider.label(), json.dumps({"credential_id": credential.id})
-            )
+            ekirjasto_token, ekirjasto_token_is_fresh = self._update_credential(_db, patron, ekirjasto_token)
+            if ekirjasto_token == None or isinstance(ekirjasto_token, ProblemDetail):
+                # Error
+                return ekirjasto_token
+            
+            if bearer_token == None or ekirjasto_token_is_fresh:
+                # Create a bearer token which we can give to the patron. This token 
+                # will never expire, but the ekirjasto_token will. Ekirjasto_token
+                # is used to actually validate the authentication.
+                bearer_token = self._authenticator.create_bearer_token(
+                    self._authenticator.ekirjasto_provider.label(), ekirjasto_token
+                )
 
-            patrondata = self._authenticator.ekirjasto_provider.remote_patron_lookup(credential, None)
+            patrondata = self._authenticator.ekirjasto_provider.remote_patron_lookup(ekirjasto_token)
             patron_info = None
             if patrondata:
                 patron_info = json.dumps(patrondata.to_dict)
@@ -168,7 +236,7 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
         
     @classmethod
     def token_type(cls) -> str:
-        return "E-kirjasto user token"
+        return "E-kirjasto user token expires"
 
     @classmethod
     def description(cls) -> str:
@@ -381,16 +449,16 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
 
     def _get_credential_expire_time(self, expires: int) -> datetime.datetime:
         """ Get the expire time to use for credential to set to expire time at 
-        75 % of the remaining duration for the ekirjasto token. This will give 
+        30 % of the remaining duration for the ekirjasto token. This will give 
         enough time to refresh ekirjasto token before it expires.
         
         :param expires: Ekirjasto token expiration timestamp in seconds.
         
         :return: Datetime for the credential expiration.
         """
-        # Set expire time to 75 % of the remaining duration, so we have enough time to refresh it.
+        # Set expire time at 30 % of the remaining duration, so we have lots of time to refresh it.
         now_seconds = utc_now().timestamp()
-        expires = (expires - now_seconds) * 0.75 + now_seconds
+        expires = (expires - now_seconds) * 0.3 + now_seconds
         return from_timestamp(expires)
         
     def get_credential_from_header(self, auth: Authorization) -> str | None:
@@ -425,79 +493,63 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
             
         return content
 
-    def remote_refresh_credential(self, credential: Credential) -> bool:
+    def remote_refresh_token(self, token: str):
         """ Refresh ekirjasto token with ekirjasto API call.
         
-        We assume that the cedential/token is valid, API call fails if not.
+        We assume that the token is valid, API call fails if not.
         
         :return: boolean if refresh was succesfull or not.
         """
         
         if self.ekirjasto_environment == EkirjastoEnvironment.FAKE:
-            credential.credential = self.fake_ekirjasto_token
-            credential.expires = utc_now() + datetime.timedelta(days=1)
-            return True
+            token = self.fake_ekirjasto_token
+            expires = utc_now() + datetime.timedelta(days=1)
+            return token, expires
         
         url = self._ekirjasto_api_url + "/v1/auth/refresh"
-        headers = {'Authorization': f'Bearer {credential.credential}'}
+        headers = {'Authorization': f'Bearer {token}'}
         
         try:
-            # TODO: Is this get or post
             response = requests.post(url, headers=headers)
             
             # TODO: REMOVE ME
-            print("remote_refresh_credential content", response, response.content)
+            print("remote_refresh_token content", response, response.content)
         except requests.exceptions.ConnectionError as e:
             raise RemoteInitiatedServerError(str(e), self.__class__.__name__)
         
         if response.status_code == 401:
             # Do nothing if authentication fails, e.g. token expired.
-            return False
+            return None, None
         elif response.status_code != 200:
             # TODO Log as warnign or similar.
             msg = "Got unexpected response code %d. Content: %s" % (
                 response.status_code,
                 response.content,
             )
-            return False
+            return None, None
         else:
             try:
                 content = response.json()
                 
                 # TODO: REMOVE ME
-                print("remote_refresh_credential content", content)
+                print("remote_refresh_token content", content)
             except requests.exceptions.JSONDecodeError as e:
                 raise RemoteInitiatedServerError(str(e), self.__class__.__name__)
             
-            credential.credential = content["token"]
-            credential.expires = self._get_credential_expire_time(content["exp"]/1000)
-            return True
+            token = content["token"]
+            expires = self._get_credential_expire_time(content["exp"]/1000)
+            return token, expires
         
     def remote_patron_lookup(
-        self, credential: Credential | None, ekirjasto_token: str | None
+        self, ekirjasto_token: str | None
     ) -> PatronData | ProblemDetail | None:
-        """Ask the remote for detailed information about patron related to credential.
+        """Ask the remote for detailed information about patron related to the ekirjasto_token.
 
         If the patron is not found, or an error occurs communicating with the remote,
         return None or a ProblemDetail.
 
         Otherwise, return a PatronData object with the complete property set to True.
         """
-        
-        if credential and credential.expires < utc_now():
-            # Attempt to refresh the credential, ekirjasto token is probably soon expiring.
-            # Since last refresh the cerential was set to expire early, so the ekirjasto 
-            # token may be still valid for refresh.
-            self.remote_refresh_credential(credential)
-        
-        if not ekirjasto_token and not credential:
-            return None
-        
-        if not ekirjasto_token:
-            ekirjasto_token = credential.credential
-            
-        if not ekirjasto_token:
-            return None
         
         if self.ekirjasto_environment == EkirjastoEnvironment.FAKE:
             if ekirjasto_token == self.fake_ekirjasto_token:
@@ -551,45 +603,41 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
         return None
 
     def remote_authenticate(
-        self, credential: Credential | None , ekirjasto_token: str | None
+        self, ekirjasto_token: str | None
     ) -> PatronData | ProblemDetail | None:
-        """Does the source of truth approve of these credentials?
+        """Does the source of truth approve the ekirjasto_token?
 
-        If the credentials are valid, return a PatronData object. The PatronData object
-        has a `complete` field. This field on the returned PatronData object will be used
-        to determine if we need to call `remote_patron_lookup` later to get the complete
-        information about the patron.
+        If the ekirjasto_token is valid, return a PatronData object. The PatronData object
+        has a `complete` field.
 
-        If the credentials are invalid, return None.
+        If the ekirjasto_token is invalid, return None.
 
         If there is a problem communicating with the remote, return a ProblemDetail.
         """
         
-        return self.remote_patron_lookup(credential, ekirjasto_token)
+        return self.remote_patron_lookup(ekirjasto_token)
 
-    def authenticate(
-        self, _db: Session, credential: Credential | None, ekirjasto_token: str | None
+    def authenticate_and_update_patron(
+        self, _db: Session, ekirjasto_token: str | None
     ) -> Patron | PatronData | ProblemDetail | None:
-        """Turn a set of credentials into a Patron object.
+        """Turn an ekirjasto_token into a Patron object.
 
-        :param token: A dictionary with keys `username` and `password`.
-        :param ekirjasto_token: A token for e-kirjasto account endpoint.
+        :param ekirjasto_token: A token for e-kirjasto authorization.
 
         :return: A Patron if one can be authenticated; PatronData if 
             authenticated, but Patron not available; a ProblemDetail
             if an error occurs; None if the credentials are missing or wrong.
         """
         
-        # Check credential / ekirjasto token with the remote source of truth.
-        patrondata = self.remote_authenticate(credential, ekirjasto_token)
+        # Check the ekirjasto token with the remote source of truth.
+        patrondata = self.remote_authenticate(ekirjasto_token)
         
         if not isinstance(patrondata, PatronData):
             # Either an error occurred or the credentials did not correspond to any patron.
             return patrondata
         
         # At this point we know there is _some_ authenticated patron,
-        # but it might not correspond to a Patron in our database.
-        
+        # but it might not correspond to any Patron in our database.
         # Try to look up the Patron object in our database.
         patron = self.local_patron_lookup(_db, patrondata)
 
@@ -631,7 +679,7 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
         self, _db: Session, ekirjasto_token: str
     ):
         """ Authenticate patron with remote ekirjasto API and if necessary, 
-        create/update patron and its credential in database.
+        create authenticated patron if not in database.
 
         :param ekirjasto_token: A token for e-kirjasto account endpoint.
         """
@@ -641,7 +689,7 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
             log_method=self.logger().info,
             message_prefix="authenticated_patron - ekirjasto_authenticate",
         ):
-            patron = self.authenticate(_db, None, ekirjasto_token)
+            patron = self.authenticate_and_update_patron(_db, ekirjasto_token)
         
         if isinstance(patron, PatronData):
             # We didn't find the patron, but authentication to external truth was 
@@ -650,24 +698,7 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
                 _db, self.library_id, analytics=self.analytics
             )
         
-        if isinstance(patron, Patron):
-            # We have a Patron, make sure it has credential for remote access.
-            
-            datasource = DataSource.lookup(
-                _db, self.label(), autocreate=True
-            )
-            
-            # Get or create ekirjasto token credential for the patron.
-            credential, _ = Credential.temporary_token_create(
-                _db, datasource, self.token_type(), patron, datetime.timedelta(), ekirjasto_token
-            )
-            
-            # Update token and expire time for the credential.
-            self.remote_refresh_credential(credential)
-            
-            return patron, is_new, credential
-        
-        return patron, is_new, None
+        return patron, is_new
 
     def authenticated_patron(
         self, _db: Session, authorization: dict | str
@@ -680,29 +711,17 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
         :return: A Patron if one can be authenticated; a ProblemDetail
             if an error occurs; None if the credentials are missing or wrong.
         """
-        if type(authorization) != dict:
+        if type(authorization) != str:
             return UNSUPPORTED_AUTHENTICATION_MECHANISM
-
-        credential = None
-        if "credential_id" in authorization:
-            datasource = DataSource.lookup(
-                _db, self.label(), autocreate=True
-            )
             
-            credential = get_one(
-                _db, Credential, data_source=datasource, id=authorization["credential_id"]
-            )
-            
-            if credential == None:
-                return None
-        else:
-            return MISSING_CREDENTIAL_ID_IN_EKIRJASTO_BEARER_TOKEN
+        if not authorization or len(authorization) == 0:
+            return UNSUPPORTED_AUTHENTICATION_MECHANISM
 
         with elapsed_time_logging(
             log_method=self.logger().info,
             message_prefix="authenticated_patron - authenticate",
         ):
-            patron = self.authenticate(_db, credential, None)
+            patron = self.authenticate_and_update_patron(_db, authorization)
 
         if isinstance(patron, PatronData):
             # Account not created, should first use ekirjasto_authenticate to
