@@ -264,7 +264,7 @@ INVALID_SAML_BEARER_TOKEN = pd(
     detail=_("The provided SAML bearer token couldn't be verified."),
 )
 
-INVALID_EKIRJASTO_BEARER_TOKEN = pd(
+INVALID_EKIRJASTO_DELEGATE_TOKEN = pd(
     "http://librarysimplified.org/terms/problem/credentials-invalid",
     status_code=401,
     title=_("Invalid bearer token for ekirjasto authentication provider."),

@@ -86,6 +86,14 @@ class Configuration(CoreConfiguration):
     # used to sign bearer tokens.
     BEARER_TOKEN_SIGNING_SECRET = "bearer_token_signing_secret"
 
+    # Name of the site-wide ConfigurationSetting containing the secret
+    # used to sign ekirjasto delegate tokens.
+    EKIRJASTO_TOKEN_SIGNING_SECRET = "ekirjasto_token_signing_secret"
+
+    # Name of the site-wide ConfigurationSetting containing the secret
+    # used to encrypt ekirjasto tokens.
+    EKIRJASTO_TOKEN_ENCRYPTING_SECRET = "ekirjasto_token_encrypting_secret"
+
     # Names of per-library ConfigurationSettings that control
     # how detailed the lane configuration gets for various languages.
     LARGE_COLLECTION_LANGUAGES = "large_collections"

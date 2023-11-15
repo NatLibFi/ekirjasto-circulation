@@ -156,9 +156,6 @@ class Authenticator:
     @property
     def ekirjasto_provider(self) -> EkirjastoAuthenticationAPI:
         return self.invoke_authenticator_method("get_ekirjasto_provider")
-        
-    def validate_ekirjasto_bearer_token(self, *args, **kwargs):
-        return self.invoke_authenticator_method("validate_ekirjasto_bearer_token", *args, **kwargs)
 
 
 class LibraryAuthenticator:
@@ -212,7 +209,7 @@ class LibraryAuthenticator:
                     (integration.parent.id, library.id)
                 ] = e
 
-        if authenticator.saml_providers_by_name or authenticator.ekirjasto_provider:
+        if authenticator.saml_providers_by_name:
             # NOTE: this will immediately commit the database session,
             # which may not be what you want during a test. To avoid
             # this, you can create the bearer token signing secret as
@@ -220,6 +217,10 @@ class LibraryAuthenticator:
             authenticator.bearer_token_signing_secret = (
                 BearerTokenSigner.bearer_token_signing_secret(_db)
             )
+
+        # Finland
+        if authenticator.ekirjasto_provider:
+            authenticator.ekirjasto_provider.set_secrets(_db)
 
         authenticator.assert_ready_for_token_signing()
 
@@ -328,12 +329,6 @@ class LibraryAuthenticator:
             raise CannotLoadConfiguration(
                 _(
                     "SAML providers are configured, but secret for signing bearer tokens is not."
-                )
-            )
-        if self.ekirjasto_provider and not self.bearer_token_signing_secret:
-            raise CannotLoadConfiguration(
-                _(
-                    "Ekirjasto provider is configured, but secret for signing bearer tokens is not."
                 )
             )
 
@@ -475,15 +470,15 @@ class LibraryAuthenticator:
             # BasicAuthenticationProvider.
             provider = self.basic_auth_provider
             provider_token = auth.parameters
-        elif self.ekirjasto_provider and auth.type.lower() == "bearer":
+        elif self.ekirjasto_provider and auth.type.lower() == "bearer": # Finland
             # The patron wants to authenticate with the
             # EkirjastoAuthenticationAPI.
             if auth.token is None:
-                return INVALID_EKIRJASTO_BEARER_TOKEN
+                return INVALID_EKIRJASTO_DELEGATE_TOKEN
             provider = self.ekirjasto_provider
-            provider_name, provider_token = self.validate_ekirjasto_bearer_token(auth.token)
-            if isinstance(provider_name, ProblemDetail):
-                return provider_name
+            provider_token = provider.validate_ekirjasto_delegate_token(auth.token)
+            if isinstance(provider_token, ProblemDetail):
+                return provider_token
         elif self.saml_providers_by_name and auth.type.lower() == "bearer":
             # The patron wants to use an
             # SAMLAuthenticationProvider. Figure out which one.
@@ -507,20 +502,6 @@ class LibraryAuthenticator:
         # We were unable to determine what was going on with the
         # Authenticate header.
         return UNSUPPORTED_AUTHENTICATION_MECHANISM
-
-    def validate_ekirjasto_bearer_token(self, token):
-        try:
-            # Validate bearer token and get credential info.
-            provider_name, provider_token = self.decode_bearer_token(token)
-        except jwt.exceptions.InvalidTokenError as e:
-            print("validate_ekirjasto_bearer_token1", e)
-            return INVALID_EKIRJASTO_BEARER_TOKEN, None
-        else:
-            print("validate_ekirjasto_bearer_token2", provider_name, self.ekirjasto_provider.label())
-            if provider_name != self.ekirjasto_provider.label():
-                # The token must be for this provider.
-                return INVALID_EKIRJASTO_BEARER_TOKEN, None
-        return provider_name, provider_token
 
     def get_credential_from_header(self, auth: Authorization) -> str | None:
         """Extract a password credential from a WWW-Authenticate header

@@ -2461,14 +2461,6 @@ class ProfileController(CirculationManagerController):
         if isinstance(result, ProblemDetail):
             return result
         
-        auth = self.authorization_header()
-        if self.manager.auth.ekirjasto_provider and auth.type.lower() == "bearer":
-            authentication was done for ekirjasto.
-            though we shouldn't trust this ,what if it changes?
-            
-            refresh token if needed
-            inject ekirjasto token to result
-        
         return make_response(*result)
 
 
