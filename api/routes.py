@@ -745,7 +745,6 @@ def saml_authenticate():
         flask.request.args, app.manager._db
     )
 
-
 # Redirect URI for SAML providers
 # NOTE: we cannot use @has_library decorator and append a library's name to saml_calback route
 # (e.g. https://cm.org/LIBRARY_NAME/saml_callback).
@@ -759,6 +758,15 @@ def saml_authenticate():
 @app.route("/saml_callback", methods=["POST"])
 def saml_callback():
     return app.manager.saml_controller.saml_authentication_callback(
+        request, app.manager._db
+    )
+
+# Authenticate with the ekirjasto token.
+@library_route("/ekirjasto_authenticate", methods=["POST"])
+@has_library
+@returns_problem_detail
+def ekirjasto_authenticate():
+    return app.manager.ekirjasto_controller.authenticate(
         request, app.manager._db
     )
 

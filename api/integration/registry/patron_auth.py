@@ -13,6 +13,7 @@ class PatronAuthRegistry(IntegrationRegistry["AuthenticationProvider"]):
     def __init__(self) -> None:
         super().__init__(Goals.PATRON_AUTH_GOAL)
 
+        from api.ekirjasto_authentication import EkirjastoAuthenticationAPI
         from api.firstbook2 import FirstBookAuthenticationAPI
         from api.kansas_patron import KansasAuthenticationAPI
         from api.millenium_patron import MilleniumPatronAPI
@@ -23,6 +24,7 @@ class PatronAuthRegistry(IntegrationRegistry["AuthenticationProvider"]):
             SirsiDynixHorizonAuthenticationProvider,
         )
 
+        self.register(EkirjastoAuthenticationAPI, canonical="api.ekirjasto")
         self.register(
             SimpleAuthenticationProvider, canonical="api.simple_authentication"
         )

@@ -97,6 +97,7 @@ from .circulation import CirculationAPI
 from .circulation_exceptions import *
 from .config import CannotLoadConfiguration, Configuration
 from .custom_index import CustomIndexView
+from .ekirjasto_authentication import EkirjastoController
 from .lanes import (
     ContributorFacets,
     ContributorLane,
@@ -526,6 +527,7 @@ class CirculationManager:
         configuration changes.
         """
         self.saml_controller = SAMLController(self, self.auth)
+        self.ekirjasto_controller = EkirjastoController(self, self.auth)
 
     @log_elapsed_time(log_method=log.debug, message_prefix="setup_adobe_vendor_id")
     def setup_adobe_vendor_id(self, _db, library):
@@ -2458,6 +2460,7 @@ class ProfileController(CirculationManagerController):
             result = controller.put(flask.request.headers, flask.request.data)
         if isinstance(result, ProblemDetail):
             return result
+        
         return make_response(*result)
 
 
