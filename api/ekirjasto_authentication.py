@@ -532,17 +532,9 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
         self, provider_token: str, patron_delegate_id: str, expires: int
     ) -> str:
         """
-        TODO: CHECK ME
-        Create a JSON web token with the given provider name and access
-        token.
+        Create a JSON Web Token fr patron with encrypted ekirjasto token in the payload.
 
-        The patron will use this as a bearer token in lieu of the
-        token we got from their OAuth provider. The big advantage of
-        this token is that it tells us _which_ OAuth provider the
-        patron authenticated against.
-
-        When the patron uses the bearer token in the Authenticate header,
-        it will be decoded with `decode_bearer_token_from_header`.
+        The patron will use this as the authentication toekn to authentiacte againsy circulation backend.
         """
         self._check_secrets_or_throw()
         
@@ -561,8 +553,7 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
 
     def decode_ekirjasto_delegate_token(self, delegate_token: str, validate_expire: bool = True, decrypt_ekirjasto_token: bool = False) -> dict:
         """
-        TODO: CHECK ME
-        Extract auth provider name and access token from JSON web token.
+        Validate and get payload of the JSON Web Token for circulation.
         
         return decoded payload
         """
@@ -596,9 +587,9 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
 
     def validate_ekirjasto_delegate_token(self, delegate_token: str, validate_expire: bool = True, decrypt_ekirjasto_token: bool = False) -> dict | ProblemDetail:
         """
-        TODO: DOCUMENT ME
+        Validate and get payload of the JSON Web Token for circulation.
         
-        return decoded payload
+        return decoded payload or ProblemDetail
         """
         
         try:
@@ -615,9 +606,6 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
         
         try:
             response = requests.get(url)
-            
-            # TODO: REMOVE ME
-            print("remote_fetch_metadata content", response)
         except requests.exceptions.ConnectionError as e:
             raise RemoteInitiatedServerError(str(e), self.__class__.__name__)
         
@@ -626,9 +614,6 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
         
         try:
             content = response.json()
-            
-            # TODO: REMOVE ME
-            print("remote_fetch_metadata content", content)
         except requests.exceptions.JSONDecodeError as e:
             raise RemoteInitiatedServerError(str(e), self.__class__.__name__)
             
@@ -652,9 +637,6 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
         
         try:
             response = requests.post(url, headers=headers)
-            
-            # TODO: REMOVE ME
-            print("remote_refresh_token content", response, response.content)
         except requests.exceptions.ConnectionError as e:
             raise RemoteInitiatedServerError(str(e), self.__class__.__name__)
         
@@ -662,7 +644,6 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
             # Do nothing if authentication fails, e.g. token expired.
             return None, None
         elif response.status_code != 200:
-            # TODO Log as warnign or similar.
             msg = "Got unexpected response code %d. Content: %s" % (
                 response.status_code,
                 response.content,
@@ -671,9 +652,6 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
         else:
             try:
                 content = response.json()
-                
-                # TODO: REMOVE ME
-                print("remote_refresh_token content", content)
             except requests.exceptions.JSONDecodeError as e:
                 raise RemoteInitiatedServerError(str(e), self.__class__.__name__)
             
@@ -712,11 +690,6 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
         
         try:
             response = requests.get(url, headers=headers)
-            
-            # TODO: REMOVE ME
-            print("remote_patron_lookup content", response, response.content)
-            print("remote_patron_lookup response.request.headers", response.request.headers)
-            print("remote_patron_lookup response.headers", response.headers)
         except requests.exceptions.ConnectionError as e:
             raise RemoteInitiatedServerError(str(e), self.__class__.__name__)
         
@@ -724,7 +697,6 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
             # Do nothing if authentication fails, e.g. token expired.
             return INVALID_EKIRJASTO_TOKEN
         elif response.status_code != 200:
-            # TODO: log warning or something.
             msg = "Got unexpected response code %d. Content: %s" % (
                 response.status_code,
                 response.content,
@@ -733,9 +705,6 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
         else:
             try:
                 content = response.json()
-                
-                # TODO: REMOVE ME
-                print("remote_patron_lookup content", content)
             except requests.exceptions.JSONDecodeError as e:
                 raise RemoteInitiatedServerError(str(e), self.__class__.__name__)
             
