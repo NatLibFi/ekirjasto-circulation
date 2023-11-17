@@ -250,6 +250,7 @@ UNKNOWN_SAML_PROVIDER = pd(
     detail=_("The specified SAML provider name isn't one of the known providers."),
 )
 
+# Finland
 EKIRJASTO_PROVIDER_NOT_CONFIGURED = pd(
     "http://librarysimplified.org/terms/problem/requested-provider-not-configured",
     status_code=400,
@@ -264,6 +265,7 @@ INVALID_SAML_BEARER_TOKEN = pd(
     detail=_("The provided SAML bearer token couldn't be verified."),
 )
 
+# Finland
 INVALID_EKIRJASTO_DELEGATE_TOKEN = pd(
     "http://librarysimplified.org/terms/problem/credentials-invalid",
     status_code=401,
@@ -271,6 +273,7 @@ INVALID_EKIRJASTO_DELEGATE_TOKEN = pd(
     detail=_("The provided delegate token couldn't be verified for ekirjasto authentication provider or it is expired."),
 )
 
+# Finland
 INVALID_EKIRJASTO_TOKEN = pd(
     "http://librarysimplified.org/terms/problem/credentials-invalid",
     status_code=401,
@@ -278,6 +281,7 @@ INVALID_EKIRJASTO_TOKEN = pd(
     detail=_("The provided ekirjasto token couldn't be verified for ekirjasto API."),
 )
 
+# Finland
 EKIRJASTO_REMOTE_AUTHENTICATION_FAILED = pd(
     "http://librarysimplified.org/terms/problem/credentials-invalid",
     status_code=400,
