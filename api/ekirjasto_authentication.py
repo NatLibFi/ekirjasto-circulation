@@ -11,7 +11,7 @@ from abc import ABC
 from base64 import b64decode, b64encode
 from cryptography.fernet import Fernet
 from enum import Enum
-from flask import url_for, Response
+from flask import url_for
 from flask_babel import lazy_gettext as _
 from typing import Any
 
@@ -45,131 +45,10 @@ from core.util.log import elapsed_time_logging
 from core.util.problem_detail import ProblemDetail
 from .problem_details import (
     UNSUPPORTED_AUTHENTICATION_MECHANISM,
-    EKIRJASTO_PROVIDER_NOT_CONFIGURED,
     EKIRJASTO_REMOTE_AUTHENTICATION_FAILED,
     INVALID_EKIRJASTO_TOKEN,
     INVALID_EKIRJASTO_DELEGATE_TOKEN
 )
-
-class EkirjastoController():
-    """Controller used for handing Ekirjasto authentication requests"""
-
-    def __init__(self, circulation_manager, authenticator):
-        """Initializes a new instance of EkirjastoController class
-
-        :param circulation_manager: Circulation Manager
-        :type circulation_manager: CirculationManager
-
-        :param authenticator: Authenticator object used to route requests to the appropriate LibraryAuthenticator
-        :type authenticator: Authenticator
-        """
-        self._circulation_manager = circulation_manager
-        self._authenticator = authenticator
-
-        self._logger = logging.getLogger(__name__)
-
-    def _get_delegate_expire_timestamp(self, ekirjasto_token_expires: int) -> int:
-        """ Get the expire time to use for delegate token, it is calculated based on 
-        expire time of the ekirjasto token.
-        
-        :param ekirjasto_token_expires: Ekirjasto token expiration timestamp in seconds.
-        
-        :return: Timestamp for the delegate token expiration.
-        """
-        
-        delegate_token_expires = (
-            utc_now() + datetime.timedelta(
-                seconds=self._authenticator.ekirjasto_provider.delegate_expire_timemestamp
-            )
-        ).timestamp()
-        
-        # Use ekirjasto expire time at 70 % of the remaining duration, so we have some time to refresh it.
-        now_seconds = utc_now().timestamp()
-        ekirjasto_token_expires = (ekirjasto_token_expires - now_seconds) * 0.7 + now_seconds
-        
-        if ekirjasto_token_expires < delegate_token_expires:
-            return int(ekirjasto_token_expires)
-        
-        return int(delegate_token_expires)
-    
-    def authenticate(self, request, _db):
-        """ Authenticate patron with ekirjasto API and return delegate token for 
-        circulation manager API access.
-        
-        New Patron is created to database if ekirjasto authentication was succesfull 
-        and no patron for it was found. Token for ekirjasto API is stored for later usage.
-        """
-        
-        if self._authenticator.ekirjasto_provider:
-            ekirjasto_provider = self._authenticator.ekirjasto_provider
-            
-            token = request.authorization.token
-            if token is None or len(token) == 0:
-                return EKIRJASTO_REMOTE_AUTHENTICATION_FAILED
-            
-            ekirjasto_token = None
-            delegate_token = None
-            delegate_expired = True
-            try:
-                # We won't to attempt to refresh ekirjasto token in any case, so we don't validate 
-                # delegate token expiration and we need the decrypted ekrijasto token.
-                delegate_payload = ekirjasto_provider.validate_ekirjasto_delegate_token(
-                    token,
-                    validate_expire=False,
-                    decrypt_ekirjasto_token=True
-                )
-                if isinstance(delegate_payload, ProblemDetail):
-                    # The ekirjasto_token might be ProblemDetail, indicating that the token 
-                    # is not valid. Still it might be ekirjasto_token (which is not JWT or 
-                    # at least not signed by us), so we can continue.
-                    ekirjasto_token = token
-                else:
-                    # Successful validation of a delegate token for circulation manager.
-                    ekirjasto_token = delegate_payload["token"]
-                    delegate_expired = from_timestamp(delegate_payload["exp"]) < utc_now()
-                    delegate_token = token
-            except jwt.exceptions.DecodeError as e:
-                # It might be just an ekirjasto_token, it will be used to authenticate 
-                # with the remote ekirjasto API. We don't do anything further validation
-                # for it as it is valdiated with successful authentication.
-                ekirjasto_token = token
-                pass
-            
-            patron, is_new = ekirjasto_provider.ekirjasto_authenticate(_db, ekirjasto_token)
-            if not isinstance(patron, Patron):
-                # Authentication was failed.
-                if patron == None:
-                    return EKIRJASTO_REMOTE_AUTHENTICATION_FAILED
-                # Return ProblemDetail
-                return patron
-            
-            ekirjasto_token_expires = None
-            if delegate_expired:
-                ekirjasto_token, ekirjasto_token_expires = ekirjasto_provider.remote_refresh_token(ekirjasto_token)
-                
-                if isinstance(ekirjasto_token, ProblemDetail):
-                    return ekirjasto_token
-                if ekirjasto_token == None or ekirjasto_token_expires == None:
-                    return ekirjasto_token
-            
-            if ekirjasto_token_expires != None:
-                # Create a delegate token which we can give to the patron.
-                delegate_expires = self._get_delegate_expire_timestamp(ekirjasto_token_expires)
-                delegate_token = ekirjasto_provider.create_ekirjasto_delegate_token(
-                    ekirjasto_token,
-                    ekirjasto_provider.get_patron_delegate_id(_db, patron),
-                    delegate_expires
-                )
-
-            patrondata = ekirjasto_provider.remote_patron_lookup(ekirjasto_token)
-            patron_info = None
-            if patrondata:
-                patron_info = json.dumps(patrondata.to_dict)
-            response_json = json.dumps({"access_token": delegate_token, "patron_info": patron_info})
-            response_code = 201 if is_new else 200
-            return Response(response_json, response_code, mimetype='application/json')
-            
-        return EKIRJASTO_PROVIDER_NOT_CONFIGURED
 
 class EkirjastoEnvironment(Enum):
     FAKE = "http://localhost"
@@ -642,13 +521,13 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
         
         if response.status_code == 401:
             # Do nothing if authentication fails, e.g. token expired.
-            return None, None
+            return INVALID_EKIRJASTO_TOKEN, None
         elif response.status_code != 200:
             msg = "Got unexpected response code %d. Content: %s" % (
                 response.status_code,
                 response.content,
             )
-            return None, None
+            return EKIRJASTO_REMOTE_AUTHENTICATION_FAILED, None
         else:
             try:
                 content = response.json()
@@ -701,7 +580,7 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
                 response.status_code,
                 response.content,
             )
-            return None
+            return EKIRJASTO_REMOTE_AUTHENTICATION_FAILED
         else:
             try:
                 content = response.json()
@@ -710,7 +589,7 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
             
             return self._userinfo_to_patrondata(content)
         
-        return None
+        return EKIRJASTO_REMOTE_AUTHENTICATION_FAILED
 
     def remote_authenticate(
         self, ekirjasto_token: str | None

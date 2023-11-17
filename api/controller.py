@@ -97,7 +97,7 @@ from .circulation import CirculationAPI
 from .circulation_exceptions import *
 from .config import CannotLoadConfiguration, Configuration
 from .custom_index import CustomIndexView
-from .ekirjasto_authentication import EkirjastoController
+from .ekirjasto_controller import EkirjastoController # Finland
 from .lanes import (
     ContributorFacets,
     ContributorLane,
@@ -527,6 +527,7 @@ class CirculationManager:
         configuration changes.
         """
         self.saml_controller = SAMLController(self, self.auth)
+        # Finland
         self.ekirjasto_controller = EkirjastoController(self, self.auth)
 
     @log_elapsed_time(log_method=log.debug, message_prefix="setup_adobe_vendor_id")

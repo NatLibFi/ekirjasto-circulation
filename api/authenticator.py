@@ -17,7 +17,7 @@ from api.adobe_vendor_id import AuthdataUtility
 from api.annotations import AnnotationWriter
 from api.announcements import Announcements
 from api.custom_patron_catalog import CustomPatronCatalog
-from api.ekirjasto_authentication import EkirjastoAuthenticationAPI
+from api.ekirjasto_authentication import EkirjastoAuthenticationAPI # Finland
 from api.opds import LibraryAnnotator
 from core.analytics import Analytics
 from core.integration.goals import Goals
@@ -153,6 +153,7 @@ class Authenticator:
     def decode_bearer_token(self, *args, **kwargs):
         return self.invoke_authenticator_method("decode_bearer_token", *args, **kwargs)
 
+    # Finland
     @property
     def ekirjasto_provider(self) -> EkirjastoAuthenticationAPI:
         return self.invoke_authenticator_method("get_ekirjasto_provider")
@@ -232,7 +233,7 @@ class LibraryAuthenticator:
         library: Library,
         basic_auth_provider: Optional[BasicAuthenticationProvider] = None,
         saml_providers: Optional[List[BaseSAMLAuthenticationProvider]] = None,
-        ekirjasto_provider: Optional[EkirjastoAuthenticationAPI] = None,
+        ekirjasto_provider: Optional[EkirjastoAuthenticationAPI] = None, # Finland
         bearer_token_signing_secret: Optional[str] = None,
         authentication_document_annotator: Optional[CustomPatronCatalog] = None,
         integration_registry: Optional[
@@ -271,7 +272,7 @@ class LibraryAuthenticator:
 
         self.basic_auth_provider = basic_auth_provider
         self.saml_providers_by_name = {}
-        self.ekirjasto_provider = ekirjasto_provider
+        self.ekirjasto_provider = ekirjasto_provider # Finland
         self.bearer_token_signing_secret = bearer_token_signing_secret
         self.initialization_exceptions: Dict[
             Tuple[int | None, int | None], Exception
@@ -294,7 +295,10 @@ class LibraryAuthenticator:
     @property
     def supports_patron_authentication(self) -> bool:
         """Does this library have any way of authenticating patrons at all?"""
-        if self.basic_auth_provider or self.saml_providers_by_name or self.ekirjasto_provider:
+        if self.basic_auth_provider or self.saml_providers_by_name:
+            return True
+        # Finland
+        if self.ekirjasto_provider:
             return True
         return False
 
@@ -399,7 +403,7 @@ class LibraryAuthenticator:
             # the ability to run one.
         elif isinstance(provider, BaseSAMLAuthenticationProvider):
             self.register_saml_provider(provider)
-        elif isinstance(provider, EkirjastoAuthenticationAPI):
+        elif isinstance(provider, EkirjastoAuthenticationAPI): # Finland
             self.register_ekirjasto_provider(provider)
         else:
             raise CannotLoadConfiguration(
@@ -429,6 +433,7 @@ class LibraryAuthenticator:
             )
         self.saml_providers_by_name[provider.label()] = provider
 
+    # Finland
     def register_ekirjasto_provider(
         self,
         provider: EkirjastoAuthenticationAPI,
@@ -440,6 +445,7 @@ class LibraryAuthenticator:
             raise CannotLoadConfiguration("Two ekirjasto auth providers configured")
         self.ekirjasto_provider = provider
 
+    # Finland
     def get_ekirjasto_provider(self) -> EkirjastoAuthenticationAPI:
         return self.ekirjasto_provider
 
@@ -448,7 +454,7 @@ class LibraryAuthenticator:
         """An iterator over all registered AuthenticationProviders."""
         if self.basic_auth_provider:
             yield self.basic_auth_provider
-        if self.ekirjasto_provider:
+        if self.ekirjasto_provider: # Finland
             yield self.ekirjasto_provider
         yield from self.saml_providers_by_name.values()
 

@@ -761,6 +761,7 @@ def saml_callback():
         request, app.manager._db
     )
 
+# Finland
 # Authenticate with the ekirjasto token.
 @library_route("/ekirjasto_authenticate", methods=["POST"])
 @has_library
