@@ -97,7 +97,7 @@ from .circulation import CirculationAPI
 from .circulation_exceptions import *
 from .config import CannotLoadConfiguration, Configuration
 from .custom_index import CustomIndexView
-from .ekirjasto_authentication import EkirjastoController
+from .ekirjasto_controller import EkirjastoController
 from .lanes import (
     ContributorFacets,
     ContributorLane,
