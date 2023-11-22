@@ -2,16 +2,16 @@
 ## lcpencrypt
 ###############################################################################
 
-FROM golang:1.17 AS builder
+#FROM golang:1.17 AS builder
 
-ENV TZ=Europe/Helsinki
+#ENV TZ=Europe/Helsinki
 
-LABEL maintainer="The Palace Project <info@thepalaceproject.org>"
+#LABEL maintainer="The Palace Project <info@thepalaceproject.org>"
 
-RUN go get -v github.com/readium/readium-lcp-server/lcpencrypt && \
-    echo Europe/Helsinki >/etc/timezone && \
-    ln -sf /usr/share/zoneinfo/Europe/Helsinki /etc/localtime && \
-    dpkg-reconfigure -f noninteractive tzdata
+#RUN go get -v github.com/readium/readium-lcp-server/lcpencrypt && \
+#    echo Europe/Helsinki >/etc/timezone && \
+#    ln -sf /usr/share/zoneinfo/Europe/Helsinki /etc/localtime && \
+#    dpkg-reconfigure -f noninteractive tzdata
 
 ###############################################################################
 ## Base Image
@@ -21,7 +21,7 @@ FROM phusion/baseimage:focal-1.1.0 As base
 
 ENV TZ=Europe/Helsinki
 
-COPY --from=builder /go/bin/lcpencrypt /go/bin/lcpencrypt
+#COPY --from=builder /go/bin/lcpencrypt /go/bin/lcpencrypt
 
 # Copy over all Palace build files for this image
 COPY ./docker /ls_build
