@@ -106,8 +106,6 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
             library_id, integration_id, settings, library_settings, analytics
         )
 
-        self.log = logging.getLogger(f"{self.__module__}.{self.__class__.__name__}")
-
         self.ekirjasto_environment = settings.ekirjasto_environment
         self.delegate_expire_timemestamp = settings.delegate_expire_time
 
