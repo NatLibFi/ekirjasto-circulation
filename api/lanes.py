@@ -2,6 +2,8 @@ import logging
 from typing import Optional
 
 import core.classifier as genres
+from api.config import CannotLoadConfiguration, Configuration
+from api.novelist import NoveListAPI
 from core import classifier
 from core.classifier import Classifier, GenreData, fiction_genres, nonfiction_genres
 from core.lane import (
@@ -12,7 +14,6 @@ from core.lane import (
     WorkList,
 )
 from core.model import (
-    CachedFeed,
     Contributor,
     DataSource,
     Edition,
@@ -23,9 +24,6 @@ from core.model import (
     get_one,
 )
 from core.util import LanguageCodes
-
-from .config import CannotLoadConfiguration, Configuration
-from .novelist import NoveListAPI
 
 
 def load_lanes(_db, library):
@@ -1038,7 +1036,6 @@ class RecommendationLane(WorkBasedLane):
     # Cache for 24 hours -- would ideally be much longer but availability
     # information goes stale.
     MAX_CACHE_AGE = 24 * 60 * 60
-    CACHED_FEED_TYPE = CachedFeed.RECOMMENDATIONS_TYPE
 
     def __init__(
         self, library, work, display_name=None, novelist_api=None, parent=None
@@ -1125,7 +1122,6 @@ class SeriesLane(DynamicLane):
     # Cache for 24 hours -- would ideally be longer but availability
     # information goes stale.
     MAX_CACHE_AGE = 24 * 60 * 60
-    CACHED_FEED_TYPE = CachedFeed.SERIES_TYPE
 
     def __init__(self, library, series_name, parent=None, **kwargs):
         if not series_name:
@@ -1186,7 +1182,6 @@ class ContributorLane(DynamicLane):
     # Cache for 24 hours -- would ideally be longer but availability
     # information goes stale.
     MAX_CACHE_AGE = 24 * 60 * 60
-    CACHED_FEED_TYPE = CachedFeed.CONTRIBUTOR_TYPE
 
     def __init__(
         self, library, contributor, parent=None, languages=None, audiences=None
@@ -1251,7 +1246,6 @@ class RelatedBooksLane(WorkBasedLane):
       service.
     """
 
-    CACHED_FEED_TYPE = CachedFeed.RELATED_TYPE
     DISPLAY_NAME = "Related Books"
     ROUTE = "related_books"
 
@@ -1355,14 +1349,14 @@ class RelatedBooksLane(WorkBasedLane):
 class CrawlableFacets(Facets):
     """A special Facets class for crawlable feeds."""
 
-    CACHED_FEED_TYPE = CachedFeed.CRAWLABLE_TYPE
-
     # These facet settings are definitive of a crawlable feed.
     # Library configuration settings don't matter.
     SETTINGS = {
         Facets.ORDER_FACET_GROUP_NAME: Facets.ORDER_LAST_UPDATE,
         Facets.AVAILABILITY_FACET_GROUP_NAME: Facets.AVAILABLE_ALL,
         Facets.COLLECTION_FACET_GROUP_NAME: Facets.COLLECTION_FULL,
+        Facets.DISTRIBUTOR_FACETS_GROUP_NAME: Facets.DISTRIBUTOR_ALL,
+        Facets.COLLECTION_NAME_FACETS_GROUP_NAME: Facets.COLLECTION_NAME_ALL,
     }
 
     @classmethod
@@ -1375,13 +1369,11 @@ class CrawlableFacets(Facets):
 
 
 class CrawlableLane(DynamicLane):
-
     # By default, crawlable feeds are cached for 12 hours.
     MAX_CACHE_AGE = 12 * 60 * 60
 
 
 class CrawlableCollectionBasedLane(CrawlableLane):
-
     # Since these collections may be shared collections, for which
     # recent information is very important, these feeds are only
     # cached for 2 hours.
@@ -1391,7 +1383,6 @@ class CrawlableCollectionBasedLane(CrawlableLane):
     COLLECTION_ROUTE = "crawlable_collection_feed"
 
     def initialize(self, library_or_collections):
-
         self.collection_feed = False
 
         if isinstance(library_or_collections, Library):

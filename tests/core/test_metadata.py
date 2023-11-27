@@ -5,15 +5,13 @@ from copy import deepcopy
 
 import pytest
 
-from core.analytics import Analytics
-from core.classifier import NO_NUMBER, NO_VALUE, Classifier
+from core.classifier import NO_NUMBER, NO_VALUE
 from core.metadata_layer import (
     CirculationData,
     ContributorData,
     CSVMetadataImporter,
     IdentifierData,
     LinkData,
-    MARCExtractor,
     MeasurementData,
     Metadata,
     ReplacementPolicy,
@@ -35,14 +33,10 @@ from core.model import (
     Work,
     WorkCoverageRecord,
 )
-from core.model.configuration import ExternalIntegrationLink
-from core.s3 import MockS3Uploader
-from core.util.datetime_helpers import datetime_utc, strptime_utc, utc_now
-from tests.core.mock import DummyHTTPClient, LogCaptureHandler
+from core.util.datetime_helpers import datetime_utc, utc_now
+from tests.core.mock import LogCaptureHandler
 from tests.fixtures.csv_files import CSVFilesFixture
 from tests.fixtures.database import DatabaseTransactionFixture
-from tests.fixtures.marc_files import MARCFilesFixture
-from tests.fixtures.sample_covers import SampleCoversFixture
 
 
 class TestIdentifierData:
@@ -259,12 +253,12 @@ class TestMetadataImporter:
             links=[image, not_a_thumbnail], data_source=edition.data_source
         )
         metadata.apply(edition, None)
-        [image, description] = sorted(
+        [hyperlink_image, description] = sorted(
             edition.primary_identifier.links, key=lambda x: x.rel
         )
         assert Hyperlink.DESCRIPTION == description.rel
         assert b"A great book" == description.resource.representation.content
-        assert [] == image.resource.representation.thumbnails
+        assert [] == hyperlink_image.resource.representation.thumbnails
         assert None == description.resource.representation.thumbnail_of
 
     def test_image_and_thumbnail_are_the_same(self, db: DatabaseTransactionFixture):
@@ -338,512 +332,6 @@ class TestMetadataImporter:
         # _the same image_ at different resolutions.
         assert "http://largeimage.com/" == edition.cover_full_url
         assert None == edition.cover_thumbnail_url
-
-    def test_image_scale_and_mirror(
-        self,
-        db,
-        sample_covers_fixture: SampleCoversFixture,
-    ):
-        # Make sure that open access material links are translated to our S3 buckets, and that
-        # commercial material links are left as is.
-        # Note: mirroring links is now also CirculationData's job.  So the unit tests
-        # that test for that have been changed to call to mirror cover images.
-        # However, updated tests passing does not guarantee that all code now
-        # correctly calls on CirculationData, too.  This is a risk.
-
-        mirrors = dict(covers_mirror=MockS3Uploader(), books_mirror=None)
-        edition, pool = db.edition(with_license_pool=True)
-        content = open(
-            sample_covers_fixture.sample_cover_path("test-book-cover.png"), "rb"
-        ).read()
-        l1 = LinkData(
-            rel=Hyperlink.IMAGE,
-            href="http://example.com/",
-            media_type=Representation.JPEG_MEDIA_TYPE,
-            content=content,
-        )
-        l2 = LinkData(
-            rel=Hyperlink.THUMBNAIL_IMAGE,
-            href="http://example.com/thumb.jpg",
-            media_type=Representation.JPEG_MEDIA_TYPE,
-            content=content,
-        )
-
-        # When we call metadata.apply, all image links will be scaled and
-        # 'mirrored'.
-        policy = ReplacementPolicy(mirrors=mirrors)
-        metadata = Metadata(links=[l1, l2], data_source=edition.data_source)
-        metadata.apply(edition, pool.collection, replace=policy)
-
-        # Two Representations were 'mirrored'.
-        image, thumbnail = mirrors[ExternalIntegrationLink.COVERS].uploaded
-
-        # The image...
-        [image_link] = image.resource.links
-        assert Hyperlink.IMAGE == image_link.rel
-
-        # And its thumbnail.
-        assert image == thumbnail.thumbnail_of
-
-        # The original image is too big to be a thumbnail.
-        assert 600 == image.image_height
-        assert 400 == image.image_width
-
-        # The thumbnail is the right height.
-        assert Edition.MAX_THUMBNAIL_HEIGHT == thumbnail.image_height
-        assert Edition.MAX_THUMBNAIL_WIDTH == thumbnail.image_width
-
-        # The thumbnail is newly generated from the full-size
-        # image--the thumbnail that came in from the OPDS feed was
-        # ignored.
-        assert thumbnail.url != l2.href
-        assert thumbnail.content != l2.content
-
-        # Both images have been 'mirrored' to Amazon S3.
-        assert image.mirror_url.startswith(
-            "https://test-cover-bucket.s3.amazonaws.com/"
-        )
-        assert image.mirror_url.endswith("cover.jpg")
-
-        # The thumbnail image has been converted to PNG.
-        assert thumbnail.mirror_url.startswith(
-            "https://test-cover-bucket.s3.amazonaws.com/scaled/300/"
-        )
-        assert thumbnail.mirror_url.endswith("cover.png")
-
-    def test_mirror_thumbnail_only(
-        self,
-        db,
-        sample_covers_fixture: SampleCoversFixture,
-    ):
-        # Make sure a thumbnail image is mirrored when there's no cover image.
-        mirrors = dict(covers_mirror=MockS3Uploader())
-        mirror_type = ExternalIntegrationLink.COVERS
-        edition, pool = db.edition(with_license_pool=True)
-        thumbnail_content = open(
-            sample_covers_fixture.sample_cover_path("tiny-image-cover.png"), "rb"
-        ).read()
-        l = LinkData(
-            rel=Hyperlink.THUMBNAIL_IMAGE,
-            href="http://example.com/thumb.png",
-            media_type=Representation.PNG_MEDIA_TYPE,
-            content=thumbnail_content,
-        )
-
-        policy = ReplacementPolicy(mirrors=mirrors)
-        metadata = Metadata(links=[l], data_source=edition.data_source)
-        metadata.apply(edition, pool.collection, replace=policy)
-
-        # One Representation was 'mirrored'.
-        [thumbnail] = mirrors[mirror_type].uploaded
-
-        # The image has been 'mirrored' to Amazon S3.
-        assert thumbnail.mirror_url.startswith(
-            "https://test-cover-bucket.s3.amazonaws.com/"
-        )
-        assert thumbnail.mirror_url.endswith("thumb.png")
-
-    def test_mirror_open_access_link_fetch_failure(
-        self, db: DatabaseTransactionFixture
-    ):
-        edition, pool = db.edition(with_license_pool=True)
-
-        data_source = DataSource.lookup(db.session, DataSource.GUTENBERG)
-        m = Metadata(data_source=data_source)
-
-        mirrors = dict(covers_mirror=MockS3Uploader())
-        h = DummyHTTPClient()
-
-        policy = ReplacementPolicy(mirrors=mirrors, http_get=h.do_get)
-
-        link = LinkData(
-            rel=Hyperlink.IMAGE,
-            media_type=Representation.JPEG_MEDIA_TYPE,
-            href="http://example.com/",
-        )
-
-        link_obj, ignore = edition.primary_identifier.add_link(
-            rel=link.rel,
-            href=link.href,
-            data_source=data_source,
-            media_type=link.media_type,
-            content=link.content,
-        )
-        h.queue_response(403)
-
-        m.mirror_link(edition, data_source, link, link_obj, policy)
-
-        representation = link_obj.resource.representation
-
-        # Fetch failed, so we should have a fetch exception but no mirror url.
-        assert representation.fetch_exception != None
-        assert None == representation.mirror_exception
-        assert None == representation.mirror_url
-        assert link.href == representation.url
-        assert representation.fetched_at != None
-        assert None == representation.mirrored_at
-
-        # the edition's identifier-associated license pool should not be
-        # suppressed just because fetch failed on getting image.
-        assert False == pool.suppressed
-
-        # the license pool only gets its license_exception column filled in
-        # if fetch failed on getting an Hyperlink.OPEN_ACCESS_DOWNLOAD-type epub.
-        assert None == pool.license_exception
-
-    def test_mirror_404_error(self, db: DatabaseTransactionFixture):
-        mirrors = dict(covers_mirror=MockS3Uploader(), books_mirror=None)
-        mirror_type = ExternalIntegrationLink.COVERS
-        h = DummyHTTPClient()
-        h.queue_response(404)
-        policy = ReplacementPolicy(mirrors=mirrors, http_get=h.do_get)
-
-        edition, pool = db.edition(with_license_pool=True)
-
-        data_source = DataSource.lookup(db.session, DataSource.GUTENBERG)
-
-        link = LinkData(
-            rel=Hyperlink.IMAGE,
-            media_type=Representation.JPEG_MEDIA_TYPE,
-            href="http://example.com/",
-        )
-
-        link_obj, ignore = edition.primary_identifier.add_link(
-            rel=link.rel,
-            href=link.href,
-            data_source=data_source,
-            media_type=link.media_type,
-            content=link.content,
-        )
-
-        m = Metadata(data_source=data_source)
-
-        m.mirror_link(edition, data_source, link, link_obj, policy)
-
-        # Since we got a 404 error, the cover image was not mirrored.
-        assert 404 == link_obj.resource.representation.status_code
-        assert None == link_obj.resource.representation.mirror_url
-        assert [] == mirrors[mirror_type].uploaded
-
-    def test_mirror_open_access_link_mirror_failure(
-        self,
-        db,
-        sample_covers_fixture: SampleCoversFixture,
-    ):
-        edition, pool = db.edition(with_license_pool=True)
-
-        data_source = DataSource.lookup(db.session, DataSource.GUTENBERG)
-        m = Metadata(data_source=data_source)
-
-        mirrors = dict(covers_mirror=MockS3Uploader(fail=True))
-        h = DummyHTTPClient()
-
-        policy = ReplacementPolicy(mirrors=mirrors, http_get=h.do_get)
-
-        content = open(
-            sample_covers_fixture.sample_cover_path("test-book-cover.png"), "rb"
-        ).read()
-        link = LinkData(
-            rel=Hyperlink.IMAGE,
-            media_type=Representation.JPEG_MEDIA_TYPE,
-            href="http://example.com/",
-            content=content,
-        )
-
-        link_obj, ignore = edition.primary_identifier.add_link(
-            rel=link.rel,
-            href=link.href,
-            data_source=data_source,
-            media_type=link.media_type,
-            content=link.content,
-        )
-
-        h.queue_response(200, media_type=Representation.JPEG_MEDIA_TYPE)
-
-        m.mirror_link(edition, data_source, link, link_obj, policy)
-
-        representation = link_obj.resource.representation
-
-        # The representation was fetched successfully.
-        assert None == representation.fetch_exception
-        assert representation.fetched_at != None
-
-        # But mirroring failed.
-        assert representation.mirror_exception != None
-        assert None == representation.mirrored_at
-        assert link.media_type == representation.media_type
-        assert link.href == representation.url
-
-        # The mirror url is not set.
-        assert None == representation.mirror_url
-
-        # Book content is still there since it wasn't mirrored.
-        assert representation.content != None
-
-        # the edition's identifier-associated license pool should not be
-        # suppressed just because fetch failed on getting image.
-        assert False == pool.suppressed
-
-        # the license pool only gets its license_exception column filled in
-        # if fetch failed on getting an Hyperlink.OPEN_ACCESS_DOWNLOAD-type epub.
-        assert None == pool.license_exception
-
-    def test_mirror_link_bad_media_type(
-        self,
-        db,
-        sample_covers_fixture: SampleCoversFixture,
-    ):
-        edition, pool = db.edition(with_license_pool=True)
-
-        data_source = DataSource.lookup(db.session, DataSource.GUTENBERG)
-        m = Metadata(data_source=data_source)
-
-        mirrors = dict(covers_mirror=MockS3Uploader())
-        h = DummyHTTPClient()
-
-        policy = ReplacementPolicy(mirrors=mirrors, http_get=h.do_get)
-
-        content = open(
-            sample_covers_fixture.sample_cover_path("test-book-cover.png"), "rb"
-        ).read()
-
-        # We thought this link was for an image file.
-        link = LinkData(
-            rel=Hyperlink.IMAGE,
-            media_type=Representation.JPEG_MEDIA_TYPE,
-            href="http://example.com/",
-            content=content,
-        )
-        link_obj, ignore = edition.primary_identifier.add_link(
-            rel=link.rel,
-            href=link.href,
-            data_source=data_source,
-        )
-
-        # The remote server told us a generic media type.
-        h.queue_response(
-            200, media_type=Representation.OCTET_STREAM_MEDIA_TYPE, content=content
-        )
-
-        m.mirror_link(edition, data_source, link, link_obj, policy)
-        representation = link_obj.resource.representation
-
-        # The representation was fetched and mirrored successfully.
-        # We assumed the original image media type was correct.
-        assert None == representation.fetch_exception
-        assert representation.fetched_at != None
-        assert None == representation.mirror_exception
-        assert representation.mirrored_at != None
-        assert Representation.JPEG_MEDIA_TYPE == representation.media_type
-        assert link.href == representation.url
-        assert "Gutenberg" in representation.mirror_url
-        assert representation.mirror_url.endswith(
-            "%s/cover.jpg" % edition.primary_identifier.identifier
-        )
-
-        # We don't know the media type for this link, but it has a file extension.
-        link = LinkData(
-            rel=Hyperlink.IMAGE, href="http://example.com/image.png", content=content
-        )
-        link_obj, ignore = edition.primary_identifier.add_link(
-            rel=link.rel,
-            href=link.href,
-            data_source=data_source,
-        )
-        h.queue_response(
-            200, media_type=Representation.OCTET_STREAM_MEDIA_TYPE, content=content
-        )
-        m.mirror_link(edition, data_source, link, link_obj, policy)
-        representation = link_obj.resource.representation
-
-        # The representation is still fetched and mirrored successfully.
-        # We used the media type from the file extension.
-        assert None == representation.fetch_exception
-        assert representation.fetched_at != None
-        assert None == representation.mirror_exception
-        assert representation.mirrored_at != None
-        assert Representation.PNG_MEDIA_TYPE == representation.media_type
-        assert link.href == representation.url
-        assert "Gutenberg" in representation.mirror_url
-        assert representation.mirror_url.endswith(
-            "%s/image.png" % edition.primary_identifier.identifier
-        )
-
-        # We don't know the media type of this link, and there's no extension.
-        link = LinkData(
-            rel=Hyperlink.IMAGE, href="http://example.com/unknown", content=content
-        )
-        link_obj, ignore = edition.primary_identifier.add_link(
-            rel=link.rel,
-            href=link.href,
-            data_source=data_source,
-        )
-        h.queue_response(
-            200, media_type=Representation.OCTET_STREAM_MEDIA_TYPE, content=content
-        )
-        m.mirror_link(edition, data_source, link, link_obj, policy)
-        representation = link_obj.resource.representation
-
-        # The representation is fetched, but we don't try to mirror it
-        # since it doesn't have a mirrorable media type.
-        assert None == representation.fetch_exception
-        assert representation.fetched_at != None
-        assert None == representation.mirror_exception
-        assert None == representation.mirrored_at
-        assert Representation.OCTET_STREAM_MEDIA_TYPE == representation.media_type
-        assert link.href == representation.url
-        assert None == representation.mirror_url
-
-    def test_non_open_access_book_not_mirrored(self, db: DatabaseTransactionFixture):
-        data_source = DataSource.lookup(db.session, DataSource.GUTENBERG)
-        m = Metadata(data_source=data_source)
-
-        mirrors = dict(covers_mirror=MockS3Uploader(fail=True))
-        mirror_type = ExternalIntegrationLink.COVERS
-        h = DummyHTTPClient()
-
-        policy = ReplacementPolicy(mirrors=mirrors, http_get=h.do_get)
-
-        content = "foo"
-        link = LinkData(
-            rel=Hyperlink.OPEN_ACCESS_DOWNLOAD,
-            media_type=Representation.EPUB_MEDIA_TYPE,
-            href="http://example.com/",
-            content=content,
-            rights_uri=RightsStatus.IN_COPYRIGHT,
-        )
-
-        identifier = db.identifier()
-        link_obj, is_new = identifier.add_link(
-            rel=link.rel,
-            href=link.href,
-            data_source=data_source,
-            media_type=link.media_type,
-            content=link.content,
-        )
-
-        # The Hyperlink object makes it look like an open-access book,
-        # but the context we have from the OPDS feed says that it's
-        # not.
-        m.mirror_link(None, data_source, link, link_obj, policy)
-
-        # No HTTP requests were made.
-        assert [] == h.requests
-
-        # Nothing was uploaded.
-        assert [] == mirrors[mirror_type].uploaded
-
-    def test_mirror_with_content_modifier(self, db: DatabaseTransactionFixture):
-        edition, pool = db.edition(with_license_pool=True)
-
-        data_source = DataSource.lookup(db.session, DataSource.GUTENBERG)
-        m = Metadata(data_source=data_source)
-
-        mirrors = dict(books_mirror=MockS3Uploader())
-        mirror_type = ExternalIntegrationLink.OPEN_ACCESS_BOOKS
-
-        def dummy_content_modifier(representation):
-            representation.content = b"Replaced Content"
-
-        h = DummyHTTPClient()
-
-        policy = ReplacementPolicy(
-            mirrors=mirrors, content_modifier=dummy_content_modifier, http_get=h.do_get
-        )
-
-        link = LinkData(
-            rel=Hyperlink.OPEN_ACCESS_DOWNLOAD,
-            media_type=Representation.EPUB_MEDIA_TYPE,
-            href="http://example.com/test.epub",
-            content="I'm an epub",
-        )
-
-        link_obj, ignore = edition.primary_identifier.add_link(
-            rel=link.rel,
-            href=link.href,
-            data_source=data_source,
-            media_type=link.media_type,
-            content=link.content,
-        )
-
-        h.queue_response(200, media_type=Representation.EPUB_MEDIA_TYPE)
-
-        m.mirror_link(edition, data_source, link, link_obj, policy)
-
-        representation = link_obj.resource.representation
-
-        # The representation was fetched successfully.
-        assert None == representation.fetch_exception
-        assert representation.fetched_at != None
-
-        # The mirror url is set.
-        assert "Gutenberg" in representation.mirror_url
-        assert representation.mirror_url.endswith(
-            f"{edition.primary_identifier.identifier}/{edition.title}.epub"
-        )
-
-        # Content isn't there since it was mirrored.
-        assert None == representation.content
-
-        # The representation was mirrored, with the modified content.
-        assert [representation] == mirrors[mirror_type].uploaded
-        assert [b"Replaced Content"] == mirrors[mirror_type].content
-
-    def test_mirror_protected_access_book(self, db: DatabaseTransactionFixture):
-        edition, pool = db.edition(with_license_pool=True)
-
-        data_source = DataSource.lookup(db.session, DataSource.GUTENBERG)
-        m = Metadata(data_source=data_source)
-
-        mirror_type = ExternalIntegrationLink.PROTECTED_ACCESS_BOOKS
-        mirrors = {mirror_type: MockS3Uploader()}
-
-        def dummy_content_modifier(representation):
-            representation.content = b"Replaced Content"
-
-        h = DummyHTTPClient()
-
-        policy = ReplacementPolicy(
-            mirrors=mirrors, content_modifier=dummy_content_modifier, http_get=h.do_get
-        )
-
-        link = LinkData(
-            rel=Hyperlink.GENERIC_OPDS_ACQUISITION,
-            media_type=Representation.EPUB_MEDIA_TYPE,
-            href="http://example.com/test.epub",
-            content="I'm an epub",
-        )
-
-        link_obj, ignore = edition.primary_identifier.add_link(
-            rel=link.rel,
-            href=link.href,
-            data_source=data_source,
-            media_type=link.media_type,
-            content=link.content,
-        )
-
-        h.queue_response(200, media_type=Representation.EPUB_MEDIA_TYPE)
-
-        m.mirror_link(edition, data_source, link, link_obj, policy)
-
-        representation = link_obj.resource.representation
-
-        # The representation was fetched successfully.
-        assert None == representation.fetch_exception
-        assert representation.fetched_at is not None
-
-        # The mirror url is set.
-        assert "Gutenberg" in representation.mirror_url
-        assert representation.mirror_url.endswith(
-            f"{edition.primary_identifier.identifier}/{edition.title}.epub"
-        )
-
-        # Content isn't there since it was mirrored.
-        assert None == representation.content
-
-        # The representation was mirrored, with the modified content.
-        assert [representation] == mirrors[mirror_type].uploaded
-        assert [b"Replaced Content"] == mirrors[mirror_type].content
 
     def test_measurements(self, db: DatabaseTransactionFixture):
         edition = db.edition()
@@ -1138,35 +626,6 @@ class TestContributorData:
 
 
 class TestLinkData:
-    @pytest.mark.parametrize(
-        "name,rel,expected_mirror_type",
-        [
-            ("image", Hyperlink.IMAGE, ExternalIntegrationLink.COVERS),
-            ("thumbnail", Hyperlink.THUMBNAIL_IMAGE, ExternalIntegrationLink.COVERS),
-            (
-                "open_access_book",
-                Hyperlink.OPEN_ACCESS_DOWNLOAD,
-                ExternalIntegrationLink.OPEN_ACCESS_BOOKS,
-            ),
-            (
-                "protected_access_book",
-                Hyperlink.GENERIC_OPDS_ACQUISITION,
-                ExternalIntegrationLink.PROTECTED_ACCESS_BOOKS,
-            ),
-        ],
-    )
-    def test_mirror_type_returns_correct_mirror_type_for(
-        self, name, rel, expected_mirror_type
-    ):
-        # Arrange
-        link_data = LinkData(rel, href="dummy")
-
-        # Act
-        result = link_data.mirror_type()
-
-        # Assert
-        assert result == expected_mirror_type
-
     def test_guess_media_type(self):
         rel = Hyperlink.IMAGE
 
@@ -1208,6 +667,7 @@ class TestMetadata:
         edition.primary_identifier.add_link(
             Hyperlink.IMAGE, "image", edition.data_source
         )
+        edition.duration = 100.1
         metadata = Metadata.from_edition(edition)
 
         # make sure the metadata and the originating edition match
@@ -1236,7 +696,6 @@ class TestMetadata:
         assert edition.series_position == metadata.series_position
 
     def test_update(self, db: DatabaseTransactionFixture):
-
         # Tests that Metadata.update correctly prefers new fields to old, unless
         # new fields aren't defined.
 
@@ -1245,6 +704,7 @@ class TestMetadata:
         edition_old.subtitle = "old_subtitile"
         edition_old.series = "old_series"
         edition_old.series_position = 5
+        edition_old.duration = 10
         metadata_old = Metadata.from_edition(edition_old)
 
         edition_new, pool = db.edition(with_license_pool=True)
@@ -1253,6 +713,7 @@ class TestMetadata:
         edition_new.subtitle = "new_updated_subtitile"
         edition_new.series = "new_series"
         edition_new.series_position = 0
+        edition_new.duration = 11
         metadata_new = Metadata.from_edition(edition_new)
 
         metadata_old.update(metadata_new)
@@ -1261,6 +722,7 @@ class TestMetadata:
         assert metadata_old.subtitle == metadata_new.subtitle
         assert metadata_old.series == edition_new.series
         assert metadata_old.series_position == edition_new.series_position
+        assert metadata_old.duration == metadata_new.duration
 
     def test_apply(self, db: DatabaseTransactionFixture):
         edition_old, pool = db.edition(with_license_pool=True)
@@ -1278,6 +740,7 @@ class TestMetadata:
             imprint="Follywood",
             published=datetime.date(1987, 5, 4),
             issued=datetime.date(1989, 4, 5),
+            duration=10,
         )
 
         edition_new, changed = metadata.apply(edition_old, pool.collection)
@@ -1294,6 +757,7 @@ class TestMetadata:
         assert edition_new.imprint == "Follywood"
         assert edition_new.published == datetime.date(1987, 5, 4)
         assert edition_new.issued == datetime.date(1989, 4, 5)
+        assert edition_new.duration == 10
 
         edition_new, changed = metadata.apply(edition_new, pool.collection)
         assert changed == False
@@ -1381,7 +845,6 @@ class TestMetadata:
         assert_registered(full=False)
 
     def test_apply_identifier_equivalency(self, db: DatabaseTransactionFixture):
-
         # Set up an Edition.
         edition, pool = db.edition(with_license_pool=True)
 
@@ -1433,7 +896,6 @@ class TestMetadata:
         assert equivalency.output.identifier == "def"
 
     def test_apply_no_value(self, db: DatabaseTransactionFixture):
-
         edition_old, pool = db.edition(with_license_pool=True)
 
         metadata = Metadata(
@@ -1474,17 +936,6 @@ class TestMetadata:
         assert 1 == records.count()
         assert CoverageRecord.SUCCESS == records.all()[0].status
 
-        # No metadata upload failure was recorded, because this metadata
-        # came from Overdrive.
-        records = (
-            db.session.query(CoverageRecord)
-            .filter(CoverageRecord.identifier_id == edition.primary_identifier.id)
-            .filter(
-                CoverageRecord.operation == CoverageRecord.METADATA_UPLOAD_OPERATION
-            )
-        )
-        assert 0 == records.count()
-
         # Apply metadata from a different source.
         metadata = Metadata(data_source=DataSource.GUTENBERG, title=db.fresh_str())
 
@@ -1499,17 +950,6 @@ class TestMetadata:
         assert 2 == records.count()
         for record in records.all():
             assert CoverageRecord.SUCCESS == record.status
-
-        # But now there's also a metadata upload failure.
-        records = (
-            db.session.query(CoverageRecord)
-            .filter(CoverageRecord.identifier_id == edition.primary_identifier.id)
-            .filter(
-                CoverageRecord.operation == CoverageRecord.METADATA_UPLOAD_OPERATION
-            )
-        )
-        assert 1 == records.count()
-        assert CoverageRecord.TRANSIENT_FAILURE == records.all()[0].status
 
     def test_update_contributions(self, db: DatabaseTransactionFixture):
         edition = db.edition()
@@ -1646,75 +1086,8 @@ class TestMetadata:
         assert [link2, link5, link4, link3] == filtered_links
 
 
-class TestCirculationData:
-    def test_apply_propagates_analytics(self, db: DatabaseTransactionFixture):
-        # Verify that an Analytics object is always passed into
-        # license_pool() and update_availability(), even if none is
-        # provided in the ReplacementPolicy.
-        #
-        # NOTE: this test was written to verify a bug fix; it's not a
-        # comprehensive test of CirculationData.apply().
-        source = DataSource.lookup(db.session, DataSource.GUTENBERG)
-        identifier = db.identifier()
-        collection = db.default_collection()
-
-        class MockLicensePool:
-            # A LicensePool-like object that tracks how its
-            # update_availability() method was called.
-            delivery_mechanisms = []
-            licenses = []
-            work = None
-
-            def calculate_work(self):
-                return None, False
-
-            def update_availability(self, **kwargs):
-                self.update_availability_called_with = kwargs
-
-        pool = MockLicensePool()
-
-        class MockCirculationData(CirculationData):
-            # A CirculationData-like object that always says
-            # update_availability ought to be called on a
-            # specific MockLicensePool.
-            def license_pool(self, _db, collection, analytics):
-                self.license_pool_called_with = (_db, collection, analytics)
-                return pool, False
-
-            def _availability_needs_update(self, *args):
-                # Force update_availability to be called.
-                return True
-
-        # First try with no particular ReplacementPolicy.
-        data = MockCirculationData(source, identifier)
-        data.apply(db.session, collection)
-
-        # A generic Analytics object was created and passed in to
-        # MockCirculationData.license_pool().
-        analytics1 = data.license_pool_called_with[-1]
-        assert isinstance(analytics1, Analytics)
-
-        # Then, the same Analytics object was passed into the
-        # update_availability() method of the MockLicensePool returned
-        # by license_pool()
-        analytics2 = pool.update_availability_called_with["analytics"]
-        assert analytics1 == analytics2
-
-        # Now try with a ReplacementPolicy that mentions a specific
-        # analytics object.
-        analytics = object()
-        policy = ReplacementPolicy(analytics=analytics)
-        data.apply(db.session, collection, replace=policy)
-
-        # That object was used instead of a generic Analytics object in
-        # both cases.
-        assert analytics == data.license_pool_called_with[-1]
-        assert analytics == pool.update_availability_called_with["analytics"]
-
-
 class TestTimestampData:
     def test_constructor(self):
-
         # By default, all fields are set to None
         d = TimestampData()
         for i in (
@@ -1797,7 +1170,6 @@ class TestTimestampData:
             assert i == None
 
     def test_finalize_full(self, db: DatabaseTransactionFixture):
-
         # You can call finalize() with a complete set of arguments.
         d = TimestampData()
         d.finalize(
@@ -1932,48 +1304,3 @@ class TestAssociateWithIdentifiersBasedOnPermanentWorkID:
         # with the identifier of the audiobook
         equivalent_identifiers = [x.output for x in identifier.equivalencies]
         assert [book.primary_identifier] == equivalent_identifiers
-
-
-class TestMARCExtractor:
-    def test_parse_year(self):
-        m = MARCExtractor.parse_year
-        nineteen_hundred = strptime_utc("1900", "%Y")
-        assert nineteen_hundred == m("1900")
-        assert nineteen_hundred == m("1900.")
-        assert None == m("not a year")
-
-    def test_parser(self, marc_files_fixture: MARCFilesFixture):
-        """Parse a MARC file into Metadata objects."""
-
-        file = marc_files_fixture.sample_data("ils_plympton_01.mrc")
-        metadata_records = MARCExtractor.parse(file, "Plympton")
-
-        assert 36 == len(metadata_records)
-
-        record = metadata_records[1]
-        assert "Strange Case of Dr Jekyll and Mr Hyde" == record.title
-        assert "Stevenson, Robert Louis" == record.contributors[0].sort_name
-        assert "Recovering the Classics" in record.publisher
-        assert "9781682280041" == record.primary_identifier.identifier
-        assert Identifier.ISBN == record.primary_identifier.type
-        subjects = record.subjects
-        assert 2 == len(subjects)
-        for s in subjects:
-            assert Classifier.FAST == s.type
-        assert "Canon" in subjects[0].identifier
-        assert Edition.BOOK_MEDIUM == record.medium
-        assert 2015 == record.issued.year
-        assert "eng" == record.language
-
-        assert 1 == len(record.links)
-        assert (
-            "Utterson and Enfield are worried about their friend"
-            in record.links[0].content
-        )
-
-    def test_name_cleanup(self):
-        """Test basic name cleanup techniques."""
-        m = MARCExtractor.name_cleanup
-        assert "Dante Alighieri" == m("Dante Alighieri,   1265-1321, author.")
-        assert "Stevenson, Robert Louis" == m("Stevenson, Robert Louis.")
-        assert "Wells, H.G." == m("Wells,     H.G.")

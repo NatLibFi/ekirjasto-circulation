@@ -1,4 +1,5 @@
 import pytest
+from Crypto.PublicKey.RSA import RsaKey, import_key
 
 from core.model.configuration import ConfigurationSetting
 from core.model.library import Library
@@ -173,6 +174,28 @@ Name: "The Library"
 Short name: "Short"
 Short name (for library registry): "SHORT"
 
+Configuration settings:
+-----------------------
+website='http://library.com'
+allow_holds='True'
+enabled_entry_points='['Book']'
+featured_lane_size='15'
+minimum_featured_quality='0.65'
+facets_enabled_order='['author', 'title', 'added']'
+facets_default_order='author'
+facets_enabled_available='['all', 'now', 'always']'
+facets_default_available='all'
+facets_enabled_collection='['full', 'featured']'
+facets_default_collection='full'
+help_web='http://library.com/support'
+default_notification_email_address='noreply@thepalaceproject.org'
+color_scheme='blue'
+web_primary_color='#377F8B'
+web_secondary_color='#D53F34'
+web_header_links='[]'
+web_header_labels='[]'
+hidden_content_types='[]'
+
 External integrations:
 ----------------------
 ID: %s
@@ -190,3 +213,28 @@ username='someuser'
         with_secrets = library.explain(True)
         assert 'Shared secret (for library registry): "secret"' in with_secrets
         assert "password='somepass'" in with_secrets
+
+    def test_generate_keypair(self, db: DatabaseTransactionFixture):
+        # Test the ability to create a public/private key pair
+
+        # If you pass in a ConfigurationSetting that is missing its
+        # value, or whose value is not a public key pair, a new key
+        # pair is created.
+        public_key, private_key = Library.generate_keypair()
+        assert "BEGIN PUBLIC KEY" in public_key
+        key = import_key(private_key)
+        assert isinstance(key, RsaKey)
+        assert public_key == key.public_key().export_key().decode("utf-8")
+
+    def test_settings(self, db: DatabaseTransactionFixture):
+        library = db.default_library()
+
+        # If our settings dict gets set to something other than a dict,
+        # we raise an error.
+        library.settings_dict = []
+        with pytest.raises(ValueError):
+            library.settings
+
+        # Test with a properly formatted settings dict.
+        library2 = db.library()
+        assert library2.settings.website == "http://library.com"

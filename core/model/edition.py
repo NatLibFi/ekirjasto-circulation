@@ -5,21 +5,36 @@ import logging
 from collections import defaultdict
 from typing import TYPE_CHECKING, Dict, List
 
-from sqlalchemy import Column, Date, Enum, ForeignKey, Index, Integer, String, Unicode
+from sqlalchemy import (
+    Column,
+    Date,
+    Enum,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Unicode,
+)
 from sqlalchemy.dialects.postgresql import JSON
 from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy.orm import Mapped, relationship
 from sqlalchemy.orm.session import Session
 
-from ..util import LanguageCodes, TitleProcessor
-from ..util.permanent_work_id import WorkIDCalculator
-from . import Base, PresentationCalculationPolicy, get_one, get_one_or_create
-from .constants import DataSourceConstants, EditionConstants, LinkRelations, MediaTypes
-from .contributor import Contribution, Contributor
-from .coverage import CoverageRecord
-from .datasource import DataSource
-from .identifier import Identifier
-from .licensing import DeliveryMechanism, LicensePool
+from core.model import Base, PresentationCalculationPolicy, get_one, get_one_or_create
+from core.model.constants import (
+    DataSourceConstants,
+    EditionConstants,
+    LinkRelations,
+    MediaTypes,
+)
+from core.model.contributor import Contribution, Contributor
+from core.model.coverage import CoverageRecord
+from core.model.datasource import DataSource
+from core.model.identifier import Identifier
+from core.model.licensing import DeliveryMechanism, LicensePool
+from core.util import LanguageCodes, TitleProcessor
+from core.util.permanent_work_id import WorkIDCalculator
 
 if TYPE_CHECKING:
     # This is needed during type checking so we have the
@@ -48,6 +63,21 @@ class Edition(Base, EditionConstants):
     # A full-sized image no larger than this height can be used as a thumbnail
     # in a pinch.
     MAX_FALLBACK_THUMBNAIL_HEIGHT = 500
+
+    # Postgresql doesn't allow indices to exceed 1/3 of a buffer page.
+    # We saw the following error here: https://ebce-lyrasis.atlassian.net/browse/PP-188:
+    #
+    # Index row size 3208 exceeds btree version 4 maximum 2704 for index "ix_editions_author"
+    # DETAIL:  Index row references tuple (48187,9) in relation "editions".
+    # HINT:  Values larger than 1/3 of a buffer page cannot be indexed.
+    #
+    # On rare occasions the author (and sort_author) fields can contain a concatenated list of a
+    # large number of authors which breaks the index and causes failures.  What exactly that threshold is
+    # I am not entirely certain.  It appears that 2704 is the size that broke the 1/3 of a buffer page
+    # limit. However, I'm not sure how the index size is calculated. I experimented
+    # with different values.  Author field values exceeding 2700 characters in length produced the aforementioned
+    # error with an index row size of 2800.  Author field values below 2650 characters seemed to be okay.
+    SAFE_AUTHOR_FIELD_LENGTH_TO_AVOID_PG_INDEX_ERROR = 2650
 
     # This Edition is associated with one particular
     # identifier--the one used by its data source to identify
@@ -106,6 +136,10 @@ class Edition(Base, EditionConstants):
 
     medium = Column(MEDIUM_ENUM, index=True)
 
+    # The playtime duration of an audiobook (seconds)
+    # https://github.com/readium/webpub-manifest/tree/master/contexts/default#duration-and-number-of-pages
+    duration = Column(Float, nullable=True)
+
     cover_id = Column(
         Integer,
         ForeignKey("resources.id", use_alter=True, name="fk_editions_summary_id"),
@@ -115,10 +149,6 @@ class Edition(Base, EditionConstants):
     # every time.
     cover_full_url = Column(Unicode)
     cover_thumbnail_url = Column(Unicode)
-
-    # An OPDS entry containing all metadata about this entry that
-    # would be relevant to display to a library patron.
-    simple_opds_entry = Column(Unicode, default=None)
 
     # Information kept in here probably won't be used.
     extra: Mapped[Dict[str, str]] = Column(MutableDict.as_mutable(JSON), default={})
@@ -724,6 +754,19 @@ class Edition(Base, EditionConstants):
             sort_author = " ; ".join(sorted(sort_names))
         else:
             sort_author = self.UNKNOWN_AUTHOR
+
+        def truncate_string(mystr: str):
+            if len(mystr) > self.SAFE_AUTHOR_FIELD_LENGTH_TO_AVOID_PG_INDEX_ERROR:
+                return (
+                    mystr[: (self.SAFE_AUTHOR_FIELD_LENGTH_TO_AVOID_PG_INDEX_ERROR - 3)]
+                    + "..."
+                )
+            return mystr
+
+        # Very long author and sort_author strings can cause issues for Postgres indices. See
+        # comment above the SAFE_AUTHOR_FIELD_LENGTH_TO_AVOID_PG_INDEX_ERROR constant for details.
+        author = truncate_string(author)
+        sort_author = truncate_string(sort_author)
         return author, sort_author
 
     def choose_cover(self, policy=None):

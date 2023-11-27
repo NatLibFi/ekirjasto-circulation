@@ -3,26 +3,22 @@ from __future__ import annotations
 
 import datetime
 from io import StringIO
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 from unittest import mock
+from unittest.mock import MagicMock
 
 import pytest
 
 from api.authentication.basic import BasicAuthenticationProvider
 from api.circulation import CirculationAPI
-from api.selftest import (
-    HasCollectionSelfTests,
-    HasSelfTests,
-    RunSelfTestsScript,
-    SelfTestResult,
-)
+from api.selftest import HasCollectionSelfTests, HasSelfTests, SelfTestResult
 from core.exceptions import IntegrationException
-from core.model import ExternalIntegration, Patron
-from core.opds_import import OPDSImportMonitor
+from core.model import Patron
+from core.scripts import RunSelfTestsScript
 from core.util.problem_detail import ProblemDetail
 
 if TYPE_CHECKING:
-    from tests.fixtures.authenticator import AuthProviderFixture
+    from tests.fixtures.authenticator import SimpleAuthIntegrationFixture
     from tests.fixtures.database import DatabaseTransactionFixture
 
 
@@ -30,7 +26,7 @@ class TestHasSelfTests:
     def test__determine_self_test_patron(
         self,
         db: DatabaseTransactionFixture,
-        create_simple_auth_integration: Callable[..., AuthProviderFixture],
+        create_simple_auth_integration: SimpleAuthIntegrationFixture,
     ):
         """Test per-library default patron lookup for self-tests.
 
@@ -99,7 +95,7 @@ class TestHasSelfTests:
     def test_default_patrons(
         self,
         db: DatabaseTransactionFixture,
-        create_simple_auth_integration: Callable[..., AuthProviderFixture],
+        create_simple_auth_integration: SimpleAuthIntegrationFixture,
     ):
         """Some self-tests must run with a patron's credentials.  The
         default_patrons() method finds the default Patron for every
@@ -199,15 +195,9 @@ class TestRunSelfTestsScript:
 
         # The API lookup map passed into test_collection() is based on
         # CirculationAPI's default API map.
-        default_api_map = CirculationAPI(
-            db.session, db.default_library()
-        ).default_api_map
-        for k, v in list(default_api_map.items()):
+        registry = CirculationAPI(db.session, db.default_library()).registry
+        for k, v in registry:
             assert api_map[k] == v
-
-        # But a couple of things were added to the map that are not in
-        # CirculationAPI.
-        assert api_map[ExternalIntegration.OPDS_IMPORT] == OPDSImportMonitor
 
         # If test_collection raises an exception, the exception is recorded,
         # and we move on.
@@ -276,7 +266,6 @@ class TestRunSelfTestsScript:
         assert ["result 1", "result 2"] == script.processed
 
     def test_process_result(self, db: DatabaseTransactionFixture):
-
         # Test a successful test that returned a result.
         success = SelfTestResult("i succeeded")
         success.success = True
@@ -308,7 +297,7 @@ class TestHasCollectionSelfTests:
                 return "1"
 
         mock = Mock()
-        results = [x for x in mock._run_self_tests()]
+        results = [x for x in mock._run_self_tests(MagicMock())]
         assert ["1"] == [x.result for x in results]
         assert True == mock._no_delivery_mechanisms_called
 

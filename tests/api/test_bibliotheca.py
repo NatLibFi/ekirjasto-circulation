@@ -6,19 +6,19 @@ from datetime import datetime, timedelta
 from io import BytesIO, StringIO
 from typing import (
     TYPE_CHECKING,
-    Any,
-    Callable,
     ClassVar,
     Optional,
     Protocol,
+    Type,
+    cast,
     runtime_checkable,
 )
 from unittest import mock
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, create_autospec
 
 import pytest
 from pymarc import parse_xml_to_array
-from pymarc.record import Record  # type: ignore
+from pymarc.record import Record
 
 from api.bibliotheca import (
     BibliothecaAPI,
@@ -38,6 +38,7 @@ from api.circulation_exceptions import (
     AlreadyCheckedOut,
     AlreadyOnHold,
     CannotHold,
+    CirculationException,
     CurrentlyAvailable,
     NoAvailableCopies,
     NoLicenses,
@@ -48,6 +49,9 @@ from api.circulation_exceptions import (
     RemoteInitiatedServerError,
 )
 from api.web_publication_manifest import FindawayManifest
+from core.analytics import Analytics
+from core.integration.goals import Goals
+from core.integration.registry import IntegrationRegistry
 from core.metadata_layer import ReplacementPolicy, TimestampData
 from core.mock_analytics_provider import MockAnalyticsProvider
 from core.model import (
@@ -60,6 +64,7 @@ from core.model import (
     Hyperlink,
     Identifier,
     LicensePool,
+    LicensePoolDeliveryMechanism,
     Measurement,
     Representation,
     Subject,
@@ -77,7 +82,7 @@ from tests.api.mockapi.bibliotheca import MockBibliothecaAPI
 
 if TYPE_CHECKING:
     from tests.fixtures.api_bibliotheca_files import BibliothecaFilesFixture
-    from tests.fixtures.authenticator import AuthProviderFixture
+    from tests.fixtures.authenticator import SimpleAuthIntegrationFixture
     from tests.fixtures.database import DatabaseTransactionFixture
     from tests.fixtures.time import Time
 
@@ -86,7 +91,9 @@ class BibliothecaAPITestFixture:
     def __init__(self, db: DatabaseTransactionFixture, files: BibliothecaFilesFixture):
         self.files = files
         self.db = db
-        self.collection = MockBibliothecaAPI.mock_collection(db.session)
+        self.collection = MockBibliothecaAPI.mock_collection(
+            db.session, db.default_library()
+        )
         self.api = MockBibliothecaAPI(db.session, self.collection)
 
 
@@ -108,7 +115,7 @@ class TestBibliothecaAPI:
     def test__run_self_tests(
         self,
         bibliotheca_fixture: BibliothecaAPITestFixture,
-        create_simple_auth_integration: Callable[..., AuthProviderFixture],
+        create_simple_auth_integration: SimpleAuthIntegrationFixture,
     ):
         db = bibliotheca_fixture.db
         # Verify that BibliothecaAPI._run_self_tests() calls the right
@@ -187,11 +194,11 @@ class TestBibliothecaAPI:
     def test_full_url(self, bibliotheca_fixture: BibliothecaAPITestFixture):
         id = bibliotheca_fixture.api.library_id
         assert (
-            "http://bibliotheca.test/cirrus/library/%s/foo" % id
+            "https://partner.yourcloudlibrary.com/cirrus/library/%s/foo" % id
             == bibliotheca_fixture.api.full_url("foo")
         )
         assert (
-            "http://bibliotheca.test/cirrus/library/%s/foo" % id
+            "https://partner.yourcloudlibrary.com/cirrus/library/%s/foo" % id
             == bibliotheca_fixture.api.full_url("/foo")
         )
 
@@ -244,7 +251,7 @@ class TestBibliothecaAPI:
         db = bibliotheca_fixture.db
 
         class MockItemListParser:
-            def parse(self, data):
+            def process_all(self, data):
                 self.parse_called_with = data
                 yield "item1"
                 yield "item2"
@@ -477,10 +484,14 @@ class TestBibliothecaAPI:
         circulation = CirculationAPI(
             db.session,
             db.default_library(),
-            api_map={bibliotheca_fixture.collection.protocol: MockBibliothecaAPI},
+            registry=IntegrationRegistry(
+                Goals.LICENSE_GOAL,
+                {bibliotheca_fixture.collection.protocol: MockBibliothecaAPI},
+            ),
         )
 
         api = circulation.api_for_collection[bibliotheca_fixture.collection.id]
+        assert isinstance(api, MockBibliothecaAPI)
         api.queue_response(
             200, content=bibliotheca_fixture.files.sample_data("checkouts.xml")
         )
@@ -576,8 +587,10 @@ class TestBibliothecaAPI:
             headers={"Content-Type": "presumably/an-acsm"},
             content="this is an ACSM",
         )
+        delivery_mechanism = create_autospec(LicensePoolDeliveryMechanism)
+        delivery_mechanism.delivery_mechanism.drm_scheme = DeliveryMechanism.ADOBE_DRM
         fulfillment = bibliotheca_fixture.api.fulfill(
-            patron, "password", pool, internal_format="ePub"
+            patron, "password", pool, delivery_mechanism=delivery_mechanism
         )
         assert isinstance(fulfillment, FulfillmentInfo)
         assert b"this is an ACSM" == fulfillment.content
@@ -595,8 +608,11 @@ class TestBibliothecaAPI:
         bibliotheca_fixture.api.queue_response(
             200, headers={"Content-Type": "application/json"}, content=license
         )
+        delivery_mechanism.delivery_mechanism.drm_scheme = (
+            DeliveryMechanism.FINDAWAY_DRM
+        )
         fulfillment = bibliotheca_fixture.api.fulfill(
-            patron, "password", pool, internal_format="MP3"
+            patron, "password", pool, delivery_mechanism=delivery_mechanism
         )
         assert isinstance(fulfillment, FulfillmentInfo)
 
@@ -606,6 +622,7 @@ class TestBibliothecaAPI:
 
         # The document sent by the 'Findaway' server has been
         # converted into a web publication manifest.
+        assert fulfillment.content is not None
         manifest = json.loads(fulfillment.content)
 
         # The conversion process is tested more fully in
@@ -626,7 +643,7 @@ class TestBibliothecaAPI:
             200, headers={"Content-Type": bad_media_type}, content=bad_content
         )
         fulfillment = bibliotheca_fixture.api.fulfill(
-            patron, "password", pool, internal_format="MP3"
+            patron, "password", pool, delivery_mechanism=delivery_mechanism
         )
         assert isinstance(fulfillment, FulfillmentInfo)
 
@@ -785,12 +802,11 @@ class TestBibliothecaCirculationSweep:
 
 class TestBibliothecaParser:
     def test_parse_date(self, bibliotheca_fixture: BibliothecaAPITestFixture):
-        parser = BibliothecaParser()
-        v = parser.parse_date("2016-01-02T12:34:56")
-        assert datetime_utc(2016, 1, 2, 12, 34, 56) == v
+        v = BibliothecaParser.parse_date("2016-01-02T12:34:56")
+        assert v == datetime_utc(2016, 1, 2, 12, 34, 56)
 
-        assert None == parser.parse_date(None)
-        assert None == parser.parse_date("Some weird value")
+        assert BibliothecaParser.parse_date(None) is None
+        assert BibliothecaParser.parse_date("Some weird value") is None
 
 
 class TestEventParser:
@@ -830,12 +846,12 @@ class TestPatronCirculationParser:
     def test_parse(self, bibliotheca_fixture: BibliothecaAPITestFixture):
         data = bibliotheca_fixture.files.sample_data("checkouts.xml")
         collection = bibliotheca_fixture.collection
-        loans_and_holds = PatronCirculationParser(collection).process_all(data)
+        loans_and_holds = list(PatronCirculationParser(collection).process_all(data))
         loans = [x for x in loans_and_holds if isinstance(x, LoanInfo)]
         holds = [x for x in loans_and_holds if isinstance(x, HoldInfo)]
         assert 2 == len(loans)
         assert 2 == len(holds)
-        [l1, l2] = sorted(loans, key=lambda x: x.identifier)
+        [l1, l2] = sorted(loans, key=lambda x: str(x.identifier))
         assert "1ad589" == l1.identifier
         assert "cgaxr9" == l2.identifier
         expect_loan_start = datetime_utc(2015, 3, 20, 18, 50, 22)
@@ -843,7 +859,7 @@ class TestPatronCirculationParser:
         assert expect_loan_start == l1.start_date
         assert expect_loan_end == l1.end_date
 
-        [h1, h2] = sorted(holds, key=lambda x: x.identifier)
+        [h1, h2] = sorted(holds, key=lambda x: str(x.identifier))
 
         # This is the book on reserve.
         assert collection.id == h1.collection_id
@@ -869,12 +885,11 @@ class TestPatronCirculationParser:
 class TestCheckoutResponseParser:
     def test_parse(self, bibliotheca_fixture: BibliothecaAPITestFixture):
         data = bibliotheca_fixture.files.sample_data("successful_checkout.xml")
-        due_date = CheckoutResponseParser().process_all(data)
+        due_date = CheckoutResponseParser().process_first(data)
         assert datetime_utc(2015, 4, 16, 0, 32, 36) == due_date
 
 
 class TestErrorParser:
-
     BIBLIOTHECA_ERROR_RESPONSE_BODY_TEMPLATE = (
         '<Error xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'
         "<Code>Gen-001</Code><Message>"
@@ -968,7 +983,7 @@ class TestErrorParser:
     def test_exception(
         self,
         incoming_message: str,
-        error_class: Any,
+        error_class: Type[CirculationException],
         error_code: int,
         problem_detail_title: str,
         problem_detail_code: int,
@@ -976,7 +991,7 @@ class TestErrorParser:
         document = self.BIBLIOTHECA_ERROR_RESPONSE_BODY_TEMPLATE.format(
             message=incoming_message
         )
-        error = ErrorParser().process_all(document)
+        error = ErrorParser().process_first(document)
         assert isinstance(error, error_class)
         assert incoming_message == str(error)
         assert error_code == error.status_code
@@ -1033,21 +1048,21 @@ class TestErrorParser:
             incoming_message = api_bibliotheca_files_fixture.files().sample_text(
                 incoming_message_from_file
             )
-        error = ErrorParser().process_all(incoming_message)
-        problem = error.as_problem_detail_document()
-
+        assert incoming_message is not None
+        error = ErrorParser().process_first(incoming_message)
         assert isinstance(error, RemoteInitiatedServerError)
+
         assert BibliothecaAPI.SERVICE_NAME == error.service_name
         assert 502 == error.status_code
         assert error_string == str(error)
 
+        problem = error.as_problem_detail_document()
         assert 502 == problem.status_code
         assert "Integration error communicating with Bibliotheca" == problem.detail
         assert "Third-party service failed." == problem.title
 
 
 class TestBibliothecaEventParser:
-
     # Sample event feed to test out the parser.
     TWO_EVENTS = """<LibraryEventBatch xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <PublishId>1b0d6667-a10e-424a-9f73-fb6f6d41308e</PublishId>
@@ -1118,7 +1133,9 @@ class TestBibliothecaPurchaseMonitor:
     @pytest.fixture()
     def initialized_monitor(self, db: DatabaseTransactionFixture):
         collection = MockBibliothecaAPI.mock_collection(
-            db.session, name="Initialized Purchase Monitor Collection"
+            db.session,
+            db.default_library(),
+            name="Initialized Purchase Monitor Collection",
         )
         monitor = BibliothecaPurchaseMonitor(
             db.session, collection, api_class=MockBibliothecaAPI
@@ -1170,7 +1187,10 @@ class TestBibliothecaPurchaseMonitor:
         ],
     )
     def test_optional_iso_date_valid_dates(
-        self, specified_default_start, expected_default_start, default_monitor
+        self,
+        specified_default_start: datetime | str | None,
+        expected_default_start: datetime | None,
+        default_monitor: BibliothecaPurchaseMonitor,
     ):
         # ISO 8601 strings, `datetime`s, or None are valid.
         actual_default_start = default_monitor._optional_iso_date(
@@ -1182,8 +1202,8 @@ class TestBibliothecaPurchaseMonitor:
 
     def test_monitor_intrinsic_start_time(
         self,
-        default_monitor,
-        initialized_monitor,
+        default_monitor: BibliothecaPurchaseMonitor,
+        initialized_monitor: BibliothecaPurchaseMonitor,
         bibliotheca_fixture: BibliothecaAPITestFixture,
     ):
         db = bibliotheca_fixture.db
@@ -1226,9 +1246,9 @@ class TestBibliothecaPurchaseMonitor:
     )
     def test_specified_start_trumps_intrinsic_default_start(
         self,
-        specified_default_start,
-        override_timestamp,
-        expected_start,
+        specified_default_start: str | None,
+        override_timestamp: bool,
+        expected_start: datetime | None,
         bibliotheca_fixture: BibliothecaAPITestFixture,
     ):
         db = bibliotheca_fixture.db
@@ -1304,9 +1324,9 @@ class TestBibliothecaPurchaseMonitor:
     )
     def test_specified_start_can_override_timestamp(
         self,
-        specified_default_start,
-        override_timestamp,
-        expected_start,
+        specified_default_start: str | None,
+        override_timestamp: bool,
+        expected_start: datetime | None,
         bibliotheca_fixture: BibliothecaAPITestFixture,
     ):
         monitor = BibliothecaPurchaseMonitor(
@@ -1341,11 +1361,15 @@ class TestBibliothecaPurchaseMonitor:
         assert progress.start == expected_actual_start_time
 
     @pytest.mark.parametrize("input", [("invalid"), ("2020/10"), (["2020-10-05"])])
-    def test_optional_iso_date_invalid_dates(self, input, default_monitor):
+    def test_optional_iso_date_invalid_dates(
+        self,
+        input: list[str] | str,
+        default_monitor: BibliothecaPurchaseMonitor,
+    ):
         with pytest.raises(ValueError) as excinfo:
             default_monitor._optional_iso_date(input)
 
-    def test_catch_up_from(self, default_monitor):
+    def test_catch_up_from(self, default_monitor: BibliothecaPurchaseMonitor):
         # catch_up_from() slices up its given timespan, calls
         # purchases() to find purchases for each slice, processes each
         # purchase using process_record(), and sets a checkpoint for each
@@ -1417,7 +1441,7 @@ class TestBibliothecaPurchaseMonitor:
             progress, start, full_slice[0], "MARC records processed: 1"
         )
 
-    def test__checkpoint(self, default_monitor):
+    def test__checkpoint(self, default_monitor: BibliothecaPurchaseMonitor):
         # The _checkpoint method allows the BibliothecaPurchaseMonitor
         # to preserve its progress in case of a crash.
 
@@ -1444,7 +1468,7 @@ class TestBibliothecaPurchaseMonitor:
         assert timestamp_obj.start == BibliothecaPurchaseMonitor.DEFAULT_START_TIME
         assert timestamp_obj.finish == finish
 
-    def test_purchases(self, default_monitor):
+    def test_purchases(self, default_monitor: BibliothecaPurchaseMonitor):
         # The purchases() method calls marc_request repeatedly, handling
         # pagination.
 
@@ -1467,7 +1491,10 @@ class TestBibliothecaPurchaseMonitor:
         assert ([1] * 50) + ([2] * 50) + ([3] * 49) == records
 
     def test_process_record(
-        self, default_monitor, caplog, bibliotheca_fixture: BibliothecaAPITestFixture
+        self,
+        default_monitor: BibliothecaPurchaseMonitor,
+        caplog: pytest.LogCaptureFixture,
+        bibliotheca_fixture: BibliothecaAPITestFixture,
     ):
         # process_record may create a LicensePool, trigger the
         # bibliographic coverage provider, and/or issue a "license
@@ -1475,7 +1502,7 @@ class TestBibliothecaPurchaseMonitor:
         # MARC record.
         purchase_time = utc_now()
         analytics = MockAnalyticsProvider()
-        default_monitor.analytics = analytics
+        default_monitor.analytics = cast(Analytics, analytics)
         ensure_coverage = MagicMock()
         default_monitor.bibliographic_coverage_provider.ensure_coverage = (
             ensure_coverage
@@ -1540,7 +1567,9 @@ class TestBibliothecaPurchaseMonitor:
         assert analytics.count == 0
 
     def test_end_to_end(
-        self, default_monitor, bibliotheca_fixture: BibliothecaAPITestFixture
+        self,
+        default_monitor: BibliothecaPurchaseMonitor,
+        bibliotheca_fixture: BibliothecaAPITestFixture,
     ):
         # Limited end-to-end test of the BibliothecaPurchaseMonitor.
 
@@ -1556,10 +1585,10 @@ class TestBibliothecaPurchaseMonitor:
         # book, and one to the metadata endpoint for information about
         # that book.
         api = default_monitor.api
-        api.queue_response(
+        api.queue_response(  # type: ignore [attr-defined]
             200, content=bibliotheca_fixture.files.sample_data("marc_records_one.xml")
         )
-        api.queue_response(
+        api.queue_response(  # type: ignore [attr-defined]
             200,
             content=bibliotheca_fixture.files.sample_data("item_metadata_single.xml"),
         )
@@ -1584,7 +1613,7 @@ class TestBibliothecaPurchaseMonitor:
         # An analytics event was issued to commemorate the addition of
         # the book to the collection.
         # No more DISTRIBUTOR events
-        assert default_monitor.analytics.count == 0
+        assert default_monitor.analytics.count == 0  # type: ignore [attr-defined]
 
         # The timestamp has been updated; the next time the monitor
         # runs it will ask for purchases that haven't happened yet.
@@ -1606,7 +1635,7 @@ class TestBibliothecaEventMonitor:
     @pytest.fixture()
     def initialized_monitor(self, db: DatabaseTransactionFixture):
         collection = MockBibliothecaAPI.mock_collection(
-            db.session, name="Initialized Monitor Collection"
+            db.session, db.default_library(), name="Initialized Monitor Collection"
         )
         monitor = BibliothecaEventMonitor(
             db.session, collection, api_class=MockBibliothecaAPI
@@ -1733,7 +1762,7 @@ class TestBibliothecaEventMonitor:
             db.session,
             bibliotheca_fixture.collection,
             api_class=api,
-            analytics=analytics,
+            analytics=cast(Analytics, analytics),
         )
 
         now = utc_now()
@@ -1785,8 +1814,12 @@ class TestBibliothecaPurchaseMonitorWhenMultipleCollections:
         # Start with multiple collections that have timestamps
         # because they've run before.
         collections = [
-            MockBibliothecaAPI.mock_collection(db.session, name="Collection 1"),
-            MockBibliothecaAPI.mock_collection(db.session, name="Collection 2"),
+            MockBibliothecaAPI.mock_collection(
+                db.session, db.default_library(), name="Collection 1"
+            ),
+            MockBibliothecaAPI.mock_collection(
+                db.session, db.default_library(), name="Collection 2"
+            ),
         ]
         for c in collections:
             Timestamp.stamp(
@@ -1875,7 +1908,7 @@ class TestItemListParser:
 
     def test_item_list(self, bibliotheca_fixture: BibliothecaAPITestFixture):
         data = bibliotheca_fixture.files.sample_data("item_metadata_list_mini.xml")
-        data_parsed = list(ItemListParser().parse(data))
+        data_parsed = list(ItemListParser().process_all(data))
 
         # There should be 2 items in the list.
         assert 2 == len(data_parsed)
@@ -1935,7 +1968,7 @@ class TestItemListParser:
         self, bibliotheca_fixture: BibliothecaAPITestFixture
     ):
         data = bibliotheca_fixture.files.sample_data("item_metadata_audio.xml")
-        [parsed_data] = list(ItemListParser().parse(data))
+        [parsed_data] = list(ItemListParser().process_all(data))
         names_and_roles = []
         for c in parsed_data.contributors:
             [role] = c.roles
@@ -2010,7 +2043,6 @@ class TestBibliographicCoverageProvider(TestBibliothecaAPI):
         assert True == pool.work.presentation_ready
 
     def test_internal_formats(self):
-
         m = ItemListParser.internal_formats
 
         def _check_format(input, expect_medium, expect_format, expect_drm):

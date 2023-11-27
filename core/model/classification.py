@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Optional
 
 from sqlalchemy import (
     Boolean,
@@ -19,14 +19,14 @@ from sqlalchemy.orm import Mapped, relationship
 from sqlalchemy.orm.session import Session
 from sqlalchemy.sql.functions import func
 
-from .. import classifier
-from ..classifier import (  # type: ignore[attr-defined]
+from core import classifier
+from core.classifier import (  # type: ignore[attr-defined]
     COMICS_AND_GRAPHIC_NOVELS,
     Classifier,
     Erotica,
     GenreData,
 )
-from . import (
+from core.model import (
     Base,
     get_one,
     get_one_or_create,
@@ -34,13 +34,15 @@ from . import (
     numericrange_to_tuple,
     tuple_to_numericrange,
 )
-from .constants import DataSourceConstants
-from .hassessioncache import HasSessionCache
+from core.model.constants import DataSourceConstants
+from core.model.hassessioncache import HasSessionCache
 
 if TYPE_CHECKING:
     # This is needed during type checking so we have the
     # types of related models.
     from core.model import WorkGenre  # noqa: autoflake
+    from core.model.datasource import DataSource  # noqa: autoflake
+    from core.model.identifier import Identifier  # noqa: autoflake
 
 
 class Subject(Base):
@@ -54,8 +56,8 @@ class Subject(Base):
     OVERDRIVE = Classifier.OVERDRIVE  # Overdrive's classification system
     BISAC = Classifier.BISAC
     BIC = Classifier.BIC  # BIC Subject Categories
-    TAG = Classifier.TAG  # Folksonomic tags.
-    FREEFORM_AUDIENCE = Classifier.FREEFORM_AUDIENCE
+    TAG: str = Classifier.TAG  # Folksonomic tags.
+    FREEFORM_AUDIENCE: str = Classifier.FREEFORM_AUDIENCE
     NYPL_APPEAL = Classifier.NYPL_APPEAL
 
     # Types with terms that are suitable for search.
@@ -63,7 +65,7 @@ class Subject(Base):
 
     AXIS_360_AUDIENCE = Classifier.AXIS_360_AUDIENCE
     GRADE_LEVEL = Classifier.GRADE_LEVEL
-    AGE_RANGE = Classifier.AGE_RANGE
+    AGE_RANGE: str = Classifier.AGE_RANGE
     LEXILE_SCORE = Classifier.LEXILE_SCORE
     ATOS_SCORE = Classifier.ATOS_SCORE
     INTEREST_LEVEL = Classifier.INTEREST_LEVEL
@@ -348,9 +350,11 @@ class Classification(Base):
     __tablename__ = "classifications"
     id = Column(Integer, primary_key=True)
     identifier_id = Column(Integer, ForeignKey("identifiers.id"), index=True)
+    identifier: Mapped[Optional[Identifier]]
     subject_id = Column(Integer, ForeignKey("subjects.id"), index=True)
     subject: Mapped[Subject] = relationship("Subject", back_populates="classifications")
     data_source_id = Column(Integer, ForeignKey("datasources.id"), index=True)
+    data_source: Mapped[Optional[DataSource]]
 
     # How much weight the data source gives to this classification.
     weight = Column(Integer)

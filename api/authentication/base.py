@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import logging
 from abc import ABC, abstractmethod
+from typing import TypeVar
 
 from money import Money
 from sqlalchemy.orm import Session
@@ -16,6 +16,7 @@ from core.model.integration import IntegrationConfiguration
 from core.selftest import HasSelfTestsIntegrationConfiguration
 from core.util.authentication_for_opds import OPDSAuthenticationFlow
 from core.util.datetime_helpers import utc_now
+from core.util.log import LoggerMixin
 from core.util.problem_detail import ProblemDetail
 
 
@@ -27,10 +28,17 @@ class AuthProviderLibrarySettings(BaseSettings):
     ...
 
 
+SettingsType = TypeVar("SettingsType", bound=AuthProviderSettings, covariant=True)
+LibrarySettingsType = TypeVar(
+    "LibrarySettingsType", bound=AuthProviderLibrarySettings, covariant=True
+)
+
+
 class AuthenticationProvider(
     OPDSAuthenticationFlow,
-    HasLibraryIntegrationConfiguration,
+    HasLibraryIntegrationConfiguration[SettingsType, LibrarySettingsType],
     HasSelfTestsIntegrationConfiguration,
+    LoggerMixin,
     ABC,
 ):
     """Handle a specific patron authentication scheme."""
@@ -39,17 +47,13 @@ class AuthenticationProvider(
         self,
         library_id: int,
         integration_id: int,
-        settings: AuthProviderSettings,
-        library_settings: AuthProviderLibrarySettings,
+        settings: SettingsType,
+        library_settings: LibrarySettingsType,
         analytics: Analytics | None = None,
     ):
         self.library_id = library_id
         self.integration_id = integration_id
         self.analytics = analytics
-
-    @classmethod
-    def logger(cls) -> logging.Logger:
-        return logging.getLogger(f"{cls.__module__}.{cls.__name__}")
 
     def library(self, _db: Session) -> Library | None:
         return Library.by_id(_db, self.library_id)
@@ -61,16 +65,6 @@ class AuthenticationProvider(
             .one_or_none()
         )
 
-    @classmethod
-    def settings_class(cls) -> type[AuthProviderSettings]:
-        return AuthProviderSettings
-
-    @classmethod
-    def library_settings_class(
-        cls,
-    ) -> type[AuthProviderLibrarySettings]:
-        return AuthProviderLibrarySettings
-
     @property
     @abstractmethod
     def identifies_individuals(self):
@@ -78,6 +72,14 @@ class AuthenticationProvider(
         # then as specific individuals (the way a geographic gate does),
         # it should override this value and set it to False.
         ...
+
+    @property
+    def patron_lookup_provider(self):
+        """Return the provider responsible for patron lookup.
+
+        By default, we'll put ourself forward for this task.
+        """
+        return self
 
     @abstractmethod
     def authenticated_patron(
@@ -104,6 +106,11 @@ class AuthenticationProvider(
         :return: The patron's password, or None if not available.
         """
         ...
+
+
+AuthenticationProviderType = AuthenticationProvider[
+    AuthProviderSettings, AuthProviderLibrarySettings
+]
 
 
 class CannotCreateLocalPatron(Exception):

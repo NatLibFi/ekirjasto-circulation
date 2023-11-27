@@ -1,9 +1,11 @@
 import json
 from contextlib import contextmanager
 from typing import Any
+from unittest.mock import MagicMock
 
 import feedparser
 from flask import url_for
+from opensearch_dsl.response.hit import Hit
 
 from api.lanes import (
     CrawlableCollectionBasedLane,
@@ -11,11 +13,10 @@ from api.lanes import (
     CrawlableFacets,
     DynamicLane,
 )
-from api.odl import ODLAPI
-from api.opds import CirculationManagerAnnotator, SharedCollectionAnnotator
 from api.problem_details import NO_SUCH_COLLECTION, NO_SUCH_LIST
-from core.external_search import MockSearchResult, SortKeyPagination
-from core.opds import AcquisitionFeed
+from core.external_search import SortKeyPagination
+from core.feed.acquisition import OPDSAcquisitionFeed
+from core.feed.annotator.circulation import CirculationManagerAnnotator
 from core.problem_details import INVALID_INPUT
 from core.util.flask_util import Response
 from core.util.problem_detail import ProblemDetail
@@ -31,7 +32,7 @@ class TestCrawlableFeed:
         controller = circulation_fixture.manager.opds_feeds
         original = controller._crawlable_feed
 
-        def mock(title, url, worklist, annotator=None, feed_class=AcquisitionFeed):
+        def mock(title, url, worklist, annotator=None, feed_class=OPDSAcquisitionFeed):
             self._crawlable_feed_called_with = dict(
                 title=title,
                 url=url,
@@ -41,9 +42,9 @@ class TestCrawlableFeed:
             )
             return "An OPDS feed."
 
-        controller._crawlable_feed = mock  # type: ignore[method-assign]
+        controller._crawlable_feed = mock
         yield
-        controller._crawlable_feed = original  # type: ignore[method-assign]
+        controller._crawlable_feed = original
 
     def test_crawlable_library_feed(
         self, circulation_fixture: CirculationControllerFixture
@@ -71,7 +72,7 @@ class TestCrawlableFeed:
         assert expect_url == kwargs.pop("url")
         assert library.name == kwargs.pop("title")
         assert None == kwargs.pop("annotator")
-        assert AcquisitionFeed == kwargs.pop("feed_class")
+        assert OPDSAcquisitionFeed == kwargs.pop("feed_class")
 
         # A CrawlableCollectionBasedLane has been set up to show
         # everything in any of the requested library's collections.
@@ -133,21 +134,6 @@ class TestCrawlableFeed:
         # library context--a CirculationManagerAnnotator.
         assert None == kwargs.pop("annotator")
 
-        # A specific annotator _is_ created for an ODL collection:
-        # A SharedCollectionAnnotator that knows about the Collection
-        # _and_ the WorkList.
-        collection.protocol = ODLAPI.NAME
-        with circulation_fixture.app.test_request_context("/"):
-            with self.mock_crawlable_feed(circulation_fixture):
-                response = controller.crawlable_collection_feed(
-                    collection_name=collection.name
-                )
-        kwargs = self._crawlable_feed_called_with
-        annotator = kwargs["annotator"]
-        assert isinstance(annotator, SharedCollectionAnnotator)
-        assert collection == annotator.collection
-        assert kwargs["worklist"] == annotator.lane
-
     def test_crawlable_list_feed(
         self, circulation_fixture: CirculationControllerFixture
     ):
@@ -189,7 +175,7 @@ class TestCrawlableFeed:
         assert expect_url == kwargs.pop("url")
         assert customlist.name == kwargs.pop("title")
         assert None == kwargs.pop("annotator")
-        assert AcquisitionFeed == kwargs.pop("feed_class")
+        assert OPDSAcquisitionFeed == kwargs.pop("feed_class")
 
         # A CrawlableCustomListBasedLane was created to fetch only
         # the works in the custom list.
@@ -206,7 +192,9 @@ class TestCrawlableFeed:
             @classmethod
             def page(cls, **kwargs):
                 self.page_called_with = kwargs
-                return Response("An OPDS feed")
+                feed = MagicMock()
+                feed.as_response.return_value = Response("An OPDS feed")
+                return feed
 
         work = circulation_fixture.db.work(with_open_access_download=True)
 
@@ -220,7 +208,14 @@ class TestCrawlableFeed:
                 # It's not necessary for this test to call it with a
                 # realistic value, but we might as well.
                 results = [
-                    MockSearchResult(work.sort_title, work.sort_author, {}, work.id)
+                    Hit(
+                        {
+                            "_source": {
+                                "work_id": work.id,
+                            },
+                            "_sort": [work.sort_title, work.sort_author, work.id],
+                        }
+                    )
                 ]
                 pagination.page_loaded(results)
                 return [work]

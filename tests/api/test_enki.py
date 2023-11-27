@@ -2,16 +2,17 @@ from __future__ import annotations
 
 import datetime
 import json
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, cast
+from unittest.mock import MagicMock
 
 import pytest
 
 from api.circulation import FulfillmentInfo, LoanInfo
 from api.circulation_exceptions import *
 from api.enki import BibliographicParser, EnkiAPI, EnkiCollectionReaper, EnkiImport
+from core.analytics import Analytics
 from core.metadata_layer import CirculationData, Metadata, TimestampData
 from core.model import (
-    ConfigurationSetting,
     Contributor,
     DataSource,
     DeliveryMechanism,
@@ -28,19 +29,21 @@ from core.util.datetime_helpers import datetime_utc, utc_now
 from core.util.http import RemoteIntegrationException, RequestTimedOut
 from tests.api.mockapi.enki import MockEnkiAPI
 from tests.core.mock import MockRequestsResponse
+from tests.fixtures.database import DatabaseTransactionFixture
 
 if TYPE_CHECKING:
     from tests.fixtures.api_enki_files import EnkiFilesFixture
-    from tests.fixtures.authenticator import AuthProviderFixture
-    from tests.fixtures.database import DatabaseTransactionFixture
+    from tests.fixtures.authenticator import SimpleAuthIntegrationFixture
 
 
 class EnkiTestFixure:
     def __init__(self, db: DatabaseTransactionFixture, files: EnkiFilesFixture):
         self.db = db
         self.files = files
-        self.api = MockEnkiAPI(db.session)
-        self.collection = self.api.collection
+        self.api = MockEnkiAPI(db.session, db.default_library())
+        collection = self.api.collection
+        assert collection is not None
+        self.collection = collection
 
 
 @pytest.fixture(scope="function")
@@ -54,7 +57,9 @@ class TestEnkiAPI:
     def test_constructor(self, enki_test_fixture: EnkiTestFixure):
         db = enki_test_fixture.db
         # The constructor must be given an Enki collection.
-        collection = db.collection(protocol=ExternalIntegration.OVERDRIVE)
+        collection = db.collection(
+            protocol=ExternalIntegration.OVERDRIVE, url="http://test.enki.url"
+        )
         with pytest.raises(ValueError) as excinfo:
             EnkiAPI(db.session, collection)
         assert "Collection protocol is Overdrive, but passed into EnkiAPI!" in str(
@@ -63,11 +68,6 @@ class TestEnkiAPI:
 
         collection.protocol = ExternalIntegration.ENKI
         EnkiAPI(db.session, collection)
-
-    def test_external_integration(self, enki_test_fixture: EnkiTestFixure):
-        db = enki_test_fixture.db
-        integration = enki_test_fixture.api.external_integration(db.session)
-        assert ExternalIntegration.ENKI == integration.protocol
 
     def test_enki_library_id(self, enki_test_fixture: EnkiTestFixure):
         db = enki_test_fixture.db
@@ -79,13 +79,14 @@ class TestEnkiAPI:
         # Associate another library with the mock Enki collection
         # and set its Enki library ID.
         other_library = db.library()
-        integration = enki_test_fixture.api.external_integration(db.session)
-        ConfigurationSetting.for_library_and_externalintegration(
-            db.session,
-            enki_test_fixture.api.ENKI_LIBRARY_ID_KEY,
-            other_library,
-            integration,
-        ).value = "other library id"
+        assert other_library.id is not None
+        config = enki_test_fixture.api.integration_configuration()
+        assert config is not None
+        DatabaseTransactionFixture.set_settings(
+            config.for_library(other_library.id, create=True),
+            **{enki_test_fixture.api.ENKI_LIBRARY_ID_KEY: "other library id"},
+        )
+        db.session.commit()
         assert "other library id" == m(other_library)
 
     def test_collection(self, enki_test_fixture: EnkiTestFixure):
@@ -94,7 +95,7 @@ class TestEnkiAPI:
     def test__run_self_tests(
         self,
         enki_test_fixture: EnkiTestFixure,
-        create_simple_auth_integration: Callable[..., AuthProviderFixture],
+        create_simple_auth_integration: SimpleAuthIntegrationFixture,
     ):
         db = enki_test_fixture.db
 
@@ -117,12 +118,13 @@ class TestEnkiAPI:
                 self.patron_activity_called_with.append((patron, pin))
                 yield 1
 
-        api = Mock(db.session)
+        api = Mock(db.session, db.default_library())
 
         # Now let's make sure two Libraries have access to the
         # Collection used in the API -- one library with a default
         # patron and one without.
         no_default_patron = db.library()
+        assert api.collection is not None
         api.collection.libraries.append(no_default_patron)
 
         with_default_patron = db.default_library()
@@ -134,7 +136,7 @@ class TestEnkiAPI:
             default_patron_activity,
             circulation_changes,
             collection_changes,
-        ) = sorted(api._run_self_tests(db.session), key=lambda x: x.name)
+        ) = sorted(api._run_self_tests(db.session), key=lambda x: str(x.name))
 
         # Verify that each test method was called and returned the
         # expected SelfTestResult object.
@@ -408,7 +410,7 @@ class TestEnkiAPI:
 
         data = enki_test_fixture.files.sample_data("checked_out_acs.json")
         enki_test_fixture.api.queue_response(200, content=data)
-        loan = enki_test_fixture.api.checkout(patron, "pin", pool, "internal format")
+        loan = enki_test_fixture.api.checkout(patron, "pin", pool, MagicMock())
 
         # An appropriate request to the "getSELink" endpoint was made.,
         [
@@ -453,7 +455,7 @@ class TestEnkiAPI:
 
             patron = db.patron(external_identifier="notabarcode")
 
-            loan = enki_test_fixture.api.checkout(patron, "notapin", pool, None)
+            loan = enki_test_fixture.api.checkout(patron, "notapin", pool, MagicMock())
 
     def test_checkout_not_available(self, enki_test_fixture: EnkiTestFixure):
         """Test that the correct exception is thrown upon an unsuccessful login."""
@@ -471,7 +473,7 @@ class TestEnkiAPI:
             pool.identifier.identifier = "econtentRecord1"
             patron = db.patron(external_identifier="12345678901234")
 
-            loan = enki_test_fixture.api.checkout(patron, "1234", pool, None)
+            loan = enki_test_fixture.api.checkout(patron, "1234", pool, MagicMock())
 
     def test_fulfillment_open_access_parser(self, enki_test_fixture: EnkiTestFixure):
         """Test that fulfillment info for non-ACS Enki books is parsed correctly."""
@@ -504,9 +506,7 @@ class TestEnkiAPI:
 
         data = enki_test_fixture.files.sample_data("checked_out_acs.json")
         enki_test_fixture.api.queue_response(200, content=data)
-        fulfillment = enki_test_fixture.api.fulfill(
-            patron, "pin", pool, "internal format"
-        )
+        fulfillment = enki_test_fixture.api.fulfill(patron, "pin", pool, MagicMock())
 
         # An appropriate request to the "getSELink" endpoint was made.,
         [
@@ -532,6 +532,7 @@ class TestEnkiAPI:
         assert fulfillment.identifier == pool.identifier.identifier
         assert fulfillment.collection_id == pool.collection.id
         assert DeliveryMechanism.ADOBE_DRM == fulfillment.content_type
+        assert fulfillment.content_link is not None
         assert fulfillment.content_link.startswith(
             "http://afs.enkilibrary.org/fulfillment/URLLink.acsm"
         )
@@ -764,7 +765,7 @@ class TestEnkiImport:
 
         passed_in = importer.incremental_import_called_with
         expect = a_while_ago - importer.OVERLAP
-        assert abs((passed_in - expect).total_seconds()) < 2
+        assert abs((passed_in - expect).total_seconds()) < 2  # type: ignore[operator]
 
         # full_import was not called.
         assert False == importer.full_import_called
@@ -808,7 +809,9 @@ class TestEnkiImport:
         api = MockAPI(pages)
 
         # Do the 'import'.
-        importer = Mock(db.session, enki_test_fixture.collection, api_class=api)
+        importer = Mock(
+            db.session, enki_test_fixture.collection, api_class=cast(EnkiAPI, api)
+        )
         importer.full_import()
 
         # get_all_titles was called three times, once for the first two
@@ -840,8 +843,10 @@ class TestEnkiImport:
                 self.update_circulation_called_with = since
 
         api = MockAPI()
-        importer = Mock(db.session, enki_test_fixture.collection, api_class=api)
-        since = object()
+        importer = Mock(
+            db.session, enki_test_fixture.collection, api_class=cast(EnkiAPI, api)
+        )
+        since = MagicMock()
         importer.incremental_import(since)
 
         # The 'since' value was passed into both methods.
@@ -854,6 +859,7 @@ class TestEnkiImport:
 
     def test_update_circulation(self, enki_test_fixture: EnkiTestFixure):
         db = enki_test_fixture.db
+
         # update_circulation() makes two-hour slices out of time
         # between the previous run and now, and passes each slice into
         # _update_circulation, keeping track of the total number of
@@ -876,7 +882,12 @@ class TestEnkiImport:
         now = utc_now()
         one_hour_ago = now - datetime.timedelta(hours=1)
         three_hours_ago = now - datetime.timedelta(hours=3)
-        monitor = Mock(db.session, enki_test_fixture.collection, api_class=MockEnkiAPI)
+        mock_api = MockEnkiAPI(
+            db.session,
+            enki_test_fixture.db.default_library(),
+            enki_test_fixture.collection,
+        )
+        monitor = Mock(db.session, enki_test_fixture.collection, api_class=mock_api)
         assert 3 == monitor.update_circulation(three_hours_ago)
 
         # slice_timespan() sliced up the timeline into two-hour
@@ -935,7 +946,7 @@ class TestEnkiImport:
             }
         }
 
-        api = MockEnkiAPI(db.session)
+        api = MockEnkiAPI(db.session, db.default_library())
         api.queue_response(200, content=json.dumps(circ_data))
         api.queue_response(200, content=json.dumps(bib_data))
 
@@ -943,7 +954,10 @@ class TestEnkiImport:
 
         analytics = MockAnalyticsProvider()
         monitor = EnkiImport(
-            db.session, enki_test_fixture.collection, api_class=api, analytics=analytics
+            db.session,
+            enki_test_fixture.collection,
+            api_class=api,
+            analytics=cast(Analytics, analytics),
         )
         end = utc_now()
 

@@ -4,8 +4,13 @@ import flask
 import pytest
 from werkzeug.datastructures import MultiDict
 
-from api.admin.exceptions import *
-from api.admin.problem_details import *
+from api.admin.exceptions import AdminNotAuthorized
+from api.admin.problem_details import (
+    ADMIN_AUTH_NOT_CONFIGURED,
+    INCOMPLETE_CONFIGURATION,
+    UNKNOWN_ROLE,
+)
+from api.problem_details import LIBRARY_NOT_FOUND
 from core.model import Admin, AdminRole, create, get_one
 
 
@@ -43,60 +48,47 @@ class TestIndividualAdmins:
                 settings_ctrl_fixture.manager.admin_individual_admin_settings_controller.process_get()
             )
             admins = response.get("individualAdmins")
-            assert sorted(
-                [
+
+            expected = {
+                "admin1@nypl.org": [{"role": AdminRole.SYSTEM_ADMIN}],
+                "admin2@nypl.org": [
                     {
-                        "email": "admin1@nypl.org",
-                        "roles": [{"role": AdminRole.SYSTEM_ADMIN}],
+                        "role": AdminRole.LIBRARY_MANAGER,
+                        "library": db.default_library().short_name,
                     },
-                    {
-                        "email": "admin2@nypl.org",
-                        "roles": [
-                            {
-                                "role": AdminRole.LIBRARY_MANAGER,
-                                "library": db.default_library().short_name,
-                            },
-                            {"role": AdminRole.SITEWIDE_LIBRARIAN},
-                        ],
-                    },
-                    {
-                        "email": "admin3@nypl.org",
-                        "roles": [
-                            {
-                                "role": AdminRole.LIBRARIAN,
-                                "library": db.default_library().short_name,
-                            }
-                        ],
-                    },
-                    {
-                        "email": "admin4@l2.org",
-                        "roles": [
-                            {
-                                "role": AdminRole.LIBRARY_MANAGER,
-                                "library": library2.short_name,
-                            }
-                        ],
-                    },
-                    {
-                        "email": "admin5@l2.org",
-                        "roles": [
-                            {
-                                "role": AdminRole.LIBRARIAN,
-                                "library": library2.short_name,
-                            }
-                        ],
-                    },
-                    {
-                        "email": "admin6@l2.org",
-                        "roles": [
-                            {
-                                "role": AdminRole.SITEWIDE_LIBRARY_MANAGER,
-                            }
-                        ],
-                    },
+                    {"role": AdminRole.SITEWIDE_LIBRARIAN},
                 ],
-                key=lambda x: x["email"],
-            ) == sorted(admins, key=lambda x: x["email"])
+                "admin3@nypl.org": [
+                    {
+                        "role": AdminRole.LIBRARIAN,
+                        "library": db.default_library().short_name,
+                    }
+                ],
+                "admin4@l2.org": [
+                    {
+                        "role": AdminRole.LIBRARY_MANAGER,
+                        "library": library2.short_name,
+                    }
+                ],
+                "admin5@l2.org": [
+                    {
+                        "role": AdminRole.LIBRARIAN,
+                        "library": library2.short_name,
+                    }
+                ],
+                "admin6@l2.org": [
+                    {
+                        "role": AdminRole.SITEWIDE_LIBRARY_MANAGER,
+                    }
+                ],
+            }
+
+            assert len(admins) == len(expected)
+            for admin in admins:
+                assert admin["email"] in expected
+                assert sorted(admin["roles"], key=lambda x: x["role"]) == sorted(
+                    expected[admin["email"]], key=lambda x: x["role"]
+                )
 
         with settings_ctrl_fixture.request_context_with_admin("/", admin=admin2):
             # A sitewide librarian or library manager can also see all admins' roles.
@@ -246,6 +238,16 @@ class TestIndividualAdmins:
                 ],
                 key=lambda x: x["email"],
             ) == sorted(admins, key=lambda x: x["email"])
+
+    def test_individual_admins_get_no_admin(self, settings_ctrl_fixture):
+        # When the application is first started, there is no admin user. In that
+        # case, we return a problem detail.
+
+        with settings_ctrl_fixture.ctrl.app.test_request_context("/", method="GET"):
+            response = (
+                settings_ctrl_fixture.manager.admin_individual_admin_settings_controller.process_get()
+            )
+            assert response == ADMIN_AUTH_NOT_CONFIGURED
 
     def test_individual_admins_post_errors(self, settings_ctrl_fixture):
         db = settings_ctrl_fixture.ctrl.db

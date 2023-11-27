@@ -1,34 +1,18 @@
 import datetime
-import logging
-from typing import Dict
+from typing import Dict, Optional
 
 from opensearchpy import OpenSearch
-from core.model.contributor import Contributor
 from opensearch_dsl import Search
+from flask_babel import lazy_gettext as _
+
+from core.model.contributor import Contributor
 from core.local_analytics_provider import LocalAnalyticsProvider
 from core.model.library import Library
 from core.model.licensing import LicensePool
-
-from flask_babel import lazy_gettext as _
-
-from core.model import ConfigurationSetting, ExternalIntegration, Session
 from core.util.http import HTTP
-
-from .config import CannotLoadConfiguration
 
 
 class OpenSearchAnalyticsProvider(LocalAnalyticsProvider):
-    NAME = _("OpenSearch")
-    DESCRIPTION = _("How to Configure a OpenSearch Integration")
-    INSTRUCTIONS = _("<p>Here be instructions</p>")
-
-    EVENTS_INDEX_PREFIX_KEY = "events_index_prefix"
-    DEFAULT_EVENTS_INDEX_PREFIX = "circulation-events"
-
-    SEARCH_VERSION = "search_version"
-    SEARCH_VERSION_OS1_X = "Opensearch 1.x"
-    DEFAULT_SEARCH_VERSION = SEARCH_VERSION_OS1_X
-
     # Fields that get indexed as keyword for aggregating and building faceted search
     KEYWORD_FIELDS = (
         "type",
@@ -75,67 +59,15 @@ class OpenSearchAnalyticsProvider(LocalAnalyticsProvider):
     BOOLEAN_FIELDS = (
         "fiction",
         "open_access",
-        "self_hosted",
     )
-
-    DEFAULT_URL = "http://localhost:9200"
-
-    SETTINGS = [
-        {
-            "key": ExternalIntegration.URL,
-            "label": _("URL"),
-            "default": DEFAULT_URL,
-            "required": True,
-            "format": "url",
-        },
-        {
-            "key": EVENTS_INDEX_PREFIX_KEY,
-            "label": _("Index prefix"),
-            "default": DEFAULT_EVENTS_INDEX_PREFIX,
-            "required": True,
-            "description": _(
-                "Event index will be created with this unique prefix. In most cases, the default will work fine. You may need to change this if you have multiple application servers using a single OpenSearch server."
-            ),
-        },
-        {
-            "key": SEARCH_VERSION,
-            "label": _("The search service version"),
-            "default": DEFAULT_SEARCH_VERSION,
-            "description": _(
-                "Which version of the search engine is being used. Changing this value will require a CM restart."
-            ),
-            "required": True,
-            "type": "select",
-            "options": [
-                {"key": SEARCH_VERSION_OS1_X, "label": SEARCH_VERSION_OS1_X},
-            ],
-        },
-    ]
 
     def __init__(
         self,
-        integration,
-        library=None,
-        version=None,
+        opensearch_analytics_url=None,
+        opensearch_analytics_index_prefix=None,
     ):
-        self.log = logging.getLogger("OpenSearch analytics")
-
-        if not library:
-            raise CannotLoadConfiguration(
-                "OpenSearch can't be configured without a library."
-            )
-
-        self.library_id = library.id
-
-        url_setting = ConfigurationSetting.for_externalintegration(
-            ExternalIntegration.URL, integration
-        )
-        self.url = url_setting.value or self.DEFAULT_URL
-
-        prefix_setting = ConfigurationSetting.for_externalintegration(
-            self.EVENTS_INDEX_PREFIX_KEY, integration
-        )
-        self.index_prefix = prefix_setting.value or self.DEFAULT_EVENTS_INDEX_PREFIX
+        self.url = opensearch_analytics_url
+        self.index_prefix = opensearch_analytics_index_prefix
 
         use_ssl = self.url.startswith("https://")
         self.__client = OpenSearch(self.url, use_ssl=use_ssl, timeout=20, maxsize=25)
@@ -148,45 +80,14 @@ class OpenSearchAnalyticsProvider(LocalAnalyticsProvider):
         self.index_name = self.index_prefix + "-" + "v1"
         self.setup_index(self.index_name)
 
-    @classmethod
-    def opensearch_integration(cls, _db, library=None) -> ExternalIntegration:
-        """Look up the ExternalIntegration for Opensearch analytics."""
-        return ExternalIntegration.lookup(
-            _db,
-            protocol=cls.__module__,
-            goal=ExternalIntegration.ANALYTICS_GOAL,
-            library=library,
-        )
-
-    @classmethod
-    def analytics_index_name(cls, _db, library=None):
-        """Look up the name of the OpenSearch analytics index.
-
-        (Copied and modified from external_search's
-        works_prefixed and works_index_name methods)
-        """
-        integration = cls.opensearch_integration(_db, library)
-
-        if not integration:
-            return None
-        setting = integration.setting(cls.EVENTS_INDEX_PREFIX_KEY)
-        prefix = setting.value_or_default(cls.DEFAULT_EVENTS_INDEX_PREFIX)
-        # Version v1 is hardcoded here. Implement external_search-type
-        # version system if needed in the future.
-        return prefix + "-" + "v1"
-
     def setup_index(self, new_index=None, **index_settings):
         """Create the event index with appropriate mapping."""
 
         index_name = new_index
         if self.indices.exists(index_name):
-            self.log.info("Index %s exists already.", index_name)
-            # self.log.info("Deleting index %s", index_name)
-            # self.indices.delete(index_name)
+            pass
 
         else:
-            self.log.info("Creating index %s", index_name)
-
             properties = {}
             for field in self.KEYWORD_FIELDS:
                 properties[field] = {"type": "keyword"}
@@ -200,7 +101,7 @@ class OpenSearchAnalyticsProvider(LocalAnalyticsProvider):
             body = {
                 "mappings": {"properties": properties}
             }  # TODO: add settings if necessary
-            index = self.indices.create(index=index_name, body=body)
+            self.indices.create(index=index_name, body=body)
 
     # Copied from s3_analytics_provider.py (with minor edits)
     @staticmethod
@@ -211,7 +112,7 @@ class OpenSearchAnalyticsProvider(LocalAnalyticsProvider):
         time: datetime.datetime,
         old_value,
         new_value,
-        neighborhood: str,
+        neighborhood: Optional[str] = None,
     ) -> Dict:
         """Create a Python dict containing required information about the event.
 
@@ -294,7 +195,6 @@ class OpenSearchAnalyticsProvider(LocalAnalyticsProvider):
             "patrons_in_hold_queue": license_pool.patrons_in_hold_queue
             if license_pool
             else None,
-            "self_hosted": license_pool.self_hosted if license_pool else None,
             "title": work.title if work else None,
             "author": work.author if work else None,
             "series": work.series if work else None,
@@ -363,12 +263,6 @@ class OpenSearchAnalyticsProvider(LocalAnalyticsProvider):
 
         if not library and not license_pool:
             raise ValueError("Either library or license_pool must be provided.")
-        if library:
-            _db = Session.object_session(library)
-        else:
-            _db = Session.object_session(license_pool)
-        if library and self.library_id and library.id != self.library_id:
-            return
 
         neighborhood = None
 
@@ -386,8 +280,4 @@ class OpenSearchAnalyticsProvider(LocalAnalyticsProvider):
         )
 
     def post(self, url, params):
-        response = HTTP.post_with_timeout(url, params)
-
-
-# The Analytics class looks for the name "Provider".
-Provider = OpenSearchAnalyticsProvider
+        HTTP.post_with_timeout(url, params)

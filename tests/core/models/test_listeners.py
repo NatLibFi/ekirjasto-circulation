@@ -5,13 +5,7 @@ import pytest
 
 from core import lane, model
 from core.config import Configuration
-from core.model import (
-    CachedFeed,
-    ConfigurationSetting,
-    Timestamp,
-    WorkCoverageRecord,
-    create,
-)
+from core.model import ConfigurationSetting, Timestamp, WorkCoverageRecord
 from core.model.listeners import site_configuration_has_changed
 from core.util.datetime_helpers import utc_now
 from tests.fixtures.database import DatabaseTransactionFixture
@@ -56,7 +50,7 @@ class ExampleSiteConfigurationHasChangedFixture:
         )
         data.mock = MockSiteConfigurationHasChanged()
         for module in model.listeners, lane:
-            module.site_configuration_has_changed = data.mock.run
+            module.site_configuration_has_changed = data.mock.run  # type: ignore[attr-defined]
         return data
 
     def close(self):
@@ -219,15 +213,6 @@ class TestSiteConfigurationHasChanged:
         session.commit()
         data.mock.assert_was_called()
 
-        # Associating a CachedFeed with the library does _not_ call
-        # the method, because nothing changed on the Library object and
-        # we don't listen for 'append' events on Library.cachedfeeds.
-        create(
-            session, CachedFeed, type="page", pagination="", facets="", library=library
-        )
-        session.commit()
-        data.mock.assert_was_not_called()
-
         # NOTE: test_work.py:TestWork.test_reindex_on_availability_change
         # tests the circumstances under which a database change
         # requires that a Work's entry in the search index be
@@ -245,10 +230,6 @@ class TestListeners:
             (
                 "works_when_open_access_property_changes",
                 functools.partial(_set_property, property_name="open_access"),
-            ),
-            (
-                "works_when_self_hosted_property_changes",
-                functools.partial(_set_property, property_name="self_hosted"),
             ),
         ],
     )

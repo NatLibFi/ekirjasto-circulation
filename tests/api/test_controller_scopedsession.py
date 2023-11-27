@@ -13,6 +13,7 @@ from core.model import (
     Library,
     create,
 )
+from core.opds_import import OPDSAPI
 from tests.fixtures.api_controller import (
     ControllerFixture,
     ControllerFixtureSetupOverrides,
@@ -22,7 +23,8 @@ from tests.fixtures.api_controller import (
 class ScopedHolder:
     """A scoped holder used to store some state in the test. This is necessary because
     we want to do some unusual things with scoped sessions, and don't necessary have access
-    to a database transaction fixture in all of the various methods that will be called."""
+    to a database transaction fixture in all of the various methods that will be called.
+    """
 
     def __init__(self):
         self.identifiers = 0
@@ -35,7 +37,17 @@ class ScopedHolder:
         libraries = []
         for i in range(2):
             name = self.fresh_id() + " (library for scoped session)"
-            library, ignore = create(session, Library, short_name=name)
+            library, ignore = create(
+                session,
+                Library,
+                short_name=name,
+                public_key="x",
+                private_key=b"y",
+                settings_dict={
+                    "website": "https://library.com",
+                    "help_web": "https://library.com/help",
+                },
+            )
             libraries.append(library)
         return libraries
 
@@ -49,6 +61,13 @@ class ScopedHolder:
             name=self.fresh_id() + " (collection for scoped session)",
         )
         collection.create_external_integration(ExternalIntegration.OPDS_IMPORT)
+        integration = collection.create_integration_configuration(
+            ExternalIntegration.OPDS_IMPORT
+        )
+        settings = OPDSAPI.settings_class()(
+            external_account_id="http://url.com", data_source="OPDS"
+        )
+        OPDSAPI.settings_update(integration, settings)
         library.collections.append(collection)
         return collection
 
@@ -75,9 +94,9 @@ class TestScopedSession:
 
         fixture = controller_fixture_without_cm
         with fixture.app.test_request_context(*args) as ctx:
-            transaction = current_session.begin_nested()
+            transaction = current_session.begin_nested()  # type: ignore[attr-defined]
             fixture.app.manager = fixture.circulation_manager_setup_with_session(
-                session=current_session,
+                session=current_session,  # type: ignore[arg-type]
                 overrides=ControllerFixtureSetupOverrides(
                     make_default_libraries=scoped.make_default_libraries,
                     make_default_collection=scoped.make_default_collection,
@@ -126,11 +145,14 @@ class TestScopedSession:
             [identifier] = fixture.app.manager._db.query(Identifier).all()
             assert "1024" == identifier.identifier
 
-            # But if we were to use flask_scoped_session to create a
-            # brand new session, it would not see the Identifier,
-            # because it's running in a different database session.
-            new_session = fixture.app.manager._db.session_factory()
-            assert [] == new_session.query(Identifier).all()
+            # We use the session context manager here to make sure
+            # we don't keep a transaction open for this new session
+            # once we are done with it.
+            with fixture.app.manager._db.session_factory() as new_session:
+                # But if we were to use flask_scoped_session to create a
+                # brand new session, it would not see the Identifier,
+                # because it's running in a different database session.
+                assert [] == new_session.query(Identifier).all()
 
             # When the index controller runs in the request context,
             # it doesn't store anything that's associated with the
@@ -172,3 +194,7 @@ class TestScopedSession:
         # which is the same as self._db, the unscoped database session
         # used by most other unit tests.
         assert session1 != session2
+
+        # Make sure that we close the connections for the scoped sessions.
+        session1.bind.dispose()
+        session2.bind.dispose()

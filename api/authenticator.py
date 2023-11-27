@@ -4,7 +4,7 @@ import json
 import logging
 import sys
 from abc import ABC
-from typing import Dict, Iterable, List, Literal, Optional, Tuple, Type
+from typing import Dict, Iterable, List, Optional, Tuple, Type
 
 import flask
 import jwt
@@ -15,27 +15,31 @@ from werkzeug.datastructures import Authorization, Headers
 
 from api.adobe_vendor_id import AuthdataUtility
 from api.annotations import AnnotationWriter
-from api.announcements import Announcements
+from api.authentication.access_token import AccessTokenProvider
+from api.authentication.base import (
+    AuthenticationProvider,
+    LibrarySettingsType,
+    SettingsType,
+)
+from api.authentication.basic import BasicAuthenticationProvider
+from api.authentication.basic_token import BasicTokenAuthenticationProvider
+from api.config import CannotLoadConfiguration, Configuration
 from api.custom_patron_catalog import CustomPatronCatalog
-from api.ekirjasto_authentication import EkirjastoAuthenticationAPI # Finland
-from api.opds import LibraryAnnotator
+from api.integration.registry.patron_auth import PatronAuthRegistry
+from api.problem_details import *
+from api.ekirjasto_authentication import EkirjastoAuthenticationAPI  # Finland
 from core.analytics import Analytics
 from core.integration.goals import Goals
 from core.integration.registry import IntegrationRegistry
 from core.model import ConfigurationSetting, Library, Patron, PatronProfileStorage
+from core.model.announcements import Announcement
 from core.model.integration import IntegrationLibraryConfiguration
-from core.opds import OPDSFeed
 from core.user_profile import ProfileController
 from core.util.authentication_for_opds import AuthenticationForOPDSDocument
 from core.util.http import RemoteIntegrationException
-from core.util.log import elapsed_time_logging
+from core.util.log import LoggerMixin, elapsed_time_logging
+from core.util.opds_writer import OPDSFeed
 from core.util.problem_detail import ProblemDetail, ProblemError
-
-from .authentication.base import AuthenticationProvider
-from .authentication.basic import BasicAuthenticationProvider
-from .config import CannotLoadConfiguration, Configuration
-from .integration.registry.patron_auth import PatronAuthRegistry
-from .problem_details import *
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -64,14 +68,6 @@ class CirculationPatronProfileStorage(PatronProfileStorage):
             ] = "http://librarysimplified.org/terms/drm/scheme/ACS"
             drm.append(adobe_drm)
 
-            device_link["rel"] = "http://librarysimplified.org/terms/drm/rel/devices"
-            device_link["href"] = self.url_for(
-                "adobe_drm_devices",
-                library_short_name=self.patron.library.short_name,
-                _external=True,
-            )
-            links.append(device_link)
-
             annotations_link = dict(
                 rel="http://www.w3.org/ns/oa#annotationService",
                 type=AnnotationWriter.CONTENT_TYPE,
@@ -83,7 +79,7 @@ class CirculationPatronProfileStorage(PatronProfileStorage):
             )
             links.append(annotations_link)
 
-            doc["links"] = links
+            doc["links"].extend(links)
 
         if drm:
             doc["drm"] = drm
@@ -91,16 +87,13 @@ class CirculationPatronProfileStorage(PatronProfileStorage):
         return doc
 
 
-class Authenticator:
+class Authenticator(LoggerMixin):
     """Route requests to the appropriate LibraryAuthenticator."""
 
     def __init__(
         self, _db, libraries: Iterable[Library], analytics: Analytics | None = None
     ):
         # Create authenticators
-        self.log = logging.getLogger(
-            f"{self.__class__.__module__}.{self.__class__.__name__}"
-        )
         self.library_authenticators: dict[str, LibraryAuthenticator] = {}
         self.populate_authenticators(_db, libraries, analytics)
 
@@ -159,7 +152,7 @@ class Authenticator:
         return self.invoke_authenticator_method("get_ekirjasto_provider")
 
 
-class LibraryAuthenticator:
+class LibraryAuthenticator(LoggerMixin):
     """Use the registered AuthenticationProviders to turn incoming
     credentials into Patron objects.
     """
@@ -233,7 +226,7 @@ class LibraryAuthenticator:
         library: Library,
         basic_auth_provider: Optional[BasicAuthenticationProvider] = None,
         saml_providers: Optional[List[BaseSAMLAuthenticationProvider]] = None,
-        ekirjasto_provider: Optional[EkirjastoAuthenticationAPI] = None, # Finland
+        ekirjasto_provider: Optional[EkirjastoAuthenticationAPI] = None,  # Finland
         bearer_token_signing_secret: Optional[str] = None,
         authentication_document_annotator: Optional[CustomPatronCatalog] = None,
         integration_registry: Optional[
@@ -270,21 +263,19 @@ class LibraryAuthenticator:
             else integration_registry
         )
 
-        self.basic_auth_provider = basic_auth_provider
         self.saml_providers_by_name = {}
-        self.ekirjasto_provider = ekirjasto_provider # Finland
+        self.ekirjasto_provider = ekirjasto_provider  # Finland
         self.bearer_token_signing_secret = bearer_token_signing_secret
         self.initialization_exceptions: Dict[
             Tuple[int | None, int | None], Exception
         ] = {}
 
-        self.log = logging.getLogger("Authenticator")
-
-        # Make sure there's a public/private key pair for this
-        # library. This makes it possible to register the library with
-        # discovery services. Store the public key here for
-        # convenience; leave the private key in the database.
-        self.public_key, ignore = self.key_pair
+        self.basic_auth_provider: BasicAuthenticationProvider | None = None
+        self.access_token_authentication_provider: BasicTokenAuthenticationProvider | None = (
+            None
+        )
+        if basic_auth_provider:
+            self.register_basic_auth_provider(basic_auth_provider)
 
         if saml_providers:
             for provider in saml_providers:
@@ -372,18 +363,8 @@ class LibraryAuthenticator:
                 f"Implementation class {impl_cls} is not an AuthenticationProvider."
             )
         try:
-            if not isinstance(integration.parent.settings, dict):
-                raise CannotLoadConfiguration(
-                    f"Settings for {impl_cls.__name__} authentication provider for "
-                    f"library {self.library_short_name} are not a dictionary."
-                )
-            if not isinstance(integration.settings, dict):
-                raise CannotLoadConfiguration(
-                    f"Library settings for {impl_cls.__name__} authentication provider for "
-                    f"library {self.library_short_name} are not a dictionary."
-                )
-            settings = impl_cls.settings_class()(**integration.parent.settings)
-            library_settings = impl_cls.library_settings_class()(**integration.settings)
+            settings = impl_cls.settings_load(integration.parent)
+            library_settings = impl_cls.library_settings_load(integration)
             provider = impl_cls(
                 self.library_id,  # type: ignore[arg-type]
                 integration.parent_id,  # type: ignore[arg-type]
@@ -403,7 +384,7 @@ class LibraryAuthenticator:
             # the ability to run one.
         elif isinstance(provider, BaseSAMLAuthenticationProvider):
             self.register_saml_provider(provider)
-        elif isinstance(provider, EkirjastoAuthenticationAPI): # Finland
+        elif isinstance(provider, EkirjastoAuthenticationAPI):  # Finland
             self.register_ekirjasto_provider(provider)
         else:
             raise CannotLoadConfiguration(
@@ -421,6 +402,14 @@ class LibraryAuthenticator:
         ):
             raise CannotLoadConfiguration("Two basic auth providers configured")
         self.basic_auth_provider = provider
+        # TODO: We can remove the configuration test once
+        #  basic token authentication is fully deployed.
+        if self.library is not None and Configuration.basic_token_auth_is_enabled():
+            self.access_token_authentication_provider = (
+                BasicTokenAuthenticationProvider(
+                    self._db, self.library, self.basic_auth_provider
+                )
+            )
 
     def register_saml_provider(
         self,
@@ -438,10 +427,7 @@ class LibraryAuthenticator:
         self,
         provider: EkirjastoAuthenticationAPI,
     ):
-        if (
-            self.ekirjasto_provider is not None
-            and self.ekirjasto_provider != provider
-        ):
+        if self.ekirjasto_provider is not None and self.ekirjasto_provider != provider:
             raise CannotLoadConfiguration("Two ekirjasto auth providers configured")
         self.ekirjasto_provider = provider
 
@@ -452,10 +438,37 @@ class LibraryAuthenticator:
     @property
     def providers(self) -> Iterable[AuthenticationProvider]:
         """An iterator over all registered AuthenticationProviders."""
+        if self.access_token_authentication_provider:
+            yield self.access_token_authentication_provider
         if self.basic_auth_provider:
             yield self.basic_auth_provider
-        if self.ekirjasto_provider: # Finland
+        if self.ekirjasto_provider:  # Finland
             yield self.ekirjasto_provider
+        yield from self.saml_providers_by_name.values()
+
+    def _unique_basic_lookup_providers(
+        self, auth_providers: Iterable[AuthenticationProvider | None]
+    ) -> Iterable[AuthenticationProvider]:
+        providers: filter[AuthenticationProvider] = filter(
+            None,
+            (p.patron_lookup_provider for p in auth_providers if p is not None),
+        )
+        # De-dupe, but preserve provider order.
+        return dict.fromkeys(list(providers)).keys()
+
+    @property
+    def unique_patron_lookup_providers(self) -> Iterable[AuthenticationProvider]:
+        """Iterator over unique patron data providers for registered AuthenticationProviders.
+
+        We want a unique list of providers in order to avoid hitting the same
+        provider multiple times, most likely in the case of failing lookups.
+        """
+        yield from self._unique_basic_lookup_providers(
+            [
+                self.access_token_authentication_provider,
+                self.basic_auth_provider,
+            ]
+        )
         yield from self.saml_providers_by_name.values()
 
     def authenticated_patron(
@@ -470,13 +483,13 @@ class LibraryAuthenticator:
             ProblemDetail if an error occurs.
         """
         provider: AuthenticationProvider | None = None
-        provider_token: Dict[str, str] | str | None = None
+        provider_token: Dict[str, str | None] | str | None = None
         if self.basic_auth_provider and auth.type.lower() == "basic":
             # The patron wants to authenticate with the
             # BasicAuthenticationProvider.
             provider = self.basic_auth_provider
             provider_token = auth.parameters
-        elif self.ekirjasto_provider and auth.type.lower() == "bearer": # Finland
+        elif self.ekirjasto_provider and auth.type.lower() == "bearer":  # Finland
             # The patron wants to authenticate with the
             # EkirjastoAuthenticationAPI.
             if auth.token is None:
@@ -491,16 +504,26 @@ class LibraryAuthenticator:
             # SAMLAuthenticationProvider. Figure out which one.
             if auth.token is None:
                 return INVALID_SAML_BEARER_TOKEN
-            try:
-                provider_name, provider_token = self.decode_bearer_token(auth.token)
-            except jwt.exceptions.InvalidTokenError as e:
-                return INVALID_SAML_BEARER_TOKEN
-            saml_provider = self.saml_provider_lookup(provider_name)
-            if isinstance(saml_provider, ProblemDetail):
-                # There was a problem turning the provider name into
-                # a registered SAMLAuthenticationProvider.
-                return saml_provider
-            provider = saml_provider
+
+            if (
+                self.access_token_authentication_provider
+                and AccessTokenProvider.is_access_token(auth.token)
+            ):
+                provider = self.access_token_authentication_provider
+                provider_token = auth.token
+            elif self.saml_providers_by_name:
+                # The patron wants to use an
+                # SAMLAuthenticationProvider. Figure out which one.
+                try:
+                    provider_name, provider_token = self.decode_bearer_token(auth.token)
+                except jwt.exceptions.InvalidTokenError as e:
+                    return INVALID_SAML_BEARER_TOKEN
+                saml_provider = self.saml_provider_lookup(provider_name)
+                if isinstance(saml_provider, ProblemDetail):
+                    # There was a problem turning the provider name into
+                    # a registered SAMLAuthenticationProvider.
+                    return saml_provider
+                provider = saml_provider
 
         if provider and provider_token:
             # Turn the token/header into a patron
@@ -571,12 +594,12 @@ class LibraryAuthenticator:
             # Maybe we should use something custom instead.
             iss=provider_name,
         )
-        return jwt.encode(payload, self.bearer_token_signing_secret, algorithm="HS256")  # type: ignore[arg-type]
+        return jwt.encode(payload, self.bearer_token_signing_secret, algorithm="HS256")
 
     def decode_bearer_token(self, token: str) -> Tuple[str, str]:
         """Extract auth provider name and access token from JSON web token."""
         decoded = jwt.decode(
-            token, self.bearer_token_signing_secret, algorithms=["HS256"]  # type: ignore[arg-type]
+            token, self.bearer_token_signing_secret, algorithms=["HS256"]
         )
         provider_name = decoded["iss"]
         token = decoded["token"]
@@ -596,25 +619,74 @@ class LibraryAuthenticator:
         """Create the Authentication For OPDS document to be used when
         a request comes in with no authentication.
         """
-        links = []
-        library = self.library
+        links: List[Dict[str, Optional[str]]] = []
+        if self.library is None:
+            raise ValueError("No library specified!")
 
-        # Add the same links that we would show in an OPDS feed, plus
-        # some extra like 'registration' that are specific to Authentication
-        # For OPDS.
-        for rel in (
-            LibraryAnnotator.CONFIGURATION_LINKS
-            + Configuration.AUTHENTICATION_FOR_OPDS_LINKS
-        ):
-            value = ConfigurationSetting.for_library(rel, library).value
-            if not value:
-                continue
-            link = dict(rel=rel, href=value)
-            if any(value.startswith(x) for x in ("http:", "https:")):
-                # We assume that HTTP URLs lead to HTML, but we don't
-                # assume anything about other URL schemes.
-                link["type"] = "text/html"
-            links.append(link)
+        # Add the same links that we would show in an OPDS feed.
+        if self.library.settings.terms_of_service:
+            links.append(
+                dict(
+                    rel="terms-of-service",
+                    href=self.library.settings.terms_of_service,
+                    type="text/html",
+                )
+            )
+
+        if self.library.settings.privacy_policy:
+            links.append(
+                dict(
+                    rel="privacy-policy",
+                    href=self.library.settings.privacy_policy,
+                    type="text/html",
+                )
+            )
+
+        if self.library.settings.copyright:
+            links.append(
+                dict(
+                    rel="copyright",
+                    href=self.library.settings.copyright,
+                    type="text/html",
+                )
+            )
+
+        if self.library.settings.about:
+            links.append(
+                dict(
+                    rel="about",
+                    href=self.library.settings.about,
+                    type="text/html",
+                )
+            )
+
+        if self.library.settings.license:
+            links.append(
+                dict(
+                    rel="license",
+                    href=self.library.settings.license,
+                    type="text/html",
+                )
+            )
+
+        # Plus some extra like 'registration' that are specific to Authentication For OPDS.
+        if self.library.settings.registration_url:
+            links.append(
+                dict(
+                    rel="register",
+                    href=self.library.settings.registration_url,
+                    type="text/html",
+                )
+            )
+
+        if self.library.settings.patron_password_reset:
+            links.append(
+                dict(
+                    rel="http://librarysimplified.org/terms/rel/patron-password-reset",
+                    href=self.library.settings.patron_password_reset,
+                    type="text/html",
+                )
+            )
 
         # Add a rel="start" link pointing to the root OPDS feed.
         index_url = url_for(
@@ -647,36 +719,35 @@ class LibraryAuthenticator:
 
         # If there is a Designated Agent email address, add it as a
         # link.
-        designated_agent_uri = Configuration.copyright_designated_agent_uri(library)
+        designated_agent_uri = Configuration.copyright_designated_agent_uri(
+            self.library
+        )
         if designated_agent_uri:
             links.append(
                 dict(
-                    rel=Configuration.COPYRIGHT_DESIGNATED_AGENT_REL,
+                    rel="http://librarysimplified.org/rel/designated-agent/copyright",
                     href=designated_agent_uri,
                 )
             )
 
         # Add a rel="help" link for every type of URL scheme that
         # leads to library-specific help.
-        for type, uri in Configuration.help_uris(library):
+        for type, uri in Configuration.help_uris(self.library):
             links.append(dict(rel="help", href=uri, type=type))
 
         # Add a link to the web page of the library itself.
-        library_uri = ConfigurationSetting.for_library(
-            Configuration.WEBSITE_URL, library
-        ).value
+        library_uri = self.library.settings.website
         if library_uri:
             links.append(dict(rel="alternate", type="text/html", href=library_uri))
 
         # Add the library's logo, if it has one.
-        logo = ConfigurationSetting.for_library(Configuration.LOGO, library).value
-        if logo:
-            links.append(dict(rel="logo", type="image/png", href=logo))
+        if self.library and self.library.logo:
+            links.append(
+                dict(rel="logo", type="image/png", href=self.library.logo.data_url)
+            )
 
         # Add the library's custom CSS file, if it has one.
-        css_file = ConfigurationSetting.for_library(
-            Configuration.WEB_CSS_FILE, library
-        ).value
+        css_file = self.library.settings.web_css_file
         if css_file:
             links.append(dict(rel="stylesheet", type="text/css", href=css_file))
 
@@ -690,19 +761,13 @@ class LibraryAuthenticator:
         ).to_dict(self._db)
 
         # Add the library's mobile color scheme, if it has one.
-        description = ConfigurationSetting.for_library(
-            Configuration.COLOR_SCHEME, library
-        ).value
-        if description:
-            doc["color_scheme"] = description
+        color_scheme = self.library.settings.color_scheme
+        if color_scheme:
+            doc["color_scheme"] = color_scheme
 
         # Add the library's web colors, if it has any.
-        primary = ConfigurationSetting.for_library(
-            Configuration.WEB_PRIMARY_COLOR, library
-        ).value
-        secondary = ConfigurationSetting.for_library(
-            Configuration.WEB_SECONDARY_COLOR, library
-        ).value
+        primary = self.library.settings.web_primary_color
+        secondary = self.library.settings.web_secondary_color
         if primary or secondary:
             doc["web_color_scheme"] = dict(
                 primary=primary,
@@ -713,28 +778,28 @@ class LibraryAuthenticator:
 
         # Add the description of the library as the OPDS feed's
         # service_description.
-        description = ConfigurationSetting.for_library(
-            Configuration.LIBRARY_DESCRIPTION, library
-        ).value
+        description = self.library.settings.library_description
         if description:
             doc["service_description"] = description
 
-        # Add the library's focus area and service area, if either is
-        # specified.
-        focus_area, service_area = self._geographic_areas(library)
-        if focus_area:
-            doc["focus_area"] = focus_area
-        if service_area:
-            doc["service_area"] = service_area
-
         # Add the library's public key.
-        doc["public_key"] = dict(type="RSA", value=self.public_key)
+        if self.library and self.library.public_key:
+            doc["public_key"] = dict(type="RSA", value=self.library.public_key)
+        else:
+            error_library = (
+                self.library.short_name
+                if self.library
+                else f'Library ID "{self.library_id}"'
+            )
+            self.log.error(
+                f"{error_library} has no public key to include in auth document."
+            )
 
         # Add feature flags to signal to clients what features they should
         # offer.
         enabled: List[str] = []
         disabled: List[str] = []
-        if library and library.allow_holds:
+        if self.library and self.library.settings.allow_holds:
             bucket = enabled
         else:
             bucket = disabled
@@ -742,84 +807,21 @@ class LibraryAuthenticator:
         doc["features"] = dict(enabled=enabled, disabled=disabled)
 
         # Add any active announcements for the library.
-        library_announcements = (
-            Announcements.for_library(library).active if library else []
-        )
-        announcements = [x.for_authentication_document for x in library_announcements]
-        # Add any global announcements
-        announcements_for_all = [
-            x.for_authentication_document
-            for x in Announcements.for_all(self._db).active
-        ]
-        doc["announcements"] = announcements_for_all + announcements
+        if self.library:
+            doc["announcements"] = Announcement.authentication_document_announcements(
+                self.library
+            )
 
         # Finally, give the active annotator a chance to modify the document.
 
         if self.authentication_document_annotator:
             doc = (
                 self.authentication_document_annotator.annotate_authentication_document(
-                    library, doc, url_for
+                    self.library, doc, url_for
                 )
             )
 
         return json.dumps(doc)
-
-    @property
-    def key_pair(self) -> Tuple[str | None, str | None]:
-        """Look up or create a public/private key pair for use by this library."""
-        setting = ConfigurationSetting.for_library(Configuration.KEY_PAIR, self.library)
-        return Configuration.key_pair(setting)
-
-    @classmethod
-    def _geographic_areas(
-        cls, library: Optional[Library]
-    ) -> Tuple[
-        Literal["everywhere"] | List[str] | None,
-        Literal["everywhere"] | List[str] | None,
-    ]:
-        """Determine the library's focus area and service area.
-
-        :param library: A Library
-        :return: A 2-tuple (focus_area, service_area)
-        """
-        if not library:
-            return None, None
-
-        focus_area = cls._geographic_area(Configuration.LIBRARY_FOCUS_AREA, library)
-        service_area = cls._geographic_area(Configuration.LIBRARY_SERVICE_AREA, library)
-
-        # If only one value is provided, both values are considered to
-        # be the same.
-        if focus_area and not service_area:
-            service_area = focus_area
-        if service_area and not focus_area:
-            focus_area = service_area
-        return focus_area, service_area
-
-    @classmethod
-    def _geographic_area(
-        cls, key: str, library: Library
-    ) -> Literal["everywhere"] | List[str] | None:
-        """Extract a geographic area from a ConfigurationSetting
-        for the given `library`.
-
-        See https://github.com/NYPL-Simplified/Simplified/wiki/Authentication-For-OPDS-Extensions#service_area and #focus_area
-        """
-        setting = ConfigurationSetting.for_library(key, library).value
-        if not setting:
-            return setting
-        if setting == "everywhere":
-            # This literal string may be served as is.
-            return setting
-        try:
-            # If we can load the setting as JSON, it is either a list
-            # of place names or a GeoJSON object.
-            setting = json.loads(setting)
-        except (ValueError, TypeError) as e:
-            # The most common outcome -- treat the value as a single place
-            # name by turning it into a list.
-            setting = [setting]
-        return setting
 
     def create_authentication_headers(self) -> Headers:
         """Create the HTTP headers to return with the OPDS
@@ -874,7 +876,9 @@ class BearerTokenSigner:
         return ConfigurationSetting.sitewide_secret(db, cls.BEARER_TOKEN_SIGNING_SECRET)
 
 
-class BaseSAMLAuthenticationProvider(AuthenticationProvider, BearerTokenSigner, ABC):
+class BaseSAMLAuthenticationProvider(
+    AuthenticationProvider[SettingsType, LibrarySettingsType], BearerTokenSigner, ABC
+):
     """
     Base class for SAML authentication providers
     """

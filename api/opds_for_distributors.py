@@ -1,9 +1,20 @@
+from __future__ import annotations
+
 import datetime
 import json
+from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional, Set, Tuple, Type
 
 import feedparser
 from flask_babel import lazy_gettext as _
 
+from api.circulation import FulfillmentInfo, LoanInfo, PatronActivityCirculationAPI
+from api.circulation_exceptions import (
+    CannotFulfill,
+    DeliveryMechanismError,
+    LibraryAuthorizationFailedException,
+)
+from api.selftest import HasCollectionSelfTests
+from core.integration.settings import BaseSettings, ConfigurationFormItem, FormField
 from core.metadata_layer import FormatData, TimestampData
 from core.model import (
     Collection,
@@ -18,35 +29,48 @@ from core.model import (
     Session,
     get_one,
 )
-from core.opds_import import OPDSImporter, OPDSImportMonitor
-from core.selftest import HasSelfTests
+from core.opds_import import OPDSImporter, OPDSImporterSettings, OPDSImportMonitor
+from core.util import base64
 from core.util.datetime_helpers import utc_now
 from core.util.http import HTTP
-from core.util.string_helpers import base64
 
-from .circulation import BaseCirculationAPI, FulfillmentInfo, LoanInfo
-from .circulation_exceptions import *
+if TYPE_CHECKING:
+    from requests import Response
+
+    from api.circulation import HoldInfo
+    from core.coverage import CoverageFailure
+    from core.metadata_layer import CirculationData
+    from core.model import Edition, LicensePoolDeliveryMechanism, Patron, Work
+    from core.selftest import SelfTestResult
 
 
-class OPDSForDistributorsAPI(BaseCirculationAPI, HasSelfTests):
-    NAME = "OPDS for Distributors"
-    DESCRIPTION = _(
-        "Import books from a distributor that requires authentication to get the OPDS feed and download books."
+class OPDSForDistributorsSettings(OPDSImporterSettings):
+    username: str = FormField(
+        form=ConfigurationFormItem(
+            label=_("Library's username or access key"),
+            required=True,
+        )
     )
-    BEARER_TOKEN_CREDENTIAL_TYPE = "OPDS For Distributors Bearer Token"
 
-    SETTINGS = OPDSImporter.BASE_SETTINGS + [
-        {
-            "key": ExternalIntegration.USERNAME,
-            "label": _("Library's username or access key"),
-            "required": True,
-        },
-        {
-            "key": ExternalIntegration.PASSWORD,
-            "label": _("Library's password or secret key"),
-            "required": True,
-        },
-    ]
+    password: str = FormField(
+        form=ConfigurationFormItem(
+            label=_("Library's password or secret key"),
+            required=True,
+        )
+    )
+
+
+class OPDSForDistributorsLibrarySettings(BaseSettings):
+    pass
+
+
+class OPDSForDistributorsAPI(
+    PatronActivityCirculationAPI[
+        OPDSForDistributorsSettings, OPDSForDistributorsLibrarySettings
+    ],
+    HasCollectionSelfTests,
+):
+    BEARER_TOKEN_CREDENTIAL_TYPE = "OPDS For Distributors Bearer Token"
 
     # In OPDS For Distributors, all items are gated through the
     # BEARER_TOKEN access control scheme.
@@ -60,35 +84,52 @@ class OPDSForDistributorsAPI(BaseCirculationAPI, HasSelfTests):
         if drm == (DeliveryMechanism.BEARER_TOKEN) and format is not None
     ]
 
-    # ...and we should map requests for delivery of that media type to
-    # the (type, BEARER_TOKEN) DeliveryMechanism.
-    delivery_mechanism_to_internal_format = {
-        (type, DeliveryMechanism.BEARER_TOKEN): type for type in SUPPORTED_MEDIA_TYPES
-    }
+    @classmethod
+    def settings_class(cls) -> Type[OPDSForDistributorsSettings]:
+        return OPDSForDistributorsSettings
 
-    def __init__(self, _db, collection):
-        self.collection_id = collection.id
+    @classmethod
+    def library_settings_class(cls) -> Type[OPDSForDistributorsLibrarySettings]:
+        return OPDSForDistributorsLibrarySettings
+
+    @classmethod
+    def description(cls) -> str:
+        return "Import books from a distributor that requires authentication to get the OPDS feed and download books."
+
+    @classmethod
+    def label(cls) -> str:
+        return "OPDS for Distributors"
+
+    def __init__(self, _db: Session, collection: Collection):
+        super().__init__(_db, collection)
         self.external_integration_id = collection.external_integration.id
-        self.data_source_name = collection.external_integration.setting(
-            Collection.DATA_SOURCE_NAME_SETTING
-        ).value
-        self.username = collection.external_integration.username
-        self.password = collection.external_integration.password
-        self.feed_url = collection.external_account_id
-        self.auth_url = None
 
-    def external_integration(self, _db):
+        settings = self.settings
+        self.data_source_name = settings.data_source
+        self.username = settings.username
+        self.password = settings.password
+        self.feed_url = collection.external_account_id
+        self.auth_url: Optional[str] = None
+
+    def external_integration(self, _db: Session) -> Optional[ExternalIntegration]:
         return get_one(_db, ExternalIntegration, id=self.external_integration_id)
 
-    def _run_self_tests(self, _db):
+    def _run_self_tests(self, _db: Session) -> Generator[SelfTestResult, None, None]:
         """Try to get a token."""
         yield self.run_test("Negotiate a fulfillment token", self._get_token, _db)
 
-    def _request_with_timeout(self, method, url, *args, **kwargs):
+    def _request_with_timeout(
+        self, method: str, url: Optional[str], *args: Any, **kwargs: Any
+    ) -> Response:
         """Wrapper around HTTP.request_with_timeout to be overridden for tests."""
+        if url is None:
+            name = self.collection.name if self.collection else "unknown"
+            raise LibraryAuthorizationFailedException(
+                f"No URL provided to request_with_timeout for collection: {name}/{self.collection_id}."
+            )
         return HTTP.request_with_timeout(method, url, *args, **kwargs)
 
-    def _get_token(self, _db) -> Credential:
+    def _get_token(self, _db: Session) -> Credential:
         # If this is the first time we're getting a token, we
         # need to find the authenticate url in the OPDS
         # authentication document.
@@ -175,12 +216,17 @@ class OPDSForDistributorsAPI(BaseCirculationAPI, HasSelfTests):
             _db,
             self.data_source_name,
             self.BEARER_TOKEN_CREDENTIAL_TYPE,
-            collection=Collection.by_id(_db, self.collection_id),
+            collection=self.collection,
             patron=None,
             refresher_method=refresh,
         )
 
-    def can_fulfill_without_loan(self, patron, licensepool, lpdm):
+    def can_fulfill_without_loan(
+        self,
+        patron: Optional[Patron],
+        pool: LicensePool,
+        lpdm: LicensePoolDeliveryMechanism,
+    ) -> bool:
         """Since OPDS For Distributors delivers books to the library rather
         than creating loans, any book can be fulfilled without
         identifying the patron, assuming the library's policies
@@ -197,7 +243,7 @@ class OPDSForDistributorsAPI(BaseCirculationAPI, HasSelfTests):
             return True
         return False
 
-    def checkin(self, patron, pin, licensepool):
+    def checkin(self, patron: Patron, pin: str, licensepool: LicensePool) -> None:
         # Delete the patron's loan for this licensepool.
         _db = Session.object_session(patron)
         try:
@@ -212,7 +258,13 @@ class OPDSForDistributorsAPI(BaseCirculationAPI, HasSelfTests):
             # The patron didn't have this book checked out.
             pass
 
-    def checkout(self, patron, pin, licensepool, internal_format):
+    def checkout(
+        self,
+        patron: Patron,
+        pin: str,
+        licensepool: LicensePool,
+        delivery_mechanism: LicensePoolDeliveryMechanism,
+    ) -> LoanInfo:
         now = utc_now()
         return LoanInfo(
             licensepool.collection,
@@ -223,56 +275,77 @@ class OPDSForDistributorsAPI(BaseCirculationAPI, HasSelfTests):
             end_date=None,
         )
 
-    def fulfill(self, patron, pin, licensepool, internal_format, **kwargs):
+    def fulfill(
+        self,
+        patron: Patron,
+        pin: str,
+        licensepool: LicensePool,
+        delivery_mechanism: LicensePoolDeliveryMechanism,
+    ) -> FulfillmentInfo:
         """Retrieve a bearer token that can be used to download the book.
-
-        :param kwargs: A container for arguments to fulfill()
-           which are not relevant to this vendor.
 
         :return: a FulfillmentInfo object.
         """
+        if (
+            delivery_mechanism.delivery_mechanism.drm_scheme
+            != DeliveryMechanism.BEARER_TOKEN
+        ):
+            raise DeliveryMechanismError(
+                "Cannot fulfill a loan through OPDS For Distributors using a delivery mechanism with DRM scheme %s"
+                % delivery_mechanism.delivery_mechanism.drm_scheme
+            )
 
         links = licensepool.identifier.links
+
         # Find the acquisition link with the right media type.
+        url = None
         for link in links:
             media_type = link.resource.representation.media_type
             if (
                 link.rel == Hyperlink.GENERIC_OPDS_ACQUISITION
-                and media_type == internal_format
+                and media_type == delivery_mechanism.delivery_mechanism.content_type
             ):
                 url = link.resource.representation.url
+                break
 
-                # Obtain a Credential with the information from our
-                # bearer token.
-                _db = Session.object_session(licensepool)
-                credential = self._get_token(_db)
+        if url is None:
+            # We couldn't find an acquisition link for this book.
+            raise CannotFulfill()
 
-                # Build a application/vnd.librarysimplified.bearer-token
-                # document using information from the credential.
-                now = utc_now()
-                expiration = int((credential.expires - now).total_seconds())
-                token_document = dict(
-                    token_type="Bearer",
-                    access_token=credential.credential,
-                    expires_in=expiration,
-                    location=url,
-                )
+        # Obtain a Credential with the information from our
+        # bearer token.
+        _db = Session.object_session(licensepool)
+        credential = self._get_token(_db)
+        if credential.expires is None:
+            self.log.error(
+                f"Credential ({credential.id}) for patron ({patron.authorization_identifier}/{patron.id}) "
+                "has no expiration date. Cannot fulfill loan."
+            )
+            raise CannotFulfill()
 
-                return FulfillmentInfo(
-                    licensepool.collection,
-                    licensepool.data_source.name,
-                    licensepool.identifier.type,
-                    licensepool.identifier.identifier,
-                    content_link=None,
-                    content_type=DeliveryMechanism.BEARER_TOKEN,
-                    content=json.dumps(token_document),
-                    content_expires=credential.expires,
-                )
+        # Build a application/vnd.librarysimplified.bearer-token
+        # document using information from the credential.
+        now = utc_now()
+        expiration = int((credential.expires - now).total_seconds())
+        token_document = dict(
+            token_type="Bearer",
+            access_token=credential.credential,
+            expires_in=expiration,
+            location=url,
+        )
 
-        # We couldn't find an acquisition link for this book.
-        raise CannotFulfill()
+        return FulfillmentInfo(
+            licensepool.collection,
+            licensepool.data_source.name,
+            licensepool.identifier.type,
+            licensepool.identifier.identifier,
+            content_link=None,
+            content_type=DeliveryMechanism.BEARER_TOKEN,
+            content=json.dumps(token_document),
+            content_expires=credential.expires,
+        )
 
-    def patron_activity(self, patron, pin):
+    def patron_activity(self, patron: Patron, pin: str) -> List[LoanInfo | HoldInfo]:
         # Look up loans for this collection in the database.
         _db = Session.object_session(patron)
         loans = (
@@ -293,29 +366,53 @@ class OPDSForDistributorsAPI(BaseCirculationAPI, HasSelfTests):
             for loan in loans
         ]
 
+    def release_hold(self, patron: Patron, pin: str, licensepool: LicensePool) -> None:
+        # All the books for this integration are available as simultaneous
+        # use, so there's no need to release a hold.
+        raise NotImplementedError()
+
+    def place_hold(
+        self,
+        patron: Patron,
+        pin: str,
+        licensepool: LicensePool,
+        notification_email_address: Optional[str],
+    ) -> HoldInfo:
+        # All the books for this integration are available as simultaneous
+        # use, so there's no need to place a hold.
+        raise NotImplementedError()
+
+    def update_availability(self, licensepool: LicensePool) -> None:
+        pass
+
 
 class OPDSForDistributorsImporter(OPDSImporter):
-    NAME = OPDSForDistributorsAPI.NAME
+    NAME = OPDSForDistributorsAPI.label()
 
-    def update_work_for_edition(self, *args, **kwargs):
-        """After importing a LicensePool, set its availability
-        appropriately. Books imported through OPDS For Distributors are
-        not open-access, but a library that can perform this import has
-        a license for the title and can distribute unlimited copies.
+    @classmethod
+    def settings_class(cls) -> Type[OPDSForDistributorsSettings]:
+        return OPDSForDistributorsSettings
+
+    def update_work_for_edition(
+        self,
+        edition: Edition,
+        is_open_access: bool = False,
+    ) -> tuple[LicensePool | None, Work | None]:
+        """After importing a LicensePool, set its availability appropriately.
+
+        Books imported through OPDS For Distributors can be designated as
+        either Open Access (handled elsewhere) or licensed (handled here). For
+        licensed content, a library that can perform this import is deemed to
+        have a license for the title and can distribute unlimited copies.
         """
-        pool, work = super().update_work_for_edition(
-            *args, is_open_access=False, **kwargs
-        )
-        pool.update_availability(
-            new_licenses_owned=1,
-            new_licenses_available=1,
-            new_licenses_reserved=0,
-            new_patrons_in_hold_queue=0,
-        )
+        pool, work = super().update_work_for_edition(edition, is_open_access=False)
+        if pool:
+            pool.unlimited_access = True
+
         return pool, work
 
     @classmethod
-    def _add_format_data(cls, circulation):
+    def _add_format_data(cls, circulation: CirculationData) -> None:
         for link in circulation.links:
             if (
                 link.rel == Hyperlink.GENERIC_OPDS_ACQUISITION
@@ -337,13 +434,22 @@ class OPDSForDistributorsImportMonitor(OPDSImportMonitor):
     """
 
     PROTOCOL = OPDSForDistributorsImporter.NAME
+    SERVICE_NAME = "OPDS for Distributors Import Monitor"
 
-    def __init__(self, _db, collection, import_class, **kwargs):
+    def __init__(
+        self,
+        _db: Session,
+        collection: Collection,
+        import_class: Type[OPDSImporter],
+        **kwargs: Any,
+    ) -> None:
         super().__init__(_db, collection, import_class, **kwargs)
 
         self.api = OPDSForDistributorsAPI(_db, collection)
 
-    def _get(self, url, headers):
+    def _get(
+        self, url: str, headers: Dict[str, str]
+    ) -> Tuple[int, Dict[str, str], bytes]:
         """Make a normal HTTP request for an OPDS feed, but add in an
         auth header with the credentials for the collection.
         """
@@ -362,23 +468,31 @@ class OPDSForDistributorsReaperMonitor(OPDSForDistributorsImportMonitor):
     has been removed from the collection.
     """
 
-    def __init__(self, _db, collection, import_class, **kwargs):
+    def __init__(
+        self,
+        _db: Session,
+        collection: Collection,
+        import_class: Type[OPDSImporter],
+        **kwargs: Any,
+    ) -> None:
         super().__init__(_db, collection, import_class, **kwargs)
-        self.seen_identifiers = set()
+        self.seen_identifiers: Set[str] = set()
 
-    def feed_contains_new_data(self, feed):
+    def feed_contains_new_data(self, feed: bytes | str) -> bool:
         # Always return True so that the importer will crawl the
         # entire feed.
         return True
 
-    def import_one_feed(self, feed):
+    def import_one_feed(
+        self, feed: bytes | str
+    ) -> Tuple[List[Edition], Dict[str, List[CoverageFailure]]]:
         # Collect all the identifiers in the feed.
         parsed_feed = feedparser.parse(feed)
         identifiers = [entry.get("id") for entry in parsed_feed.get("entries", [])]
         self.seen_identifiers.update(identifiers)
         return [], {}
 
-    def run_once(self, progress):
+    def run_once(self, progress: TimestampData) -> TimestampData:
         """Check to see if any identifiers we know about are no longer
         present on the remote. If there are any, remove them.
 
@@ -398,7 +512,7 @@ class OPDSForDistributorsReaperMonitor(OPDSForDistributorsImportMonitor):
             .join(Identifier)
             .filter(LicensePool.collection_id == self.collection.id)
             .filter(~Identifier.id.in_(identifier_ids))
-            .filter(LicensePool.licenses_available > 0)
+            .filter(LicensePool.licenses_available == LicensePool.UNLIMITED_ACCESS)
         )
         pools_reaped = qu.count()
         self.log.info(
@@ -407,8 +521,8 @@ class OPDSForDistributorsReaperMonitor(OPDSForDistributorsImportMonitor):
         )
 
         for pool in qu:
-            pool.licenses_available = 0
-            pool.licenses_owned = 0
+            pool.unlimited_access = False
+
         self._db.commit()
         achievements = "License pools removed: %d." % pools_reaped
         return TimestampData(achievements=achievements)

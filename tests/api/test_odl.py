@@ -1,13 +1,14 @@
+from __future__ import annotations
+
 import datetime
 import json
 import urllib.parse
-import uuid
-from typing import TYPE_CHECKING, Callable, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Dict
+from unittest.mock import MagicMock
 
 import dateutil
 import pytest
 from freezegun import freeze_time
-from jinja2 import Template
 
 from api.circulation import HoldInfo
 from api.circulation_exceptions import (
@@ -15,33 +16,20 @@ from api.circulation_exceptions import (
     AlreadyOnHold,
     CannotFulfill,
     CannotLoan,
-    CannotReleaseHold,
-    CannotReturn,
     CurrentlyAvailable,
-    FormatNotAvailable,
-    LibraryAuthorizationFailedException,
     NoAvailableCopies,
     NoLicenses,
     NotCheckedOut,
     NotOnHold,
 )
-from api.odl import (
-    ODLAPIConfiguration,
-    ODLHoldReaper,
-    ODLImporter,
-    SharedODLAPI,
-    SharedODLImporter,
-)
-from api.problem_details import NO_LICENSES
+from api.odl import ODLHoldReaper, ODLImporter, ODLSettings
 from core.model import (
     Collection,
-    ConfigurationSetting,
     DataSource,
     DeliveryMechanism,
     Edition,
-    ExternalIntegration,
     Hold,
-    Hyperlink,
+    LicensePoolDeliveryMechanism,
     Loan,
     MediaTypes,
     Representation,
@@ -49,83 +37,24 @@ from core.model import (
 )
 from core.util import datetime_helpers
 from core.util.datetime_helpers import datetime_utc, utc_now
-from core.util.http import BadResponseException, RemoteIntegrationException
-from core.util.string_helpers import base64
-from tests.api.mockapi.odl import MockSharedODLAPI
-from tests.fixtures.api_odl_files import ODLAPIFilesFixture
+from core.util.http import BadResponseException
+from tests.fixtures.api_odl import (
+    LicenseHelper,
+    LicenseInfoHelper,
+    MockGet,
+    OdlImportTemplatedFixture,
+)
 from tests.fixtures.database import DatabaseTransactionFixture
-from tests.fixtures.files import APIFilesFixture
 from tests.fixtures.odl import ODLAPITestFixture, ODLTestFixture
 
 if TYPE_CHECKING:
     from core.model import LicensePool
 
 
-class LicenseHelper:
-    """Represents an ODL license."""
-
-    def __init__(
-        self,
-        identifier: Optional[str] = None,
-        checkouts: Optional[int] = None,
-        concurrency: Optional[int] = None,
-        expires: Optional[Union[datetime.datetime, str]] = None,
-    ) -> None:
-        """Initialize a new instance of LicenseHelper class.
-
-        :param identifier: License's identifier
-        :param checkouts: Total number of checkouts before a license expires
-        :param concurrency: Number of concurrent checkouts allowed
-        :param expires: Date & time when a license expires
-        """
-        self.identifier: str = identifier if identifier else f"urn:uuid:{uuid.uuid1()}"
-        self.checkouts: Optional[int] = checkouts
-        self.concurrency: Optional[int] = concurrency
-        if isinstance(expires, datetime.datetime):
-            self.expires = expires.isoformat()
-        else:
-            self.expires: Optional[str] = expires  # type: ignore
-
-
-class LicenseInfoHelper:
-    """Represents information about the current state of a license stored in the License Info Document."""
-
-    def __init__(
-        self,
-        license: LicenseHelper,
-        available: int,
-        status: str = "available",
-        left: Optional[int] = None,
-    ) -> None:
-        """Initialize a new instance of LicenseInfoHelper class."""
-        self.license: LicenseHelper = license
-        self.status: str = status
-        self.left: Optional[int] = left
-        self.available: int = available
-
-    def __str__(self) -> str:
-        """Return a JSON representation of a part of the License Info Document."""
-        output = {
-            "identifier": self.license.identifier,
-            "status": self.status,
-            "terms": {
-                "concurrency": self.license.concurrency,
-            },
-            "checkouts": {
-                "available": self.available,
-            },
-        }
-        if self.license.expires is not None:
-            output["terms"]["expires"] = self.license.expires  # type: ignore
-        if self.left is not None:
-            output["checkouts"]["left"] = self.left  # type: ignore
-        return json.dumps(output)
-
-
 class TestODLAPI:
     def test_get_license_status_document_success(
         self, odl_api_test_fixture: ODLAPITestFixture
-    ):
+    ) -> None:
         # With a new loan.
         loan, _ = odl_api_test_fixture.license.loan_to(odl_api_test_fixture.patron)
         odl_api_test_fixture.api.queue_response(
@@ -139,9 +68,10 @@ class TestODLAPI:
         assert "loan.feedbooks.net" == parsed.netloc
         params = urllib.parse.parse_qs(parsed.query)
 
-        assert ODLAPIConfiguration.passphrase_hint.default == params.get("hint")[0]  # type: ignore
+        schema = ODLSettings.schema()["properties"]
+        assert schema["passphrase_hint"]["default"] == params.get("hint")[0]  # type: ignore
         assert (
-            ODLAPIConfiguration.passphrase_hint_url.default == params.get("hint_url")[0]  # type: ignore
+            schema["passphrase_hint_url"]["default"] == params.get("hint_url")[0]  # type: ignore
         )
 
         assert odl_api_test_fixture.license.identifier == params.get("id")[0]  # type: ignore
@@ -187,7 +117,7 @@ class TestODLAPI:
 
     def test_get_license_status_document_errors(
         self, odl_api_test_fixture: ODLAPITestFixture
-    ):
+    ) -> None:
         loan, _ = odl_api_test_fixture.license.loan_to(odl_api_test_fixture.patron)
 
         odl_api_test_fixture.api.queue_response(200, content="not json")
@@ -208,9 +138,9 @@ class TestODLAPI:
 
     def test_checkin_success(
         self, db: DatabaseTransactionFixture, odl_api_test_fixture: ODLAPITestFixture
-    ):
+    ) -> None:
         # A patron has a copy of this book checked out.
-        odl_api_test_fixture.license.setup(concurrency=7, available=6)
+        odl_api_test_fixture.license.setup(concurrency=7, available=6)  # type: ignore[attr-defined]
 
         loan, _ = odl_api_test_fixture.license.loan_to(odl_api_test_fixture.patron)
         loan.external_identifier = "http://loan/" + db.fresh_str()
@@ -233,9 +163,9 @@ class TestODLAPI:
 
     def test_checkin_success_with_holds_queue(
         self, db: DatabaseTransactionFixture, odl_api_test_fixture: ODLAPITestFixture
-    ):
+    ) -> None:
         # A patron has the only copy of this book checked out.
-        odl_api_test_fixture.license.setup(concurrency=1, available=0)
+        odl_api_test_fixture.license.setup(concurrency=1, available=0)  # type: ignore[attr-defined]
         loan, _ = odl_api_test_fixture.license.loan_to(odl_api_test_fixture.patron)
         loan.external_identifier = "http://loan/" + db.fresh_str()
         loan.end = utc_now() + datetime.timedelta(days=3)
@@ -263,9 +193,9 @@ class TestODLAPI:
 
     def test_checkin_already_fulfilled(
         self, db: DatabaseTransactionFixture, odl_api_test_fixture: ODLAPITestFixture
-    ):
+    ) -> None:
         # The loan is already fulfilled.
-        odl_api_test_fixture.license.setup(concurrency=7, available=6)
+        odl_api_test_fixture.license.setup(concurrency=7, available=6)  # type: ignore[attr-defined]
         loan, _ = odl_api_test_fixture.license.loan_to(odl_api_test_fixture.patron)
         loan.external_identifier = db.fresh_str()
         loan.end = utc_now() + datetime.timedelta(days=3)
@@ -287,7 +217,7 @@ class TestODLAPI:
 
     def test_checkin_not_checked_out(
         self, db: DatabaseTransactionFixture, odl_api_test_fixture: ODLAPITestFixture
-    ):
+    ) -> None:
         # Not checked out locally.
         pytest.raises(
             NotCheckedOut,
@@ -319,7 +249,7 @@ class TestODLAPI:
 
     def test_checkin_cannot_return(
         self, db: DatabaseTransactionFixture, odl_api_test_fixture: ODLAPITestFixture
-    ):
+    ) -> None:
         # Not fulfilled yet, but no return link from the distributor.
         loan, ignore = odl_api_test_fixture.license.loan_to(odl_api_test_fixture.patron)
         loan.external_identifier = db.fresh_str()
@@ -360,9 +290,9 @@ class TestODLAPI:
 
     def test_checkout_success(
         self, db: DatabaseTransactionFixture, odl_api_test_fixture: ODLAPITestFixture
-    ):
+    ) -> None:
         # This book is available to check out.
-        odl_api_test_fixture.license.setup(concurrency=6, available=6, left=30)
+        odl_api_test_fixture.license.setup(concurrency=6, available=6, left=30)  # type: ignore[attr-defined]
 
         # A patron checks out the book successfully.
         loan_url = db.fresh_str()
@@ -372,6 +302,7 @@ class TestODLAPI:
         assert odl_api_test_fixture.pool.data_source.name == loan.data_source_name
         assert odl_api_test_fixture.pool.identifier.type == loan.identifier_type
         assert odl_api_test_fixture.pool.identifier.identifier == loan.identifier
+        assert loan.start_date is not None
         assert loan.start_date > utc_now() - datetime.timedelta(minutes=1)
         assert loan.start_date < utc_now() + datetime.timedelta(minutes=1)
         assert datetime_utc(3017, 10, 21, 11, 12, 13) == loan.end_date
@@ -392,14 +323,14 @@ class TestODLAPI:
 
     def test_checkout_success_with_hold(
         self, db: DatabaseTransactionFixture, odl_api_test_fixture: ODLAPITestFixture
-    ):
+    ) -> None:
         # A patron has this book on hold, and the book just became available to check out.
         odl_api_test_fixture.pool.on_hold_to(
             odl_api_test_fixture.patron,
             start=utc_now() - datetime.timedelta(days=1),
             position=0,
         )
-        odl_api_test_fixture.license.setup(concurrency=1, available=1, left=5)
+        odl_api_test_fixture.license.setup(concurrency=1, available=1, left=5)  # type: ignore[attr-defined]
 
         assert odl_api_test_fixture.pool.licenses_available == 0
         assert odl_api_test_fixture.pool.licenses_reserved == 1
@@ -414,6 +345,7 @@ class TestODLAPI:
         assert odl_api_test_fixture.pool.data_source.name == loan.data_source_name
         assert odl_api_test_fixture.pool.identifier.type == loan.identifier_type
         assert odl_api_test_fixture.pool.identifier.identifier == loan.identifier
+        assert loan.start_date is not None
         assert loan.start_date > utc_now() - datetime.timedelta(minutes=1)
         assert loan.start_date < utc_now() + datetime.timedelta(minutes=1)
         assert datetime_utc(3017, 10, 21, 11, 12, 13) == loan.end_date
@@ -433,8 +365,8 @@ class TestODLAPI:
 
     def test_checkout_already_checked_out(
         self, db: DatabaseTransactionFixture, odl_api_test_fixture: ODLAPITestFixture
-    ):
-        odl_api_test_fixture.license.setup(concurrency=2, available=1)
+    ) -> None:
+        odl_api_test_fixture.license.setup(concurrency=2, available=1)  # type: ignore[attr-defined]
 
         # Checkout succeeds the first time
         odl_api_test_fixture.checkout()
@@ -446,7 +378,7 @@ class TestODLAPI:
 
     def test_checkout_expired_hold(
         self, db: DatabaseTransactionFixture, odl_api_test_fixture: ODLAPITestFixture
-    ):
+    ) -> None:
         # The patron was at the beginning of the hold queue, but the hold already expired.
         yesterday = utc_now() - datetime.timedelta(days=1)
         hold, _ = odl_api_test_fixture.pool.on_hold_to(
@@ -455,7 +387,7 @@ class TestODLAPI:
         other_hold, _ = odl_api_test_fixture.pool.on_hold_to(
             db.patron(), start=utc_now()
         )
-        odl_api_test_fixture.license.setup(concurrency=2, available=1)
+        odl_api_test_fixture.license.setup(concurrency=2, available=1)  # type: ignore[attr-defined]
 
         pytest.raises(
             NoAvailableCopies,
@@ -468,9 +400,9 @@ class TestODLAPI:
 
     def test_checkout_no_available_copies(
         self, db: DatabaseTransactionFixture, odl_api_test_fixture: ODLAPITestFixture
-    ):
+    ) -> None:
         # A different patron has the only copy checked out.
-        odl_api_test_fixture.license.setup(concurrency=1, available=0)
+        odl_api_test_fixture.license.setup(concurrency=1, available=0)  # type: ignore[attr-defined]
         existing_loan, _ = odl_api_test_fixture.license.loan_to(db.patron())
 
         pytest.raises(
@@ -542,8 +474,8 @@ class TestODLAPI:
 
     def test_checkout_no_licenses(
         self, db: DatabaseTransactionFixture, odl_api_test_fixture: ODLAPITestFixture
-    ):
-        odl_api_test_fixture.license.setup(concurrency=1, available=1, left=0)
+    ) -> None:
+        odl_api_test_fixture.license.setup(concurrency=1, available=1, left=0)  # type: ignore[attr-defined]
 
         pytest.raises(
             NoLicenses,
@@ -558,9 +490,9 @@ class TestODLAPI:
 
     def test_checkout_when_all_licenses_expired(
         self, odl_api_test_fixture: ODLAPITestFixture
-    ):
+    ) -> None:
         # license expired by expiration date
-        odl_api_test_fixture.license.setup(
+        odl_api_test_fixture.license.setup(  # type: ignore[attr-defined]
             concurrency=1,
             available=2,
             left=1,
@@ -577,7 +509,7 @@ class TestODLAPI:
         )
 
         # license expired by no remaining checkouts
-        odl_api_test_fixture.license.setup(
+        odl_api_test_fixture.license.setup(  # type: ignore[attr-defined]
             concurrency=1,
             available=2,
             left=0,
@@ -595,7 +527,7 @@ class TestODLAPI:
 
     def test_checkout_cannot_loan(
         self, db: DatabaseTransactionFixture, odl_api_test_fixture: ODLAPITestFixture
-    ):
+    ) -> None:
         lsd = json.dumps(
             {
                 "status": "revoked",
@@ -684,14 +616,19 @@ class TestODLAPI:
         self,
         odl_api_test_fixture: ODLAPITestFixture,
         db: DatabaseTransactionFixture,
-        delivery_mechanism,
-        correct_type,
-        correct_link,
-        links,
-    ):
+        delivery_mechanism: str,
+        correct_type: str,
+        correct_link: str,
+        links: Dict[str, Any],
+    ) -> None:
         # Fulfill a loan in a way that gives access to a license file.
-        odl_api_test_fixture.license.setup(concurrency=1, available=1)
+        odl_api_test_fixture.license.setup(concurrency=1, available=1)  # type: ignore[attr-defined]
         odl_api_test_fixture.checkout()
+
+        lpdm = MagicMock(spec=LicensePoolDeliveryMechanism)
+        lpdm.delivery_mechanism = MagicMock(spec=DeliveryMechanism)
+        lpdm.delivery_mechanism.content_type = "ignored/format"
+        lpdm.delivery_mechanism.drm_scheme = delivery_mechanism
 
         lsd = json.dumps(
             {
@@ -706,7 +643,7 @@ class TestODLAPI:
             odl_api_test_fixture.patron,
             "pin",
             odl_api_test_fixture.pool,
-            delivery_mechanism,
+            lpdm,
         )
 
         assert odl_api_test_fixture.collection == fulfillment.collection(db.session)
@@ -721,8 +658,8 @@ class TestODLAPI:
 
     def test_fulfill_cannot_fulfill(
         self, db: DatabaseTransactionFixture, odl_api_test_fixture: ODLAPITestFixture
-    ):
-        odl_api_test_fixture.license.setup(concurrency=7, available=7)
+    ) -> None:
+        odl_api_test_fixture.license.setup(concurrency=7, available=7)  # type: ignore[attr-defined]
         odl_api_test_fixture.checkout()
 
         assert 1 == db.session.query(Loan).count()
@@ -764,7 +701,7 @@ class TestODLAPI:
 
     def test_count_holds_before(
         self, db: DatabaseTransactionFixture, odl_api_test_fixture: ODLAPITestFixture
-    ):
+    ) -> None:
         now = utc_now()
         yesterday = now - datetime.timedelta(days=1)
         tomorrow = now + datetime.timedelta(days=1)
@@ -816,7 +753,7 @@ class TestODLAPI:
 
     def test_update_hold_end_date(
         self, db: DatabaseTransactionFixture, odl_api_test_fixture: ODLAPITestFixture
-    ):
+    ) -> None:
         now = utc_now()
         tomorrow = now + datetime.timedelta(days=1)
         yesterday = now - datetime.timedelta(days=1)
@@ -833,12 +770,18 @@ class TestODLAPI:
         library = hold.patron.library
 
         # Set the reservation period and loan period.
-        odl_api_test_fixture.collection.external_integration.set_setting(
-            Collection.DEFAULT_RESERVATION_PERIOD_KEY, 3
+        config = odl_api_test_fixture.collection.integration_configuration.for_library(
+            library.id
         )
-        odl_api_test_fixture.collection.external_integration.set_setting(
-            Collection.EBOOK_LOAN_DURATION_KEY, 6
+        assert config is not None
+        DatabaseTransactionFixture.set_settings(
+            config,
+            **{
+                Collection.DEFAULT_RESERVATION_PERIOD_KEY: 3,
+                Collection.EBOOK_LOAN_DURATION_KEY: 6,
+            },
         )
+        odl_api_test_fixture.db.session.commit()
 
         # A hold that's already reserved and has an end date doesn't change.
         info.end_date = tomorrow
@@ -858,7 +801,8 @@ class TestODLAPI:
         odl_api_test_fixture.api._update_hold_end_date(
             info, hold.license_pool, library=library
         )
-        assert info.end_date < next_week
+        assert info.end_date is not None
+        assert info.end_date < next_week  # type: ignore[unreachable]
         assert info.end_date > now
 
         # Updating a hold that has an end date but just became reserved starts
@@ -996,7 +940,7 @@ class TestODLAPI:
 
     def test_update_hold_position(
         self, db: DatabaseTransactionFixture, odl_api_test_fixture: ODLAPITestFixture
-    ):
+    ) -> None:
         now = utc_now()
         yesterday = now - datetime.timedelta(days=1)
         tomorrow = now + datetime.timedelta(days=1)
@@ -1051,7 +995,7 @@ class TestODLAPI:
 
     def test_update_hold_data(
         self, db: DatabaseTransactionFixture, odl_api_test_fixture: ODLAPITestFixture
-    ):
+    ) -> None:
         hold, is_new = odl_api_test_fixture.pool.on_hold_to(
             odl_api_test_fixture.patron,
             utc_now(),
@@ -1059,17 +1003,17 @@ class TestODLAPI:
             9,
         )
         odl_api_test_fixture.api._update_hold_data(hold)
-        print(hold.start, hold.end, hold.position)
         assert hold.position == 0
         assert hold.end.date() == (hold.start + datetime.timedelta(days=3)).date()
 
     def test_update_hold_queue(
         self, db: DatabaseTransactionFixture, odl_api_test_fixture: ODLAPITestFixture
-    ):
+    ) -> None:
         licenses = [odl_api_test_fixture.license]
 
-        odl_api_test_fixture.collection.external_integration.set_setting(
-            Collection.DEFAULT_RESERVATION_PERIOD_KEY, 3
+        DatabaseTransactionFixture.set_settings(
+            odl_api_test_fixture.collection.integration_configuration,
+            **{Collection.DEFAULT_RESERVATION_PERIOD_KEY: 3},
         )
 
         # If there's no holds queue when we try to update the queue, it
@@ -1198,7 +1142,7 @@ class TestODLAPI:
 
     def test_place_hold_success(
         self, db: DatabaseTransactionFixture, odl_api_test_fixture: ODLAPITestFixture
-    ):
+    ) -> None:
         loan, _ = odl_api_test_fixture.checkout(patron=db.patron())
 
         hold = odl_api_test_fixture.api.place_hold(
@@ -1218,8 +1162,10 @@ class TestODLAPI:
         assert loan.end_date == hold.end_date
         assert 1 == hold.hold_position
 
-    def test_place_hold_already_on_hold(self, odl_api_test_fixture: ODLAPITestFixture):
-        odl_api_test_fixture.license.setup(concurrency=1, available=0)
+    def test_place_hold_already_on_hold(
+        self, odl_api_test_fixture: ODLAPITestFixture
+    ) -> None:
+        odl_api_test_fixture.license.setup(concurrency=1, available=0)  # type: ignore[attr-defined]
         odl_api_test_fixture.pool.on_hold_to(odl_api_test_fixture.patron)
         pytest.raises(
             AlreadyOnHold,
@@ -1232,7 +1178,7 @@ class TestODLAPI:
 
     def test_place_hold_currently_available(
         self, odl_api_test_fixture: ODLAPITestFixture
-    ):
+    ) -> None:
         pytest.raises(
             CurrentlyAvailable,
             odl_api_test_fixture.api.place_hold,
@@ -1244,12 +1190,12 @@ class TestODLAPI:
 
     def test_release_hold_success(
         self, db: DatabaseTransactionFixture, odl_api_test_fixture: ODLAPITestFixture
-    ):
+    ) -> None:
         loan_patron = db.patron()
         odl_api_test_fixture.checkout(patron=loan_patron)
         odl_api_test_fixture.pool.on_hold_to(odl_api_test_fixture.patron, position=1)
 
-        assert True == odl_api_test_fixture.api.release_hold(
+        odl_api_test_fixture.api.release_hold(
             odl_api_test_fixture.patron, "pin", odl_api_test_fixture.pool
         )
         assert 0 == odl_api_test_fixture.pool.licenses_available
@@ -1260,7 +1206,7 @@ class TestODLAPI:
         odl_api_test_fixture.pool.on_hold_to(odl_api_test_fixture.patron, position=0)
         odl_api_test_fixture.checkin(patron=loan_patron)
 
-        assert True == odl_api_test_fixture.api.release_hold(
+        odl_api_test_fixture.api.release_hold(
             odl_api_test_fixture.patron, "pin", odl_api_test_fixture.pool
         )
         assert 1 == odl_api_test_fixture.pool.licenses_available
@@ -1273,7 +1219,7 @@ class TestODLAPI:
             db.patron(), position=2
         )
 
-        assert True == odl_api_test_fixture.api.release_hold(
+        odl_api_test_fixture.api.release_hold(
             odl_api_test_fixture.patron, "pin", odl_api_test_fixture.pool
         )
         assert 0 == odl_api_test_fixture.pool.licenses_available
@@ -1282,7 +1228,9 @@ class TestODLAPI:
         assert 1 == db.session.query(Hold).count()
         assert 0 == other_hold.position
 
-    def test_release_hold_not_on_hold(self, odl_api_test_fixture: ODLAPITestFixture):
+    def test_release_hold_not_on_hold(
+        self, odl_api_test_fixture: ODLAPITestFixture
+    ) -> None:
         pytest.raises(
             NotOnHold,
             odl_api_test_fixture.api.release_hold,
@@ -1293,7 +1241,7 @@ class TestODLAPI:
 
     def test_patron_activity_loan(
         self, db: DatabaseTransactionFixture, odl_api_test_fixture: ODLAPITestFixture
-    ):
+    ) -> None:
         # No loans yet.
         assert [] == odl_api_test_fixture.api.patron_activity(
             odl_api_test_fixture.patron, "pin"
@@ -1390,8 +1338,8 @@ class TestODLAPI:
 
     def test_update_loan_still_active(
         self, db: DatabaseTransactionFixture, odl_api_test_fixture: ODLAPITestFixture
-    ):
-        odl_api_test_fixture.license.setup(concurrency=6, available=6)
+    ) -> None:
+        odl_api_test_fixture.license.setup(concurrency=6, available=6)  # type: ignore[attr-defined]
         loan, _ = odl_api_test_fixture.license.loan_to(odl_api_test_fixture.patron)
         loan.external_identifier = db.fresh_str()
         status_doc = {
@@ -1405,8 +1353,8 @@ class TestODLAPI:
 
     def test_update_loan_removes_loan(
         self, db: DatabaseTransactionFixture, odl_api_test_fixture: ODLAPITestFixture
-    ):
-        odl_api_test_fixture.license.setup(concurrency=7, available=7)
+    ) -> None:
+        odl_api_test_fixture.license.setup(concurrency=7, available=7)  # type: ignore[attr-defined]
         _, loan = odl_api_test_fixture.checkout()
 
         assert 6 == odl_api_test_fixture.pool.licenses_available
@@ -1424,7 +1372,7 @@ class TestODLAPI:
 
     def test_update_loan_removes_loan_with_hold_queue(
         self, db: DatabaseTransactionFixture, odl_api_test_fixture: ODLAPITestFixture
-    ):
+    ) -> None:
         _, loan = odl_api_test_fixture.checkout()
         hold, _ = odl_api_test_fixture.pool.on_hold_to(db.patron(), position=1)
         odl_api_test_fixture.pool.update_availability_from_licenses()
@@ -1446,331 +1394,15 @@ class TestODLAPI:
         assert 0 == hold.position
         assert 0 == db.session.query(Loan).count()
 
-    def test_checkout_from_external_library(
-        self, db: DatabaseTransactionFixture, odl_api_test_fixture: ODLAPITestFixture
-    ):
-        # This book is available to check out.
-        odl_api_test_fixture.pool.licenses_owned = 6
-        odl_api_test_fixture.pool.licenses_available = 6
-        odl_api_test_fixture.license.checkouts_available = 6
-        odl_api_test_fixture.license.checkouts_left = 10
-
-        # An integration client checks out the book successfully.
-        loan_url = db.fresh_str()
-        lsd = json.dumps(
-            {
-                "status": "ready",
-                "potential_rights": {"end": "3017-10-21T11:12:13Z"},
-                "links": [
-                    {
-                        "rel": "self",
-                        "href": loan_url,
-                    }
-                ],
-            }
-        )
-
-        odl_api_test_fixture.api.queue_response(200, content=lsd)
-        loan = odl_api_test_fixture.api.checkout_to_external_library(
-            odl_api_test_fixture.client, odl_api_test_fixture.pool
-        )
-        assert odl_api_test_fixture.client == loan.integration_client
-        assert odl_api_test_fixture.pool == loan.license_pool
-        assert loan.start > utc_now() - datetime.timedelta(minutes=1)
-        assert loan.start < utc_now() + datetime.timedelta(minutes=1)
-        assert datetime_utc(3017, 10, 21, 11, 12, 13) == loan.end
-        assert loan_url == loan.external_identifier
-        assert 1 == db.session.query(Loan).count()
-
-        # The pool's availability and the license's remaining checkouts have decreased.
-        assert 5 == odl_api_test_fixture.pool.licenses_available
-        assert 9 == odl_api_test_fixture.license.checkouts_left
-
-        # The book can also be placed on hold to an external library,
-        # if there are no copies available.
-        odl_api_test_fixture.license.setup(concurrency=1, available=0)
-
-        holdinfo = odl_api_test_fixture.api.checkout_to_external_library(
-            odl_api_test_fixture.client, odl_api_test_fixture.pool
-        )
-
-        assert 1 == odl_api_test_fixture.pool.patrons_in_hold_queue
-        assert odl_api_test_fixture.client == holdinfo.integration_client
-        assert holdinfo.start_date > utc_now() - datetime.timedelta(minutes=1)
-        assert holdinfo.start_date < utc_now() + datetime.timedelta(minutes=1)
-        assert holdinfo.end_date > utc_now() + datetime.timedelta(days=7)
-        assert 1 == holdinfo.hold_position
-
-    def test_checkout_from_external_library_with_hold(
-        self, db: DatabaseTransactionFixture, odl_api_test_fixture: ODLAPITestFixture
-    ):
-        # An integration client has this book on hold, and the book just became available to check out.
-        odl_api_test_fixture.pool.licenses_owned = 1
-        odl_api_test_fixture.pool.licenses_available = 0
-        odl_api_test_fixture.pool.licenses_reserved = 1
-        odl_api_test_fixture.pool.patrons_in_hold_queue = 1
-        hold, ignore = odl_api_test_fixture.pool.on_hold_to(
-            odl_api_test_fixture.client,
-            start=utc_now() - datetime.timedelta(days=1),
-            position=0,
-        )
-
-        # The patron checks out the book.
-        loan_url = db.fresh_str()
-        lsd = json.dumps(
-            {
-                "status": "ready",
-                "potential_rights": {"end": "3017-10-21T11:12:13Z"},
-                "links": [
-                    {
-                        "rel": "self",
-                        "href": loan_url,
-                    }
-                ],
-            }
-        )
-
-        odl_api_test_fixture.api.queue_response(200, content=lsd)
-
-        # The patron gets a loan successfully.
-        loan = odl_api_test_fixture.api.checkout_to_external_library(
-            odl_api_test_fixture.client, odl_api_test_fixture.pool, hold
-        )
-        assert odl_api_test_fixture.client == loan.integration_client
-        assert odl_api_test_fixture.pool == loan.license_pool
-        assert loan.start > utc_now() - datetime.timedelta(minutes=1)
-        assert loan.start < utc_now() + datetime.timedelta(minutes=1)
-        assert datetime_utc(3017, 10, 21, 11, 12, 13) == loan.end
-        assert loan_url == loan.external_identifier
-        assert 1 == db.session.query(Loan).count()
-
-        # The book is no longer reserved for the patron, and the hold has been deleted.
-        assert 0 == odl_api_test_fixture.pool.licenses_reserved
-        assert 0 == odl_api_test_fixture.pool.licenses_available
-        assert 0 == odl_api_test_fixture.pool.patrons_in_hold_queue
-        assert 0 == db.session.query(Hold).count()
-
-    def test_checkin_from_external_library(
-        self, db: DatabaseTransactionFixture, odl_api_test_fixture: ODLAPITestFixture
-    ):
-        # An integration client has a copy of this book checked out.
-        odl_api_test_fixture.license.setup(concurrency=7, available=6)
-        loan, ignore = odl_api_test_fixture.license.loan_to(odl_api_test_fixture.client)
-        loan.external_identifier = "http://loan/" + db.fresh_str()
-        loan.end = utc_now() + datetime.timedelta(days=3)
-
-        # The patron returns the book successfully.
-        lsd = json.dumps(
-            {
-                "status": "ready",
-                "links": [
-                    {
-                        "rel": "return",
-                        "href": "http://return",
-                    }
-                ],
-            }
-        )
-        returned_lsd = json.dumps(
-            {
-                "status": "returned",
-            }
-        )
-
-        odl_api_test_fixture.api.queue_response(200, content=lsd)
-        odl_api_test_fixture.api.queue_response(200)
-        odl_api_test_fixture.api.queue_response(200, content=returned_lsd)
-        odl_api_test_fixture.api.checkin_from_external_library(
-            odl_api_test_fixture.client, loan
-        )
-        assert 3 == len(odl_api_test_fixture.api.requests)
-        assert "http://loan" in odl_api_test_fixture.api.requests[0][0]
-        assert "http://return" == odl_api_test_fixture.api.requests[1][0]
-        assert "http://loan" in odl_api_test_fixture.api.requests[2][0]
-
-        # The pool's availability has increased, and the local loan has
-        # been deleted.
-        assert 7 == odl_api_test_fixture.pool.licenses_available
-        assert 0 == db.session.query(Loan).count()
-
-    def test_fulfill_for_external_library(
-        self, db: DatabaseTransactionFixture, odl_api_test_fixture: ODLAPITestFixture
-    ):
-        loan, ignore = odl_api_test_fixture.license.loan_to(odl_api_test_fixture.client)
-        loan.external_identifier = db.fresh_str()
-        loan.end = utc_now() + datetime.timedelta(days=3)
-
-        lsd = json.dumps(
-            {
-                "status": "ready",
-                "potential_rights": {"end": "2017-10-21T11:12:13Z"},
-                "links": [
-                    {
-                        "rel": "license",
-                        "href": "http://acsm",
-                        "type": DeliveryMechanism.ADOBE_DRM,
-                    }
-                ],
-            }
-        )
-
-        odl_api_test_fixture.api.queue_response(200, content=lsd)
-        fulfillment = odl_api_test_fixture.api.fulfill_for_external_library(
-            odl_api_test_fixture.client, loan, None
-        )
-        assert odl_api_test_fixture.collection == fulfillment.collection(db.session)
-        assert (
-            odl_api_test_fixture.pool.data_source.name == fulfillment.data_source_name
-        )
-        assert odl_api_test_fixture.pool.identifier.type == fulfillment.identifier_type
-        assert odl_api_test_fixture.pool.identifier.identifier == fulfillment.identifier
-        assert datetime_utc(2017, 10, 21, 11, 12, 13) == fulfillment.content_expires
-        assert "http://acsm" == fulfillment.content_link
-        assert DeliveryMechanism.ADOBE_DRM == fulfillment.content_type
-
-    def test_release_hold_from_external_library(
-        self, db: DatabaseTransactionFixture, odl_api_test_fixture: ODLAPITestFixture
-    ):
-        odl_api_test_fixture.license.setup(concurrency=1, available=1)
-        other_patron = db.patron()
-        odl_api_test_fixture.checkout(patron=other_patron)
-        hold, ignore = odl_api_test_fixture.pool.on_hold_to(
-            odl_api_test_fixture.client, position=1
-        )
-
-        assert (
-            odl_api_test_fixture.api.release_hold_from_external_library(
-                odl_api_test_fixture.client, hold
-            )
-            is True
-        )
-        assert 0 == odl_api_test_fixture.pool.licenses_available
-        assert 0 == odl_api_test_fixture.pool.licenses_reserved
-        assert 0 == odl_api_test_fixture.pool.patrons_in_hold_queue
-        assert 0 == db.session.query(Hold).count()
-
-        odl_api_test_fixture.checkin(patron=other_patron)
-        hold, ignore = odl_api_test_fixture.pool.on_hold_to(
-            odl_api_test_fixture.client, position=0
-        )
-
-        assert (
-            odl_api_test_fixture.api.release_hold_from_external_library(
-                odl_api_test_fixture.client, hold
-            )
-            is True
-        )
-        assert 1 == odl_api_test_fixture.pool.licenses_available
-        assert 0 == odl_api_test_fixture.pool.licenses_reserved
-        assert 0 == odl_api_test_fixture.pool.patrons_in_hold_queue
-        assert 0 == db.session.query(Hold).count()
-
-        hold, ignore = odl_api_test_fixture.pool.on_hold_to(
-            odl_api_test_fixture.client, position=0
-        )
-        other_hold, ignore = odl_api_test_fixture.pool.on_hold_to(
-            db.patron(), position=2
-        )
-
-        assert (
-            odl_api_test_fixture.api.release_hold_from_external_library(
-                odl_api_test_fixture.client, hold
-            )
-            is True
-        )
-        assert 0 == odl_api_test_fixture.pool.licenses_available
-        assert 1 == odl_api_test_fixture.pool.licenses_reserved
-        assert 1 == odl_api_test_fixture.pool.patrons_in_hold_queue
-        assert 1 == db.session.query(Hold).count()
-        assert 0 == other_hold.position
-
 
 class TestODLImporter:
-    class MockGet:
-        def __init__(self):
-            self.responses = []
-
-        def get(self, *args, **kwargs):
-            return 200, {}, str(self.responses.pop(0))
-
-        def add(self, item):
-            return self.responses.append(item)
-
-    class MockMetadataClient:
-        def canonicalize_author_name(self, identifier, working_display_name):
-            return working_display_name
-
-    @pytest.fixture()
-    def mock_get(self) -> MockGet:
-        return self.MockGet()
-
-    @pytest.fixture()
-    def importer(
-        self,
-        db: DatabaseTransactionFixture,
-        odl_test_fixture: ODLTestFixture,
-        mock_get,
-    ) -> ODLImporter:
-        library = odl_test_fixture.library()
-        return ODLImporter(
-            db.session,
-            collection=odl_test_fixture.collection(library),
-            http_get=mock_get.get,
-        )
-
-    @pytest.fixture()
-    def datasource(
-        self, db: DatabaseTransactionFixture, odl_test_fixture: ODLTestFixture
-    ) -> DataSource:
-        collection = odl_test_fixture.collection(odl_test_fixture.library())
-        data_source = DataSource.lookup(db.session, "Feedbooks", autocreate=True)
-        collection.external_integration.set_setting(
-            Collection.DATA_SOURCE_NAME_SETTING, data_source.name
-        )
-        return data_source
-
-    @pytest.fixture()
-    def feed_template(self):
-        return "feed_template.xml.jinja"
-
-    @pytest.fixture()
-    def import_templated(
-        self,
-        mock_get,
-        importer,
-        feed_template: str,
-        api_odl_files_fixture: ODLAPIFilesFixture,
-    ) -> Callable:
-        def i(licenses: List[LicenseInfoHelper]) -> Tuple[List, List, List, List]:
-            feed_licenses = [l.license for l in licenses]
-            [mock_get.add(l) for l in licenses]
-            feed = self.get_templated_feed(
-                files=api_odl_files_fixture,
-                filename=feed_template,
-                licenses=feed_licenses,
-            )
-            return importer.import_from_feed(feed)
-
-        return i
-
-    def get_templated_feed(
-        self, files: APIFilesFixture, filename: str, licenses: List[LicenseHelper]
-    ) -> str:
-        """Get the test ODL feed with specific licensing information.
-
-        :param files: Access to test files
-        :param filename: Name of template to load
-        :param licenses: List of ODL licenses
-
-        :return: Test ODL feed
-        """
-        text = files.sample_text(filename)
-        template = Template(text)
-        feed = template.render(licenses=licenses)
-        return feed
-
     @freeze_time("2019-01-01T00:00:00+00:00")
-    def test_import(self, importer, mock_get, odl_test_fixture: ODLTestFixture):
+    def test_import(
+        self,
+        odl_importer: ODLImporter,
+        odl_mock_get: MockGet,
+        odl_test_fixture: ODLTestFixture,
+    ) -> None:
         """Ensure that ODLImporter correctly processes and imports the ODL feed encoded using OPDS 1.x.
 
         NOTE: `freeze_time` decorator is required to treat the licenses in the ODL feed as non-expired.
@@ -1810,24 +1442,22 @@ class TestODLImporter:
             available=5,
         )
 
-        [
-            mock_get.add(r)
-            for r in [
-                warrior_time_limited,
-                canadianity_loan_limited,
-                canadianity_perpetual,
-                midnight_loan_limited_1,
-                midnight_loan_limited_2,
-                dragons_loan,
-            ]
-        ]
+        for r in [
+            warrior_time_limited,
+            canadianity_loan_limited,
+            canadianity_perpetual,
+            midnight_loan_limited_1,
+            midnight_loan_limited_2,
+            dragons_loan,
+        ]:
+            odl_mock_get.add(r)
 
         (
             imported_editions,
             imported_pools,
             imported_works,
             failures,
-        ) = importer.import_from_feed(feed)
+        ) = odl_importer.import_from_feed(feed)
 
         # This importer works the same as the base OPDSImporter, except that
         # it extracts format information from 'odl:license' tags and creates
@@ -1846,7 +1476,7 @@ class TestODLImporter:
             warrior,
             blazing,
             midnight,
-        ] = sorted(imported_editions, key=lambda x: x.title)
+        ] = sorted(imported_editions, key=lambda x: str(x.title))
         assert "The Blazing World" == blazing.title
         assert "Sun Warrior" == warrior.title
         assert "Canadianity" == canadianity.title
@@ -1951,7 +1581,7 @@ class TestODLImporter:
         )  # 40 remaining checkouts + 1 perpetual license in the License Info Documents
         assert 11 == canadianity_pool.licenses_available
         [license1, license2] = sorted(
-            canadianity_pool.licenses, key=lambda x: x.identifier
+            canadianity_pool.licenses, key=lambda x: str(x.identifier)
         )
         assert "2" == license1.identifier
         assert (
@@ -2000,7 +1630,7 @@ class TestODLImporter:
         )  # 20 + 52 remaining checkouts in corresponding License Info Documents
         assert 2 == midnight_pool.licenses_available
         [license1, license2] = sorted(
-            midnight_pool.licenses, key=lambda x: x.identifier
+            midnight_pool.licenses, key=lambda x: str(x.identifier)
         )
         assert "4" == license1.identifier
         assert (
@@ -2027,6 +1657,8 @@ class TestODLImporter:
         assert 52 == license2.checkouts_left
         assert 1 == license2.checkouts_available
 
+
+class TestOdlAndOdl2Importer:
     @pytest.mark.parametrize(
         "license",
         [
@@ -2063,12 +1695,19 @@ class TestODLImporter:
         ],
     )
     @freeze_time("2021-01-01T00:00:00+00:00")
-    def test_odl_importer_expired_licenses(self, import_templated, license):
+    def test_odl_importer_expired_licenses(
+        self,
+        odl_import_templated: OdlImportTemplatedFixture,
+        license: LicenseInfoHelper,
+    ):
         """Ensure ODLImporter imports expired licenses, but does not count them."""
         # Import the test feed with an expired ODL license.
-        imported_editions, imported_pools, imported_works, failures = import_templated(
-            [license]
-        )
+        (
+            imported_editions,
+            imported_pools,
+            imported_works,
+            failures,
+        ) = odl_import_templated([license])
 
         # The importer created 1 edition and 1 work with no failures.
         assert failures == {}
@@ -2087,7 +1726,9 @@ class TestODLImporter:
         [imported_license] = imported_pool.licenses
         assert imported_license.is_inactive is True
 
-    def test_odl_importer_reimport_expired_licenses(self, import_templated):
+    def test_odl_importer_reimport_expired_licenses(
+        self, odl_import_templated: OdlImportTemplatedFixture
+    ):
         license_expiry = dateutil.parser.parse("2021-01-01T00:01:00+00:00")
         licenses = [
             LicenseInfoHelper(
@@ -2098,14 +1739,13 @@ class TestODLImporter:
 
         # First import the license when it is not expired
         with freeze_time(license_expiry - datetime.timedelta(days=1)):
-
             # Import the test feed.
             (
                 imported_editions,
                 imported_pools,
                 imported_works,
                 failures,
-            ) = import_templated(licenses)
+            ) = odl_import_templated(licenses)
 
             # The importer created 1 edition and 1 work with no failures.
             assert failures == {}
@@ -2125,14 +1765,13 @@ class TestODLImporter:
 
         # Reimport the license when it is expired
         with freeze_time(license_expiry + datetime.timedelta(days=1)):
-
             # Import the test feed.
             (
                 imported_editions,
                 imported_pools,
                 imported_works,
                 failures,
-            ) = import_templated(licenses)
+            ) = odl_import_templated(licenses)
 
             # The importer created 1 edition and 1 work with no failures.
             assert failures == {}
@@ -2151,7 +1790,9 @@ class TestODLImporter:
             assert imported_license.is_inactive is True
 
     @freeze_time("2021-01-01T00:00:00+00:00")
-    def test_odl_importer_multiple_expired_licenses(self, import_templated):
+    def test_odl_importer_multiple_expired_licenses(
+        self, odl_import_templated: OdlImportTemplatedFixture
+    ):
         """Ensure ODLImporter imports expired licenses
         and does not count them in the total number of available licenses."""
 
@@ -2194,9 +1835,12 @@ class TestODLImporter:
                 left=40,
             ),
         ]
-        imported_editions, imported_pools, imported_works, failures = import_templated(
-            active + inactive
-        )
+        (
+            imported_editions,
+            imported_pools,
+            imported_works,
+            failures,
+        ) = odl_import_templated(active + inactive)
 
         assert failures == {}
 
@@ -2215,7 +1859,9 @@ class TestODLImporter:
         assert sum(not l.is_inactive for l in imported_pool.licenses) == len(active)
         assert sum(l.is_inactive for l in imported_pool.licenses) == len(inactive)
 
-    def test_odl_importer_reimport_multiple_licenses(self, import_templated):
+    def test_odl_importer_reimport_multiple_licenses(
+        self, odl_import_templated: OdlImportTemplatedFixture
+    ):
         """Ensure ODLImporter correctly imports licenses that have already been imported."""
 
         # 1.1. Import the test feed with ODL licenses that are not expired.
@@ -2241,7 +1887,7 @@ class TestODLImporter:
                 imported_pools,
                 imported_works,
                 failures,
-            ) = import_templated(licenses)
+            ) = odl_import_templated(licenses)
 
             # No failures in the import
             assert failures == {}
@@ -2274,7 +1920,7 @@ class TestODLImporter:
                 imported_pools,
                 imported_works,
                 failures,
-            ) = import_templated(licenses)
+            ) = odl_import_templated(licenses)
 
             # No failures in the import
             assert failures == {}
@@ -2305,8 +1951,9 @@ class TestODLHoldReaper:
         pool = odl_test_fixture.pool(license)
 
         data_source = DataSource.lookup(db.session, "Feedbooks", autocreate=True)
-        collection.external_integration.set_setting(
-            Collection.DATA_SOURCE_NAME_SETTING, data_source.name
+        DatabaseTransactionFixture.set_settings(
+            collection.integration_configuration,
+            **{Collection.DATA_SOURCE_NAME_SETTING: data_source.name},
         )
         reaper = ODLHoldReaper(db.session, collection, api=api)
 
@@ -2343,711 +1990,3 @@ class TestODLHoldReaper:
         # that will be applied by run().
         assert None == progress.start
         assert None == progress.finish
-
-
-class SharedODLAPIFixture:
-    def __init__(
-        self, db: DatabaseTransactionFixture, api_odl_files_fixture: ODLAPIFilesFixture
-    ):
-        self.db = db
-        self.files = api_odl_files_fixture
-        self.collection = MockSharedODLAPI.mock_collection(db.session)
-        self.collection.external_integration.set_setting(
-            Collection.DATA_SOURCE_NAME_SETTING, "Feedbooks"
-        )
-        self.api = MockSharedODLAPI(db.session, self.collection)
-        self.pool = db.licensepool(None, collection=self.collection)
-        self.pool.identifier.add_link(
-            Hyperlink.BORROW, db.fresh_str(), self.collection.data_source
-        )
-        self.patron = db.patron()
-
-
-@pytest.fixture(scope="function")
-def shared_odl(
-    db: DatabaseTransactionFixture, api_odl_files_fixture: ODLAPIFilesFixture
-) -> SharedODLAPIFixture:
-    return SharedODLAPIFixture(db, api_odl_files_fixture)
-
-
-class TestSharedODLAPI:
-    def test_get(self, shared_odl: SharedODLAPIFixture):
-        db, files = shared_odl.db, shared_odl.files
-
-        # Create a SharedODLAPI to test the _get method. The other tests use a
-        # mock API class that overrides _get.
-        api = SharedODLAPI(db.session, shared_odl.collection)
-
-        # The library has not registered with the remote collection yet.
-        def do_get(url, headers=None, allowed_response_codes=None):
-            raise Exception("do_get should not be called")
-
-        pytest.raises(
-            LibraryAuthorizationFailedException,
-            api._get,
-            "test url",
-            patron=shared_odl.patron,
-            do_get=do_get,
-        )
-
-        # Once the library registers, it gets a shared secret that is included
-        # in request headers.
-        ConfigurationSetting.for_library_and_externalintegration(
-            db.session,
-            ExternalIntegration.PASSWORD,
-            shared_odl.patron.library,
-            shared_odl.collection.external_integration,
-        ).value = "secret"
-
-        def do_get2(url, headers=None, allowed_response_codes=None):
-            assert "test url" == url
-            assert "test header value" == headers.get("test_key")
-            assert "Bearer " + base64.b64encode("secret") == headers.get(
-                "Authorization"
-            )
-            assert ["200"] == allowed_response_codes
-
-        api._get(
-            "test url",
-            headers=dict(test_key="test header value"),
-            patron=shared_odl.patron,
-            allowed_response_codes=["200"],
-            do_get=do_get2,
-        )
-
-    def test_checkout_success(self, shared_odl: SharedODLAPIFixture):
-        db, files = shared_odl.db, shared_odl.files
-
-        response = files.sample_data("shared_collection_borrow_success.opds")
-        shared_odl.api.queue_response(200, content=response)
-
-        loan = shared_odl.api.checkout(
-            shared_odl.patron, "pin", shared_odl.pool, Representation.EPUB_MEDIA_TYPE
-        )
-        assert shared_odl.collection == loan.collection(db.session)
-        assert shared_odl.pool.data_source.name == loan.data_source_name
-        assert shared_odl.pool.identifier.type == loan.identifier_type
-        assert shared_odl.pool.identifier.identifier == loan.identifier
-        assert datetime_utc(2018, 3, 8, 17, 41, 31) == loan.start_date
-        assert datetime_utc(2018, 3, 29, 17, 41, 30) == loan.end_date
-        assert (
-            "http://localhost:6500/AL/collections/DPLA%20Exchange/loans/31"
-            == loan.external_identifier
-        )
-
-        assert [
-            shared_odl.pool.identifier.links[0].resource.url
-        ] == shared_odl.api.requests
-
-    def test_checkout_from_hold(self, shared_odl: SharedODLAPIFixture):
-        db, files = shared_odl.db, shared_odl.files
-
-        hold, ignore = shared_odl.pool.on_hold_to(
-            shared_odl.patron, external_identifier=db.fresh_str()
-        )
-        hold_info_response = files.sample_data("shared_collection_hold_info_ready.opds")
-        shared_odl.api.queue_response(200, content=hold_info_response)
-        borrow_response = files.sample_data("shared_collection_borrow_success.opds")
-        shared_odl.api.queue_response(200, content=borrow_response)
-
-        loan = shared_odl.api.checkout(
-            shared_odl.patron, "pin", shared_odl.pool, Representation.EPUB_MEDIA_TYPE
-        )
-        assert shared_odl.collection == loan.collection(db.session)
-        assert shared_odl.pool.data_source.name == loan.data_source_name
-        assert shared_odl.pool.identifier.type == loan.identifier_type
-        assert shared_odl.pool.identifier.identifier == loan.identifier
-        assert datetime_utc(2018, 3, 8, 17, 41, 31) == loan.start_date
-        assert datetime_utc(2018, 3, 29, 17, 41, 30) == loan.end_date
-        assert (
-            "http://localhost:6500/AL/collections/DPLA%20Exchange/loans/31"
-            == loan.external_identifier
-        )
-
-        assert [
-            hold.external_identifier,
-            "http://localhost:6500/AL/collections/DPLA%20Exchange/holds/17/borrow",
-        ] == shared_odl.api.requests
-
-    def test_checkout_already_checked_out(self, shared_odl: SharedODLAPIFixture):
-        loan, ignore = shared_odl.pool.loan_to(shared_odl.patron)
-        pytest.raises(
-            AlreadyCheckedOut,
-            shared_odl.api.checkout,
-            shared_odl.patron,
-            "pin",
-            shared_odl.pool,
-            Representation.EPUB_MEDIA_TYPE,
-        )
-        assert [] == shared_odl.api.requests
-
-    def test_checkout_no_available_copies(self, shared_odl: SharedODLAPIFixture):
-        shared_odl.api.queue_response(403)
-        pytest.raises(
-            NoAvailableCopies,
-            shared_odl.api.checkout,
-            shared_odl.patron,
-            "pin",
-            shared_odl.pool,
-            Representation.EPUB_MEDIA_TYPE,
-        )
-        assert [
-            shared_odl.pool.identifier.links[0].resource.url
-        ] == shared_odl.api.requests
-
-    def test_checkout_no_licenses(self, shared_odl: SharedODLAPIFixture):
-        shared_odl.api.queue_response(
-            NO_LICENSES.response[1],
-            headers=NO_LICENSES.response[2],
-            content=NO_LICENSES.response[0],
-        )
-        pytest.raises(
-            NoLicenses,
-            shared_odl.api.checkout,
-            shared_odl.patron,
-            "pin",
-            shared_odl.pool,
-            Representation.EPUB_MEDIA_TYPE,
-        )
-        assert [
-            shared_odl.pool.identifier.links[0].resource.url
-        ] == shared_odl.api.requests
-
-    def test_checkout_from_hold_not_available(self, shared_odl: SharedODLAPIFixture):
-        files = shared_odl.files
-        hold, ignore = shared_odl.pool.on_hold_to(shared_odl.patron)
-        hold_info_response = files.sample_data(
-            "shared_collection_hold_info_reserved.opds"
-        )
-        shared_odl.api.queue_response(200, content=hold_info_response)
-        pytest.raises(
-            NoAvailableCopies,
-            shared_odl.api.checkout,
-            shared_odl.patron,
-            "pin",
-            shared_odl.pool,
-            Representation.EPUB_MEDIA_TYPE,
-        )
-        assert [hold.external_identifier] == shared_odl.api.requests
-
-    def test_checkout_cannot_loan(self, shared_odl: SharedODLAPIFixture):
-        db, files = shared_odl.db, shared_odl.files
-
-        shared_odl.api.queue_response(500)
-        pytest.raises(
-            CannotLoan,
-            shared_odl.api.checkout,
-            shared_odl.patron,
-            "pin",
-            shared_odl.pool,
-            Representation.EPUB_MEDIA_TYPE,
-        )
-        assert [
-            shared_odl.pool.identifier.links[0].resource.url
-        ] == shared_odl.api.requests
-
-        # This pool has no borrow link.
-        pool = db.licensepool(None, collection=shared_odl.collection)
-        pytest.raises(
-            CannotLoan,
-            shared_odl.api.checkout,
-            shared_odl.patron,
-            "pin",
-            pool,
-            Representation.EPUB_MEDIA_TYPE,
-        )
-
-    def test_checkin_success(self, shared_odl: SharedODLAPIFixture):
-        db, files = shared_odl.db, shared_odl.files
-
-        loan, ignore = shared_odl.pool.loan_to(
-            shared_odl.patron, external_identifier=db.fresh_str()
-        )
-        loan_info_response = files.sample_data("shared_collection_loan_info.opds")
-        shared_odl.api.queue_response(200, content=loan_info_response)
-        shared_odl.api.queue_response(200, content="Deleted")
-        response = shared_odl.api.checkin(shared_odl.patron, "pin", shared_odl.pool)
-        assert True == response
-        assert [
-            loan.external_identifier,
-            "http://localhost:6500/AL/collections/DPLA%20Exchange/loans/33/revoke",
-        ] == shared_odl.api.requests
-
-    def test_checkin_not_checked_out(self, shared_odl: SharedODLAPIFixture):
-        db, files = shared_odl.db, shared_odl.files
-
-        pytest.raises(
-            NotCheckedOut,
-            shared_odl.api.checkin,
-            shared_odl.patron,
-            "pin",
-            shared_odl.pool,
-        )
-        assert [] == shared_odl.api.requests
-
-        loan, ignore = shared_odl.pool.loan_to(
-            shared_odl.patron, external_identifier=db.fresh_str()
-        )
-        shared_odl.api.queue_response(404)
-        pytest.raises(
-            NotCheckedOut,
-            shared_odl.api.checkin,
-            shared_odl.patron,
-            "pin",
-            shared_odl.pool,
-        )
-        assert [loan.external_identifier] == shared_odl.api.requests
-
-    def test_checkin_cannot_return(self, shared_odl: SharedODLAPIFixture):
-        db, files = shared_odl.db, shared_odl.files
-
-        loan, ignore = shared_odl.pool.loan_to(
-            shared_odl.patron, external_identifier=db.fresh_str()
-        )
-        shared_odl.api.queue_response(500)
-        pytest.raises(
-            CannotReturn,
-            shared_odl.api.checkin,
-            shared_odl.patron,
-            "pin",
-            shared_odl.pool,
-        )
-        assert [loan.external_identifier] == shared_odl.api.requests
-
-        loan_info_response = files.sample_data("shared_collection_loan_info.opds")
-        shared_odl.api.queue_response(200, content=loan_info_response)
-        shared_odl.api.queue_response(500)
-        pytest.raises(
-            CannotReturn,
-            shared_odl.api.checkin,
-            shared_odl.patron,
-            "pin",
-            shared_odl.pool,
-        )
-        assert [
-            loan.external_identifier,
-            "http://localhost:6500/AL/collections/DPLA%20Exchange/loans/33/revoke",
-        ] == shared_odl.api.requests[1:]
-
-    def test_fulfill_success(self, shared_odl: SharedODLAPIFixture):
-        db, files = shared_odl.db, shared_odl.files
-
-        loan, ignore = shared_odl.pool.loan_to(
-            shared_odl.patron, external_identifier=db.fresh_str()
-        )
-        loan_info_response = files.sample_data("shared_collection_loan_info.opds")
-        shared_odl.api.queue_response(200, content=loan_info_response)
-        shared_odl.api.queue_response(200, content="An ACSM file")
-        fulfillment = shared_odl.api.fulfill(
-            shared_odl.patron,
-            "pin",
-            shared_odl.pool,
-            shared_odl.pool.delivery_mechanisms[0],
-        )
-        assert shared_odl.collection == fulfillment.collection(db.session)
-        assert shared_odl.pool.data_source.name == fulfillment.data_source_name
-        assert shared_odl.pool.identifier.type == fulfillment.identifier_type
-        assert shared_odl.pool.identifier.identifier == fulfillment.identifier
-        assert None == fulfillment.content_link
-        assert b"An ACSM file" == fulfillment.content
-        assert datetime_utc(2018, 3, 29, 17, 44, 11) == fulfillment.content_expires
-
-        assert [
-            loan.external_identifier,
-            "http://localhost:6500/AL/collections/DPLA%20Exchange/loans/33/fulfill/2",
-        ] == shared_odl.api.requests
-
-    def test_fulfill_not_checked_out(self, shared_odl: SharedODLAPIFixture):
-        db, files = shared_odl.db, shared_odl.files
-
-        pytest.raises(
-            NotCheckedOut,
-            shared_odl.api.fulfill,
-            shared_odl.patron,
-            "pin",
-            shared_odl.pool,
-            shared_odl.pool.delivery_mechanisms[0],
-        )
-        assert [] == shared_odl.api.requests
-
-        loan, ignore = shared_odl.pool.loan_to(
-            shared_odl.patron, external_identifier=db.fresh_str()
-        )
-        shared_odl.api.queue_response(404)
-        pytest.raises(
-            NotCheckedOut,
-            shared_odl.api.fulfill,
-            shared_odl.patron,
-            "pin",
-            shared_odl.pool,
-            shared_odl.pool.delivery_mechanisms[0],
-        )
-        assert [loan.external_identifier] == shared_odl.api.requests
-
-    def test_fulfill_cannot_fulfill(self, shared_odl: SharedODLAPIFixture):
-        db, files = shared_odl.db, shared_odl.files
-
-        loan, ignore = shared_odl.pool.loan_to(
-            shared_odl.patron, external_identifier=db.fresh_str()
-        )
-        shared_odl.api.queue_response(500)
-        pytest.raises(
-            CannotFulfill,
-            shared_odl.api.fulfill,
-            shared_odl.patron,
-            "pin",
-            shared_odl.pool,
-            shared_odl.pool.delivery_mechanisms[0],
-        )
-        assert [loan.external_identifier] == shared_odl.api.requests
-
-        shared_odl.api.queue_response(200, content="not opds")
-        pytest.raises(
-            CannotFulfill,
-            shared_odl.api.fulfill,
-            shared_odl.patron,
-            "pin",
-            shared_odl.pool,
-            shared_odl.pool.delivery_mechanisms[0],
-        )
-        assert [loan.external_identifier] == shared_odl.api.requests[1:]
-
-        loan_info_response = files.sample_data("shared_collection_loan_info.opds")
-        shared_odl.api.queue_response(200, content=loan_info_response)
-        shared_odl.api.queue_response(500)
-        pytest.raises(
-            CannotFulfill,
-            shared_odl.api.fulfill,
-            shared_odl.patron,
-            "pin",
-            shared_odl.pool,
-            shared_odl.pool.delivery_mechanisms[0],
-        )
-        assert [
-            loan.external_identifier,
-            "http://localhost:6500/AL/collections/DPLA%20Exchange/loans/33/fulfill/2",
-        ] == shared_odl.api.requests[2:]
-
-    def test_fulfill_format_not_available(self, shared_odl: SharedODLAPIFixture):
-        db, files = shared_odl.db, shared_odl.files
-
-        loan, ignore = shared_odl.pool.loan_to(shared_odl.patron)
-        loan_info_response = files.sample_data(
-            "shared_collection_loan_info_no_epub.opds"
-        )
-        shared_odl.api.queue_response(200, content=loan_info_response)
-        pytest.raises(
-            FormatNotAvailable,
-            shared_odl.api.fulfill,
-            shared_odl.patron,
-            "pin",
-            shared_odl.pool,
-            shared_odl.pool.delivery_mechanisms[0],
-        )
-        assert [loan.external_identifier] == shared_odl.api.requests
-
-    def test_place_hold_success(self, shared_odl: SharedODLAPIFixture):
-        db, files = shared_odl.db, shared_odl.files
-
-        hold_response = files.sample_data("shared_collection_hold_info_reserved.opds")
-        shared_odl.api.queue_response(200, content=hold_response)
-        hold = shared_odl.api.place_hold(
-            shared_odl.patron,
-            "pin",
-            shared_odl.pool,
-            "notifications@librarysimplified.org",
-        )
-        assert shared_odl.collection == hold.collection(db.session)
-        assert shared_odl.pool.data_source.name == hold.data_source_name
-        assert shared_odl.pool.identifier.type == hold.identifier_type
-        assert shared_odl.pool.identifier.identifier == hold.identifier
-        assert datetime_utc(2018, 3, 8, 18, 50, 18) == hold.start_date
-        assert datetime_utc(2018, 3, 29, 17, 44, 1) == hold.end_date
-        assert 1 == hold.hold_position
-        assert (
-            "http://localhost:6500/AL/collections/DPLA%20Exchange/holds/18"
-            == hold.external_identifier
-        )
-
-        assert [
-            shared_odl.pool.identifier.links[0].resource.url
-        ] == shared_odl.api.requests
-
-    def test_place_hold_already_checked_out(self, shared_odl: SharedODLAPIFixture):
-        loan, ignore = shared_odl.pool.loan_to(shared_odl.patron)
-        pytest.raises(
-            AlreadyCheckedOut,
-            shared_odl.api.place_hold,
-            shared_odl.patron,
-            "pin",
-            shared_odl.pool,
-            "notification@librarysimplified.org",
-        )
-        assert [] == shared_odl.api.requests
-
-    def test_release_hold_success(self, shared_odl: SharedODLAPIFixture):
-        db, files = shared_odl.db, shared_odl.files
-
-        hold, ignore = shared_odl.pool.on_hold_to(
-            shared_odl.patron, external_identifier=db.fresh_str()
-        )
-        hold_response = files.sample_data("shared_collection_hold_info_reserved.opds")
-        shared_odl.api.queue_response(200, content=hold_response)
-        shared_odl.api.queue_response(200, content="Deleted")
-        response = shared_odl.api.release_hold(
-            shared_odl.patron, "pin", shared_odl.pool
-        )
-        assert True == response
-        assert [
-            hold.external_identifier,
-            "http://localhost:6500/AL/collections/DPLA%20Exchange/holds/18/revoke",
-        ] == shared_odl.api.requests
-
-    def test_release_hold_not_on_hold(self, shared_odl: SharedODLAPIFixture):
-        db, files = shared_odl.db, shared_odl.files
-
-        pytest.raises(
-            NotOnHold,
-            shared_odl.api.release_hold,
-            shared_odl.patron,
-            "pin",
-            shared_odl.pool,
-        )
-        assert [] == shared_odl.api.requests
-
-        hold, ignore = shared_odl.pool.on_hold_to(
-            shared_odl.patron, external_identifier=db.fresh_str()
-        )
-        shared_odl.api.queue_response(404)
-        pytest.raises(
-            NotOnHold,
-            shared_odl.api.release_hold,
-            shared_odl.patron,
-            "pin",
-            shared_odl.pool,
-        )
-        assert [hold.external_identifier] == shared_odl.api.requests
-
-    def test_release_hold_cannot_release_hold(self, shared_odl: SharedODLAPIFixture):
-        db, files = shared_odl.db, shared_odl.files
-
-        hold, ignore = shared_odl.pool.on_hold_to(
-            shared_odl.patron, external_identifier=db.fresh_str()
-        )
-        shared_odl.api.queue_response(500)
-        pytest.raises(
-            CannotReleaseHold,
-            shared_odl.api.release_hold,
-            shared_odl.patron,
-            "pin",
-            shared_odl.pool,
-        )
-        assert [hold.external_identifier] == shared_odl.api.requests
-
-        hold_response = files.sample_data("shared_collection_hold_info_reserved.opds")
-        shared_odl.api.queue_response(200, content=hold_response)
-        shared_odl.api.queue_response(500)
-        pytest.raises(
-            CannotReleaseHold,
-            shared_odl.api.release_hold,
-            shared_odl.patron,
-            "pin",
-            shared_odl.pool,
-        )
-        assert [
-            hold.external_identifier,
-            "http://localhost:6500/AL/collections/DPLA%20Exchange/holds/18/revoke",
-        ] == shared_odl.api.requests[1:]
-
-    def test_patron_activity_success(self, shared_odl: SharedODLAPIFixture):
-        db, files = shared_odl.db, shared_odl.files
-
-        # The patron has one loan, and the remote circ manager returns it.
-        loan, ignore = shared_odl.pool.loan_to(
-            shared_odl.patron, external_identifier=db.fresh_str()
-        )
-        loan_response = files.sample_data("shared_collection_loan_info.opds")
-        shared_odl.api.queue_response(200, content=loan_response)
-        activity = shared_odl.api.patron_activity(shared_odl.patron, "pin")
-        assert 1 == len(activity)
-        [loan_info] = activity
-        assert shared_odl.collection == loan_info.collection(db.session)
-        assert shared_odl.pool.data_source.name == loan_info.data_source_name
-        assert shared_odl.pool.identifier.type == loan_info.identifier_type
-        assert shared_odl.pool.identifier.identifier == loan_info.identifier
-        assert datetime_utc(2018, 3, 8, 17, 44, 12) == loan_info.start_date
-        assert datetime_utc(2018, 3, 29, 17, 44, 11) == loan_info.end_date
-        assert [loan.external_identifier] == shared_odl.api.requests
-
-        # The _get method was passed a patron - this is necessary because
-        # the patron_activity method may be called from a thread without
-        # access to the flask request.
-        assert shared_odl.patron == shared_odl.api.request_args[0][0]
-
-        # The patron's loan has been deleted on the remote.
-        shared_odl.api.queue_response(404, content="No loan here")
-        activity = shared_odl.api.patron_activity(shared_odl.patron, "pin")
-        assert 0 == len(activity)
-        assert [loan.external_identifier] == shared_odl.api.requests[1:]
-
-        # Now the patron has a hold instead.
-        db.session.delete(loan)
-        hold, ignore = shared_odl.pool.on_hold_to(
-            shared_odl.patron, external_identifier=db.fresh_str()
-        )
-        hold_response = files.sample_data("shared_collection_hold_info_reserved.opds")
-        shared_odl.api.queue_response(200, content=hold_response)
-        activity = shared_odl.api.patron_activity(shared_odl.patron, "pin")
-        assert 1 == len(activity)
-        [hold_info] = activity
-        assert shared_odl.collection == hold_info.collection(db.session)
-        assert shared_odl.pool.data_source.name == hold_info.data_source_name
-        assert shared_odl.pool.identifier.type == hold_info.identifier_type
-        assert shared_odl.pool.identifier.identifier == hold_info.identifier
-        assert datetime_utc(2018, 3, 8, 18, 50, 18) == hold_info.start_date
-        assert datetime_utc(2018, 3, 29, 17, 44, 1) == hold_info.end_date
-        assert [hold.external_identifier] == shared_odl.api.requests[2:]
-
-        # The patron's hold has been deleted on the remote.
-        shared_odl.api.queue_response(404, content="No hold here")
-        activity = shared_odl.api.patron_activity(shared_odl.patron, "pin")
-        assert 0 == len(activity)
-        assert [hold.external_identifier] == shared_odl.api.requests[3:]
-
-    def test_patron_activity_remote_integration_exception(
-        self, shared_odl: SharedODLAPIFixture
-    ):
-        db, files = shared_odl.db, shared_odl.files
-
-        loan, ignore = shared_odl.pool.loan_to(
-            shared_odl.patron, external_identifier=db.fresh_str()
-        )
-        shared_odl.api.queue_response(500)
-        pytest.raises(
-            RemoteIntegrationException,
-            shared_odl.api.patron_activity,
-            shared_odl.patron,
-            "pin",
-        )
-        assert [loan.external_identifier] == shared_odl.api.requests
-        db.session.delete(loan)
-
-        hold, ignore = shared_odl.pool.on_hold_to(
-            shared_odl.patron, external_identifier=db.fresh_str()
-        )
-        shared_odl.api.queue_response(500)
-        pytest.raises(
-            RemoteIntegrationException,
-            shared_odl.api.patron_activity,
-            shared_odl.patron,
-            "pin",
-        )
-        assert [hold.external_identifier] == shared_odl.api.requests[1:]
-
-
-class TestSharedODLImporter:
-    def test_get_fulfill_url(self, api_odl_files_fixture: ODLAPIFilesFixture):
-        entry = api_odl_files_fixture.sample_data("shared_collection_loan_info.opds")
-        assert (
-            "http://localhost:6500/AL/collections/DPLA%20Exchange/loans/33/fulfill/2"
-            == SharedODLImporter.get_fulfill_url(
-                entry, "application/epub+zip", "application/vnd.adobe.adept+xml"
-            )
-        )
-        assert None == SharedODLImporter.get_fulfill_url(
-            entry, "application/pdf", "application/vnd.adobe.adept+xml"
-        )
-        assert None == SharedODLImporter.get_fulfill_url(
-            entry, "application/epub+zip", None
-        )
-
-    def test_import(
-        self, db: DatabaseTransactionFixture, api_odl_files_fixture: ODLAPIFilesFixture
-    ):
-        feed = api_odl_files_fixture.sample_data("shared_collection_feed.opds")
-        data_source = DataSource.lookup(db.session, "DPLA Exchange", autocreate=True)
-        collection = MockSharedODLAPI.mock_collection(db.session)
-        collection.external_integration.set_setting(
-            Collection.DATA_SOURCE_NAME_SETTING, data_source.name
-        )
-
-        class MockMetadataClient:
-            def canonicalize_author_name(self, identifier, working_display_name):
-                return working_display_name
-
-        importer = SharedODLImporter(db.session, collection=collection)
-
-        (
-            imported_editions,
-            imported_pools,
-            imported_works,
-            failures,
-        ) = importer.import_from_feed(feed)
-
-        # This importer works the same as the base OPDSImporter, except that
-        # it extracts license pool information from acquisition links.
-
-        # The importer created 3 editions, pools, and works.
-        assert 3 == len(imported_editions)
-        assert 3 == len(imported_pools)
-        assert 3 == len(imported_works)
-
-        [six_months, essex, gatsby] = sorted(imported_editions, key=lambda x: x.title)
-        assert "Six Months, Three Days, Five Others" == six_months.title
-        assert "The Essex Serpent" == essex.title
-        assert "The Great Gatsby" == gatsby.title
-
-        # This book is open access.
-        [gatsby_pool] = [
-            p for p in imported_pools if p.identifier == gatsby.primary_identifier
-        ]
-        assert True == gatsby_pool.open_access
-        # This pool has two delivery mechanisms, from a borrow link and an open-access link.
-        # Both are DRM-free epubs.
-        lpdms = gatsby_pool.delivery_mechanisms
-        assert 2 == len(lpdms)
-        for lpdm in lpdms:
-            assert (
-                Representation.EPUB_MEDIA_TYPE == lpdm.delivery_mechanism.content_type
-            )
-            assert DeliveryMechanism.NO_DRM == lpdm.delivery_mechanism.drm_scheme
-
-        # This book is already checked out and has a hold.
-        [six_months_pool] = [
-            p for p in imported_pools if p.identifier == six_months.primary_identifier
-        ]
-        assert False == six_months_pool.open_access
-        assert 1 == six_months_pool.licenses_owned
-        assert 0 == six_months_pool.licenses_available
-        assert 1 == six_months_pool.patrons_in_hold_queue
-        [lpdm] = six_months_pool.delivery_mechanisms
-        assert Representation.EPUB_MEDIA_TYPE == lpdm.delivery_mechanism.content_type
-        assert DeliveryMechanism.ADOBE_DRM == lpdm.delivery_mechanism.drm_scheme
-        assert RightsStatus.IN_COPYRIGHT == lpdm.rights_status.uri
-        [borrow_link] = [
-            l for l in six_months_pool.identifier.links if l.rel == Hyperlink.BORROW
-        ]
-        assert (
-            "http://localhost:6500/AL/works/URI/http://www.feedbooks.com/item/2493650/borrow"
-            == borrow_link.resource.url
-        )
-
-        # This book is currently available.
-        [essex_pool] = [
-            p for p in imported_pools if p.identifier == essex.primary_identifier
-        ]
-        assert False == essex_pool.open_access
-        assert 4 == essex_pool.licenses_owned
-        assert 4 == essex_pool.licenses_available
-        assert 0 == essex_pool.patrons_in_hold_queue
-        [lpdm] = essex_pool.delivery_mechanisms
-        assert Representation.EPUB_MEDIA_TYPE == lpdm.delivery_mechanism.content_type
-        assert DeliveryMechanism.ADOBE_DRM == lpdm.delivery_mechanism.drm_scheme
-        assert RightsStatus.IN_COPYRIGHT == lpdm.rights_status.uri
-        [borrow_link] = [
-            l for l in essex_pool.identifier.links if l.rel == Hyperlink.BORROW
-        ]
-        assert (
-            "http://localhost:6500/AL/works/URI/http://www.feedbooks.com/item/1946289/borrow"
-            == borrow_link.resource.url
-        )

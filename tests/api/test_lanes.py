@@ -1,10 +1,8 @@
-import json
 from collections import Counter
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from api.config import Configuration
 from api.lanes import (
     ContributorFacets,
     ContributorLane,
@@ -30,18 +28,13 @@ from api.lanes import (
 from api.novelist import MockNoveListAPI
 from core.classifier import Classifier
 from core.entrypoint import AudiobooksEntryPoint
-from core.external_search import Filter, MockExternalSearchIndex
+from core.external_search import Filter
 from core.lane import DefaultSortOrderFacets, Facets, FeaturedFacets, Lane, WorkList
 from core.metadata_layer import ContributorData, Metadata
-from core.model import (
-    CachedFeed,
-    Contributor,
-    DataSource,
-    Edition,
-    ExternalIntegration,
-    create,
-)
+from core.model import Contributor, DataSource, Edition, ExternalIntegration, create
 from tests.fixtures.database import DatabaseTransactionFixture
+from tests.fixtures.library import LibraryFixture
+from tests.fixtures.search import ExternalSearchFixtureFake
 
 
 class TestLaneCreation:
@@ -181,7 +174,7 @@ class TestLaneCreation:
         # from all three languages mentioned in its children.
         top_level = db.session.query(Lane).filter(Lane.parent == None).one()
         assert "World Languages" == top_level.display_name
-        assert {"spa", "fre", "eng"} == top_level.languages
+        assert {"spa", "fre", "eng"} == set(top_level.languages)
 
         # It has two children -- one for the small English collection and
         # one for the tiny Spanish/French collection.,
@@ -190,7 +183,7 @@ class TestLaneCreation:
         assert ["eng"] == small.languages
 
         assert "espa\xf1ol/fran\xe7ais" == tiny.display_name
-        assert ["spa", "fre"] == tiny.languages
+        assert {"spa", "fre"} == set(tiny.languages)
 
         # The tiny collection has no sublanes, but the small one has
         # three.  These lanes are tested in more detail in
@@ -260,24 +253,19 @@ class TestLaneCreation:
         lane = db.session.query(Lane).filter(Lane.parent == new_parent)
         assert lane.count() == 0
 
-    def test_create_default_lanes(self, db: DatabaseTransactionFixture):
-        library = db.default_library()
-        library.setting(Configuration.LARGE_COLLECTION_LANGUAGES).value = json.dumps(
-            ["eng"]
-        )
+    def test_create_default_lanes(
+        self, db: DatabaseTransactionFixture, library_fixture: LibraryFixture
+    ):
+        settings = library_fixture.mock_settings()
+        settings.large_collection_languages = ["eng"]
+        settings.small_collection_languages = ["spa", "chi"]
+        settings.tiny_collection_languages = ["ger", "fre", "ita"]
+        library = library_fixture.library(settings=settings)
 
-        library.setting(Configuration.SMALL_COLLECTION_LANGUAGES).value = json.dumps(
-            ["spa", "chi"]
-        )
-
-        library.setting(Configuration.TINY_COLLECTION_LANGUAGES).value = json.dumps(
-            ["ger", "fre", "ita"]
-        )
-
-        create_default_lanes(db.session, db.default_library())
+        create_default_lanes(db.session, library)
         lanes = (
             db.session.query(Lane)
-            .filter(Lane.library == library)  # type: ignore
+            .filter(Lane.library == library)
             .filter(Lane.parent_id == None)
             .all()
         )
@@ -312,19 +300,12 @@ class TestLaneCreation:
         assert Classifier.AUDIENCE_CHILDREN == audiences[0]
 
     def test_create_default_when_more_than_one_large_language_is_configured(
-        self, db: DatabaseTransactionFixture
+        self, db: DatabaseTransactionFixture, library_fixture: LibraryFixture
     ):
-        library = db.default_library()
-        library.setting(Configuration.LARGE_COLLECTION_LANGUAGES).value = json.dumps(
-            [
-                "eng",
-                "fre",
-            ]
-        )
+        settings = library_fixture.mock_settings()
+        settings.large_collection_languages = ["eng", "fre"]
+        library = library_fixture.library(settings=settings)
 
-        library.setting(Configuration.SMALL_COLLECTION_LANGUAGES).value = json.dumps([])
-
-        library.setting(Configuration.TINY_COLLECTION_LANGUAGES).value = json.dumps([])
         session = db.session
         create_default_lanes(session, library)
         lanes = (
@@ -348,9 +329,6 @@ class TestLaneCreation:
         self, db: DatabaseTransactionFixture
     ):
         library = db.default_library()
-        library.setting(Configuration.LARGE_COLLECTION_LANGUAGES).value = json.dumps([])
-        library.setting(Configuration.SMALL_COLLECTION_LANGUAGES).value = json.dumps([])
-        library.setting(Configuration.TINY_COLLECTION_LANGUAGES).value = json.dumps([])
         session = db.session
         with patch(
             "api.lanes._lane_configuration_from_collection_sizes"
@@ -531,10 +509,6 @@ def related_books_fixture(db: DatabaseTransactionFixture) -> RelatedBooksFixture
 
 
 class TestRelatedBooksLane:
-    def test_feed_type(self, related_books_fixture: RelatedBooksFixture):
-        # All feeds from these lanes are cached as 'related works' feeds.
-        assert CachedFeed.RELATED_TYPE == RelatedBooksLane.CACHED_FEED_TYPE
-
     def test_initialization(self, related_books_fixture: RelatedBooksFixture):
         # Asserts that a RelatedBooksLane won't be initialized for a work
         # without related books
@@ -636,7 +610,9 @@ class TestRelatedBooksLane:
         result = RelatedBooksLane(db.default_library(), related_books_fixture.work, "")
         assert 2 == len(result.children)
         sublane_contributors = list()
-        [sublane_contributors.append(c.contributor) for c in result.children]
+
+        for c in result.children:
+            sublane_contributors.append(c.contributor)
         assert {lane, original} == set(sublane_contributors)
 
         # When there are no AUTHOR_ROLES present, contributors in
@@ -781,10 +757,6 @@ class TestSeriesFacets:
 
 
 class TestSeriesLane:
-    def test_feed_type(self):
-        # All feeds from these lanes are cached as series feeds.
-        assert CachedFeed.SERIES_TYPE == SeriesLane.CACHED_FEED_TYPE
-
     def test_initialization(self, lane_fixture: LaneFixture):
         # An error is raised if SeriesLane is created with an empty string.
         pytest.raises(ValueError, SeriesLane, lane_fixture.db.default_library(), "")
@@ -854,10 +826,6 @@ class TestContributorFacets:
 
 
 class TestContributorLane:
-    def test_feed_type(self):
-        # All feeds of this type are cached as contributor feeds.
-        assert CachedFeed.CONTRIBUTOR_TYPE == ContributorLane.CACHED_FEED_TYPE
-
     def test_initialization(self, lane_fixture: LaneFixture):
         with pytest.raises(ValueError) as excinfo:
             ContributorLane(lane_fixture.db.default_library(), None)
@@ -938,11 +906,6 @@ class TestContributorLane:
 
 
 class TestCrawlableFacets:
-    def test_feed_type(self, db: DatabaseTransactionFixture):
-        # All crawlable feeds are cached as such, no matter what
-        # WorkList they come from.
-        assert CachedFeed.CRAWLABLE_TYPE == CrawlableFacets.CACHED_FEED_TYPE
-
     def test_default(self, db: DatabaseTransactionFixture):
         facets = CrawlableFacets.default(db.default_library())
         assert CrawlableFacets.COLLECTION_FULL == facets.collection
@@ -957,7 +920,6 @@ class TestCrawlableFacets:
 
 class TestCrawlableCollectionBasedLane:
     def test_init(self, db: DatabaseTransactionFixture):
-
         # Collection-based crawlable feeds are cached for 2 hours.
         assert 2 * 60 * 60 == CrawlableCollectionBasedLane.MAX_CACHE_AGE
 
@@ -980,6 +942,8 @@ class TestCrawlableCollectionBasedLane:
         # affiliation.
         lane = CrawlableCollectionBasedLane()
         lane.initialize([unused_collection, other_library_collection])
+        assert isinstance(unused_collection.name, str)
+        assert isinstance(other_library_collection.name, str)
         assert (
             "Crawlable feed: %s / %s"
             % tuple(sorted([unused_collection.name, other_library_collection.name]))
@@ -1012,24 +976,29 @@ class TestCrawlableCollectionBasedLane:
         assert CrawlableCollectionBasedLane.COLLECTION_ROUTE == route
         assert other_collection.name == kwargs.get("collection_name")
 
-    def test_works(self, db: DatabaseTransactionFixture):
+    def test_works(
+        self,
+        db: DatabaseTransactionFixture,
+        external_search_fake_fixture: ExternalSearchFixtureFake,
+    ):
         w1 = db.work(collection=db.default_collection())
         w2 = db.work(collection=db.default_collection())
         w3 = db.work(collection=db.collection())
 
         lane = CrawlableCollectionBasedLane()
         lane.initialize([db.default_collection()])
-        search = MockExternalSearchIndex()
+        search = external_search_fake_fixture.external_search
+        search.query_works = MagicMock(return_value=[])  # type: ignore [method-assign]
         lane.works(
             db.session, facets=CrawlableFacets.default(None), search_engine=search
         )
 
-        assert len(search.queries) == 1
-        filter = search.queries[0][1]
+        queries = search.query_works.call_args[1]
+        assert search.query_works.call_count == 1
         # Only target a single collection
-        assert filter.collection_ids == [db.default_collection().id]
+        assert queries["filter"].collection_ids == [db.default_collection().id]
         # without any search query
-        assert None == search.queries[0][0]
+        assert None == queries["query_string"]
 
 
 class TestCrawlableCustomListBasedLane:
@@ -1194,7 +1163,7 @@ class TestJackpotWorkList:
         ] = available_now
 
         assert (
-            "License source {[Unknown]} - Medium {Book} - Collection name {%s}"
+            "License source {OPDS} - Medium {Book} - Collection name {%s}"
             % db.default_collection().name
             == default_ebooks.display_name
         )
@@ -1202,7 +1171,7 @@ class TestJackpotWorkList:
         assert [Edition.BOOK_MEDIUM] == default_ebooks.media
 
         assert (
-            "License source {[Unknown]} - Medium {Audio} - Collection name {%s}"
+            "License source {OPDS} - Medium {Audio} - Collection name {%s}"
             % db.default_collection().name
             == default_audio.display_name
         )

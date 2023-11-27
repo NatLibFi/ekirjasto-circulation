@@ -9,16 +9,15 @@ import requests
 from flask_babel import lazy_gettext as _
 from pydantic import HttpUrl
 
-from core.integration.settings import ConfigurationFormItem, FormField
-from core.model import Patron
-
-from .authentication.base import PatronData
-from .authentication.basic import (
+from api.authentication.base import PatronData
+from api.authentication.basic import (
     BasicAuthenticationProvider,
     BasicAuthProviderLibrarySettings,
     BasicAuthProviderSettings,
 )
-from .circulation_exceptions import RemoteInitiatedServerError
+from api.circulation_exceptions import RemoteInitiatedServerError
+from core.integration.settings import ConfigurationFormItem, FormField
+from core.model import Patron
 
 
 class FirstBookAuthSettings(BasicAuthProviderSettings):
@@ -60,7 +59,9 @@ class FirstBookAuthSettings(BasicAuthProviderSettings):
     )
 
 
-class FirstBookAuthenticationAPI(BasicAuthenticationProvider):
+class FirstBookAuthenticationAPI(
+    BasicAuthenticationProvider[FirstBookAuthSettings, BasicAuthProviderLibrarySettings]
+):
     @classmethod
     def label(cls) -> str:
         return "First Book"
@@ -75,6 +76,10 @@ class FirstBookAuthenticationAPI(BasicAuthenticationProvider):
     @classmethod
     def settings_class(cls) -> type[FirstBookAuthSettings]:
         return FirstBookAuthSettings
+
+    @classmethod
+    def library_settings_class(cls) -> type[BasicAuthProviderLibrarySettings]:
+        return BasicAuthProviderLibrarySettings
 
     @property
     def login_button_image(self) -> str | None:
@@ -154,7 +159,7 @@ class FirstBookAuthenticationAPI(BasicAuthenticationProvider):
         """Create and sign a JWT with the payload expected by the
         First Book API.
         """
-        now = str(int(time.time()))
+        now = int(time.time())
         payload = dict(
             barcode=barcode,
             pin=pin,

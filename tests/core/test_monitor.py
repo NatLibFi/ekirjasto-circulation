@@ -1,11 +1,11 @@
 import datetime
+from unittest.mock import MagicMock
 
 import pytest
 
 from core.config import Configuration
 from core.metadata_layer import TimestampData
 from core.model import (
-    CachedFeed,
     CirculationEvent,
     Collection,
     CollectionMissing,
@@ -27,7 +27,6 @@ from core.model import (
     get_one_or_create,
 )
 from core.monitor import (
-    CachedFeedReaper,
     CirculationEventLocationScrubber,
     CollectionMonitor,
     CollectionReaper,
@@ -41,7 +40,6 @@ from core.monitor import (
     MeasurementReaper,
     Monitor,
     NotPresentationReadyWorkSweepMonitor,
-    OPDSEntryCacheMonitor,
     PatronNeighborhoodScrubber,
     PatronRecordReaper,
     PermanentWorkIDRefreshMonitor,
@@ -53,6 +51,7 @@ from core.monitor import (
     WorkReaper,
     WorkSweepMonitor,
 )
+from core.service import container
 from core.util.datetime_helpers import datetime_utc, utc_now
 from tests.core.mock import (
     AlwaysSuccessfulCoverageProvider,
@@ -63,7 +62,6 @@ from tests.fixtures.time import Time
 
 
 class MockMonitor(Monitor):
-
     SERVICE_NAME = "Dummy monitor for test"
 
     def __init__(self, _db, collection=None):
@@ -82,7 +80,7 @@ class MockMonitor(Monitor):
 class TestMonitor:
     def test_must_define_service_name(self, db: DatabaseTransactionFixture):
         class NoServiceName(MockMonitor):
-            SERVICE_NAME = None
+            SERVICE_NAME = None  # type: ignore[assignment]
 
         with pytest.raises(ValueError) as excinfo:
             NoServiceName(db.session)
@@ -158,8 +156,8 @@ class TestMonitor:
             DEFAULT_START_TIME = MockMonitor.ONE_YEAR_AGO
 
         # The Timestamp object is created, and its .timestamp is long ago.
-        m = RunLongAgoMonitor(db.session, db.default_collection())
-        timestamp = m.timestamp()
+        m2 = RunLongAgoMonitor(db.session, db.default_collection())
+        timestamp = m2.timestamp()
         now = utc_now()
         assert timestamp.start < now
 
@@ -226,8 +224,8 @@ class TestMonitor:
             def run_once(self, progress):
                 return TimestampData(exception="I'm also doomed")
 
-        m = AlsoDoomed(db.session, db.default_collection())
-        assert_run_sets_exception(m, "I'm also doomed")
+        m2 = AlsoDoomed(db.session, db.default_collection())
+        assert_run_sets_exception(m2, "I'm also doomed")
 
     def test_same_monitor_different_collections(self, db: DatabaseTransactionFixture):
         """A single Monitor has different Timestamps when run against
@@ -267,7 +265,17 @@ class TestMonitor:
 
         # But the second Monitor now has its own timestamp.
         [t2] = c2.timestamps
+        assert isinstance(t1.start, datetime.datetime)
+        assert isinstance(t2.start, datetime.datetime)
         assert t2.start > t1.start
+
+    def test_init_configures_logging(self, db: DatabaseTransactionFixture):
+        mock_services = MagicMock()
+        container._container_instance = mock_services
+        collection = db.collection()
+        MockMonitor(db.session, collection)
+        mock_services.init_resources.assert_called_once()
+        container._container_instance = None
 
 
 class TestCollectionMonitor:
@@ -839,38 +847,21 @@ class TestWorkSweepMonitors:
 
         # PresentationReadyWorkSweepMonitor is the same, but it excludes
         # works that are not presentation ready.
-        class Mock(PresentationReadyWorkSweepMonitor):
+        class Mock2(PresentationReadyWorkSweepMonitor):
             SERVICE_NAME = "Mock"
 
-        assert [w1, w4] == Mock(db.session).item_query().all()
-        assert [w1] == Mock(db.session, collection=c1).item_query().all()
-        assert [] == Mock(db.session, collection=c2).item_query().all()
+        assert [w1, w4] == Mock2(db.session).item_query().all()
+        assert [w1] == Mock2(db.session, collection=c1).item_query().all()
+        assert [] == Mock2(db.session, collection=c2).item_query().all()
 
         # NotPresentationReadyWorkSweepMonitor is the same, but it _only_
         # includes works that are not presentation ready.
-        class Mock(NotPresentationReadyWorkSweepMonitor):
+        class Mock3(NotPresentationReadyWorkSweepMonitor):
             SERVICE_NAME = "Mock"
 
-        assert [w2, w3] == Mock(db.session).item_query().all()
-        assert [] == Mock(db.session, collection=c1).item_query().all()
-        assert [w2] == Mock(db.session, collection=c2).item_query().all()
-
-
-class TestOPDSEntryCacheMonitor:
-    def test_process_item(self, db: DatabaseTransactionFixture):
-        """This Monitor calculates OPDS entries for works."""
-
-        class Mock(OPDSEntryCacheMonitor):
-            SERVICE_NAME = "Mock"
-
-        monitor = Mock(db.session)
-        work = db.work()
-        assert None == work.simple_opds_entry
-        assert None == work.verbose_opds_entry
-
-        monitor.process_item(work)
-        assert work.simple_opds_entry != None
-        assert work.verbose_opds_entry != None
+        assert [w2, w3] == Mock3(db.session).item_query().all()
+        assert [] == Mock3(db.session, collection=c1).item_query().all()
+        assert [w2] == Mock3(db.session, collection=c2).item_query().all()
 
 
 class TestPermanentWorkIDRefresh:
@@ -1037,8 +1028,6 @@ class TestReaperMonitor:
         Time.time_eq(m.cutoff, utc_now() - m.MAX_AGE)
 
     def test_specific_reapers(self, db: DatabaseTransactionFixture):
-        assert CachedFeed.timestamp == CachedFeedReaper(db.session).timestamp_field
-        assert 30 == CachedFeedReaper.MAX_AGE
         assert Credential.expires == CredentialReaper(db.session).timestamp_field
         assert 1 == CredentialReaper.MAX_AGE
         assert (
@@ -1046,10 +1035,6 @@ class TestReaperMonitor:
             == PatronRecordReaper(db.session).timestamp_field
         )
         assert 60 == PatronRecordReaper.MAX_AGE
-
-    def test_where_clause(self, db: DatabaseTransactionFixture):
-        m = CachedFeedReaper(db.session)
-        assert "cachedfeeds.timestamp < :timestamp_1" == str(m.where_clause)
 
     def test_run_once(self, db: DatabaseTransactionFixture):
         # Create four Credentials: two expired, two valid.
@@ -1089,7 +1074,9 @@ class TestReaperMonitor:
             days=PatronRecordReaper.MAX_AGE + 1
         )
         active = db.patron()
-        active.expires = now - datetime.timedelta(days=PatronRecordReaper.MAX_AGE - 1)
+        active.authorization_expires = now - datetime.timedelta(
+            days=PatronRecordReaper.MAX_AGE - 1
+        )
         result = m.run_once()
         assert "Items deleted: 1" == result.achievements
         remaining = db.session.query(Patron).all()
@@ -1145,25 +1132,9 @@ class TestWorkReaper:
         for work in works:
             WorkCoverageRecord.add_for(work, operation="some operation")
 
-        # Each work has a CachedFeed.
-        for work in works:
-            feed = CachedFeed(
-                work=work, type="page", content="content", pagination="", facets=""
-            )
-            db.session.add(feed)
-
-        # Also create a CachedFeed that has no associated Work.
-        workless_feed = CachedFeed(
-            work=None, type="page", content="content", pagination="", facets=""
-        )
-        db.session.add(workless_feed)
-
-        db.session.commit()
-
         # Run the reaper.
         s = MockSearchIndex()
         m = WorkReaper(db.session, search_index_client=s)
-        print(m.search_index_client)
         m.run_once()
 
         # Search index was updated
@@ -1192,14 +1163,6 @@ class TestWorkReaper:
         # their work.
         assert 2 == len([x for x in l.entries if not x.work])
         assert [has_license_pool] == [x.work for x in l.entries if x.work]
-
-        # The CachedFeeds associated with the reaped Works have been
-        # deleted. The surviving Work still has one, and the
-        # CachedFeed that didn't have a work in the first place is
-        # unaffected.
-        feeds = db.session.query(CachedFeed).all()
-        assert [workless_feed] == [x for x in feeds if not x.work]
-        assert [has_license_pool] == [x.work for x in feeds if x.work]
 
 
 class TestCollectionReaper:

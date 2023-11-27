@@ -13,7 +13,7 @@ from core.util.http import (
     RequestNetworkException,
     RequestTimedOut,
 )
-from core.util.problem_detail import ProblemDetail
+from core.util.problem_detail import ProblemDetail, ProblemError
 from tests.core.mock import MockRequestsResponse
 
 
@@ -40,6 +40,20 @@ class TestHTTP:
         assert "2xx" == m(201)
         assert "3xx" == m(399)
         assert "5xx" == m(500)
+
+    @mock.patch("core.util.http.sessions.Session")
+    def test_request_with_timeout_defaults(self, mock_session):
+        with mock.patch.object(HTTP, "DEFAULT_REQUEST_TIMEOUT", 10), mock.patch.object(
+            HTTP, "DEFAULT_REQUEST_RETRIES", 2
+        ):
+            mock_ctx = mock_session().__enter__()
+            mock_request = mock_ctx.request
+            HTTP.request_with_timeout("GET", "url")
+            # The session adapter has a retry attached
+            assert mock_ctx.mount.call_args[0][1].max_retries.total == 2
+            mock_request.assert_called_once()
+            # The request has a timeout
+            assert mock_request.call_args[1]["timeout"] == 10
 
     @mock.patch("core.util.http.core.__version__", "<VERSION>")
     def test_request_with_timeout_success(self, mock_request):
@@ -264,16 +278,20 @@ class TestHTTP:
         success = MockRequestsResponse(302, content="Success!")
         assert success == m("url", success)
 
-        # An error is turned into a detailed ProblemDetail
+        # An error is turned into a ProblemError
         error = MockRequestsResponse(500, content="Error!")
-        problem = m("url", error)
+        with pytest.raises(ProblemError) as excinfo:
+            m("url", error)
+        problem = excinfo.value.problem_detail
         assert isinstance(problem, ProblemDetail)
         assert INTEGRATION_ERROR.uri == problem.uri
-        assert "500 response from integration server: 'Error!'" == problem.detail
+        assert '500 response from integration server: "Error!"' == problem.detail
 
         content, status_code, headers = INVALID_INPUT.response
         error = MockRequestsResponse(status_code, headers, content)
-        problem = m("url", error)
+        with pytest.raises(ProblemError) as excinfo:
+            m("url", error)
+        problem = excinfo.value.problem_detail
         assert isinstance(problem, ProblemDetail)
         assert INTEGRATION_ERROR.uri == problem.uri
         assert (

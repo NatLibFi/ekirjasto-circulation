@@ -13,92 +13,27 @@ from wsgiref.handlers import format_date_time
 import flask
 import pytz
 from attr import define
+from dependency_injector.wiring import Provide, inject
 from expiringdict import ExpiringDict
 from flask import Response, make_response, redirect
 from flask_babel import lazy_gettext as _
 from lxml import etree
+from pydantic import ValidationError
+from sqlalchemy import select
 from sqlalchemy.orm import eagerload
 from sqlalchemy.orm.exc import NoResultFound
 
-from api.opds2 import OPDS2NavigationsAnnotator, OPDS2PublicationsAnnotator
+from api.annotations import AnnotationParser, AnnotationWriter
+from api.authentication.access_token import AccessTokenProvider
+from api.authenticator import Authenticator, CirculationPatronProfileStorage
+from api.base_controller import BaseCirculationManagerController
+from api.circulation import CirculationAPI
+from api.circulation_exceptions import *
+from api.config import CannotLoadConfiguration, Configuration
+from .ekirjasto_controller import EkirjastoController  # Finland
 from api.opensearch_analytics_search import OpenSearchAnalyticsSearch
-from api.saml.controller import SAMLController
-from core.analytics import Analytics
-from core.app_server import ApplicationVersionController
-from core.app_server import URNLookupController as CoreURNLookupController
-from core.app_server import (
-    load_facets_from_request,
-    load_pagination_from_request,
-    url_for,
-)
-from core.entrypoint import EverythingEntryPoint
-from core.external_search import ExternalSearchIndex, SortKeyPagination
-from core.lane import (
-    BaseFacets,
-    Facets,
-    FeaturedFacets,
-    Lane,
-    Pagination,
-    SearchFacets,
-    WorkList,
-)
-from core.log import LogConfiguration
-from core.marc import MARCExporter
-from core.metadata_layer import ContributorData
-from core.model import (
-    Admin,
-    Annotation,
-    CachedFeed,
-    CirculationEvent,
-    Collection,
-    ConfigurationSetting,
-    CustomList,
-    DataSource,
-    DeliveryMechanism,
-    ExternalIntegration,
-    Hold,
-    Identifier,
-    IntegrationClient,
-    Library,
-    LicensePool,
-    LicensePoolDeliveryMechanism,
-    Loan,
-    Patron,
-    Representation,
-    Session,
-    get_one,
-)
-from core.model.devicetokens import (
-    DeviceToken,
-    DuplicateDeviceTokenError,
-    InvalidTokenTypeError,
-)
-from core.opds import AcquisitionFeed, NavigationFacets, NavigationFeed
-from core.opds2 import AcquisitonFeedOPDS2
-from core.opensearch import OpenSearchDocument
-from core.user_profile import ProfileController as CoreProfileController
-from core.util.authentication_for_opds import AuthenticationForOPDSDocument
-from core.util.datetime_helpers import utc_now
-from core.util.http import HTTP, RemoteIntegrationException
-from core.util.log import elapsed_time_logging, log_elapsed_time
-from core.util.opds_writer import OPDSFeed
-from core.util.problem_detail import ProblemDetail
-from core.util.string_helpers import base64
-
-from .adobe_vendor_id import (
-    AdobeVendorIDController,
-    AuthdataUtility,
-    DeviceManagementProtocolController,
-)
-from .annotations import AnnotationParser, AnnotationWriter
-from .authenticator import Authenticator, CirculationPatronProfileStorage
-from .base_controller import BaseCirculationManagerController
-from .circulation import CirculationAPI
-from .circulation_exceptions import *
-from .config import CannotLoadConfiguration, Configuration
-from .custom_index import CustomIndexView
-from .ekirjasto_controller import EkirjastoController # Finland
-from .lanes import (
+from api.custom_index import CustomIndexView
+from api.lanes import (
     ContributorFacets,
     ContributorLane,
     CrawlableCollectionBasedLane,
@@ -113,71 +48,117 @@ from .lanes import (
     SeriesLane,
     load_lanes,
 )
-from .odl import ODLAPI
-from .odl2 import ODL2API
-from .opds import (
+from api.model.patron_auth import PatronAuthAccessToken
+from api.model.time_tracking import PlaytimeEntriesPost, PlaytimeEntriesPostResponse
+from api.odl import ODLAPI
+from api.odl2 import ODL2API
+from api.problem_details import *
+from api.saml.controller import SAMLController
+from core.analytics import Analytics
+from core.app_server import ApplicationVersionController
+from core.app_server import URNLookupController as CoreURNLookupController
+from core.app_server import (
+    load_facets_from_request,
+    load_pagination_from_request,
+    url_for,
+)
+from core.entrypoint import EverythingEntryPoint
+from core.external_search import ExternalSearchIndex, SortKeyPagination
+from core.feed.acquisition import OPDSAcquisitionFeed
+from core.feed.annotator.circulation import (
     CirculationManagerAnnotator,
     LibraryAnnotator,
-    LibraryLoanAndHoldAnnotator,
-    SharedCollectionAnnotator,
-    SharedCollectionLoanAndHoldAnnotator,
 )
-from .problem_details import *
-from .shared_collection import SharedCollectionAPI
+from core.feed.navigation import NavigationFeed
+from core.feed.opds import NavigationFacets
+from core.lane import Facets, FeaturedFacets, Lane, Pagination, SearchFacets, WorkList
+from core.marc import MARCExporter
+from core.metadata_layer import ContributorData
+from core.model import (
+    Annotation,
+    CirculationEvent,
+    Collection,
+    ConfigurationSetting,
+    CustomList,
+    DataSource,
+    DeliveryMechanism,
+    Hold,
+    Identifier,
+    IntegrationConfiguration,
+    IntegrationLibraryConfiguration,
+    Library,
+    LicensePool,
+    LicensePoolDeliveryMechanism,
+    Loan,
+    Patron,
+    Representation,
+    Session,
+    get_one,
+)
+from core.model.devicetokens import (
+    DeviceToken,
+    DuplicateDeviceTokenError,
+    InvalidTokenTypeError,
+)
+from core.model.discovery_service_registration import DiscoveryServiceRegistration
+from core.opensearch import OpenSearchDocument
+from core.query.playtime_entries import PlaytimeEntries
+from core.service.container import Services
+from core.user_profile import ProfileController as CoreProfileController
+from core.util.authentication_for_opds import AuthenticationForOPDSDocument
+from core.util.datetime_helpers import utc_now
+from core.util.http import RemoteIntegrationException
+from core.util.log import elapsed_time_logging, log_elapsed_time
+from core.util.opds_writer import OPDSFeed
+from core.util.problem_detail import ProblemError
 
 if TYPE_CHECKING:
     from werkzeug import Response as wkResponse
 
+    from api.admin.controller.admin_search import AdminSearchController
     from api.admin.controller.announcement_service import AnnouncementSettings
     from api.admin.controller.catalog_services import CatalogServicesController
-    from api.admin.controller.collection_library_registrations import (
-        CollectionLibraryRegistrationsController,
-    )
     from api.admin.controller.collection_self_tests import CollectionSelfTestsController
     from api.admin.controller.collection_settings import CollectionSettingsController
+    from api.admin.controller.custom_lists import CustomListsController
+    from api.admin.controller.dashboard import DashboardController
+    from api.admin.controller.discovery_service_library_registrations import (
+        DiscoveryServiceLibraryRegistrationsController,
+    )
+    from api.admin.controller.discovery_services import DiscoveryServicesController
+    from api.admin.controller.feed import FeedController
     from api.admin.controller.individual_admin_settings import (
         IndividualAdminSettingsController,
     )
+    from api.admin.controller.lanes import LanesController
     from api.admin.controller.library_settings import LibrarySettingsController
     from api.admin.controller.metadata_service_self_tests import (
         MetadataServiceSelfTestsController,
     )
     from api.admin.controller.metadata_services import MetadataServicesController
+    from api.admin.controller.patron import PatronController
     from api.admin.controller.patron_auth_service_self_tests import (
         PatronAuthServiceSelfTestsController,
     )
     from api.admin.controller.patron_auth_services import PatronAuthServicesController
+    from api.admin.controller.quicksight import QuickSightController
+    from api.admin.controller.reset_password import ResetPasswordController
     from api.admin.controller.search_service_self_tests import (
         SearchServiceSelfTestsController,
     )
+    from api.admin.controller.self_tests import SelfTestsController
+    from api.admin.controller.settings import SettingsController
+    from api.admin.controller.sign_in import SignInController
     from api.admin.controller.sitewide_services import (
-        LoggingServicesController,
         SearchServicesController,
         SitewideServicesController,
     )
     from api.admin.controller.sitewide_settings import (
         SitewideConfigurationSettingsController,
     )
-    from api.admin.controller.storage_services import StorageServicesController
-
-    from .admin.controller import (
-        AdminSearchController,
-        CustomListsController,
-        DashboardController,
-        FeedController,
-        LanesController,
-        PatronController,
-        ResetPasswordController,
-        SettingsController,
-        SignInController,
-        TimestampsController,
-    )
-    from .admin.controller.analytics_services import AnalyticsServicesController
-    from .admin.controller.discovery_service_library_registrations import (
-        DiscoveryServiceLibraryRegistrationsController,
-    )
-    from .admin.controller.discovery_services import DiscoveryServicesController
-    from .admin.controller.self_tests import SelfTestsController
+    from api.admin.controller.timestamps import TimestampsController
+    from api.admin.controller.view import ViewController
+    from api.admin.controller.work_editor import WorkController as AdminWorkController
 
 
 class CirculationManager:
@@ -186,7 +167,6 @@ class CirculationManager:
     # API Controllers
     index_controller: IndexController
     opds_feeds: OPDSFeedController
-    opds2_feeds: OPDS2FeedController
     marc_records: MARCRecordController
     loans: LoanController
     annotations: AnnotationController
@@ -197,14 +177,14 @@ class CirculationManager:
     patron_devices: DeviceTokensController
     version: ApplicationVersionController
     odl_notification_controller: ODLNotificationController
-    shared_collection_controller: SharedCollectionController
     static_files: StaticFileController
+    playtime_entries: PlaytimeEntriesController
 
     # Admin controllers
     admin_sign_in_controller: SignInController
     admin_reset_password_controller: ResetPasswordController
     timestamps_controller: TimestampsController
-    admin_work_controller: WorkController
+    admin_work_controller: AdminWorkController
     admin_feed_controller: FeedController
     admin_custom_lists_controller: CustomListsController
     admin_lanes_controller: LanesController
@@ -214,28 +194,32 @@ class CirculationManager:
     admin_self_tests_controller: SelfTestsController
     admin_discovery_services_controller: DiscoveryServicesController
     admin_discovery_service_library_registrations_controller: DiscoveryServiceLibraryRegistrationsController
-    admin_analytics_services_controller: AnalyticsServicesController
     admin_metadata_services_controller: MetadataServicesController
     admin_metadata_service_self_tests_controller: MetadataServiceSelfTestsController
     admin_patron_auth_services_controller: PatronAuthServicesController
     admin_patron_auth_service_self_tests_controller: PatronAuthServiceSelfTestsController
     admin_collection_settings_controller: CollectionSettingsController
     admin_collection_self_tests_controller: CollectionSelfTestsController
-    admin_collection_library_registrations_controller: CollectionLibraryRegistrationsController
     admin_sitewide_configuration_settings_controller: SitewideConfigurationSettingsController
     admin_library_settings_controller: LibrarySettingsController
     admin_individual_admin_settings_controller: IndividualAdminSettingsController
     admin_sitewide_services_controller: SitewideServicesController
-    admin_logging_services_controller: LoggingServicesController
     admin_search_service_self_tests_controller: SearchServiceSelfTestsController
     admin_search_services_controller: SearchServicesController
-    admin_storage_services_controller: StorageServicesController
     admin_catalog_services_controller: CatalogServicesController
     admin_announcement_service: AnnouncementSettings
     admin_search_controller: AdminSearchController
+    admin_view_controller: ViewController
+    admin_quicksight_controller: QuickSightController
 
-    def __init__(self, _db):
+    @inject
+    def __init__(
+        self,
+        _db,
+        analytics: Analytics = Provide[Services.analytics.analytics],
+    ):
         self._db = _db
+        self.analytics = analytics
         self.site_configuration_last_update = (
             Configuration.site_configuration_last_update(self._db, timeout=0)
         )
@@ -263,30 +247,6 @@ class CirculationManager:
             ):
                 return NO_SUCH_LANE.detailed(_("Lane does not exist"))
 
-        if (
-            isinstance(facets, BaseFacets)
-            and getattr(facets, "max_cache_age", None) is not None
-        ):
-            # A faceting object was loaded, and it tried to do something nonstandard
-            # with caching.
-
-            # Try to get the AdminSignInController, which is
-            # associated with the CirculationManager object by the
-            # admin interface in admin/controller.
-            #
-            # If the admin interface wasn't initialized for whatever
-            # reason, we'll default to assuming the user is not an
-            # authenticated admin.
-            authenticated = False
-            controller = getattr(self, "admin_sign_in_controller", None)
-            if controller:
-                admin = controller.authenticated_admin_from_request()
-                # If authenticated_admin_from_request returns anything other than an admin (probably
-                # a ProblemDetail), the user is not an authenticated admin.
-                if isinstance(admin, Admin):
-                    authenticated = True
-            if not authenticated:
-                facets.max_cache_age = None
         return facets
 
     def reload_settings_if_changed(self):
@@ -308,9 +268,6 @@ class CirculationManager:
         configuration after changes are made in the administrative
         interface.
         """
-        LogConfiguration.initialize(self._db)
-        self.analytics = Analytics(self._db, refresh=True)
-
         with elapsed_time_logging(
             log_method=self.log.debug,
             skip_start=True,
@@ -355,15 +312,9 @@ class CirculationManager:
                     library, self.analytics
                 )
 
-        with elapsed_time_logging(
-            log_method=self.log.debug, message_prefix="Configure device management"
-        ):
-            self.adobe_device_management = self._dev_mgmt_from_libraries(libraries)
-
         self.top_level_lanes = new_top_level_lanes
         self.circulation_apis = new_circulation_apis
         self.custom_index_views = new_custom_index_views
-        self.shared_collection_api = self.setup_shared_collection()
 
         # Assemble the list of patron web client domains from individual
         # library registration settings as well as a sitewide setting.
@@ -390,13 +341,13 @@ class CirculationManager:
                 if domain:
                     patron_web_domains.add(domain)
 
-        from api.registration.registry import Registration
-
-        for setting in self._db.query(ConfigurationSetting).filter(
-            ConfigurationSetting.key == Registration.LIBRARY_REGISTRATION_WEB_CLIENT
-        ):
-            if setting.value:
-                patron_web_domains.add(get_domain(setting.value))
+        domains = self._db.execute(
+            select(DiscoveryServiceRegistration.web_client).where(
+                DiscoveryServiceRegistration.web_client != None
+            )
+        ).all()
+        for row in domains:
+            patron_web_domains.add(get_domain(row.web_client))
 
         self.patron_web_domains = patron_web_domains
         self.setup_configuration_dependent_controllers()
@@ -408,20 +359,6 @@ class CirculationManager:
         self.authentication_for_opds_documents = ExpiringDict(
             max_len=1000, max_age_seconds=authentication_document_cache_time
         )
-
-    def _dev_mgmt_from_libraries(
-        self, libraries: list[Library]
-    ) -> DeviceManagementProtocolController | None:
-        """Return a DeviceManagementProtocolController in any library uses Adobe Vendor IDs."""
-
-        for library in libraries:
-            authdata = self.setup_adobe_vendor_id(self._db, library)
-            if authdata:
-                device_management = DeviceManagementProtocolController(self)
-                break
-        else:
-            device_management = None
-        return device_management
 
     # Finland
     @property
@@ -440,7 +377,7 @@ class CirculationManager:
     # Finland
     def setup_opensearch_analytics_search(self):
         try:
-            self._opensearch_analytics_search = OpenSearchAnalyticsSearch(self._db)
+            self._opensearch_analytics_search = OpenSearchAnalyticsSearch()
             self.opensearch_analytics_search_initialization_exception = None
         except Exception as e:
             self.log.error("Exception initializing search engine: %s", e)
@@ -488,10 +425,7 @@ class CirculationManager:
 
     def setup_circulation(self, library, analytics):
         """Set up the Circulation object."""
-        return CirculationAPI(self._db, library, analytics)
-
-    def setup_shared_collection(self):
-        return SharedCollectionAPI(self._db)
+        return CirculationAPI(self._db, library, analytics=analytics)
 
     def setup_one_time_controllers(self):
         """Set up all the controllers that will be used by the web app.
@@ -501,7 +435,6 @@ class CirculationManager:
         """
         self.index_controller = IndexController(self)
         self.opds_feeds = OPDSFeedController(self)
-        self.opds2_feeds = OPDS2FeedController(self)
         self.marc_records = MARCRecordController(self)
         self.loans = LoanController(self)
         self.annotations = AnnotationController(self)
@@ -512,12 +445,9 @@ class CirculationManager:
         self.patron_devices = DeviceTokensController(self)
         self.version = ApplicationVersionController()
         self.odl_notification_controller = ODLNotificationController(self)
-        self.shared_collection_controller = SharedCollectionController(self)
         self.static_files = StaticFileController(self)
-
-        from api.lcp.controller import LCPController
-
-        self.lcp_controller = LCPController(self)
+        self.patron_auth_token = PatronAuthTokenController(self)
+        self.playtime_entries = PlaytimeEntriesController(self)
 
     def setup_configuration_dependent_controllers(self):
         """Set up all the controllers that depend on the
@@ -529,87 +459,6 @@ class CirculationManager:
         self.saml_controller = SAMLController(self, self.auth)
         # Finland
         self.ekirjasto_controller = EkirjastoController(self, self.auth)
-
-    @log_elapsed_time(log_method=log.debug, message_prefix="setup_adobe_vendor_id")
-    def setup_adobe_vendor_id(self, _db, library):
-        """If this Library has an Adobe Vendor ID integration,
-        configure the controller for it.
-
-        :return: An Authdata object for `library`, if one could be created.
-        """
-        short_client_token_initialization_exceptions = {}
-        with elapsed_time_logging(
-            log_method=self.log.debug,
-            skip_start=True,
-            message_prefix="Lookup Adobe Vendor ID integrations",
-        ):
-            adobe = ExternalIntegration.lookup(
-                _db,
-                ExternalIntegration.ADOBE_VENDOR_ID,
-                ExternalIntegration.DRM_GOAL,
-                library=library,
-            )
-        warning = (
-            "Adobe Vendor ID controller is disabled due to missing or"
-            " incomplete configuration. This is probably nothing to"
-            " worry about."
-        )
-
-        new_adobe_vendor_id = None
-        if adobe:
-            # Relatively few libraries will have this setup.
-            vendor_id = adobe.username
-            node_value = adobe.password
-            if vendor_id and node_value:
-                if new_adobe_vendor_id:
-                    self.log.warning(
-                        "Multiple libraries define an Adobe Vendor ID integration. This is not supported and the last library seen will take precedence."
-                    )
-                new_adobe_vendor_id = AdobeVendorIDController(
-                    _db, library, vendor_id, node_value, self.auth
-                )
-            else:
-                self.log.warning(
-                    "Adobe Vendor ID controller is disabled due to missing or incomplete configuration. This is probably nothing to worry about."
-                )
-        if new_adobe_vendor_id:
-            self.adobe_vendor_id = new_adobe_vendor_id
-
-        # But almost all libraries will have a Short Client Token
-        # setup. We're not setting anything up here, but this is useful
-        # information for the calling code to have so it knows
-        # whether or not we should support the Device Management Protocol.
-        with elapsed_time_logging(
-            log_method=self.log.debug,
-            skip_start=True,
-            message_prefix="Lookup registry integrations",
-        ):
-            registry = ExternalIntegration.lookup(
-                _db,
-                ExternalIntegration.OPDS_REGISTRATION,
-                ExternalIntegration.DISCOVERY_GOAL,
-                library=library,
-            )
-        authdata = None
-        if registry:
-            try:
-                with elapsed_time_logging(
-                    log_method=self.log.debug,
-                    skip_start=True,
-                    message_prefix="setup_adobe_vendor_id - fetch authdata utility",
-                ):
-                    authdata = AuthdataUtility.from_config(library, _db)
-            except CannotLoadConfiguration as e:
-                short_client_token_initialization_exceptions[library.id] = e
-                self.log.error(
-                    "Short Client Token configuration for %s is present but not working. This may be cause for concern. Original error: %s",
-                    library.name,
-                    str(e),
-                )
-        self.short_client_token_initialization_exceptions = (
-            short_client_token_initialization_exceptions
-        )
-        return authdata
 
     def annotator(self, lane, facets=None, *args, **kwargs):
         """Create an appropriate OPDS annotator for the given lane.
@@ -714,11 +563,6 @@ class CirculationManagerController(BaseCirculationManagerController):
         """Return the appropriate CirculationAPI for the request Library."""
         library_id = flask.request.library.id
         return self.manager.circulation_apis[library_id]
-
-    @property
-    def shared_collection(self):
-        """Return the appropriate SharedCollectionAPI for the request library."""
-        return self.manager.shared_collection_api
 
     @property
     def search_engine(self):
@@ -842,13 +686,27 @@ class CirculationManagerController(BaseCirculationManagerController):
         """
         _db = Session.object_session(library)
         pools = (
-            _db.query(LicensePool)
-            .join(LicensePool.collection)
-            .join(LicensePool.identifier)
-            .join(Collection.libraries)
-            .filter(Identifier.type == identifier_type)
-            .filter(Identifier.identifier == identifier)
-            .filter(Library.id == library.id)
+            _db.scalars(
+                select(LicensePool)
+                .join(Collection, LicensePool.collection_id == Collection.id)
+                .join(Identifier, LicensePool.identifier_id == Identifier.id)
+                .join(
+                    IntegrationConfiguration,
+                    Collection.integration_configuration_id
+                    == IntegrationConfiguration.id,
+                )
+                .join(
+                    IntegrationLibraryConfiguration,
+                    IntegrationConfiguration.id
+                    == IntegrationLibraryConfiguration.parent_id,
+                )
+                .where(
+                    Identifier.type == identifier_type,
+                    Identifier.identifier == identifier,
+                    IntegrationLibraryConfiguration.library_id == library.id,
+                )
+            )
+            .unique()
             .all()
         )
         if not pools:
@@ -906,11 +764,10 @@ class CirculationManagerController(BaseCirculationManagerController):
             return NOT_AGE_APPROPRIATE
 
         if (
-            not patron.library.allow_holds
+            not patron.library.settings.allow_holds
             and license_pool.licenses_available == 0
             and not license_pool.open_access
             and not license_pool.unlimited_access
-            and not license_pool.self_hosted
         ):
             return FORBIDDEN_BY_POLICY.detailed(
                 _("Library policy prohibits the placement of holds."), status_code=403
@@ -995,7 +852,7 @@ class IndexController(CirculationManagerController):
 
 
 class OPDSFeedController(CirculationManagerController):
-    def groups(self, lane_identifier, feed_class=AcquisitionFeed):
+    def groups(self, lane_identifier, feed_class=OPDSAcquisitionFeed):
         """Build or retrieve a grouped acquisition feed.
 
         :param lane_identifier: An identifier that uniquely identifiers
@@ -1033,7 +890,7 @@ class OPDSFeedController(CirculationManagerController):
             return self.feed(lane_identifier, feed_class)
 
         facet_class_kwargs = dict(
-            minimum_featured_quality=library.minimum_featured_quality,
+            minimum_featured_quality=library.settings.minimum_featured_quality,
         )
         facets = self.manager.load_facets_from_request(
             worklist=lane,
@@ -1063,9 +920,9 @@ class OPDSFeedController(CirculationManagerController):
             annotator=annotator,
             facets=facets,
             search_engine=search_engine,
-        )
+        ).as_response(mime_types=flask.request.accept_mimetypes)
 
-    def feed(self, lane_identifier, feed_class=AcquisitionFeed):
+    def feed(self, lane_identifier, feed_class=OPDSAcquisitionFeed):
         """Build or retrieve a paginated acquisition feed.
 
         :param lane_identifier: An identifier that uniquely identifiers
@@ -1095,7 +952,8 @@ class OPDSFeedController(CirculationManagerController):
         )
 
         annotator = self.manager.annotator(lane, facets=facets)
-        return feed_class.page(
+        max_age = flask.request.args.get("max_age")
+        feed = feed_class.page(
             _db=self._db,
             title=lane.display_name,
             url=url,
@@ -1104,6 +962,10 @@ class OPDSFeedController(CirculationManagerController):
             facets=facets,
             pagination=pagination,
             search_engine=search_engine,
+        )
+        return feed.as_response(
+            max_age=int(max_age) if max_age else lane.max_cache_age(),
+            mime_types=flask.request.accept_mimetypes,
         )
 
     def navigation(self, lane_identifier):
@@ -1123,7 +985,7 @@ class OPDSFeedController(CirculationManagerController):
 
         title = lane.display_name
         facet_class_kwargs = dict(
-            minimum_featured_quality=library.minimum_featured_quality,
+            minimum_featured_quality=library.settings.minimum_featured_quality,
         )
         facets = self.manager.load_facets_from_request(
             worklist=lane,
@@ -1138,7 +1000,7 @@ class OPDSFeedController(CirculationManagerController):
             worklist=lane,
             annotator=annotator,
             facets=facets,
-        )
+        ).as_response(max_age=lane.max_cache_age())
 
     def crawlable_library_feed(self):
         """Build or retrieve a crawlable acquisition feed for the
@@ -1159,7 +1021,7 @@ class OPDSFeedController(CirculationManagerController):
         """Build or retrieve a crawlable acquisition feed for the
         requested collection.
         """
-        collection = get_one(self._db, Collection, name=collection_name)
+        collection = Collection.by_name(self._db, collection_name)
         if not collection:
             return NO_SUCH_COLLECTION
         title = collection.name
@@ -1168,14 +1030,7 @@ class OPDSFeedController(CirculationManagerController):
         )
         lane = CrawlableCollectionBasedLane()
         lane.initialize([collection])
-        if collection.protocol in [ODLAPI.NAME]:
-            annotator = SharedCollectionAnnotator(collection, lane)
-        else:
-            # We'll get a generic CirculationManagerAnnotator.
-            annotator = None
-        return self._crawlable_feed(
-            title=title, url=url, worklist=lane, annotator=annotator
-        )
+        return self._crawlable_feed(title=title, url=url, worklist=lane)
 
     def crawlable_list_feed(self, list_name):
         """Build or retrieve a crawlable, paginated acquisition feed for the
@@ -1201,7 +1056,7 @@ class OPDSFeedController(CirculationManagerController):
         return self._crawlable_feed(title=title, url=url, worklist=lane)
 
     def _crawlable_feed(
-        self, title, url, worklist, annotator=None, feed_class=AcquisitionFeed
+        self, title, url, worklist, annotator=None, feed_class=OPDSAcquisitionFeed
     ):
         """Helper method to create a crawlable feed.
 
@@ -1210,7 +1065,7 @@ class OPDSFeedController(CirculationManagerController):
         :param worklist: A crawlable Lane which controls which works show up
             in the feed.
         :param annotator: A custom Annotator to use when generating the feed.
-        :param feed_class: A drop-in replacement for AcquisitionFeed
+        :param feed_class: A drop-in replacement for OPDSAcquisitionFeed
             for use in tests.
         """
         pagination = load_pagination_from_request(
@@ -1238,6 +1093,8 @@ class OPDSFeedController(CirculationManagerController):
             facets=facets,
             pagination=pagination,
             search_engine=search_engine,
+        ).as_response(
+            mime_types=flask.request.accept_mimetypes, max_age=worklist.max_cache_age()
         )
 
     def _load_search_facets(self, lane):
@@ -1256,7 +1113,7 @@ class OPDSFeedController(CirculationManagerController):
             default_entrypoint=default_entrypoint,
         )
 
-    def search(self, lane_identifier, feed_class=AcquisitionFeed):
+    def search(self, lane_identifier, feed_class=OPDSAcquisitionFeed):
         """Search for books."""
         lane = self.load_lane(lane_identifier)
         if isinstance(lane, ProblemDetail):
@@ -1273,7 +1130,7 @@ class OPDSFeedController(CirculationManagerController):
 
         facets = self._load_search_facets(lane)
         if isinstance(facets, ProblemDetail):
-            return lane
+            return facets
 
         search_engine = self.search_engine
         if isinstance(search_engine, ProblemDetail):
@@ -1311,7 +1168,7 @@ class OPDSFeedController(CirculationManagerController):
         # Run a search.
         annotator = self.manager.annotator(lane, facets)
         info = OpenSearchDocument.search_info(lane)
-        return feed_class.search(
+        response = feed_class.search(
             _db=self._db,
             title=info["name"],
             url=make_url(),
@@ -1321,6 +1178,11 @@ class OPDSFeedController(CirculationManagerController):
             annotator=annotator,
             pagination=pagination,
             facets=facets,
+        )
+        if isinstance(response, ProblemDetail):
+            return response
+        return response.as_response(
+            mime_types=flask.request.accept_mimetypes, max_age=lane.max_cache_age()
         )
 
     def _qa_feed(
@@ -1373,10 +1235,10 @@ class OPDSFeedController(CirculationManagerController):
             annotator=annotator,
             search_engine=search_engine,
             facets=facets,
-            max_age=CachedFeed.IGNORE_CACHE,
+            max_age=0,
         )
 
-    def qa_feed(self, feed_class=AcquisitionFeed):
+    def qa_feed(self, feed_class=OPDSAcquisitionFeed):
         """Create an OPDS feed containing the information necessary to
         run a full set of integration tests against this server and
         the vendors it relies on.
@@ -1396,7 +1258,7 @@ class OPDSFeedController(CirculationManagerController):
             worklist_factory=factory,
         )
 
-    def qa_series_feed(self, feed_class=AcquisitionFeed):
+    def qa_series_feed(self, feed_class=OPDSAcquisitionFeed):
         """Create an OPDS feed containing books that belong to _some_
         series, without regard to _which_ series.
 
@@ -1426,67 +1288,6 @@ class FeedRequestParameters:
     pagination: Pagination | None = None
     facets: Facets | None = None
     problem: ProblemDetail | None = None
-
-
-class OPDS2FeedController(CirculationManagerController):
-    """All OPDS2 type feeds are served through this controller"""
-
-    def _parse_feed_request(self):
-        """Parse the request to get frequently used request parameters for the feeds"""
-        library = getattr(flask.request, "library", None)
-        pagination = load_pagination_from_request(SortKeyPagination)
-        if isinstance(pagination, ProblemDetail):
-            return FeedRequestParameters(problem=pagination)
-
-        try:
-            facets = load_facets_from_request()
-            if isinstance(facets, ProblemDetail):
-                return FeedRequestParameters(problem=facets)
-        except AttributeError:
-            # No facets/library present, so NoneType
-            facets = None
-
-        return FeedRequestParameters(
-            library=library, facets=facets, pagination=pagination
-        )
-
-    def publications(self):
-        """OPDS2 publications feed"""
-        params: FeedRequestParameters = self._parse_feed_request()
-        if params.problem:
-            return params.problem
-        annotator = OPDS2PublicationsAnnotator(
-            flask.request.url, params.facets, params.pagination, params.library
-        )
-        lane = self.load_lane(None)
-        feed = AcquisitonFeedOPDS2.publications(
-            self._db,
-            lane,
-            params.facets,
-            params.pagination,
-            self.search_engine,
-            annotator,
-        )
-
-        return Response(
-            str(feed), status=200, headers={"Content-Type": annotator.OPDS2_TYPE}
-        )
-
-    def navigation(self):
-        """OPDS2 navigation links"""
-        params: FeedRequestParameters = self._parse_feed_request()
-        annotator = OPDS2NavigationsAnnotator(
-            flask.request.url,
-            params.facets,
-            params.pagination,
-            params.library,
-            title="OPDS2 Navigation",
-        )
-        feed = AcquisitonFeedOPDS2.navigation(self._db, annotator)
-
-        return Response(
-            str(feed), status=200, headers={"Content-Type": annotator.OPDS2_TYPE}
-        )
 
 
 class MARCRecordController(CirculationManagerController):
@@ -1612,7 +1413,17 @@ class LoanController(CirculationManagerController):
                 )
 
         # Then make the feed.
-        return LibraryLoanAndHoldAnnotator.active_loans_for(self.circulation, patron)
+        feed = OPDSAcquisitionFeed.active_loans_for(self.circulation, patron)
+        response = feed.as_response(
+            max_age=0,
+            private=True,
+            mime_types=flask.request.accept_mimetypes,
+        )
+
+        last_modified = patron.last_loan_activity_sync
+        if last_modified:
+            response.last_modified = last_modified
+        return response
 
     def borrow(self, identifier_type, identifier, mechanism_id=None):
         """Create a new loan or hold for a book.
@@ -1660,7 +1471,7 @@ class LoanController(CirculationManagerController):
             response_kwargs["status"] = 201
         else:
             response_kwargs["status"] = 200
-        return LibraryLoanAndHoldAnnotator.single_item_feed(
+        return OPDSAcquisitionFeed.single_entry_loans_feed(
             self.circulation, loan_or_hold, **response_kwargs
         )
 
@@ -1805,7 +1616,6 @@ class LoanController(CirculationManagerController):
         self,
         license_pool_id: int,
         mechanism_id: int | None = None,
-        part: str | None = None,
         do_get: Any | None = None,
     ) -> wkResponse | ProblemDetail:
         """Fulfill a book that has already been checked out,
@@ -1818,10 +1628,6 @@ class LoanController(CirculationManagerController):
 
         :param license_pool_id: Database ID of a LicensePool.
         :param mechanism_id: Database ID of a DeliveryMechanism.
-
-        :param part: Vendor-specific identifier used when fulfilling a
-           specific part of a book rather than the whole thing (e.g. a
-           single chapter of an audiobook).
         """
         do_get = do_get or Representation.simple_http_get
 
@@ -1893,26 +1699,12 @@ class LoanController(CirculationManagerController):
                     _("You must specify a delivery mechanism to fulfill this loan.")
                 )
 
-        # Define a function that, given a part identifier, will create
-        # an appropriate link to this controller.
-        def fulfill_part_url(part):
-            return url_for(
-                "fulfill",
-                license_pool_id=requested_license_pool.id,
-                mechanism_id=mechanism.delivery_mechanism.id,
-                library_short_name=library.short_name,
-                part=str(part),
-                _external=True,
-            )
-
         try:
             fulfillment = self.circulation.fulfill(
                 patron,
                 credential,
                 requested_license_pool,
                 mechanism,
-                part=part,
-                fulfill_part_url=fulfill_part_url,
             )
         except DeliveryMechanismConflict as e:
             return DELIVERY_CONFLICT.detailed(str(e))
@@ -1921,10 +1713,10 @@ class LoanController(CirculationManagerController):
                 _("Can't fulfill loan because you have no active loan for this book."),
                 status_code=e.status_code,
             )
-        except CannotFulfill as e:
-            return CANNOT_FULFILL.with_debug(str(e), status_code=e.status_code)
         except FormatNotAvailable as e:
             return NO_ACCEPTABLE_FORMAT.with_debug(str(e), status_code=e.status_code)
+        except CannotFulfill as e:
+            return CANNOT_FULFILL.with_debug(str(e), status_code=e.status_code)
         except DeliveryMechanismError as e:
             return BAD_DELIVERY_MECHANISM.with_debug(str(e), status_code=e.status_code)
 
@@ -1946,7 +1738,7 @@ class LoanController(CirculationManagerController):
         if mechanism.delivery_mechanism.is_streaming:
             # If this is a streaming delivery mechanism, create an OPDS entry
             # with a fulfillment link to the streaming reader url.
-            feed = LibraryLoanAndHoldAnnotator.single_item_feed(
+            feed = OPDSAcquisitionFeed.single_entry_loans_feed(
                 self.circulation, loan, fulfillment=fulfillment
             )
             if isinstance(feed, ProblemDetail):
@@ -1955,8 +1747,6 @@ class LoanController(CirculationManagerController):
                 return feed
             if isinstance(feed, Response):
                 return feed
-            if isinstance(feed, OPDSFeed):  # type: ignore
-                content = str(feed)
             else:
                 content = etree.tostring(feed)
             status_code = 200
@@ -2073,7 +1863,9 @@ class LoanController(CirculationManagerController):
 
         work = pool.work
         annotator = self.manager.annotator(None)
-        return AcquisitionFeed.single_entry(self._db, work, annotator)
+        return OPDSAcquisitionFeed.entry_as_response(
+            OPDSAcquisitionFeed.single_entry(work, annotator)
+        )
 
     def detail(self, identifier_type, identifier):
         if flask.request.method == "DELETE":
@@ -2105,7 +1897,7 @@ class LoanController(CirculationManagerController):
                 item = loan
             else:
                 item = hold
-            return LibraryLoanAndHoldAnnotator.single_item_feed(self.circulation, item)
+            return OPDSAcquisitionFeed.single_entry_loans_feed(self.circulation, item)
 
 
 class AnnotationController(CirculationManagerController):
@@ -2198,7 +1990,7 @@ class WorkController(CirculationManagerController):
         return languages, audiences
 
     def contributor(
-        self, contributor_name, languages, audiences, feed_class=AcquisitionFeed
+        self, contributor_name, languages, audiences, feed_class=OPDSAcquisitionFeed
     ):
         """Serve a feed of books written by a particular author"""
         library = flask.request.library
@@ -2252,6 +2044,8 @@ class WorkController(CirculationManagerController):
             pagination=pagination,
             annotator=annotator,
             search_engine=search_engine,
+        ).as_response(
+            max_age=lane.max_cache_age(), mime_types=flask.request.accept_mimetypes
         )
 
     def permalink(self, identifier_type, identifier):
@@ -2285,18 +2079,23 @@ class WorkController(CirculationManagerController):
             item = loan or hold
             pool = pool or pools[0]
 
-            return LibraryLoanAndHoldAnnotator.single_item_feed(
+            return OPDSAcquisitionFeed.single_entry_loans_feed(
                 self.circulation, item or pool
             )
         else:
             annotator = self.manager.annotator(lane=None)
 
-            return AcquisitionFeed.single_entry(
-                self._db, work, annotator, max_age=OPDSFeed.DEFAULT_MAX_AGE
+            return OPDSAcquisitionFeed.entry_as_response(
+                OPDSAcquisitionFeed.single_entry(work, annotator),
+                max_age=OPDSFeed.DEFAULT_MAX_AGE,
             )
 
     def related(
-        self, identifier_type, identifier, novelist_api=None, feed_class=AcquisitionFeed
+        self,
+        identifier_type,
+        identifier,
+        novelist_api=None,
+        feed_class=OPDSAcquisitionFeed,
     ):
         """Serve a groups feed of books related to a given book."""
 
@@ -2323,7 +2122,7 @@ class WorkController(CirculationManagerController):
             worklist=lane,
             base_class=FeaturedFacets,
             base_class_constructor_kwargs=dict(
-                minimum_featured_quality=library.minimum_featured_quality
+                minimum_featured_quality=library.settings.minimum_featured_quality
             ),
         )
         if isinstance(facets, ProblemDetail):
@@ -2341,12 +2140,19 @@ class WorkController(CirculationManagerController):
             url=url,
             worklist=lane,
             annotator=annotator,
+            pagination=None,
             facets=facets,
             search_engine=search_engine,
+        ).as_response(
+            max_age=lane.max_cache_age(), mime_types=flask.request.accept_mimetypes
         )
 
     def recommendations(
-        self, identifier_type, identifier, novelist_api=None, feed_class=AcquisitionFeed
+        self,
+        identifier_type,
+        identifier,
+        novelist_api=None,
+        feed_class=OPDSAcquisitionFeed,
     ):
         """Serve a feed of recommendations related to a given book."""
 
@@ -2398,9 +2204,9 @@ class WorkController(CirculationManagerController):
             pagination=pagination,
             annotator=annotator,
             search_engine=search_engine,
-        )
+        ).as_response(max_age=lane.max_cache_age())
 
-    def series(self, series_name, languages, audiences, feed_class=AcquisitionFeed):
+    def series(self, series_name, languages, audiences, feed_class=OPDSAcquisitionFeed):
         """Serve a feed of books in a given series."""
         library = flask.request.library
         if not series_name:
@@ -2437,31 +2243,29 @@ class WorkController(CirculationManagerController):
             pagination=pagination,
             annotator=annotator,
             search_engine=search_engine,
+        ).as_response(
+            max_age=lane.max_cache_age(), mime_types=flask.request.accept_mimetypes
         )
 
 
 class ProfileController(CirculationManagerController):
     """Implement the User Profile Management Protocol."""
 
-    @property
-    def _controller(self):
+    def _controller(self, patron):
         """Instantiate a CoreProfileController that actually does the work."""
-        # TODO: Probably better to use request_patron and check for
-        # None here.
-        patron = self.authenticated_patron_from_request()
         storage = CirculationPatronProfileStorage(patron, flask.url_for)
         return CoreProfileController(storage)
 
     def protocol(self):
         """Handle a UPMP request."""
-        controller = self._controller
+        patron = flask.request.patron
+        controller = self._controller(patron)
         if flask.request.method == "GET":
             result = controller.get()
         else:
             result = controller.put(flask.request.headers, flask.request.data)
         if isinstance(result, ProblemDetail):
             return result
-        
         return make_response(*result)
 
 
@@ -2557,6 +2361,48 @@ class AnalyticsController(CirculationManagerController):
             return INVALID_ANALYTICS_EVENT_TYPE
 
 
+class PlaytimeEntriesController(CirculationManagerController):
+    def track_playtimes(self, collection_id, identifier_type, identifier_idn):
+        library: Library = flask.request.library
+        identifier = get_one(
+            self._db, Identifier, type=identifier_type, identifier=identifier_idn
+        )
+        collection = Collection.by_id(self._db, collection_id)
+
+        if not identifier:
+            return NOT_FOUND_ON_REMOTE.detailed(
+                f"The identifier {identifier_type}/{identifier_idn} was not found."
+            )
+        if not collection:
+            return NOT_FOUND_ON_REMOTE.detailed(
+                f"The collection {collection_id} was not found."
+            )
+
+        if collection not in library.collections:
+            return INVALID_INPUT.detailed("Collection was not found in the Library.")
+
+        if not identifier.licensed_through_collection(collection):
+            return INVALID_INPUT.detailed(
+                "This Identifier was not found in the Collection."
+            )
+
+        try:
+            data = PlaytimeEntriesPost(**flask.request.json)
+        except ValidationError as ex:
+            return INVALID_INPUT.detailed(ex.json())
+
+        responses, summary = PlaytimeEntries.insert_playtime_entries(
+            self._db, identifier, collection, library, data
+        )
+
+        response_data = PlaytimeEntriesPostResponse(
+            summary=summary, responses=responses
+        )
+        response = flask.jsonify(response_data.dict())
+        response.status_code = 207
+        return response
+
+
 class ODLNotificationController(CirculationManagerController):
     """Receive notifications from an ODL distributor when the
     status of a loan changes.
@@ -2571,237 +2417,13 @@ class ODLNotificationController(CirculationManagerController):
             return NO_ACTIVE_LOAN.detailed(_("No loan was found for this identifier."))
 
         collection = loan.license_pool.collection
-        if collection.protocol not in (ODLAPI.NAME, ODL2API.NAME):
+        if collection.protocol not in (ODLAPI.label(), ODL2API.label()):
             return INVALID_LOAN_FOR_ODL_NOTIFICATION
 
         api = self.manager.circulation_apis[library.id].api_for_license_pool(
             loan.license_pool
         )
         api.update_loan(loan, json.loads(status_doc))
-        return Response(_("Success"), 200)
-
-
-class SharedCollectionController(CirculationManagerController):
-    """Enable this circulation manager to share its collections with
-    libraries on other circulation managers, for collection types that
-    support it."""
-
-    def info(self, collection_name):
-        """Return an OPDS2 catalog-like document with a link to register."""
-        collection = get_one(self._db, Collection, name=collection_name)
-        if not collection:
-            return NO_SUCH_COLLECTION
-
-        register_url = url_for(
-            "shared_collection_register",
-            collection_name=collection_name,
-            _external=True,
-        )
-        register_link = dict(href=register_url, rel="register")
-        content = json.dumps(dict(links=[register_link]))
-        headers = dict()
-        headers[
-            "Content-Type"
-        ] = "application/opds+json;profile=https://librarysimplified.org/rel/profile/directory"
-        return Response(content, 200, headers)
-
-    def load_collection(self, collection_name):
-        collection = get_one(self._db, Collection, name=collection_name)
-        if not collection:
-            return NO_SUCH_COLLECTION
-        return collection
-
-    def register(self, collection_name):
-        collection = self.load_collection(collection_name)
-        if isinstance(collection, ProblemDetail):
-            return collection
-        url = flask.request.form.get("url")
-        try:
-            response = self.shared_collection.register(collection, url)
-        except InvalidInputException as e:
-            return INVALID_REGISTRATION.detailed(str(e))
-        except AuthorizationFailedException as e:
-            return INVALID_CREDENTIALS.detailed(str(e))
-        except RemoteInitiatedServerError as e:
-            return e.as_problem_detail_document(debug=False)
-
-        return Response(json.dumps(response), 200)
-
-    def authenticated_client_from_request(self):
-        header = flask.request.headers.get("Authorization")
-        if header and "bearer" in header.lower():
-            shared_secret = base64.b64decode(header.split(" ")[1])
-            client = IntegrationClient.authenticate(self._db, shared_secret)
-            if client:
-                return client
-        return INVALID_CREDENTIALS
-
-    def loan_info(self, collection_name, loan_id):
-        collection = self.load_collection(collection_name)
-        if isinstance(collection, ProblemDetail):
-            return collection
-        client = self.authenticated_client_from_request()
-        if isinstance(client, ProblemDetail):
-            return client
-        loan = get_one(self._db, Loan, id=loan_id, integration_client=client)
-        if not loan or loan.license_pool.collection != collection:
-            return LOAN_NOT_FOUND
-
-        return SharedCollectionLoanAndHoldAnnotator.single_item_feed(collection, loan)
-
-    def borrow(self, collection_name, identifier_type, identifier, hold_id):
-        collection = self.load_collection(collection_name)
-        if isinstance(collection, ProblemDetail):
-            return collection
-        client = self.authenticated_client_from_request()
-        if isinstance(client, ProblemDetail):
-            return client
-        if identifier_type and identifier:
-            pools = (
-                self._db.query(LicensePool)
-                .join(LicensePool.identifier)
-                .filter(Identifier.type == identifier_type)
-                .filter(Identifier.identifier == identifier)
-                .filter(LicensePool.collection_id == collection.id)
-                .all()
-            )
-            if not pools:
-                return NO_LICENSES.detailed(
-                    _("The item you're asking about (%s/%s) isn't in this collection.")
-                    % (identifier_type, identifier)
-                )
-            pool = pools[0]
-            hold = None
-        elif hold_id:
-            hold = get_one(self._db, Hold, id=hold_id)
-            pool = hold.license_pool
-
-        try:
-            loan = self.shared_collection.borrow(collection, client, pool, hold)
-        except AuthorizationFailedException as e:
-            return INVALID_CREDENTIALS.detailed(str(e))
-        except NoAvailableCopies as e:
-            return NO_AVAILABLE_LICENSE.detailed(str(e))
-        except CannotLoan as e:
-            return CHECKOUT_FAILED.detailed(str(e))
-        except RemoteIntegrationException as e:
-            return e.as_problem_detail_document(debug=False)
-        if loan:
-            return SharedCollectionLoanAndHoldAnnotator.single_item_feed(
-                collection, loan, status=201
-            )
-
-    def revoke_loan(self, collection_name, loan_id):
-        collection = self.load_collection(collection_name)
-        if isinstance(collection, ProblemDetail):
-            return collection
-        client = self.authenticated_client_from_request()
-        if isinstance(client, ProblemDetail):
-            return client
-        loan = get_one(self._db, Loan, id=loan_id, integration_client=client)
-        if not loan or not loan.license_pool.collection == collection:
-            return LOAN_NOT_FOUND
-
-        try:
-            self.shared_collection.revoke_loan(collection, client, loan)
-        except AuthorizationFailedException as e:
-            return INVALID_CREDENTIALS.detailed(str(e))
-        except NotCheckedOut as e:
-            return NO_ACTIVE_LOAN.detailed(str(e))
-        except CannotReturn as e:
-            return COULD_NOT_MIRROR_TO_REMOTE.detailed(str(e))
-        return Response(_("Success"), 200)
-
-    def fulfill(
-        self, collection_name, loan_id, mechanism_id, do_get=HTTP.get_with_timeout
-    ):
-        collection = self.load_collection(collection_name)
-        if isinstance(collection, ProblemDetail):
-            return collection
-        client = self.authenticated_client_from_request()
-        if isinstance(client, ProblemDetail):
-            return client
-        loan = get_one(self._db, Loan, id=loan_id)
-        if not loan or not loan.license_pool.collection == collection:
-            return LOAN_NOT_FOUND
-
-        mechanism = None
-        if mechanism_id:
-            mechanism = self.load_licensepooldelivery(loan.license_pool, mechanism_id)
-            if isinstance(mechanism, ProblemDetail):
-                return mechanism
-
-        if not mechanism:
-            # See if the loan already has a mechanism set. We can use that.
-            if loan and loan.fulfillment:
-                mechanism = loan.fulfillment
-            else:
-                return BAD_DELIVERY_MECHANISM.detailed(
-                    _("You must specify a delivery mechanism to fulfill this loan.")
-                )
-
-        try:
-            fulfillment = self.shared_collection.fulfill(
-                collection, client, loan, mechanism
-            )
-        except AuthorizationFailedException as e:
-            return INVALID_CREDENTIALS.detailed(str(e))
-        except CannotFulfill as e:
-            return CANNOT_FULFILL.detailed(str(e))
-        except RemoteIntegrationException as e:
-            return e.as_problem_detail_document(debug=False)
-        headers = dict()
-        content = fulfillment.content
-        if fulfillment.content_link:
-            # If we have a link to the content on a remote server, web clients may not
-            # be able to access it if the remote server does not support CORS requests.
-            # We need to fetch the content and return it instead of redirecting to it.
-            try:
-                response = do_get(fulfillment.content_link)
-                status_code = response.status_code
-                headers = dict(response.headers)
-                content = response.content
-            except RemoteIntegrationException as e:
-                return e.as_problem_detail_document(debug=False)
-        else:
-            status_code = 200
-        if fulfillment.content_type:
-            headers["Content-Type"] = fulfillment.content_type
-
-        return Response(content, status_code, headers)
-
-    def hold_info(self, collection_name, hold_id):
-        collection = self.load_collection(collection_name)
-        if isinstance(collection, ProblemDetail):
-            return collection
-        client = self.authenticated_client_from_request()
-        if isinstance(client, ProblemDetail):
-            return client
-        hold = get_one(self._db, Hold, id=hold_id, integration_client=client)
-        if not hold or not hold.license_pool.collection == collection:
-            return HOLD_NOT_FOUND
-
-        return SharedCollectionLoanAndHoldAnnotator.single_item_feed(collection, hold)
-
-    def revoke_hold(self, collection_name, hold_id):
-        collection = self.load_collection(collection_name)
-        if isinstance(collection, ProblemDetail):
-            return collection
-        client = self.authenticated_client_from_request()
-        if isinstance(client, ProblemDetail):
-            return client
-        hold = get_one(self._db, Hold, id=hold_id, integration_client=client)
-        if not hold or not hold.license_pool.collection == collection:
-            return HOLD_NOT_FOUND
-
-        try:
-            self.shared_collection.revoke_hold(collection, client, hold)
-        except AuthorizationFailedException as e:
-            return INVALID_CREDENTIALS.detailed(str(e))
-        except NotOnHold as e:
-            return NO_ACTIVE_HOLD.detailed(str(e))
-        except CannotReleaseHold as e:
-            return CANNOT_RELEASE_HOLD.detailed(str(e))
         return Response(_("Success"), 200)
 
 
@@ -2817,3 +2439,31 @@ class StaticFileController(CirculationManagerController):
             os.path.abspath(os.path.dirname(__file__)), "..", "resources", "images"
         )
         return self.static_file(directory, filename)
+
+
+class PatronAuthTokenController(CirculationManagerController):
+    def get_token(self):
+        """Create a Patron Auth access token for an authenticated patron"""
+        patron = flask.request.patron
+        auth = flask.request.authorization
+        token_expiry = 3600
+
+        if not patron or auth.type.lower() != "basic":
+            return PATRON_AUTH_ACCESS_TOKEN_NOT_POSSIBLE
+
+        try:
+            token = AccessTokenProvider.generate_token(
+                self._db,
+                patron,
+                auth["password"],
+                expires_in=token_expiry,
+            )
+        except ProblemError as ex:
+            logging.getLogger(self.__class__.__name__).error(
+                f"Could not generate Patron Auth Access Token: {ex}"
+            )
+            return ex.problem_detail
+
+        return PatronAuthAccessToken(
+            access_token=token, expires_in=token_expiry, token_type="Bearer"
+        ).api_dict()

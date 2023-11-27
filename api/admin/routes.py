@@ -3,40 +3,28 @@ from functools import wraps
 
 import flask
 from flask import Response, make_response, redirect, url_for, request
-from api.opensearch_analytics_search import OpenSearchAnalyticsSearch
 from flask_pydantic_spec import FileResponse as SpecFileResponse
 from flask_pydantic_spec import Request as SpecRequest
 from flask_pydantic_spec import Response as SpecResponse
 
 from api.admin.config import Configuration as AdminClientConfig
+from api.admin.controller.custom_lists import CustomListsController
 from api.admin.dashboard_stats import generate_statistics
 from api.admin.model.dashboard_statistics import StatisticsResponse
+from api.admin.model.quicksight import (
+    QuicksightDashboardNamesResponse,
+    QuicksightGenerateUrlRequest,
+    QuicksightGenerateUrlResponse,
+)
+from api.admin.templates import admin_sign_in_again as sign_in_again_template
 from api.app import api_spec, app
-from api.config import Configuration
 from api.routes import allows_library, has_library, library_route
 from core.app_server import ensure_pydantic_after_problem_detail, returns_problem_detail
-from core.local_analytics_provider import LocalAnalyticsProvider
-from core.model import ConfigurationSetting
-from core.util.problem_detail import ProblemDetail, ProblemDetailModel
-
-from .controller import CustomListsController, setup_admin_controllers
-from .templates import admin_sign_in_again as sign_in_again_template
+from core.util.problem_detail import ProblemDetail, ProblemDetailModel, ProblemError
 
 # An admin's session will expire after this amount of time and
 # the admin will have to log in again.
 app.permanent_session_lifetime = timedelta(hours=9)
-
-
-@app.before_first_request
-def setup_admin(_db=None):
-    if getattr(app, "manager", None) is not None:
-        setup_admin_controllers(app.manager)
-    _db = _db or app._db
-    # The secret key is used for signing cookies for admin login
-    app.secret_key = ConfigurationSetting.sitewide_secret(_db, Configuration.SECRET_KEY)
-    # Create a default Local Analytics service if one does not
-    # already exist.
-    local_analytics = LocalAnalyticsProvider.initialize(_db)
 
 
 def allows_admin_auth_setup(f):
@@ -99,7 +87,11 @@ def returns_json_or_response_or_problem_detail(f):
 
     @wraps(f)
     def decorated(*args, **kwargs):
-        v = f(*args, **kwargs)
+        try:
+            v = f(*args, **kwargs)
+        except ProblemError as ex:
+            # A ProblemError is the same as a ProblemDetail
+            v = ex.problem_detail
         if isinstance(v, ProblemDetail):
             return v.response
         if isinstance(v, Response):
@@ -167,32 +159,6 @@ def work_details(identifier_type, identifier):
 @requires_admin
 def work_classifications(identifier_type, identifier):
     return app.manager.admin_work_controller.classifications(
-        identifier_type, identifier
-    )
-
-
-@library_route(
-    "/admin/works/<identifier_type>/<path:identifier>/preview_book_cover",
-    methods=["POST"],
-)
-@has_library
-@returns_problem_detail
-@requires_admin
-def work_preview_book_cover(identifier_type, identifier):
-    return app.manager.admin_work_controller.preview_book_cover(
-        identifier_type, identifier
-    )
-
-
-@library_route(
-    "/admin/works/<identifier_type>/<path:identifier>/change_book_cover",
-    methods=["POST"],
-)
-@has_library
-@returns_problem_detail
-@requires_admin
-def work_change_book_cover(identifier_type, identifier):
-    return app.manager.admin_work_controller.change_book_cover(
         identifier_type, identifier
     )
 
@@ -384,6 +350,31 @@ def stats():
     return statistics_response.api_dict()
 
 
+@app.route("/admin/quicksight_embed/<dashboard_name>")
+@api_spec.validate(
+    resp=SpecResponse(HTTP_200=QuicksightGenerateUrlResponse),
+    tags=["admin.quicksight"],
+    query=QuicksightGenerateUrlRequest,
+)
+@returns_json_or_response_or_problem_detail
+@requires_admin
+def generate_quicksight_url(dashboard_name: str):
+    return app.manager.admin_quicksight_controller.generate_quicksight_url(
+        dashboard_name
+    )
+
+
+@app.route("/admin/quicksight_embed/names")
+@api_spec.validate(
+    resp=SpecResponse(HTTP_200=QuicksightDashboardNamesResponse),
+    tags=["admin.quicksight"],
+)
+@returns_json_or_response_or_problem_detail
+@requires_admin
+def get_quicksight_names():
+    return app.manager.admin_quicksight_controller.get_dashboard_names()
+
+
 # Finland
 @library_route("/admin/events/terms")
 @returns_json_or_response_or_problem_detail
@@ -456,16 +447,6 @@ def collection(collection_id):
 def collection_self_tests(identifier):
     return app.manager.admin_collection_self_tests_controller.process_collection_self_tests(
         identifier
-    )
-
-
-@app.route("/admin/collection_library_registrations", methods=["GET", "POST"])
-@returns_json_or_response_or_problem_detail
-@requires_admin
-@requires_csrf_token
-def collection_library_registrations():
-    return (
-        app.manager.admin_collection_library_registrations_controller.process_collection_library_registrations()
     )
 
 
@@ -562,22 +543,6 @@ def metadata_service_self_tests(identifier):
     )
 
 
-@app.route("/admin/analytics_services", methods=["GET", "POST"])
-@returns_json_or_response_or_problem_detail
-@requires_admin
-@requires_csrf_token
-def analytics_services():
-    return app.manager.admin_analytics_services_controller.process_analytics_services()
-
-
-@app.route("/admin/analytics_service/<service_id>", methods=["DELETE"])
-@returns_json_or_response_or_problem_detail
-@requires_admin
-@requires_csrf_token
-def analytics_service(service_id):
-    return app.manager.admin_analytics_services_controller.process_delete(service_id)
-
-
 @app.route("/admin/search_services", methods=["GET", "POST"])
 @returns_json_or_response_or_problem_detail
 @requires_admin
@@ -602,22 +567,6 @@ def search_service_self_tests(identifier):
     return app.manager.admin_search_service_self_tests_controller.process_search_service_self_tests(
         identifier
     )
-
-
-@app.route("/admin/storage_services", methods=["GET", "POST"])
-@returns_json_or_response_or_problem_detail
-@requires_admin
-@requires_csrf_token
-def storage_services():
-    return app.manager.admin_storage_services_controller.process_services()
-
-
-@app.route("/admin/storage_service/<service_id>", methods=["DELETE"])
-@returns_json_or_response_or_problem_detail
-@requires_admin
-@requires_csrf_token
-def storage_service(service_id):
-    return app.manager.admin_storage_services_controller.process_delete(service_id)
 
 
 @app.route("/admin/catalog_services", methods=["GET", "POST"])
@@ -678,22 +627,6 @@ def sitewide_setting(key):
 @requires_csrf_token
 def announcements_for_all():
     return app.manager.admin_announcement_service.process_many()
-
-
-@app.route("/admin/logging_services", methods=["GET", "POST"])
-@returns_json_or_response_or_problem_detail
-@requires_admin
-@requires_csrf_token
-def logging_services():
-    return app.manager.admin_logging_services_controller.process_services()
-
-
-@app.route("/admin/logging_service/<key>", methods=["DELETE"])
-@returns_json_or_response_or_problem_detail
-@requires_admin
-@requires_csrf_token
-def logging_service(key):
-    return app.manager.admin_logging_services_controller.process_delete(key)
 
 
 @app.route("/admin/discovery_service_library_registrations", methods=["GET", "POST"])

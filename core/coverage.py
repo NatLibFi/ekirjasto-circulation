@@ -6,11 +6,8 @@ from sqlalchemy.orm import Load
 from sqlalchemy.orm.session import Session
 from sqlalchemy.sql.functions import func
 
-from core.model.coverage import EquivalencyCoverageRecord
-
-from . import log  # This sets the appropriate log format.
-from .metadata_layer import ReplacementPolicy, TimestampData
-from .model import (
+from core.metadata_layer import ReplacementPolicy, TimestampData
+from core.model import (
     BaseCoverageRecord,
     Collection,
     CollectionMissing,
@@ -25,8 +22,9 @@ from .model import (
     WorkCoverageRecord,
     get_one,
 )
-from .util.datetime_helpers import utc_now
-from .util.worker_pools import DatabaseJob
+from core.model.coverage import EquivalencyCoverageRecord
+from core.util.datetime_helpers import utc_now
+from core.util.worker_pools import DatabaseJob
 
 
 class CoverageFailure:
@@ -230,7 +228,6 @@ class BaseCoverageProvider:
     def run(self):
         start = utc_now()
         result = self.run_once_and_update_timestamp()
-
         result = result or CoverageProviderProgress()
         self.finalize_timestampdata(result, start=start)
         return result
@@ -1279,7 +1276,7 @@ class CollectionCoverageProvider(IdentifierCoverageProvider):
 
         if license_pool:
             if not license_pool.work or not license_pool.work.presentation_ready:
-                for (v, default) in (("exclude_search", self.EXCLUDE_SEARCH_INDEX),):
+                for v, default in (("exclude_search", self.EXCLUDE_SEARCH_INDEX),):
                     if not v in calculate_work_kwargs:
                         calculate_work_kwargs[v] = default
 
@@ -1388,25 +1385,6 @@ class CollectionCoverageProviderJob(DatabaseJob):
         provider = self.provider_class(collection, **self.provider_kwargs)
         provider.run_once(self.progress)
         provider.finalize_timestampdata(self.progress)
-
-
-class CatalogCoverageProvider(CollectionCoverageProvider):
-    """Most CollectionCoverageProviders provide coverage to Identifiers
-    that are licensed through a given Collection.
-
-    A CatalogCoverageProvider provides coverage to Identifiers that
-    are present in a given Collection's catalog.
-    """
-
-    def items_that_need_coverage(self, identifiers=None, **kwargs):
-        """Find all Identifiers in this Collection's catalog but lacking
-        coverage through this CoverageProvider.
-        """
-        qu = super(CollectionCoverageProvider, self).items_that_need_coverage(
-            identifiers, **kwargs
-        )
-        qu = qu.join(Identifier.collections).filter(Collection.id == self.collection_id)
-        return qu
 
 
 class BibliographicCoverageProvider(CollectionCoverageProvider):
@@ -1550,24 +1528,6 @@ class WorkPresentationProvider(PresentationReadyWorkCoverageProvider):
     DEFAULT_BATCH_SIZE = 100
 
 
-class OPDSEntryWorkCoverageProvider(WorkPresentationProvider):
-    """Make sure all presentation-ready works have an up-to-date OPDS
-    entry.
-
-    This is different from the OPDSEntryCacheMonitor, which sweeps
-    over all presentation-ready works, even ones which are already
-    covered.
-    """
-
-    SERVICE_NAME = "OPDS Entry Work Coverage Provider"
-    OPERATION = WorkCoverageRecord.GENERATE_OPDS_OPERATION
-    DEFAULT_BATCH_SIZE = 1000
-
-    def process_item(self, work):
-        work.calculate_opds_entries()
-        return work
-
-
 class MARCRecordWorkCoverageProvider(WorkPresentationProvider):
     """Make sure all presentation-ready works have an up-to-date MARC
     record.
@@ -1609,12 +1569,7 @@ class WorkPresentationEditionCoverageProvider(WorkPresentationProvider):
         # operation (COVER_OPERATION), but it's a little complicated because
         # that's not a WorkCoverageRecord operation.
         choose_cover=True,
-        # We do this even though it's redundant with
-        # OPDSEntryWorkCoverageProvider. If you change a
-        # Work's presentation edition but don't update its OPDS entry,
-        # it effectively didn't happen.
-        regenerate_opds_entries=True,
-        # Same logic for the search index. This will flag the Work as
+        # This will flag the Work as
         # needing a search index update, and SearchIndexCoverageProvider
         # will take care of it.
         update_search_index=True,

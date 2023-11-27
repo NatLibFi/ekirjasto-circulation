@@ -83,7 +83,6 @@ class TestHasSessionCache:
     def test_by_cache_key_miss_triggers_cache_miss_hook(
         self, mock_db, mock_class, mock
     ):
-
         db = mock_db()
         cache_miss_hook = MagicMock(side_effect=lambda: (mock, True))
         created, is_new = mock_class.by_cache_key(db, mock.cache_key(), cache_miss_hook)
@@ -242,10 +241,10 @@ class TestHasFullTableCacheDatabase:
         db_setting2.value = setting_new_value
 
         # Now let's make sure that the cached value has also been updated.
-        assert (
-            ConfigurationSetting.by_id(db.session, setting_id)._value
-            == setting_new_value
-        )
+        assert isinstance(setting_id, int)
+        config_setting_by_id = ConfigurationSetting.by_id(db.session, setting_id)
+        assert isinstance(config_setting_by_id, HasSessionCache)
+        assert config_setting_by_id._value == setting_new_value
 
     def test_cached_value_deleted(self, db: DatabaseTransactionFixture):
         # Get setting

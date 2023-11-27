@@ -1,14 +1,16 @@
 """Utilities for Flask applications."""
 import datetime
 import time
+from typing import Any, Dict
 from wsgiref.handlers import format_date_time
 
 from flask import Response as FlaskResponse
 from lxml import etree
+from pydantic import BaseModel, Extra
 
-from . import problem_detail
-from .datetime_helpers import utc_now
-from .opds_writer import OPDSFeed
+from core.util import problem_detail
+from core.util.datetime_helpers import utc_now
+from core.util.opds_writer import OPDSFeed
 
 
 def problem_raw(type, status, title, detail=None, instance=None, headers={}):
@@ -150,7 +152,6 @@ class OPDSFeedResponse(Response):
         max_age=None,
         private=None,
     ):
-
         mimetype = mimetype or OPDSFeed.ACQUISITION_FEED_TYPE
         status = status or 200
         if max_age is None:
@@ -179,3 +180,39 @@ def boolean_value(value: str) -> bool:
     """Convert a string request value into a boolean, used for form encoded requests
     JSON encoded requests will get automatically converted"""
     return True if value in ["true", "True", True, "1"] else False
+
+
+def _snake_to_camel_case(name: str) -> str:
+    """Convert from Python snake case to JavaScript lower camel case."""
+    new_name = "".join(word.title() for word in name.split("_") if word)
+    if not new_name:
+        raise ValueError("Name ('{name}') may not consist entirely of underscores.")
+    return f"{new_name[0].lower()}{new_name[1:]}"
+
+
+class CustomBaseModel(BaseModel):
+    class Config:
+        alias_generator = _snake_to_camel_case
+        allow_population_by_field_name = True
+        extra = Extra.forbid
+
+    def api_dict(
+        self, *args: Any, by_alias: bool = True, **kwargs: Any
+    ) -> Dict[str, Any]:
+        """Return the instance in a form suitable for a web response.
+
+        By default, the properties use their lower camel case aliases,
+        rather than their Python class member names.
+        """
+        return self.dict(*args, by_alias=by_alias, **kwargs)
+
+
+def str_comma_list_validator(value):
+    """Validate a comma separated string and parse it into a list, generally used for query parameters"""
+    if isinstance(value, (int, float)):
+        # A single number shows up as an int
+        value = str(value)
+    elif not isinstance(value, str):
+        raise TypeError("string required")
+
+    return value.split(",")

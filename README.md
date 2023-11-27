@@ -22,10 +22,10 @@ Docker images are the preferred way to deploy this code in a production environm
 
 ## Git Branch Workflow
 
-| Branch   | Python Version |
-| -------- | -------------- |
-| main     | Python 3       |
-| python2  | Python 2       |
+| Branch  | Python Version |
+| ------- | -------------- |
+| main    | Python 3       |
+| python2 | Python 2       |
 
 The default branch is `main` and that's the working branch that should be used when branching off for bug fixes or new
 features.
@@ -83,6 +83,7 @@ Enable Source Packages:
 Uncomment a deb-src in `/etc/apt/sources.list` e.g. `jammy main`
 
 Install build dependencies:
+
 ```sh
 $ sudo apt-get update
 $ sudo apt-get build-dep python3
@@ -164,13 +165,124 @@ CREATE USER palace with password 'test';
 grant all privileges on database circ to palace;
 ```
 
-#### Environment variables
+### Environment variables
 
-To let the application know which database to use set the `SIMPLIFIED_PRODUCTION_DATABASE` env variable.
+#### Database
+
+To let the application know which database to use, set the `SIMPLIFIED_PRODUCTION_DATABASE` environment variable.
 
 ```sh
 export SIMPLIFIED_PRODUCTION_DATABASE="postgresql://palace:test@localhost:5432/circ"
 ```
+
+#### Storage Service
+
+The application optionally uses a s3 compatible storage service to store files. To configure the application to use
+a storage service, you can set the following environment variables:
+
+- `PALACE_STORAGE_PUBLIC_ACCESS_BUCKET`: Required if you want to use the storage service to serve files directly to
+  users. This is the name of the bucket that will be used to serve files. This bucket should be configured to allow
+  public access to the files.
+- `PALACE_STORAGE_ANALYTICS_BUCKET`: Required if you want to use the storage service to store analytics data.
+- `PALACE_STORAGE_ACCESS_KEY`: The access key (optional).
+  - If this key is set it will be passed to boto3 when connecting to the storage service.
+  - If it is not set boto3 will attempt to find credentials as outlined in their
+    [documentation](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html#configuring-credentials).
+- `PALACE_STORAGE_SECRET_KEY`: The secret key (optional).
+- `PALACE_STORAGE_REGION`: The AWS region of the storage service (optional).
+- `PALACE_STORAGE_ENDPOINT_URL`: The endpoint of the storage service (optional). This is used if you are using a
+  s3 compatible storage service like [minio](https://min.io/).
+- `PALACE_STORAGE_URL_TEMPLATE`: The url template to use when generating urls for files stored in the storage service
+  (optional).
+  - The default value is `https://{bucket}.s3.{region}.amazonaws.com/{key}`.
+  - The following variables can be used in the template:
+    - `{bucket}`: The name of the bucket.
+    - `{key}`: The key of the file.
+    - `{region}`: The region of the storage service.
+
+#### Reporting
+
+- `PALACE_REPORTING_NAME`: (Optional) A name used to identify the CM instance associated with generated reports.
+- `SIMPLIFIED_REPORTING_EMAIL`: (Required) Email address of recipient of reports.
+
+#### Logging
+
+The application uses the [Python logging](https://docs.python.org/3/library/logging.html) module for logging. Optionally
+logs can be configured to be sent to AWS CloudWatch logs. The following environment variables can be used to configure
+the logging:
+
+- `PALACE_LOG_LEVEL`: The log level to use for the application. The default is `INFO`.
+- `PALACE_LOG_VERBOSE_LEVEL`: The log level to use for particularly verbose loggers. Keeping these loggers at a
+  higher log level by default makes it easier to troubleshoot issues. The default is `WARNING`.
+- `PALACE_LOG_CLOUDWATCH_ENABLED`: Enable / disable sending logs to CloudWatch. The default is `false`.
+- `PALACE_LOG_CLOUDWATCH_REGION`: The AWS region of the CloudWatch logs. This must be set if using CloudWatch logs.
+- `PALACE_LOG_CLOUDWATCH_GROUP`: The name of the CloudWatch log group to send logs to. Default is `palace`.
+- `PALACE_LOG_CLOUDWATCH_STREAM`: The name of the CloudWatch log stream to send logs to. Default is
+  `{machine_name}/{program_name}/{logger_name}/{process_id}`. See
+  [watchtower docs](https://github.com/kislyuk/watchtower#log-stream-naming) for details.
+- `PALACE_LOG_CLOUDWATCH_INTERVAL`: The interval in seconds to send logs to CloudWatch. Default is `60`.
+- `PALACE_LOG_CLOUDWATCH_CREATE_GROUP`: Whether to create the log group if it does not exist. Default is `true`.
+- `PALACE_LOG_CLOUDWATCH_ACCESS_KEY`: The access key to use when sending logs to CloudWatch. This is optional.
+  - If this key is set it will be passed to boto3 when connecting to CloudWatch.
+  - If it is not set boto3 will attempt to find credentials as outlined in their
+    [documentation](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html#configuring-credentials).
+- `PALACE_LOG_CLOUDWATCH_SECRET_KEY`: The secret key to use when sending logs to CloudWatch. This is optional.
+
+#### Patron `Basic Token` authentication
+
+Enables/disables patron "basic token" authentication through setting the designated environment variable to any
+(case-insensitive) value of "true"/"yes"/"on"/"1" or "false"/"no"/"off"/"0", respectively.
+If the value is the empty string or the variable is not present in the environment, it is disabled by default.
+
+- `SIMPLIFIED_ENABLE_BASIC_TOKEN_AUTH`
+
+```sh
+export SIMPLIFIED_ENABLE_BASIC_TOKEN_AUTH=true
+```
+
+#### Firebase Cloud Messaging
+
+For Firebase Cloud Messaging (FCM) support (e.g., for notifications), `one` (and only one) of the following should be set:
+
+- `SIMPLIFIED_FCM_CREDENTIALS_JSON` - the JSON-format Google Cloud Platform (GCP) service account key or
+- `SIMPLIFIED_FCM_CREDENTIALS_FILE` - the name of the file containing that key.
+
+```sh
+export SIMPLIFIED_FCM_CREDENTIALS_JSON='{"type":"service_account","project_id":"<id>", "private_key_id":"f8...d1", ...}'
+```
+
+...or...
+
+```sh
+export SIMPLIFIED_FCM_CREDENTIALS_FILE="/opt/credentials/fcm_credentials.json"
+```
+
+The FCM credentials can be downloaded once a Google Service account has been created.
+More details in the [FCM documentation](https://firebase.google.com/docs/admin/setup#set-up-project-and-service-account)
+
+#### Quicksight Dashboards
+
+For generating quicksight dashboard links the following environment variable is required
+`QUICKSIGHT_AUTHORIZED_ARNS` - A dictionary of the format `"<dashboard name>": ["arn:aws:quicksight:...",...]`
+where each quicksight dashboard gets treated with an arbitrary "name", and a list of "authorized arns".
+The first the "authorized arns" is always considered as the `InitialDashboardID` when creating an embed URL
+for the respective "dashboard name".
+
+#### Analytics
+
+Local analytics are enabled by default. S3 analytics can be enabled via the following environment variable:
+
+- PALACE_S3_ANALYTICS_ENABLED: A boolean value to disable or enable s3 analytics. The default is false.
+
+## OpenSearch Analytics (E-Kirjasto, Finland)
+
+OpenSearch analytics can be enabled via the following environment variables:
+
+- PALACE_OPENSEARCH_ANALYTICS_ENABLED: A boolean value to disable or enable OpenSearch analytics. The default is false.
+- PALACE_OPENSEARCH_ANALYTICS_URL: The url of your OpenSearch instance, eg. "http://localhost:9200"
+- PALACE_OPENSEARCH_ANALYTICS_INDEX_PREFIX: The prefix of the event index name, eg. "circulation-events"
+
+#### Email
 
 ### Email sending
 
@@ -185,7 +297,7 @@ export SIMPLIFIED_MAIL_PASSWORD=password
 export SIMPLIFIED_MAIL_SENDER=sender@example.com
 ```
 
-### Running the Application
+## Running the Application
 
 As mentioned in the [pyenv](#pyenv) section, the `poetry` tool should be executed under a virtual environment
 in order to guarantee that it will use the Python version you expect. To use a particular Python version,
@@ -277,8 +389,9 @@ At this point, the _library_ exists but does not contain any _collections_ and t
 
 Navigate to `System Configuration → Collections` and click _Create new collection_. You will prompted to enter
 details that will be used to source the data for the collection. A good starting point, for testing purposes,
-is to use an open access OPDS feed as a data source. The [Open Bookshelf](https://openbookshelf.dp.la/) is a good example
-of such a feed. Enter the following details:
+is to use an open access OPDS feed as a data source. The
+[Open Bookshelf](https://palace-bookshelf-opds2.dp.la/v1/publications) is a good example of such a feed. Enter the
+following details:
 
 ![.github/readme/collection.png](.github/readme/collection.png)
 
@@ -370,6 +483,16 @@ Examining collection "Palace Bookshelf"
 We can see from the above output that the vast majority of the books in the _Open Bookshelf_ collection
 were indexed correctly.
 
+### Sitewide Settings
+
+Some settings have been provided in the admin UI that configure or toggle various functions of the Circulation Manager.
+These can be found at `/admin/web/config/SitewideSettings` in the admin interface.
+
+#### Push Notification Status
+
+This setting is a toggle that may be used to turn on or off the ability for the the system
+to send the Loan and Hold reminders to the mobile applications.
+
 ### Installation Issues
 
 When running the `poetry install ...` command, you may run into installation issues. On newer macos machines, you may
@@ -393,6 +516,26 @@ the `xcode-select --install` command. If it does not work, you can try adding th
 export CPPFLAGS="-DXMLSEC_NO_XKMS=1"
 ```
 
+## Scheduled Jobs
+
+All jobs are scheduled via `cron`, as specified in the `docker/services/simplified_crontab` file.
+This includes all the import and reaper jobs, as well as other necessary background tasks, such as maintaining
+the search index and feed caches.
+
+### Job Requirements
+
+#### hold_notifications
+
+Requires one of [the Firebase Cloud Messaging credentials environment variables (described above)](#firebase-cloud-messaging)
+to be present and non-empty.
+In addition, the site-wide `PUSH_NOTIFICATIONS_STATUS` setting must be either `unset` or `true`.
+
+#### loan_notifications
+
+Requires one of [the Firebase Cloud Messaging credentials environment variables (described above](#firebase-cloud-messaging)
+to be present and non-empty.
+In addition, the site-wide `PUSH_NOTIFICATIONS_STATUS` setting must be either `unset` or `true`.
+
 ## Code Style
 
 Code style on this project is linted using [pre-commit](https://pre-commit.com/). This python application is included
@@ -415,13 +558,14 @@ the different lints that pre-commit runs.
 #### Built in
 
 Pre-commit ships with a [number of lints](https://pre-commit.com/hooks.html) out of the box, we are configured to use:
+
 - `trailing-whitespace` - trims trailing whitespace.
 - `end-of-file-fixer` - ensures that a file is either empty, or ends with one newline.
 - `check-yaml` - checks yaml files for parseable syntax.
 - `check-json` - checks json files for parseable syntax.
 - `check-ast` - simply checks whether the files parse as valid python.
 - `check-shebang-scripts-are-executable` - ensures that (non-binary) files with a shebang are executable.
-- `check-executables-have-shebangs` -  ensures that (non-binary) executables have a shebang.
+- `check-executables-have-shebangs` - ensures that (non-binary) executables have a shebang.
 - `check-merge-conflict` - checks for files that contain merge conflict strings.
 - `check-added-large-files` - prevents giant files from being committed.
 - `mixed-line-ending` - replaces or checks mixed line ending.
@@ -474,7 +618,7 @@ with service dependencies running in docker containers.
 #### Python version
 
 | Factor | Python Version |
-|--------|----------------|
+| ------ | -------------- |
 | py38   | Python 3.8     |
 | py39   | Python 3.9     |
 | py310  | Python 3.10    |
@@ -498,10 +642,10 @@ missing Python versions in your system for local testing.
 
 #### Module
 
-| Factor      | Module            |
-| ----------- | ----------------- |
-| core        | core tests        |
-| api         | api tests         |
+| Factor | Module     |
+| ------ | ---------- |
+| core   | core tests |
+| api    | api tests  |
 
 #### Docker
 
@@ -584,7 +728,7 @@ enabled by setting environment variables while starting the application.
 - `PALACE_XRAY_NAME`: The name of the service shown in x-ray for these traces.
 - `PALACE_XRAY_ANNOTATE_`: Any environment variable starting with this prefix will be added to to the trace as an
   annotation.
-    - For example setting `PALACE_XRAY_ANNOTATE_KEY=value` will set the annotation `key=value` on all xray traces sent
+  - For example setting `PALACE_XRAY_ANNOTATE_KEY=value` will set the annotation `key=value` on all xray traces sent
     from the application.
 - `PALACE_XRAY_INCLUDE_BARCODE`: If this environment variable is set to `true` then the tracing code will try to include
   the patrons barcode in the user parameter of the trace, if a barcode is available.
@@ -606,8 +750,9 @@ module under the hood to do the profiling.
   path specified in the environment variable.
 - The profile data will have the extension `.prof`.
 - The data can be accessed using the
-[`pstats.Stats` class](https://docs.python.org/3/library/profile.html#the-stats-class).
+  [`pstats.Stats` class](https://docs.python.org/3/library/profile.html#the-stats-class).
 - Example code to print details of the gathered statistics:
+
   ```python
   import os
   from pathlib import Path
@@ -628,23 +773,25 @@ This profiler uses [PyInstrument](https://pyinstrument.readthedocs.io/en/latest/
 
 - `PALACE_PYINSTRUMENT`: Profiling will the enabled if this variable is set. The saved profile data will be available at
   path specified in the environment variable.
-    - The profile data will have the extension `.pyisession`.
-    - The data can be accessed with the
+
+  - The profile data will have the extension `.pyisession`.
+  - The data can be accessed with the
     [`pyinstrument.session.Session` class](https://pyinstrument.readthedocs.io/en/latest/reference.html#pyinstrument.session.Session).
-    - Example code to print details of the gathered statistics:
-      ```python
-      import os
-      from pathlib import Path
+  - Example code to print details of the gathered statistics:
 
-      from pyinstrument.renderers import HTMLRenderer
-      from pyinstrument.session import Session
+    ```python
+    import os
+    from pathlib import Path
 
-      path = Path(os.environ.get("PALACE_PYINSTRUMENT"))
-      for file in path.glob("*.pyisession"):
-          session = Session.load(file)
-          renderer = HTMLRenderer()
-          renderer.open_in_browser(session)
-      ```
+    from pyinstrument.renderers import HTMLRenderer
+    from pyinstrument.session import Session
+
+    path = Path(os.environ.get("PALACE_PYINSTRUMENT"))
+    for file in path.glob("*.pyisession"):
+        session = Session.load(file)
+        renderer = HTMLRenderer()
+        renderer.open_in_browser(session)
+    ```
 
 ### Other Environment Variables
 

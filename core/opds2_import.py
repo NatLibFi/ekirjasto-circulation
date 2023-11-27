@@ -1,18 +1,29 @@
 from __future__ import annotations
 
 import logging
-from contextlib import contextmanager
 from datetime import datetime
 from io import BytesIO, StringIO
-from typing import TYPE_CHECKING, Any, Callable, Generator, Iterable
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Literal,
+    Optional,
+    Tuple,
+    Type,
+)
 from urllib.parse import urljoin, urlparse
 
-import sqlalchemy
 import webpub_manifest_parser.opds2.ast as opds2_ast
 from flask_babel import lazy_gettext as _
+from sqlalchemy.orm import Session
+from uritemplate import URITemplate
 from webpub_manifest_parser.core import ManifestParserFactory, ManifestParserResult
 from webpub_manifest_parser.core.analyzer import NodeFinder
-from webpub_manifest_parser.core.ast import Manifestlike
+from webpub_manifest_parser.core.ast import Link, Manifestlike
 from webpub_manifest_parser.errors import BaseError
 from webpub_manifest_parser.opds2.registry import (
     OPDS2LinkRelationsRegistry,
@@ -20,20 +31,15 @@ from webpub_manifest_parser.opds2.registry import (
 )
 from webpub_manifest_parser.utils import encode, first_or_default
 
-from core.configuration.ignored_identifier import IgnoredIdentifierImporterMixin
-from core.mirror import MirrorUploader
-from core.model.configuration import (
-    ConfigurationAttributeType,
-    ConfigurationFactory,
-    ConfigurationGrouping,
-    ConfigurationMetadata,
-    ConfigurationStorage,
-    HasExternalIntegration,
+from api.circulation import FulfillmentInfo
+from api.circulation_exceptions import CannotFulfill
+from core.coverage import CoverageFailure
+from core.integration.settings import (
+    ConfigurationFormItem,
+    ConfigurationFormItemType,
+    FormField,
 )
-
-from .coverage import CoverageFailure
-from .importers import BaseImporterConfiguration
-from .metadata_layer import (
+from core.metadata_layer import (
     CirculationData,
     ContributorData,
     FormatData,
@@ -42,25 +48,35 @@ from .metadata_layer import (
     Metadata,
     SubjectData,
 )
-from .model import (
+from core.model import (
     Collection,
-    ConfigurationSetting,
     Contributor,
+    DataSource,
     DeliveryMechanism,
     Edition,
     ExternalIntegration,
     Hyperlink,
     Identifier,
     LicensePool,
+    LicensePoolDeliveryMechanism,
     LinkRelations,
     MediaTypes,
+    Patron,
     Representation,
     RightsStatus,
     Subject,
 )
-from .opds_import import OPDSImporter, OPDSImportMonitor
-from .util.http import BadResponseException
-from .util.opds_writer import OPDSFeed
+from core.model.configuration import ConfigurationSetting
+from core.model.constants import IdentifierType
+from core.opds_import import (
+    BaseOPDSAPI,
+    BaseOPDSImporter,
+    OPDSImporterLibrarySettings,
+    OPDSImporterSettings,
+    OPDSImportMonitor,
+)
+from core.util.http import HTTP, BadResponseException
+from core.util.opds_writer import OPDSFeed
 
 if TYPE_CHECKING:
     from webpub_manifest_parser.core import ast as core_ast
@@ -83,7 +99,7 @@ class RWPMManifestParser:
         self._manifest_parser_factory = manifest_parser_factory
 
     def parse_manifest(
-        self, manifest: str | dict | Manifestlike
+        self, manifest: str | dict[str, Any] | Manifestlike
     ) -> ManifestParserResult:
         """Parse the feed into an RPWM-like AST object.
 
@@ -121,47 +137,158 @@ class RWPMManifestParser:
         return result
 
 
-class OPDS2ImporterConfiguration(ConfigurationGrouping, BaseImporterConfiguration):
-    """Contains configuration settings of OPDS2Importer.
-    Currently empty, but maintaining it as a base class for others"""
-
-    custom_accept_header_setting: ConfigurationMetadata = ConfigurationMetadata(
-        key=ExternalIntegration.CUSTOM_ACCEPT_HEADER,
-        label=_("Custom accept header"),
-        description=_(
-            "Some servers expect an accept header to decide which file to send. You can use */* if the server doesn't expect anything."
-        ),
-        type=ConfigurationAttributeType.TEXT,
-        required=False,
+class OPDS2ImporterSettings(OPDSImporterSettings):
+    custom_accept_header: str = FormField(
         default="{}, {};q=0.9, */*;q=0.1".format(
             OPDS2MediaTypesRegistry.OPDS_FEED.key, "application/json"
+        ),
+        form=ConfigurationFormItem(
+            label=_("Custom accept header"),
+            description=_(
+                "Some servers expect an accept header to decide which file to send. You can use */* if the server doesn't expect anything."
+            ),
+            type=ConfigurationFormItemType.TEXT,
+            required=False,
+        ),
+    )
+
+    ignored_identifier_types: List[str] = FormField(
+        alias="IGNORED_IDENTIFIER_TYPE",
+        default=[],
+        form=ConfigurationFormItem(
+            label=_("List of identifiers that will be skipped"),
+            description=_(
+                "Circulation Manager will not be importing publications with identifiers having one of the selected types."
+            ),
+            type=ConfigurationFormItemType.MENU,
+            required=False,
+            options={
+                identifier_type.value: identifier_type.value
+                for identifier_type in IdentifierType
+            },
+            format="narrow",
         ),
     )
 
 
-class OPDS2Importer(
-    IgnoredIdentifierImporterMixin, OPDSImporter, HasExternalIntegration
-):
+class OPDS2ImporterLibrarySettings(OPDSImporterLibrarySettings):
+    pass
+
+
+class OPDS2API(BaseOPDSAPI):
+    @classmethod
+    def settings_class(cls) -> Type[OPDS2ImporterSettings]:
+        return OPDS2ImporterSettings
+
+    @classmethod
+    def library_settings_class(cls) -> Type[OPDS2ImporterLibrarySettings]:
+        return OPDS2ImporterLibrarySettings
+
+    @classmethod
+    def label(cls) -> str:
+        return "OPDS 2.0 Import"
+
+    @classmethod
+    def description(cls) -> str:
+        return "Import books from a publicly-accessible OPDS 2.0 feed."
+
+    def __init__(self, _db: Session, collection: Collection):
+        super().__init__(_db, collection)
+        # TODO: This needs to be refactored to use IntegrationConfiguration,
+        #  but it has been temporarily rolled back, since the IntegrationConfiguration
+        #  code caused problems fulfilling TOKEN_AUTH books in production.
+        #  This should be fixed as part of the work PP-313 to fully remove
+        #  ExternalIntegrations from our collections code.
+        token_auth_configuration = ConfigurationSetting.for_externalintegration(
+            ExternalIntegration.TOKEN_AUTH, collection.external_integration
+        )
+        self.token_auth_configuration = (
+            token_auth_configuration.value if token_auth_configuration else None
+        )
+
+    @classmethod
+    def get_authentication_token(
+        cls, patron: Patron, datasource: DataSource, token_auth_url: str
+    ) -> str:
+        """Get the authentication token for a patron"""
+        log = cls.logger()
+
+        patron_id = patron.identifier_to_remote_service(datasource)
+        url = URITemplate(token_auth_url).expand(patron_id=patron_id)
+        response = HTTP.get_with_timeout(url)
+        if response.status_code != 200:
+            log.error(
+                f"Could not authenticate the patron (authorization identifier: '{patron.authorization_identifier}' "
+                f"external identifier: '{patron_id}'): {str(response.content)}"
+            )
+            raise CannotFulfill()
+
+        # The response should be the JWT token, not wrapped in any format like JSON
+        token = response.text
+        if not token:
+            log.error(
+                f"Could not authenticate the patron({patron_id}): {str(response.content)}"
+            )
+            raise CannotFulfill()
+
+        return token
+
+    def fulfill_token_auth(
+        self, patron: Patron, licensepool: LicensePool, fulfillment: FulfillmentInfo
+    ) -> FulfillmentInfo:
+        if not fulfillment.content_link:
+            self.log.warning(
+                "No content link found in fulfillment, unable to fulfill via OPDS2 token auth."
+            )
+            return fulfillment
+
+        templated = URITemplate(fulfillment.content_link)
+        if "authentication_token" not in templated.variable_names:
+            self.log.warning(
+                "No authentication_token variable found in content_link, unable to fulfill via OPDS2 token auth."
+            )
+            return fulfillment
+
+        token = self.get_authentication_token(
+            patron, licensepool.data_source, self.token_auth_configuration
+        )
+        fulfillment.content_link = templated.expand(authentication_token=token)
+        fulfillment.content_link_redirect = True
+        return fulfillment
+
+    def fulfill(
+        self,
+        patron: Patron,
+        pin: str,
+        licensepool: LicensePool,
+        delivery_mechanism: LicensePoolDeliveryMechanism,
+    ) -> FulfillmentInfo:
+        fufillment_info = super().fulfill(patron, pin, licensepool, delivery_mechanism)
+        if self.token_auth_configuration:
+            fufillment_info = self.fulfill_token_auth(
+                patron, licensepool, fufillment_info
+            )
+        return fufillment_info
+
+
+class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
     """Imports editions and license pools from an OPDS 2.0 feed."""
 
     NAME: str = ExternalIntegration.OPDS2_IMPORT
     DESCRIPTION: str = _("Import books from a publicly-accessible OPDS 2.0 feed.")
-    SETTINGS: list[dict] = (
-        OPDSImporter.SETTINGS + OPDS2ImporterConfiguration.to_settings()
-    )
     NEXT_LINK_RELATION: str = "next"
+
+    @classmethod
+    def settings_class(cls) -> Type[OPDS2ImporterSettings]:
+        return OPDS2ImporterSettings
 
     def __init__(
         self,
-        db: sqlalchemy.orm.session.Session,
+        db: Session,
         collection: Collection,
         parser: RWPMManifestParser,
         data_source_name: str | None = None,
-        identifier_mapping: dict | None = None,
-        http_get: Callable | None = None,
-        content_modifier: Callable | None = None,
-        map_from_collection: dict | None = None,
-        mirrors: dict[str, MirrorUploader] | None = None,
+        http_get: Optional[Callable[..., Tuple[int, Any, bytes]]] = None,
     ):
         """Initialize a new instance of OPDS2Importer class.
 
@@ -176,50 +303,23 @@ class OPDS2Importer(
             If there is no DataSource with this name, one will be created.
             NOTE: If `collection` is provided, its .data_source will take precedence over any value provided here.
             This is only for use when you are importing OPDS metadata without any particular Collection in mind.
-        :param identifier_mapping: Dictionary used for mapping external identifiers into a set of internal ones
-        :param content_modifier: A function that may modify-in-place representations (such as images and EPUB documents)
-            as they come in from the network.
-        :param map_from_collection: Identifier mapping
-        :param mirrors: A dictionary of different MirrorUploader objects for different purposes
         """
-        super().__init__(
-            db,
-            collection,
-            data_source_name,
-            identifier_mapping,
-            http_get,
-            content_modifier,
-            map_from_collection,
-            mirrors,
-        )
+        super().__init__(db, collection, data_source_name, http_get)
+        self._parser = parser
+        self.ignored_identifier_types = self.settings.ignored_identifier_types
 
-        if not isinstance(parser, RWPMManifestParser):
-            raise ValueError(
-                f"Argument 'parser' must be an instance of {RWPMManifestParser}"
-            )
-
-        self._parser: RWPMManifestParser = parser
-        self._logger: logging.Logger = logging.getLogger(__name__)
-
-        self._external_integration_id = collection.external_integration.id
-        self._configuration_storage: ConfigurationStorage = ConfigurationStorage(self)
-        self._configuration_factory: ConfigurationFactory = ConfigurationFactory()
+    def assert_importable_content(
+        self, feed: str, feed_url: str, max_get_attempts: int = 5
+    ) -> Literal[True]:
+        raise NotImplementedError("OPDS2Importer does not support this method")
 
     def _is_identifier_allowed(self, identifier: Identifier) -> bool:
         """Check the identifier and return a boolean value indicating whether CM can import it.
 
-        NOTE: Currently, this method hard codes allowed identifier types.
-        The next PR will add an additional configuration setting allowing to override this behaviour
-        and configure allowed identifier types in the CM Admin UI.
-
         :param identifier: Identifier object
         :return: Boolean value indicating whether CM can import the identifier
         """
-        configuration = self._get_configuration(self._db)
-        with configuration as conf:
-            ignored_identifier_types = self._get_ignored_identifier_types(conf)
-
-        return identifier.type not in ignored_identifier_types
+        return identifier.type not in self.ignored_identifier_types
 
     def _extract_subjects(self, subjects: list[core_ast.Subject]) -> list[SubjectData]:
         """Extract a list of SubjectData objects from the webpub-manifest-parser's subject.
@@ -227,12 +327,12 @@ class OPDS2Importer(
         :param subjects: Parsed subject object
         :return: List of subjects metadata
         """
-        self._logger.debug("Started extracting subjects metadata")
+        self.log.debug("Started extracting subjects metadata")
 
         subject_metadata_list = []
 
         for subject in subjects:
-            self._logger.debug(
+            self.log.debug(
                 f"Started extracting subject metadata from {encode(subject)}"
             )
 
@@ -250,13 +350,13 @@ class OPDS2Importer(
 
             subject_metadata_list.append(subject_metadata)
 
-            self._logger.debug(
+            self.log.debug(
                 "Finished extracting subject metadata from {}: {}".format(
                     encode(subject), encode(subject_metadata)
                 )
             )
 
-        self._logger.debug(
+        self.log.debug(
             "Finished extracting subjects metadata: {}".format(
                 encode(subject_metadata_list)
             )
@@ -275,12 +375,12 @@ class OPDS2Importer(
         :param default_role: Default role
         :return: List of contributors metadata
         """
-        self._logger.debug("Started extracting contributors metadata")
+        self.log.debug("Started extracting contributors metadata")
 
         contributor_metadata_list = []
 
         for contributor in contributors:
-            self._logger.debug(
+            self.log.debug(
                 "Started extracting contributor metadata from {}".format(
                     encode(contributor)
                 )
@@ -294,7 +394,7 @@ class OPDS2Importer(
                 roles=contributor.roles if contributor.roles else default_role,
             )
 
-            self._logger.debug(
+            self.log.debug(
                 "Finished extracting contributor metadata from {}: {}".format(
                     encode(contributor), encode(contributor_metadata)
                 )
@@ -302,7 +402,7 @@ class OPDS2Importer(
 
             contributor_metadata_list.append(contributor_metadata)
 
-        self._logger.debug(
+        self.log.debug(
             "Finished extracting contributors metadata: {}".format(
                 encode(contributor_metadata_list)
             )
@@ -310,22 +410,18 @@ class OPDS2Importer(
 
         return contributor_metadata_list
 
-    def _extract_link(self, link, feed_self_url, default_link_rel=None):
+    def _extract_link(
+        self, link: Link, feed_self_url: str, default_link_rel: Optional[str] = None
+    ) -> LinkData:
         """Extract a LinkData object from webpub-manifest-parser's link.
 
         :param link: webpub-manifest-parser's link
-        :type link: ast_core.Link
-
         :param feed_self_url: Feed's self URL
-        :type feed_self_url: str
-
         :param default_link_rel: Default link's relation
-        :type default_link_rel: Optional[str]
 
         :return: Link metadata
-        :rtype: LinkData
         """
-        self._logger.debug(f"Started extracting link metadata from {encode(link)}")
+        self.log.debug(f"Started extracting link metadata from {encode(link)}")
 
         # FIXME: It seems that OPDS 2.0 spec doesn't contain information about rights so we use the default one.
         rights_uri = RightsStatus.rights_uri_from_string("")
@@ -345,7 +441,7 @@ class OPDS2Importer(
             content=None,
         )
 
-        self._logger.debug(
+        self.log.debug(
             "Finished extracting link metadata from {}: {}".format(
                 encode(link), encode(link_metadata)
             )
@@ -361,7 +457,7 @@ class OPDS2Importer(
         :param publication: Publication object
         :return: LinkData object containing publication's description
         """
-        self._logger.debug(
+        self.log.debug(
             "Started extracting a description link from {}".format(
                 encode(publication.metadata.description)
             )
@@ -376,7 +472,7 @@ class OPDS2Importer(
                 content=publication.metadata.description,
             )
 
-        self._logger.debug(
+        self.log.debug(
             "Finished extracting a description link from {}: {}".format(
                 encode(publication.metadata.description), encode(description_link)
             )
@@ -393,7 +489,7 @@ class OPDS2Importer(
         :param feed_self_url: Feed's self URL
         :return: List of links metadata
         """
-        self._logger.debug(
+        self.log.debug(
             f"Started extracting image links from {encode(publication.images)}"
         )
 
@@ -436,7 +532,7 @@ class OPDS2Importer(
             )
             image_links.append(cover_link)
 
-        self._logger.debug(
+        self.log.debug(
             "Finished extracting image links from {}: {}".format(
                 encode(publication.images), encode(image_links)
             )
@@ -453,7 +549,7 @@ class OPDS2Importer(
         :param feed_self_url: Feed's self URL
         :return: List of links metadata
         """
-        self._logger.debug(f"Started extracting links from {encode(publication.links)}")
+        self.log.debug(f"Started extracting links from {encode(publication.links)}")
 
         links = []
 
@@ -469,7 +565,7 @@ class OPDS2Importer(
         if image_links:
             links.extend(image_links)
 
-        self._logger.debug(
+        self.log.debug(
             "Finished extracting links from {}: {}".format(
                 encode(publication.links), encode(links)
             )
@@ -485,7 +581,7 @@ class OPDS2Importer(
         :param link: Link object
         :return: 2-tuple containing information about the content's media type and its DRM schema
         """
-        self._logger.debug(
+        self.log.debug(
             "Started extracting media types and a DRM scheme from {}".format(
                 encode(link)
             )
@@ -499,7 +595,7 @@ class OPDS2Importer(
             and link.properties.availability.state
             != opds2_ast.OPDS2AvailabilityType.AVAILABLE.value
         ):
-            self._logger.info(f"Link unavailable. Skipping. {encode(link)}")
+            self.log.info(f"Link unavailable. Skipping. {encode(link)}")
             return []
 
         # We need to take into account indirect acquisition links
@@ -538,7 +634,7 @@ class OPDS2Importer(
             ):
                 media_types_and_drm_scheme.append((link.type, DeliveryMechanism.NO_DRM))
 
-        self._logger.debug(
+        self.log.debug(
             "Finished extracting media types and a DRM scheme from {}: {}".format(
                 encode(link), encode(media_types_and_drm_scheme)
             )
@@ -596,13 +692,13 @@ class OPDS2Importer(
         :param publication: Publication object
         :return: Identifier object
         """
-        return self._parse_identifier(publication.metadata.identifier)
+        return self.parse_identifier(publication.metadata.identifier)  # type: ignore[no-any-return]
 
     def _extract_publication_metadata(
         self,
         feed: opds2_ast.OPDS2Feed,
         publication: opds2_ast.OPDS2Publication,
-        data_source_name: str,
+        data_source_name: Optional[str],
     ) -> Metadata:
         """Extract a Metadata object from webpub-manifest-parser's publication.
 
@@ -611,7 +707,7 @@ class OPDS2Importer(
         :param data_source_name: Data source's name
         :return: Publication's metadata
         """
-        self._logger.debug(
+        self.log.debug(
             "Started extracting metadata from publication {}".format(
                 encode(publication)
             )
@@ -673,6 +769,8 @@ class OPDS2Importer(
                 publication.metadata.contributors, Contributor.CONTRIBUTOR_ROLE
             )
         )
+        # Audiobook duration
+        duration = publication.metadata.duration
 
         feed_self_url = first_or_default(
             feed.links.get_by_rel(OPDS2LinkRelationsRegistry.SELF.key)
@@ -730,10 +828,11 @@ class OPDS2Importer(
             series_position=series_position,
             links=links,
             data_source_last_updated=last_opds_update,
+            duration=duration,
             circulation=circulation_data,
         )
 
-        self._logger.debug(
+        self.log.debug(
             "Finished extracting metadata from publication {}: {}".format(
                 encode(publication), encode(metadata)
             )
@@ -779,26 +878,13 @@ class OPDS2Importer(
 
         return formats
 
-    @contextmanager
-    def _get_configuration(
-        self, db: sqlalchemy.orm.session.Session
-    ) -> Generator[OPDS2ImporterConfiguration, None, None]:
-        """Return the configuration object.
-        :param db: Database session
-        :return: Configuration object
-        """
-        with self._configuration_factory.create(
-            self._configuration_storage, db, OPDS2ImporterConfiguration
-        ) as configuration:
-            yield configuration
-
-    def external_integration(
-        self, db: sqlalchemy.orm.session.Session
-    ) -> ExternalIntegration:
+    def external_integration(self, db: Session) -> ExternalIntegration:
         """Return an external integration associated with this object.
         :param db: Database session
         :return: External integration associated with this object
         """
+        if self.collection is None:
+            raise ValueError("Collection is not set")
         return self.collection.external_integration
 
     @staticmethod
@@ -898,9 +984,9 @@ class OPDS2Importer(
         title = publication.metadata.title
 
         if original_identifier is None:
-            self._logger.warning(f"Publication '{title}' does not have an identifier.")
+            self.log.warning(f"Publication '{title}' does not have an identifier.")
         else:
-            self._logger.warning(
+            self.log.warning(
                 f"Publication # {original_identifier} ('{title}') has an unrecognizable identifier."
             )
 
@@ -919,11 +1005,11 @@ class OPDS2Importer(
         next_links = parsed_feed.links.get_by_rel(self.NEXT_LINK_RELATION)
         next_links = [next_link.href for next_link in next_links]
 
-        return next_links
+        return next_links  # type: ignore[no-any-return]
 
     def extract_last_update_dates(
         self, feed: str | opds2_ast.OPDS2Feed
-    ) -> list[tuple[str, datetime]]:
+    ) -> list[tuple[Optional[str], Optional[datetime]]]:
         """Extract last update date of the feed.
 
         :param feed: OPDS 2.0 feed
@@ -949,13 +1035,13 @@ class OPDS2Importer(
             if first_or_default(link.rels) == Hyperlink.TOKEN_AUTH:
                 # Save the collection-wide token authentication endpoint
                 auth_setting = ConfigurationSetting.for_externalintegration(
-                    ExternalIntegration.TOKEN_AUTH, self.collection.external_integration
+                    ExternalIntegration.TOKEN_AUTH, self.external_integration(self._db)
                 )
                 auth_setting.value = link.href
 
     def extract_feed_data(
         self, feed: str | opds2_ast.OPDS2Feed, feed_url: str | None = None
-    ) -> tuple[dict, dict]:
+    ) -> tuple[dict[str, Metadata], dict[str, list[CoverageFailure]]]:
         """Turn an OPDS 2.0 feed into lists of Metadata and CirculationData objects.
         :param feed: OPDS 2.0 feed
         :param feed_url: Feed URL used to resolve relative links
@@ -1004,7 +1090,7 @@ class OPDS2Importer(
                         failures, recognized_identifier, error.error_message
                     )
             else:
-                self._logger.warning(f"{error.error_message}")
+                self.log.warning(f"{error.error_message}")
 
         return publication_metadata_dictionary, failures
 
@@ -1013,7 +1099,9 @@ class OPDS2ImportMonitor(OPDSImportMonitor):
     PROTOCOL = ExternalIntegration.OPDS2_IMPORT
     MEDIA_TYPE = OPDS2MediaTypesRegistry.OPDS_FEED.key, "application/json"
 
-    def _verify_media_type(self, url, status_code, headers, feed):
+    def _verify_media_type(
+        self, url: str, status_code: int, headers: Dict[str, str], feed: bytes
+    ) -> None:
         # Make sure we got an OPDS feed, and not an error page that was
         # sent with a 200 status code.
         media_type = headers.get("content-type")
@@ -1026,7 +1114,7 @@ class OPDS2ImportMonitor(OPDSImportMonitor):
                 url, message=message, debug_message=feed, status_code=status_code
             )
 
-    def _get_accept_header(self):
+    def _get_accept_header(self) -> str:
         return "{}, {};q=0.9, */*;q=0.1".format(
             OPDS2MediaTypesRegistry.OPDS_FEED.key, "application/json"
         )

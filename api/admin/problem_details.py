@@ -138,13 +138,6 @@ INVALID_IMAGE = pd(
     detail=_("The submitted image is invalid."),
 )
 
-MISSING_LIBRARY_SHORT_NAME = pd(
-    "http://librarysimplified.org/terms/problem/missing-library-short-name",
-    status_code=400,
-    title=_("Missing library short name"),
-    detail=_("You must set a short name for the library."),
-)
-
 LIBRARY_SHORT_NAME_ALREADY_IN_USE = pd(
     "http://librarysimplified.org/terms/problem/library-short-name-already-in-use",
     status_code=400,
@@ -229,6 +222,15 @@ PROTOCOL_DOES_NOT_SUPPORT_PARENTS = pd(
     title=_("Protocol does not support parents"),
     detail=_(
         "You attempted to add a parent but the protocol does not support parents."
+    ),
+)
+
+PROTOCOL_DOES_NOT_SUPPORT_SETTINGS = pd(
+    "http://librarysimplified.org/terms/problem/protocol-does-not-support-settings",
+    status_code=400,
+    title=_("Protocol does not support settings"),
+    detail=_(
+        "You attempted to update settings for a protocol that does not support settings."
     ),
 )
 

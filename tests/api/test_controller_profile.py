@@ -11,17 +11,14 @@ from core.user_profile import ProfileController, ProfileStorage
 from core.util.problem_detail import ProblemDetail
 from tests.fixtures.api_controller import ControllerFixture
 from tests.fixtures.database import DatabaseTransactionFixture
-from tests.fixtures.vendor_id import VendorIDFixture
 
 
 class ProfileFixture(ControllerFixture):
     auth: dict[Any, Any]
     other_patron: Patron
 
-    def __init__(
-        self, db: DatabaseTransactionFixture, vendor_id_fixture: VendorIDFixture
-    ):
-        super().__init__(db, vendor_id_fixture, setup_cm=True)
+    def __init__(self, db: DatabaseTransactionFixture):
+        super().__init__(db, setup_cm=True)
         # Nothing will happen to this patron. This way we can verify
         # that a patron can only see/modify their own profile.
         self.other_patron = db.patron()
@@ -30,8 +27,8 @@ class ProfileFixture(ControllerFixture):
 
 
 @pytest.fixture(scope="function")
-def profile_fixture(db: DatabaseTransactionFixture, vendor_id_fixture: VendorIDFixture):
-    return ProfileFixture(db, vendor_id_fixture)
+def profile_fixture(db: DatabaseTransactionFixture):
+    return ProfileFixture(db)
 
 
 class TestProfileController:
@@ -47,7 +44,9 @@ class TestProfileController:
             "/", method="GET", headers=profile_fixture.auth
         ):
             assert isinstance(
-                profile_fixture.manager.profiles._controller.storage,
+                profile_fixture.manager.profiles._controller(
+                    profile_fixture.other_patron
+                ).storage,
                 CirculationPatronProfileStorage,
             )
 
@@ -62,7 +61,7 @@ class TestProfileController:
             assert "200 OK" == response.status
             data = json.loads(response.get_data(as_text=True))
             settings = data["settings"]
-            assert True == settings[ProfileStorage.SYNCHRONIZE_ANNOTATIONS]
+            assert settings[ProfileStorage.SYNCHRONIZE_ANNOTATIONS] is True
 
     def test_put(self, profile_fixture: ProfileFixture):
         """Verify that a patron can modify their own profile."""
@@ -81,7 +80,7 @@ class TestProfileController:
             request_patron = (
                 profile_fixture.controller.authenticated_patron_from_request()
             )
-            assert None == request_patron.synchronize_annotations
+            assert request_patron.synchronize_annotations is None
 
             # This means we can't create annotations for them.
             pytest.raises(
@@ -93,17 +92,17 @@ class TestProfileController:
             )
 
             # But by sending a PUT request...
-            response = profile_fixture.manager.profiles.protocol()
+            profile_fixture.manager.profiles.protocol()
 
             # ...we can change synchronize_annotations to True.
-            assert True == request_patron.synchronize_annotations
+            assert request_patron.synchronize_annotations is True
 
             # The other patron is unaffected.
-            assert False == profile_fixture.other_patron.synchronize_annotations
+            assert profile_fixture.other_patron.synchronize_annotations is False  # type: ignore[unreachable]
 
         # Now we can create an annotation for the patron who enabled
         # annotation sync.
-        annotation = Annotation.get_one_or_create(
+        Annotation.get_one_or_create(  # type: ignore[unreachable]
             profile_fixture.db.session, patron=request_patron, identifier=identifier
         )
         assert 1 == len(request_patron.annotations)
@@ -118,11 +117,12 @@ class TestProfileController:
             content_type=ProfileController.MEDIA_TYPE,
             data=json.dumps(payload),
         ):
-            response = profile_fixture.manager.profiles.protocol()
+            profile_fixture.controller.authenticated_patron_from_request()
+            profile_fixture.manager.profiles.protocol()
 
             # ...the annotation goes away.
             profile_fixture.db.session.commit()
-            assert False == request_patron.synchronize_annotations
+            assert request_patron.synchronize_annotations is False
             assert 0 == len(request_patron.annotations)
 
     def test_problemdetail_on_error(self, profile_fixture: ProfileFixture):
@@ -135,6 +135,7 @@ class TestProfileController:
             headers=profile_fixture.auth,
             content_type="text/plain",
         ):
+            profile_fixture.controller.authenticated_patron_from_request()
             response = profile_fixture.manager.profiles.protocol()
             assert isinstance(response, ProblemDetail)
             assert 415 == response.status_code

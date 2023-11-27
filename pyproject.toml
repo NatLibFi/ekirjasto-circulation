@@ -3,9 +3,11 @@ build-backend = "poetry.core.masonry.api"
 requires = ["poetry-core>=1.0.0"]
 
 [tool.coverage.report]
-exclude_lines = [
+exclude_also = [
     "if TYPE_CHECKING:",
-    "pragma: no cover",
+    '^\s*\.\.\.\s*$',
+    '^\s*pass\s*$',
+    '^\s*raise NotImplementedError\s*$',
 ]
 
 [tool.coverage.run]
@@ -32,84 +34,8 @@ exclude = [
     'core/bin/repair/startup\.py',
     'core/classifier',
     'integration_tests/',
-    # TODO: Post test-suite refactoring.
-    'tests/api/admin/controller/test_admin_search_controller\.py',
-    'tests/api/admin/controller/test_analytics_services\.py',
-    'tests/api/admin/controller/test_announcement_service\.py',
-    'tests/api/admin/controller/test_catalog_services\.py',
-    'tests/api/admin/controller/test_collection_registrations\.py',
-    'tests/api/admin/controller/test_collection_self_tests\.py',
-    'tests/api/admin/controller/test_collections\.py',
-    'tests/api/admin/controller/test_controller\.py',
-    'tests/api/admin/controller/test_discovery_services\.py',
-    'tests/api/admin/controller/test_library\.py',
-    'tests/api/admin/controller/test_work_editor\.py',
-    'tests/api/admin/test_routes\.py',
-    'tests/api/saml/metadata',
-    'tests/api/saml/test_auth\.py',
-    'tests/api/saml/test_provider\.py',
-    'tests/api/test_adobe_vendor_id\.py',
-    'tests/api/test_announcements\.py',
-    'tests/api/test_axis\.py',
-    'tests/api/test_bibliotheca\.py',
-    'tests/api/test_circulationapi\.py',
-    'tests/api/test_controller_annotation\.py',
-    'tests/api/test_controller_base\.py',
-    'tests/api/test_controller_cm\.py',
-    'tests/api/test_controller_device_manage\.py',
-    'tests/api/test_controller_index\.py',
-    'tests/api/test_controller_loan\.py',
-    'tests/api/test_controller_odl_notify\.py',
-    'tests/api/test_controller_scopedsession\.py',
-    'tests/api/test_controller_work\.py',
-    'tests/api/test_coverage\.py',
-    'tests/api/test_lanes\.py',
-    'tests/api/test_local_analytics_exporter\.py',
-    'tests/api/test_monitor\.py',
-    'tests/api/test_novelist\.py',
-    'tests/api/test_odilo\.py',
-    'tests/api/test_odl2\.py',
-    'tests/api/test_odl\.py',
-    'tests/api/test_opds2\.py',
-    'tests/api/test_opds\.py',
-    'tests/api/test_overdrive\.py',
-    'tests/api/test_patron_utility\.py',
-    'tests/api/test_registry\.py',
-    'tests/api/test_routes\.py',
-    'tests/api/test_scripts\.py',
-    'tests/core/models/test_admin\.py',
-    'tests/core/models/test_cachedfeed\.py',
-    'tests/core/models/test_collection\.py',
-    'tests/core/models/test_configuration\.py',
-    'tests/core/models/test_coverage\.py',
-    'tests/core/models/test_credential\.py',
-    'tests/core/models/test_datasource\.py',
-    'tests/core/models/test_devicetoken\.py',
-    'tests/core/models/test_hassessioncache\.py',
-    'tests/core/models/test_identifier\.py',
-    'tests/core/models/test_library\.py',
-    'tests/core/models/test_licensing\.py',
-    'tests/core/models/test_listeners\.py',
-    'tests/core/models/test_measurement\.py',
-    'tests/core/models/test_patron\.py',
-    'tests/core/models/test_work\.py',
-    'tests/core/test_analytics\.py',
-    'tests/core/test_app_server\.py',
-    'tests/core/test_circulation_data\.py',
-    'tests/core/test_coverage\.py',
-    'tests/core/test_equivalent_coverage\.py',
-    'tests/core/test_external_list\.py',
+    # TODO: Post test-suite refactoring.,
     'tests/core/test_external_search\.py',
-    'tests/core/test_lane\.py',
-    'tests/core/test_local_analytics_provider\.py',
-    'tests/core/test_marc\.py',
-    'tests/core/test_metadata\.py',
-    'tests/core/test_monitor\.py',
-    'tests/core/test_opds2\.py',
-    'tests/core/test_opds\.py',
-    'tests/core/test_opds_import\.py',
-    'tests/core/test_overdrive\.py',
-    'tests/core/test_s3\.py',
     'tests/core/test_scripts\.py',
 ]
 files = ["."]
@@ -118,6 +44,15 @@ warn_redundant_casts = true
 warn_unreachable = true
 warn_unused_configs = true
 warn_unused_ignores = true
+
+[[tool.mypy.overrides]]
+# In our tests, we often overwrite methods on classes to mock out behavior.
+# This is a common pattern in Python, but mypy doesn't like it. This override
+# silences those errors, but only for the tests module.
+# See discussion here:
+# https://github.com/python/mypy/issues/2427
+disable_error_code = "method-assign"
+module = "tests.*"
 
 [[tool.mypy.overrides]]
 # This override is the equivalent of running mypy with the --strict flag.
@@ -130,16 +65,46 @@ disallow_subclassing_any = true
 disallow_untyped_decorators = true
 disallow_untyped_defs = true
 module = [
+    "api.admin.announcement_list_validator",
+    "api.admin.config",
+    "api.admin.controller.discovery_service_library_registrations",
+    "api.admin.controller.discovery_services",
+    "api.admin.controller.integration_settings",
+    "api.admin.controller.library_settings",
     "api.admin.controller.patron_auth_services",
     "api.admin.form_data",
     "api.admin.model.dashboard_statistics",
+    "api.adobe_vendor_id",
+    "api.axis",
+    "api.circulation",
+    "api.discovery.*",
+    "api.enki",
     "api.integration.*",
+    "api.lcp.hash",
+    "api.odl",
+    "api.odl2",
+    "api.opds_for_distributors",
+    "core.feed.*",
     "core.integration.*",
+    "core.model.announcements",
+    "core.model.collection",
     "core.model.hassessioncache",
     "core.model.integration",
+    "core.model.library",
+    "core.opds2_import",
+    "core.opds_import",
     "core.selftest",
+    "core.service.*",
+    "core.settings.*",
     "core.util.authentication_for_opds",
+    "core.util.base64",
     "core.util.cache",
+    "core.util.notifications",
+    "core.util.problem_detail",
+    "core.util.string_helpers",
+    "core.util.worker_pools",
+    "core.util.xmlparser",
+    "tests.fixtures.authenticator",
     "tests.migration.*",
 ]
 no_implicit_reexport = true
@@ -164,19 +129,21 @@ module = [
 ignore_missing_imports = true
 module = [
     "aws_xray_sdk.ext.*",
-    "bcrypt",
     # This is ignored because the file is created when building a container
     # so it typically doesn't exist when running mypy, but since it only
     # contains a couple version strings it can be safely ignored
     "core._version",
     "expiringdict",
     "feedparser",
+    "firebase_admin.*",
     "flask_babel",
     "flask_pydantic_spec.*",
     "fuzzywuzzy",
+    "google.auth",
     "greenlet",
     "html_sanitizer",
     "isbnlib",
+    "jwcrypto",
     "lxml.*",
     "money",
     "multipledispatch",
@@ -185,14 +152,12 @@ module = [
     "opensearch_dsl.*",
     "pyfakefs.*",
     "pyld",
-    "pymarc",
+    "pymarc.*",
     "pyparsing",
-    "pypostalcode",
     "spellchecker",
     "textblob.*",
     "unicodecsv",
     "uritemplate",
-    "uszipcode",
     "watchtower",
     "wcag_contrast_ratio",
     "webpub_manifest_parser.*",
@@ -211,46 +176,48 @@ version = "0"  # Version number is managed with tags in git
 [tool.poetry.dependencies]
 alembic = {extras = ["tz"], version = "^1.8.1"}
 aws-xray-sdk = "~2.12"
-boto3 = "~1.18"
-botocore = "~1.21"
+bcrypt = "^4.0.1"
+boto3 = "^1.28"
 certifi = "*"
 click = "^8.1.3"
 contextlib2 = "21.6.0"
+dependency-injector = "^4.41"
 expiringdict = "1.2.2"
 feedparser = "6.0.10"
-Flask = "^2.2.3"
-Flask-Babel = "2.0.0"
-Flask-Cors = "3.0.10"
-flask-pydantic-spec = "^0.4.2"
+firebase-admin = "^6.0.1"
+Flask = "^3.0"
+Flask-Babel = "^4.0"
+Flask-Cors = "4.0.0"
+flask-pydantic-spec = "^0.5.0"
 fuzzywuzzy = "0.18.0"  # fuzzywuzzy is for author name manipulations
-html-sanitizer = "~1.9.3"
+html-sanitizer = "^2.1.0"
 isbnlib = "^3.10.14"
 itsdangerous = "^2.1.2"
-levenshtein = "~0.21"
-lxml = "4.9.2"
+jwcrypto = "^1.4.2"
+levenshtein = "^0.23"
+lxml = "^4.9.3"
 money = "1.3.0"
-multipledispatch = "0.6.0"
-nameparser = "1.1.2"  # nameparser is for author name manipulations
+multipledispatch = "^1.0"
+nameparser = "^1.1"  # nameparser is for author name manipulations
 nltk = "3.8.1"  # nltk is a textblob dependency.
 openpyxl = "3.1.2" # Finland
 opensearch-dsl = "~1.0"
 opensearch-py = "~1.1"
-palace-webpub-manifest-parser = "~3.0.1"
-Pillow = "9.5.0"
-py-bcrypt = "0.4"
+palace-webpub-manifest-parser = "^3.1"
+pillow = "^10.0"
 pycryptodome = "^3.18"
-pyinstrument = "<4.5"
-PyJWT = "2.4.0"
+pydantic = {version = "^1.10.9", extras = ["dotenv", "email"]}
+pyinstrument = "^4.6"
+PyJWT = "^2.8"
 PyLD = "2.0.3"
 pymarc = "5.1.0"
 pyOpenSSL = "^23.1.0"
-pyparsing = "3.0.9"
-pypostalcode = "0.4.1"
+pyparsing = "3.1.1"
 pyspellchecker = "0.7.2"
 python = ">=3.8,<4"
 python-dateutil = "2.8.2"
-python3-saml = "~1.15.0"  # python-saml is required for SAML authentication
-pytz = "2021.3"
+python3-saml = "^1.16"  # python-saml is required for SAML authentication
+pytz = "^2023.3"
 pyyaml = "^6.0"
 redmail = "^0.6.0"
 requests = "^2.29"
@@ -264,12 +231,11 @@ types-pyyaml = "^6.0.12.9"
 typing_extensions = {version = "^4.5.0", python = "<3.11"}
 unicodecsv = "0.14.1"  # this is used, but can probably be removed on py3
 uritemplate = "4.1.1"
-urllib3 = "~1.26.14"
-uszipcode = "0.2.6"
+urllib3 = "^1.26.17"
 uWSGI = "~2.0.21"
 watchtower = "3.0.1"  # watchtower is for Cloudwatch logging integration
 wcag-contrast-ratio = "0.9"
-Werkzeug = "^2.2.3"
+Werkzeug = "^3.0.0"
 
 [tool.poetry.group.ci.dependencies]
 dunamai = "^1.16"
@@ -279,22 +245,21 @@ tox-docker = "^4.1"
 tox-gh-actions = "^3.0"
 
 [tool.poetry.group.dev.dependencies]
-boto3-stubs = "^1.26.81"
-botocore-stubs = "^1.29.81"
+boto3-stubs = {version = "^1.28", extras = ["boto3", "essential", "logs", "s3"]}
 freezegun = "~1.2.2"
 Jinja2 = "^3.1.2"
-mypy = "^1.0.1"
+mypy = "^1.4.1"
 psycopg2-binary = "~2.9.5"
-pyfakefs = "~5.2.0"
+pyfakefs = "^5.3"
 pytest = ">=7.2.0"
 pytest-alembic = "^0.10.4"
 pytest-cov = "^4.0.0"
 pytest-timeout = "*"
-requests-mock = "1.10.0"
+requests-mock = "1.11.0"
 types-aws-xray-sdk = "^2.11.0.13"
-types-Flask-Cors = "^3.0.10"
+types-Flask-Cors = "^4.0.0"
 types-jsonschema = "^4.17.0.5"
-types-Pillow = "^9.4.0"
+types-Pillow = "^10.0.0"
 types-psycopg2 = "^2.9.21"
 types-python-dateutil = "^2.8.19"
 types-pytz = "^2023.2"

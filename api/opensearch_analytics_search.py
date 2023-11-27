@@ -1,13 +1,10 @@
-import datetime
+import os
 import logging
 import flask
-
 from opensearchpy import OpenSearch
-from api.opensearch_analytics_provider import OpenSearchAnalyticsProvider
 from opensearch_dsl import Search
-from core.config import CannotLoadConfiguration
 
-from core.model.configuration import ExternalIntegration
+from api.opensearch_analytics_provider import OpenSearchAnalyticsProvider
 
 
 class OpenSearchAnalyticsSearch:
@@ -28,18 +25,10 @@ class OpenSearchAnalyticsSearch:
         "language",
     )
 
-    def __init__(self, _db):
+    def __init__(self):
         self.log = logging.getLogger("OpenSearch analytics")
-        library = getattr(flask.request, "library", None)
-        integration = OpenSearchAnalyticsSearch.opensearch_integration(_db, library)
-        if not integration:
-            raise CannotLoadConfiguration(
-                "No OpenSearch analytics integration configured."
-            )
-        self.url = integration.setting(ExternalIntegration.URL).value
-        index_prefix = integration.setting(
-            OpenSearchAnalyticsProvider.EVENTS_INDEX_PREFIX_KEY
-        ).value
+        self.url = os.environ.get("PALACE_OPENSEARCH_ANALYTICS_URL", "")
+        index_prefix = os.environ.get("PALACE_OPENSEARCH_ANALYTICS_INDEX_PREFIX", "")
         # Version v1 is hardcoded here. Implement external_search-type
         # version system if needed in the future.
         self.index_name = index_prefix + "-" + "v1"
@@ -47,17 +36,6 @@ class OpenSearchAnalyticsSearch:
         use_ssl = self.url.startswith("https://")
         self.__client = OpenSearch(self.url, use_ssl=use_ssl, timeout=20, maxsize=25)
         self.search = Search(using=self.__client, index=self.index_name)
-
-    @classmethod
-    def opensearch_integration(cls, _db, library) -> ExternalIntegration:
-        """Look up the ExternalIntegration for Opensearch analytics."""
-        integration = ExternalIntegration.lookup(
-            _db,
-            protocol=OpenSearchAnalyticsProvider.__module__,
-            goal=ExternalIntegration.ANALYTICS_GOAL,
-            library=library,
-        )
-        return integration
 
     def events(self, params=None, pdebug=False):
         """Run a search query on events.

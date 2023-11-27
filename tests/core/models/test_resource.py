@@ -54,62 +54,9 @@ class TestHyperlink:
         assert "cover" == m(Hyperlink.IMAGE)
         assert "cover-thumbnail" == m(Hyperlink.THUMBNAIL_IMAGE)
 
-    def test_unmirrored(self, db: DatabaseTransactionFixture):
-        ds = DataSource.lookup(db.session, DataSource.GUTENBERG)
-        overdrive = DataSource.lookup(db.session, DataSource.OVERDRIVE)
-
-        c1 = db.default_collection()
-        c1.data_source = ds
-
-        # Here's an Identifier associated with a collection.
-        work = db.work(with_license_pool=True, collection=c1)
-        [pool] = work.license_pools
-        i1 = pool.identifier
-
-        # This is a random identifier not associated with the collection.
-        i2 = db.identifier()
-
-        def m():
-            return Hyperlink.unmirrored(c1).all()
-
-        # Identifier is not in the collection.
-        not_in_collection, ignore = i2.add_link(Hyperlink.IMAGE, db.fresh_url(), ds)
-        assert [] == m()
-
-        # Hyperlink rel is not mirrorable.
-        wrong_type, ignore = i1.add_link(
-            "not mirrorable", db.fresh_url(), ds, "text/plain"
-        )
-        assert [] == m()
-
-        # Hyperlink has no associated representation -- it needs to be
-        # mirrored, which will create one!
-        hyperlink, ignore = i1.add_link(
-            Hyperlink.IMAGE, db.fresh_url(), ds, "image/png"
-        )
-        assert [hyperlink] == m()
-
-        # Representation is already mirrored, so does not show up
-        # in the unmirrored list.
-        representation = hyperlink.resource.representation
-        representation.set_as_mirrored(db.fresh_url())
-        assert [] == m()
-
-        # Representation exists in database but is not mirrored -- it needs
-        # to be mirrored!
-        representation.mirror_url = None
-        assert [hyperlink] == m()
-
-        # Hyperlink is associated with a data source other than the
-        # data source of the collection. It ought to be mirrored, but
-        # this collection isn't responsible for mirroring it.
-        hyperlink.data_source = overdrive
-        assert [] == m()
-
 
 class TestResource:
     def test_as_delivery_mechanism_for(self, db: DatabaseTransactionFixture):
-
         # Calling as_delivery_mechanism_for on a Resource that is used
         # to deliver a specific LicensePool returns the appropriate
         # LicensePoolDeliveryMechanism.
@@ -499,7 +446,6 @@ class TestRepresentation:
         assert "" == m("no/such-media-type")
 
     def test_default_filename(self, db: DatabaseTransactionFixture):
-
         # Here's a common sort of URL.
         url = "http://example.com/foo/bar/baz.txt"
         representation, ignore = db.representation(url)
@@ -550,7 +496,6 @@ class TestRepresentation:
         assert "cover.png" == filename
 
     def test_cautious_http_get(self):
-
         h = DummyHTTPClient()
         h.queue_response(200, content="yay")
 

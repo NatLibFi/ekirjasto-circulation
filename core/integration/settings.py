@@ -1,9 +1,18 @@
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    List,
+    Mapping,
+    Optional,
+    Tuple,
+    Union,
+)
 
 from pydantic import (
     BaseModel,
@@ -12,13 +21,14 @@ from pydantic import (
     ValidationError,
     root_validator,
 )
-from pydantic.fields import FieldInfo, ModelField, NoArgAnyCallable, Undefined
+from pydantic.fields import FieldInfo, NoArgAnyCallable, Undefined
 from sqlalchemy.orm import Session
 
 from api.admin.problem_details import (
     INCOMPLETE_CONFIGURATION,
     INVALID_CONFIGURATION_OPTION,
 )
+from core.util.log import LoggerMixin
 from core.util.problem_detail import ProblemDetail, ProblemError
 
 if TYPE_CHECKING:
@@ -139,6 +149,10 @@ class ConfigurationFormItemType(Enum):
     SELECT = "select"
     LIST = "list"
     MENU = "menu"
+    NUMBER = "number"
+    ANNOUNCEMENTS = "announcements"
+    COLOR = "color-picker"
+    IMAGE = "image"
 
 
 @dataclass(frozen=True)
@@ -168,7 +182,7 @@ class ConfigurationFormItem:
     # When the type is SELECT, LIST, or MENU, the options are used to populate the
     # field in the admin interface. This can either be a callable that returns a
     # dictionary of options or a dictionary of options.
-    options: Callable[[Session], Dict[Enum | str, str]] | Dict[
+    options: Callable[[Session], Dict[Enum | str, str]] | Mapping[
         Enum | str, str
     ] | None = None
 
@@ -192,7 +206,9 @@ class ConfigurationFormItem:
             return str(value)
         return value
 
-    def to_dict(self, db: Session, field: ModelField) -> Tuple[int, Dict[str, Any]]:
+    def to_dict(
+        self, db: Session, key: str, required: bool = False, default: Any = None
+    ) -> Tuple[int, Dict[str, Any]]:
         """
         Convert the ConfigurationFormItem to a dictionary
 
@@ -200,11 +216,11 @@ class ConfigurationFormItem:
         """
         form_entry: Dict[str, Any] = {
             "label": self.label,
-            "key": field.name,
-            "required": field.required or self.required,
+            "key": key,
+            "required": required or self.required,
         }
-        if field.default is not None:
-            form_entry["default"] = self.get_form_value(field.default)
+        if default is not None:
+            form_entry["default"] = self.get_form_value(default)
         if self.type.value is not None:
             form_entry["type"] = self.type.value
         if self.description is not None:
@@ -220,10 +236,11 @@ class ConfigurationFormItem:
             ]
         if self.format is not None:
             form_entry["format"] = self.format
+
         return self.weight, form_entry
 
 
-class BaseSettings(BaseModel):
+class BaseSettings(BaseModel, LoggerMixin):
     """
     Base class for all our database backed pydantic settings classes
 
@@ -289,11 +306,6 @@ class BaseSettings(BaseModel):
         allow_population_by_field_name = True
 
     @classmethod
-    def logger(cls) -> logging.Logger:
-        """Get the logger for this class"""
-        return logging.getLogger(f"{cls.__module__}.{cls.__name__}")
-
-    @classmethod
     def configuration_form(cls, db: Session) -> List[Dict[str, Any]]:
         """Get the configuration dictionary for this class"""
         config = []
@@ -303,7 +315,13 @@ class BaseSettings(BaseModel):
                     f"{field.name} was not initialized with FormField, skipping."
                 )
                 continue
-            config.append(field.field_info.form.to_dict(db, field))
+            required = field.required if isinstance(field.required, bool) else False
+            config.append(
+                field.field_info.form.to_dict(db, field.name, required, field.default)
+            )
+
+        for key, additional_field in cls._additional_form_fields.items():
+            config.append(additional_field.to_dict(db, key))
 
         # Sort by weight then return only the settings
         config.sort(key=lambda x: x[0])
@@ -311,7 +329,34 @@ class BaseSettings(BaseModel):
 
     def dict(self, *args: Any, **kwargs: Any) -> Dict[str, Any]:
         """Override the dict method to remove the default values"""
-        return super().dict(exclude_defaults=True, *args, **kwargs)
+        if "exclude_defaults" not in kwargs:
+            kwargs["exclude_defaults"] = True
+        return super().dict(*args, **kwargs)
+
+    @classmethod
+    def get_form_field_label(cls, field_name: str) -> str:
+        item = cls.__fields__.get(field_name)
+        if item is None:
+            # Try to lookup field_name by alias instead
+            for field in cls.__fields__.values():
+                if field.alias == field_name:
+                    item = field
+                    break
+        if item is not None and isinstance(item.field_info, FormFieldInfo):
+            return item.field_info.form.label
+        else:
+            return field_name
+
+    # If your settings class needs additional form fields that are not
+    # defined on the model, you can add them here. This is useful if you
+    # need to add a custom form field, but don't want the data in the field
+    # to be stored on the model in the database. For example, if you want
+    # to add a custom form field that allows the user to upload an image, but
+    # want to store that image data outside the settings model.
+    #
+    # The key for the dictionary should be the field name, and the value
+    # should be a ConfigurationFormItem object that defines the form field.
+    _additional_form_fields: Dict[str, ConfigurationFormItem] = {}
 
     def __init__(self, **data: Any):
         """
@@ -326,11 +371,7 @@ class BaseSettings(BaseModel):
         except ValidationError as e:
             error = e.errors()[0]
             error_location = str(error["loc"][0])
-            item = self.__fields__.get(error_location)
-            if item is not None and isinstance(item.field_info, FormFieldInfo):
-                item_label = item.field_info.form.label
-            else:
-                item_label = error_location
+            item_label = self.get_form_field_label(error_location)
 
             if (
                 error["type"] == "value_error.problem_detail"

@@ -1,5 +1,4 @@
 import argparse
-import csv
 import datetime
 import json
 import logging
@@ -10,33 +9,24 @@ import traceback
 import unicodedata
 import uuid
 from enum import Enum
-from pathlib import Path
-from typing import Generator, List, Optional, Type
+from typing import Generator, Optional, Type
 
-from sqlalchemy import and_, exists, tuple_
+from sqlalchemy import and_, exists, or_, tuple_
 from sqlalchemy.orm import Query, Session, defer
+from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
 
-from alembic.command import downgrade, upgrade
-from alembic.config import Config as AlembicConfig
-from alembic.util import CommandError
-from core.model.classification import Classification
-from core.query.customlist import CustomListQueries
-
-from .config import CannotLoadConfiguration, Configuration
-from .coverage import CollectionCoverageProviderJob, CoverageProviderProgress
-from .external_search import ExternalSearchIndex, Filter, SearchIndexCoverageProvider
-from .lane import Lane
-from .metadata_layer import (
-    LinkData,
-    MetaToModelUtility,
-    ReplacementPolicy,
-    TimestampData,
+from core.config import CannotLoadConfiguration, Configuration, ConfigurationConstants
+from core.coverage import CollectionCoverageProviderJob, CoverageProviderProgress
+from core.external_search import (
+    ExternalSearchIndex,
+    Filter,
+    SearchIndexCoverageProvider,
 )
-from .mirror import MirrorUploader
-from .model import (
+from core.lane import Lane
+from core.metadata_layer import TimestampData
+from core.model import (
     BaseCoverageRecord,
-    CachedFeed,
     Collection,
     ConfigurationSetting,
     Contributor,
@@ -44,33 +34,38 @@ from .model import (
     DataSource,
     Edition,
     ExternalIntegration,
-    Hyperlink,
     Identifier,
     Library,
     LicensePool,
     LicensePoolDeliveryMechanism,
     Patron,
     PresentationCalculationPolicy,
-    Representation,
     SessionManager,
     Subject,
     Timestamp,
     Work,
-    WorkCoverageRecord,
     create,
     get_one,
     get_one_or_create,
     production_session,
 )
-from .model.configuration import ExternalIntegrationLink
-from .model.listeners import site_configuration_has_changed
-from .monitor import CollectionMonitor, ReaperMonitor
-from .opds_import import OPDSImporter, OPDSImportMonitor
-from .overdrive import OverdriveCoreAPI
-from .util import fast_query_count
-from .util.datetime_helpers import strptime_utc, utc_now
-from .util.personal_names import contributor_name_match_ratio, display_name_to_sort_name
-from .util.worker_pools import DatabasePool
+from core.model.classification import Classification
+from core.model.devicetokens import DeviceToken, DeviceTokenTypes
+from core.model.listeners import site_configuration_has_changed
+from core.model.patron import Loan
+from core.monitor import CollectionMonitor, ReaperMonitor
+from core.opds_import import OPDSImporter, OPDSImportMonitor
+from core.query.customlist import CustomListQueries
+from core.search.coverage_remover import RemovesSearchCoverage
+from core.service.container import Services, container_instance
+from core.util import fast_query_count
+from core.util.datetime_helpers import strptime_utc, utc_now
+from core.util.notifications import PushNotifications
+from core.util.personal_names import (
+    contributor_name_match_ratio,
+    display_name_to_sort_name,
+)
+from core.util.worker_pools import DatabasePool
 
 
 class Script:
@@ -79,6 +74,10 @@ class Script:
         if not hasattr(self, "_session"):
             self._session = production_session()
         return self._session
+
+    @property
+    def services(self) -> Services:
+        return self._services
 
     @property
     def script_name(self):
@@ -119,7 +118,7 @@ class Script:
                     continue
         raise ValueError("Could not parse time: %s" % time_string)
 
-    def __init__(self, _db=None, *args, **kwargs):
+    def __init__(self, _db=None, services: Optional[Services] = None, *args, **kwargs):
         """Basic constructor.
 
         :_db: A database session to be used instead of
@@ -127,6 +126,11 @@ class Script:
         """
         if _db:
             self._session = _db
+
+        self._services = container_instance() if services is None else services
+
+        # Call init_resources() to initialize the logging configuration.
+        self._services.init_resources()
 
     def run(self):
         DataSource.well_known_sources(self._db)
@@ -361,8 +365,8 @@ class RunThreadedCollectionCoverageProviderScript(Script):
 
         for collection in collections:
             provider = self.provider_class(collection, **self.provider_kwargs)
-            with (
-                pool or DatabasePool(self.worker_size, self.session_factory)
+            with pool or DatabasePool(
+                self.worker_size, self.session_factory
             ) as job_queue:
                 query_size, batch_size = self.get_query_and_batch_sizes(provider)
                 # Without a commit, the query to count which items need
@@ -717,7 +721,7 @@ class LaneSweeperScript(LibraryInputScript):
     """Do something to each lane in a library."""
 
     def process_library(self, library):
-        from .lane import WorkList
+        from core.lane import WorkList
 
         top_level = WorkList.top_level_for_library(self._db, library)
         queue = [top_level]
@@ -797,7 +801,6 @@ class RunCoverageProviderScript(IdentifierInputScript):
     def __init__(
         self, provider, _db=None, cmd_args=None, *provider_args, **provider_kwargs
     ):
-
         super().__init__(_db)
         parsed_args = self.parse_command_line(self._db, cmd_args)
         if parsed_args.identifier_type:
@@ -904,6 +907,59 @@ class ConfigurationSettingScript(Script):
             obj.setting(key).value = value
 
 
+class RunSelfTestsScript(LibraryInputScript):
+    """Run the self-tests for every collection in the given library
+    where that's possible.
+    """
+
+    def __init__(self, _db=None, output=sys.stdout):
+        super().__init__(_db)
+        self.out = output
+
+    def do_run(self, *args, **kwargs):
+        from api.circulation import CirculationAPI
+
+        parsed = self.parse_command_line(self._db, *args, **kwargs)
+        for library in parsed.libraries:
+            api_map = dict(CirculationAPI(self._db, library).registry)
+            self.out.write("Testing %s\n" % library.name)
+            for collection in library.collections:
+                try:
+                    self.test_collection(collection, api_map)
+                except Exception as e:
+                    self.out.write("  Exception while running self-test: '%s'\n" % e)
+
+    def test_collection(self, collection, api_map, extra_args=None):
+        tester = api_map.get(collection.protocol)
+        if not tester:
+            self.out.write(
+                " Cannot find a self-test for %s, ignoring.\n" % collection.name
+            )
+            return
+
+        self.out.write(" Running self-test for %s.\n" % collection.name)
+        extra_args = extra_args or {}
+        extra = extra_args.get(tester, [])
+        constructor_args = [self._db, collection] + list(extra)
+        results_dict, results_list = tester.run_self_tests(
+            self._db, None, *constructor_args
+        )
+        for result in results_list:
+            self.process_result(result)
+
+    def process_result(self, result):
+        """Process a single TestResult object."""
+        if result.success:
+            success = "SUCCESS"
+        else:
+            success = "FAILURE"
+        self.out.write(f"  {success} {result.name} ({result.duration:.1f}sec)\n")
+        if isinstance(result.result, (bytes, str)):
+            self.out.write("   Result: %s\n" % result.result)
+        if result.exception:
+            self.out.write("   Exception: '%s'\n" % result.exception)
+
+
 class ConfigureSiteScript(ConfigurationSettingScript):
     """View or update site-wide configuration."""
 
@@ -982,6 +1038,17 @@ class ConfigureLibraryScript(ConfigurationSettingScript):
         )
         return parser
 
+    def apply_settings(self, settings, library):
+        """Treat `settings` as a list of command-line argument settings,
+        and apply each one to `obj`.
+        """
+        if not settings:
+            return None
+        for setting in settings:
+            key, value = self._parse_setting(setting)
+            library.settings_dict[key] = value
+        flag_modified(library, "settings_dict")
+
     def do_run(self, _db=None, cmd_args=None, output=sys.stdout):
         _db = _db or self._db
         args = self.parse_command_line(_db, cmd_args=cmd_args)
@@ -998,13 +1065,14 @@ class ConfigureLibraryScript(ConfigurationSettingScript):
                 raise ValueError("Could not locate library '%s'" % args.short_name)
         else:
             # No existing library. Make one.
-            library, ignore = get_one_or_create(
+            public_key, private_key = Library.generate_keypair()
+            library, ignore = create(
                 _db,
                 Library,
-                create_method_kwargs=dict(
-                    uuid=str(uuid.uuid4()),
-                    short_name=args.short_name,
-                ),
+                uuid=str(uuid.uuid4()),
+                short_name=args.short_name,
+                public_key=public_key,
+                private_key=private_key,
             )
 
         if args.name:
@@ -1188,19 +1256,27 @@ class ConfigureCollectionScript(ConfigurationSettingScript):
                     'No collection called "%s". You can create it, but you must specify a protocol.'
                     % name
                 )
+        config = collection.integration_configuration
+        settings = config.settings_dict.copy()
         integration = collection.external_integration
         if protocol:
+            config.protocol = protocol
             integration.protocol = protocol
         if args.external_account_id:
             collection.external_account_id = args.external_account_id
 
         if args.url:
-            integration.url = args.url
+            settings["url"] = args.url
         if args.username:
-            integration.username = args.username
+            settings["username"] = args.username
         if args.password:
-            integration.password = args.password
+            settings["password"] = args.password
         self.apply_settings(args.setting, integration)
+        if args.setting:
+            for setting in args.setting:
+                key, value = ConfigurationSettingScript._parse_setting(setting)
+                settings[key] = value
+        config.settings_dict = settings
 
         if hasattr(args, "library"):
             for name in args.library:
@@ -1213,6 +1289,7 @@ class ConfigureCollectionScript(ConfigurationSettingScript):
                     raise ValueError(message)
                 if collection not in library.collections:
                     library.collections.append(collection)
+                    config.for_library(library.id, create=True)
         site_configuration_has_changed(_db)
         _db.commit()
         output.write("Configuration settings stored.\n")
@@ -1479,7 +1556,6 @@ class AddClassificationScript(IdentifierInputScript):
             choose_summary=False,
             calculate_quality=False,
             choose_cover=False,
-            regenerate_opds_entries=True,
             regenerate_marc_record=True,
             update_search_index=True,
             verbose=True,
@@ -1501,7 +1577,6 @@ class AddClassificationScript(IdentifierInputScript):
 
 
 class WorkProcessingScript(IdentifierInputScript):
-
     name = "Work processing script"
 
     def __init__(
@@ -1650,7 +1725,6 @@ class WorkClassificationScript(WorkPresentationScript):
         choose_summary=False,
         calculate_quality=False,
         choose_cover=False,
-        regenerate_opds_entries=False,
         regenerate_marc_record=False,
         update_search_index=False,
     )
@@ -1699,8 +1773,6 @@ class ReclassifyWorksForUncheckedSubjectsScript(WorkClassificationScript):
             )
             .options(
                 defer(Work.summary_text),
-                defer(Work.simple_opds_entry),
-                defer(Work.verbose_opds_entry),
             )
         )
 
@@ -1732,7 +1804,6 @@ class ReclassifyWorksForUncheckedSubjectsScript(WorkClassificationScript):
         the ordering of the rows follows all the joined tables"""
 
         for subject in self._unchecked_subjects():
-
             last_work: Optional[Work] = None  # Last work object of the previous page
             # IDs of the last work, for paging
             work_id, license_id, iden_id, classn_id = (
@@ -1802,7 +1873,6 @@ class WorkOPDSScript(WorkPresentationScript):
         choose_summary=False,
         calculate_quality=False,
         choose_cover=False,
-        regenerate_opds_entries=True,
         regenerate_marc_record=True,
         update_search_index=True,
     )
@@ -1983,174 +2053,6 @@ class OPDSImportScript(CollectionInputScript):
         monitor.run()
 
 
-class MirrorResourcesScript(CollectionInputScript):
-    """Make sure that all mirrorable resources in a collection have
-    in fact been mirrored.
-    """
-
-    # This object contains the actual logic of mirroring.
-    MIRROR_UTILITY = MetaToModelUtility()
-
-    @classmethod
-    def arg_parser(cls):
-        parser = super().arg_parser()
-        parser.add_argument(
-            "--collection-type",
-            help="Collection type. Valid values are: OPEN_ACCESS (default), PROTECTED_ACCESS.",
-            type=CollectionType,
-            choices=list(CollectionType),
-            default=CollectionType.OPEN_ACCESS,
-        )
-        return parser
-
-    def do_run(self, cmd_args=None):
-        parsed = self.parse_command_line(self._db, cmd_args=cmd_args)
-        collections = parsed.collections
-        collection_type = parsed.collection_type
-        if not collections:
-            # Assume they mean all collections.
-            collections = self._db.query(Collection).all()
-
-        # But only process collections that have an associated MirrorUploader.
-        for collection, policy in self.collections_with_uploader(
-            collections, collection_type
-        ):
-            self.process_collection(collection, policy)
-
-    def collections_with_uploader(
-        self, collections, collection_type=CollectionType.OPEN_ACCESS
-    ):
-        """Filter out collections that have no MirrorUploader.
-
-        :yield: 2-tuples (Collection, ReplacementPolicy). The
-            ReplacementPolicy is the appropriate one for this script
-            to use for that Collection.
-        """
-        for collection in collections:
-            covers = MirrorUploader.for_collection(
-                collection, ExternalIntegrationLink.COVERS
-            )
-            books_mirror_type = (
-                ExternalIntegrationLink.OPEN_ACCESS_BOOKS
-                if collection_type == CollectionType.OPEN_ACCESS
-                else ExternalIntegrationLink.PROTECTED_ACCESS_BOOKS
-            )
-            books = MirrorUploader.for_collection(collection, books_mirror_type)
-            if covers or books:
-                mirrors = {
-                    ExternalIntegrationLink.COVERS: covers,
-                    books_mirror_type: books,
-                }
-                policy = self.replacement_policy(mirrors)
-                yield collection, policy
-            else:
-                self.log.info("Skipping %r as it has no MirrorUploader.", collection)
-
-    @classmethod
-    def replacement_policy(cls, mirrors):
-        """Create a ReplacementPolicy for this script that uses the
-        given mirrors.
-        """
-        return ReplacementPolicy(
-            mirrors=mirrors,
-            link_content=True,
-            even_if_not_apparently_updated=True,
-            http_get=Representation.cautious_http_get,
-        )
-
-    def process_collection(self, collection, policy, unmirrored=None):
-        """Make sure every mirrorable resource in this collection has
-        been mirrored.
-
-        :param unmirrored: A replacement for Hyperlink.unmirrored,
-            for use in tests.
-
-        """
-        unmirrored = unmirrored or Hyperlink.unmirrored
-        for link in unmirrored(collection):
-            self.process_item(collection, link, policy)
-            self._db.commit()
-
-    @classmethod
-    def derive_rights_status(cls, license_pool, resource):
-        """Make a best guess about the rights status for the given
-        resource.
-
-        This relies on the information having been available at one point,
-        but having been stored in the database at a slight remove.
-        """
-        rights_status = None
-        if not license_pool:
-            return None
-        if resource:
-            lpdm = resource.as_delivery_mechanism_for(license_pool)
-            # When this Resource was associated with this LicensePool,
-            # the rights information was recorded in its
-            # LicensePoolDeliveryMechanism.
-            if lpdm:
-                rights_status = lpdm.rights_status
-        if not rights_status:
-            # We could not find a LicensePoolDeliveryMechanism for
-            # this particular resource, but if every
-            # LicensePoolDeliveryMechanism has the same rights
-            # status, we can assume it's that one.
-            statuses = list({x.rights_status for x in license_pool.delivery_mechanisms})
-            if len(statuses) == 1:
-                [rights_status] = statuses
-        if rights_status:
-            rights_status = rights_status.uri
-        return rights_status
-
-    def process_item(self, collection, link_obj, policy):
-        """Determine the URL that needs to be mirrored and (for books)
-        the rationale that lets us mirror that URL. Then mirror it.
-        """
-        identifier = link_obj.identifier
-        license_pool, ignore = LicensePool.for_foreign_id(
-            self._db,
-            collection.data_source,
-            identifier.type,
-            identifier.identifier,
-            collection=collection,
-            autocreate=False,
-        )
-        if not license_pool:
-            # This shouldn't happen.
-            self.log.warning(
-                "Could not find LicensePool for %r, skipping it rather than mirroring something we shouldn't."
-            )
-            return
-        resource = link_obj.resource
-
-        if link_obj.rel == Hyperlink.OPEN_ACCESS_DOWNLOAD:
-            rights_status = self.derive_rights_status(license_pool, resource)
-            if not rights_status:
-                self.log.warning(
-                    "Could not unambiguously determine rights status for %r, skipping.",
-                    link_obj,
-                )
-                return
-        else:
-            # For resources like book covers, the rights status is
-            # irrelevant -- we rely on fair use.
-            rights_status = None
-
-        # Mock up a LinkData that MetaToModelUtility can use to
-        # mirror this link (or decide not to mirror it).
-        linkdata = LinkData(
-            rel=link_obj.rel, href=resource.url, rights_uri=rights_status
-        )
-
-        # Mirror the link (or not).
-        self.MIRROR_UTILITY.mirror_link(
-            model_object=license_pool,
-            data_source=collection.data_source,
-            link=linkdata,
-            link_obj=link_obj,
-            policy=policy,
-        )
-
-
 class CheckContributorNamesInDB(IdentifierInputScript):
     """Checks that contributor sort_names are display_names in
     "last name, comma, other names" format.
@@ -2202,7 +2104,6 @@ class CheckContributorNamesInDB(IdentifierInputScript):
         return query.order_by(Edition.id)
 
     def do_run(self, batch_size=10):
-
         self.query = self.make_query(
             self._db,
             self.parsed_args.identifier_type,
@@ -2561,7 +2462,9 @@ class WhereAreMyBooksScript(CollectionInputScript):
     is being configured.
     """
 
-    def __init__(self, _db=None, output=None, search=None):
+    def __init__(
+        self, _db=None, output=None, search: Optional[ExternalSearchIndex] = None
+    ):
         _db = _db or self._db
         super().__init__(_db)
         self.output = output or sys.stdout
@@ -2589,7 +2492,6 @@ class WhereAreMyBooksScript(CollectionInputScript):
                 self.out("\n")
         else:
             self.out("There are no libraries in the system -- that's a problem.")
-        self.delete_cached_feeds()
         self.out("\n")
         collections = parsed.collections or self._db.query(Collection)
         for collection in collections:
@@ -2612,20 +2514,6 @@ class WhereAreMyBooksScript(CollectionInputScript):
             self.out(" This library has no lanes -- that's a problem.")
         else:
             self.out(" Associated with %s lanes.", len(library.lanes))
-
-    def delete_cached_feeds(self):
-        page_feeds = self._db.query(CachedFeed).filter(
-            CachedFeed.type != CachedFeed.GROUPS_TYPE
-        )
-        page_feeds_count = page_feeds.count()
-        self.out(
-            "%d feeds in cachedfeeds table, not counting grouped feeds.",
-            page_feeds_count,
-        )
-        if page_feeds_count:
-            self.out(" Deleting them all.")
-            page_feeds.delete()
-            self._db.commit()
 
     def explain_collection(self, collection):
         self.out('Examining collection "%s"', collection.name)
@@ -2684,56 +2572,12 @@ class WhereAreMyBooksScript(CollectionInputScript):
         )
 
 
-class ListCollectionMetadataIdentifiersScript(CollectionInputScript):
-    """List the metadata identifiers for Collections in the database.
-
-    This script is helpful for accounting for and tracking collections on
-    the metadata wrangler.
-    """
-
-    def __init__(self, _db=None, output=None):
-        _db = _db or self._db
-        super().__init__(_db)
-        self.output = output or sys.stdout
-
-    def run(self, cmd_args=None):
-        parsed = self.parse_command_line(self._db, cmd_args=cmd_args)
-        self.do_run(parsed.collections)
-
-    def do_run(self, collections=None):
-        collection_ids = list()
-        if collections:
-            collection_ids = [c.id for c in collections]
-
-        collections = self._db.query(Collection).order_by(Collection.id)
-        if collection_ids:
-            collections = collections.filter(Collection.id.in_(collection_ids))
-
-        self.output.write("COLLECTIONS\n")
-        self.output.write("=" * 50 + "\n")
-
-        def add_line(id, name, protocol, metadata_identifier):
-            line = f"({id}) {name}/{protocol} => {metadata_identifier}\n"
-            self.output.write(line)
-
-        count = 0
-        for collection in collections:
-            if not count:
-                # Add a format line.
-                add_line("id", "name", "protocol", "metadata_identifier")
-
-            count += 1
-            add_line(
-                str(collection.id),
-                collection.name,
-                collection.protocol,
-                collection.metadata_identifier,
-            )
-
-        self.output.write("\n%d collections found.\n" % count)
-
-
 class UpdateLaneSizeScript(LaneSweeperScript):
+    def __init__(self, _db=None, *args, **kwargs):
+        super().__init__(_db, *args, **kwargs)
+        search = kwargs.get("search_index_client", None)
+        self._search: ExternalSearchIndex = search or ExternalSearchIndex(self._db)
+
     def should_process_lane(self, lane):
         """We don't want to process generic WorkLists -- there's nowhere
         to store the data.
@@ -2750,7 +2594,7 @@ class UpdateLaneSizeScript(LaneSweeperScript):
         # This is done because calling site_configuration_has_changed repeatedly
         # was causing performance problems, when we have lots of lanes to update.
         lane._suppress_before_flush_listeners = True
-        lane.update_size(self._db)
+        lane.update_size(self._db, search_engine=self._search)
         self.log.info("%s: %d", lane.full_identifier, lane.size)
 
     def do_run(self, *args, **kwargs):
@@ -2763,50 +2607,16 @@ class UpdateCustomListSizeScript(CustomListSweeperScript):
         custom_list.update_size(self._db)
 
 
-class RemovesSearchCoverage:
-    """Mix-in class for a script that might remove all coverage records
-    for the search engine.
-    """
-
-    def remove_search_coverage_records(self):
-        """Delete all search coverage records from the database.
-
-        :return: The number of records deleted.
-        """
-        wcr = WorkCoverageRecord
-        clause = wcr.operation == wcr.UPDATE_SEARCH_INDEX_OPERATION
-        count = self._db.query(wcr).filter(clause).count()
-
-        # We want records to be updated in ascending order in order to avoid deadlocks.
-        # To guarantee lock order, we explicitly acquire locks by using a subquery with FOR UPDATE (with_for_update).
-        # Please refer for my details to this SO article:
-        # https://stackoverflow.com/questions/44660368/postgres-update-with-order-by-how-to-do-it
-        self._db.execute(
-            wcr.__table__.delete().where(
-                wcr.id.in_(
-                    self._db.query(wcr.id)
-                    .with_for_update()
-                    .filter(clause)
-                    .order_by(WorkCoverageRecord.id)
-                )
-            )
-        )
-
-        return count
-
-
 class RebuildSearchIndexScript(RunWorkCoverageProviderScript, RemovesSearchCoverage):
     """Completely delete the search index and recreate it."""
 
     def __init__(self, *args, **kwargs):
         search = kwargs.get("search_index_client", None)
-        self.search = search or ExternalSearchIndex(self._db)
+        self.search: ExternalSearchIndex = search or ExternalSearchIndex(self._db)
         super().__init__(SearchIndexCoverageProvider, *args, **kwargs)
 
     def do_run(self):
-        # Calling setup_index will destroy the index and recreate it
-        # empty.
-        self.search.setup_index()
+        self.search.clear_search_documents()
 
         # Remove all search coverage records so the
         # SearchIndexCoverageProvider will start from scratch.
@@ -2831,122 +2641,6 @@ class SearchIndexCoverageRemover(TimestampScript, RemovesSearchCoverage):
         )
 
 
-class GenerateOverdriveAdvantageAccountList(InputScript):
-    """Generates a CSV containing the following fields:
-    circulation manager
-    collection
-    client_key
-    external_account_id
-    library_token
-    advantage_name
-    advantage_id
-    advantage_token
-    already_configured
-    """
-
-    def __init__(self, _db=None, *args, **kwargs):
-        super().__init__(_db, args, kwargs)
-        self._data: List[List[str]] = list()
-
-    def _create_overdrive_api(self, c: Collection):
-        return OverdriveCoreAPI(_db=self._db, collection=c)
-
-    def do_run(self, *args, **kwargs):
-        parsed = GenerateOverdriveAdvantageAccountList.parse_command_line(
-            _db=self._db, *args, **kwargs
-        )
-        query: Query = Collection.by_protocol(
-            self._db, protocol=ExternalIntegration.OVERDRIVE
-        )
-        for c in query.filter(Collection.parent_id == None):
-            collection: Collection = c
-            api = self._create_overdrive_api(collection=collection)
-            client_key = api.client_key().decode()
-            client_secret = api.client_secret().decode()
-
-            try:
-                library_token = api.collection_token
-                advantage_accounts = api.get_advantage_accounts()
-
-                for aa in advantage_accounts:
-                    existing_child_collections = query.filter(
-                        Collection.parent_id == collection.id
-                    )
-                    already_configured_aa_libraries = [
-                        e.external_account_id for e in existing_child_collections
-                    ]
-                    self._data.append(
-                        [
-                            collection.name,
-                            collection.external_account_id,
-                            client_key,
-                            client_secret,
-                            library_token,
-                            aa.name,
-                            aa.library_id,
-                            aa.token,
-                            aa.library_id in already_configured_aa_libraries,
-                        ]
-                    )
-            except Exception as e:
-                logging.error(
-                    f"Could not connect to collection {c.name}: reason: {str(e)}."
-                )
-
-        file_path = parsed.output_file_path[0]
-        circ_manager_name = parsed.circulation_manager_name[0]
-        self.write_csv(output_file_path=file_path, circ_manager_name=circ_manager_name)
-
-    def write_csv(self, output_file_path: str, circ_manager_name: str):
-        with open(output_file_path, "w", newline="") as csvfile:
-            writer = csv.writer(csvfile)
-            writer.writerow(
-                [
-                    "cm",
-                    "collection",
-                    "overdrive_library_id",
-                    "client_key",
-                    "client_secret",
-                    "library_token",
-                    "advantage_name",
-                    "advantage_id",
-                    "advantage_token",
-                    "already_configured",
-                ]
-            )
-            for i in self._data:
-                i.insert(0, circ_manager_name)
-                writer.writerow(i)
-
-    @classmethod
-    def arg_parser(cls):
-        parser = argparse.ArgumentParser()
-        parser.add_argument(
-            "--output-file-path",
-            help="The path of an output file",
-            metavar="o",
-            nargs=1,
-        )
-
-        parser.add_argument(
-            "--circulation-manager-name",
-            help="The name of the circulation-manager",
-            metavar="c",
-            nargs=1,
-            required=True,
-        )
-
-        parser.add_argument(
-            "--file-format",
-            help="The file format of the output file",
-            metavar="f",
-            nargs=1,
-            default="csv",
-        )
-
-        return parser
-
-
 class CustomListUpdateEntriesScript(CustomListSweeperScript):
     """Traverse all entries and update lists if they have auto_update_enabled"""
 
@@ -2961,7 +2655,8 @@ class CustomListUpdateEntriesScript(CustomListSweeperScript):
 
     def _update_list_with_new_entries(self, custom_list: CustomList):
         """Run a search on a custom list, assuming we have auto_update_enabled with a valid query
-        Only json type queries are supported right now, without any support for additional facets"""
+        Only json type queries are supported right now, without any support for additional facets
+        """
 
         start_page = 1
         json_query = None
@@ -3013,49 +2708,10 @@ class CustomListUpdateEntriesScript(CustomListSweeperScript):
         custom_list.auto_update_status = CustomList.UPDATED
 
 
-class AlembicMigrateVersion(Script):
-    @classmethod
-    def arg_parser(cls):
-        parser = argparse.ArgumentParser(
-            prog="Alembic Database Migration",
-            description="By default, running this script without any arguments "
-            "will run an 'upgrade head' command from alembic",
-        )
-        parser.add_argument(
-            "-d",
-            "--downgrade",
-            help="Downgrade to a specific version.",
-            required=False,
-            default=None,
-        )
-        parser.add_argument(
-            "-u",
-            "--upgrade",
-            help="Upgrade to a specific version.",
-            required=False,
-            default="head",
-        )
-        return parser
-
-    def do_run(self, cmd_args=None):
-        args = self.parse_command_line(cmd_args=cmd_args)
-        config = AlembicConfig(
-            str(Path(__file__).parent.parent.absolute() / "alembic.ini")
-        )
-        try:
-            if args.downgrade is not None:
-                downgrade(config, args.downgrade)
-            elif args.upgrade is not None:
-                upgrade(config, args.upgrade)
-        except CommandError as e:
-            print(f"Error: {e}. No migrations performed.")
-
-
 class DeleteInvisibleLanesScript(LibraryInputScript):
     """Delete lanes that are flagged as invisible"""
 
     def process_library(self, library):
-
         try:
             for lane in self._db.query(Lane).filter(Lane.library_id == library.id):
                 if not lane.visible:
@@ -3074,6 +2730,83 @@ class DeleteInvisibleLanesScript(LibraryInputScript):
                 logging.exception(
                     f"hidden lane deletion rollback for {library.short_name} failed", e
                 )
+
+
+class LoanNotificationsScript(Script):
+    """Notifications must be sent to Patrons based on when their current loans
+    are expiring"""
+
+    # Days before on which to send out a notification
+    LOAN_EXPIRATION_DAYS = [5, 1]
+    BATCH_SIZE = 100
+
+    def do_run(self):
+        self.log.info("Loan Notifications Job started")
+
+        setting = ConfigurationSetting.sitewide(
+            self._db, Configuration.PUSH_NOTIFICATIONS_STATUS
+        )
+        if setting.value == ConfigurationConstants.FALSE:
+            self.log.info(
+                "Push notifications have been turned off in the sitewide settings, skipping this job"
+            )
+            return
+
+        _query = (
+            self._db.query(Loan)
+            .filter(
+                or_(
+                    Loan.patron_last_notified != utc_now().date(),
+                    Loan.patron_last_notified == None,
+                )
+            )
+            .order_by(Loan.id)
+        )
+        last_loan_id = None
+        processed_loans = 0
+
+        while True:
+            query = _query.limit(self.BATCH_SIZE)
+            if last_loan_id:
+                query = _query.filter(Loan.id > last_loan_id)
+
+            loans = query.all()
+            if len(loans) == 0:
+                break
+
+            for loan in loans:
+                processed_loans += 1
+                self.process_loan(loan)
+            last_loan_id = loan.id
+            # Commit every batch
+            self._db.commit()
+
+        self.log.info(
+            f"Loan Notifications Job ended: {processed_loans} loans processed"
+        )
+
+    def process_loan(self, loan: Loan):
+        tokens = []
+        patron: Patron = loan.patron
+        t: DeviceToken
+        for t in patron.device_tokens:
+            if t.token_type in [DeviceTokenTypes.FCM_ANDROID, DeviceTokenTypes.FCM_IOS]:
+                tokens.append(t)
+
+        # No tokens means no notifications
+        if not tokens:
+            return
+
+        now = utc_now()
+        if loan.end is None:
+            self.log.warning(f"Loan: {loan.id} has no end date, skipping")
+            return
+        delta: datetime.timedelta = loan.end - now
+        if delta.days in self.LOAN_EXPIRATION_DAYS:
+            self.log.info(
+                f"Patron {patron.authorization_identifier} has an expiring loan on ({loan.license_pool.identifier.urn})"
+            )
+            PushNotifications.send_loan_expiry_message(loan, delta.days, tokens)
 
 
 class MockStdin:

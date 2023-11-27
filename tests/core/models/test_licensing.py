@@ -524,6 +524,8 @@ class TestLicensePool:
             "541",
             collection=db.collection(),
         )
+        assert pool is not None
+        assert pool.availability_time is not None
         assert (pool.availability_time - now).total_seconds() < 2
         assert True == was_new
         assert DataSource.GUTENBERG == pool.data_source.name
@@ -561,7 +563,8 @@ class TestLicensePool:
         assert [] == qu.all()
 
         # Let's delete it.
-        [db.session.delete(x) for x in pool.delivery_mechanisms]
+        for x in pool.delivery_mechanisms:
+            db.session.delete(x)
         assert [pool] == qu.all()
 
     def test_no_license_pool_for_non_primary_identifier(
@@ -643,6 +646,7 @@ class TestLicensePool:
             "1",
             collection=db.default_collection(),
         )
+        assert p1 is not None
 
         p2, ignore = LicensePool.for_foreign_id(
             db.session,
@@ -651,6 +655,7 @@ class TestLicensePool:
             "2",
             collection=db.default_collection(),
         )
+        assert p2 is not None
 
         work = db.work(title="Foo")
         p1.work = work
@@ -669,8 +674,10 @@ class TestLicensePool:
         assert 2 == pool.licenses_reserved
         assert 0 == pool.patrons_in_hold_queue
 
+        assert work.last_update_time is not None
+
         # Updating availability also modified work.last_update_time.
-        assert (utc_now() - work.last_update_time) < datetime.timedelta(seconds=2)
+        assert (utc_now() - work.last_update_time) < datetime.timedelta(seconds=2)  # type: ignore[unreachable]
 
     def test_update_availability_does_nothing_if_given_no_data(
         self, db: DatabaseTransactionFixture

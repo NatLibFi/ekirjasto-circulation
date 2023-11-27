@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import importlib
 import logging
 import os
@@ -5,21 +7,24 @@ import shutil
 import tempfile
 import time
 import uuid
-from typing import Callable, Generator, Iterable, List, Optional, Tuple
+from textwrap import dedent
+from typing import Generator, Iterable, List, Optional, Tuple
 
 import pytest
 import sqlalchemy
+from Crypto.PublicKey.RSA import import_key
+from sqlalchemy import MetaData
 from sqlalchemy.engine import Connection, Engine, Transaction
 from sqlalchemy.orm import Session
 
 import core.lane
-from core.analytics import Analytics
+from api.discovery.opds_registration import OpdsRegistrationService
+from api.integration.registry.discovery import DiscoveryRegistry
 from core.classifier import Classifier
 from core.config import Configuration
+from core.configuration.library import LibrarySettings
 from core.integration.goals import Goals
-from core.log import LogConfiguration
 from core.model import (
-    Base,
     Classification,
     Collection,
     Contributor,
@@ -30,11 +35,9 @@ from core.model import (
     DeliveryMechanism,
     Edition,
     ExternalIntegration,
-    ExternalIntegrationLink,
     Genre,
     Hyperlink,
     Identifier,
-    IntegrationClient,
     Library,
     LicensePool,
     MediaTypes,
@@ -48,39 +51,36 @@ from core.model import (
     create,
     get_one_or_create,
 )
-from core.model.devicetokens import DeviceToken
 from core.model.integration import (
     IntegrationConfiguration,
     IntegrationLibraryConfiguration,
 )
 from core.model.licensing import License, LicensePoolDeliveryMechanism, LicenseStatus
 from core.util.datetime_helpers import utc_now
-from tests.fixtures.api_config import KeyPairFixture
+from core.util.string_helpers import random_string
 
 
 class ApplicationFixture:
     """The ApplicationFixture is a representation of the state that must be set up in order to run the application for
     testing."""
 
-    @staticmethod
-    def create():
+    @classmethod
+    def drop_existing_schema(cls):
+        engine = SessionManager.engine()
+        metadata_obj = MetaData()
+        metadata_obj.reflect(bind=engine)
+        metadata_obj.drop_all(engine)
+        metadata_obj.clear()
+
+    @classmethod
+    def create(cls):
         # This will make sure we always connect to the test database.
         os.environ["TESTING"] = "true"
 
-        # Ensure that the log configuration starts in a known state.
-        LogConfiguration.initialize(None, testing=True)
-
-        # Drop any existing schema. It will be recreated when
-        # SessionManager.initialize() runs.
-        engine = SessionManager.engine()
-        # Trying to drop all tables without reflecting first causes an issue
-        # since SQLAlchemy does not know the order of cascades
-        # Adding .reflect is throwing an error locally because tables are imported
-        # later and hence being defined twice
-        # Deleting the problematic table first fixes the issue, in this case DeviceToken
-        DeviceToken.__table__.drop(engine, checkfirst=True)
-        Base.metadata.drop_all(engine)
-        return ApplicationFixture()
+        # Drop any existing schema. It will be recreated when the database is initialized.
+        _cls = cls()
+        _cls.drop_existing_schema()
+        return _cls
 
     def close(self):
         if "TESTING" in os.environ:
@@ -100,8 +100,16 @@ class DatabaseFixture:
     @staticmethod
     def _get_database_connection() -> Tuple[Engine, Connection]:
         url = Configuration.database_url()
-        engine, connection = SessionManager.initialize(url)
+        engine = SessionManager.engine(url)
+        connection = engine.connect()
         return engine, connection
+
+    @staticmethod
+    def _initialize_database(connection: Connection):
+        SessionManager.initialize_schema(connection)
+        with Session(connection) as session:
+            # Initialize the database with default data
+            SessionManager.initialize_data(session)
 
     @staticmethod
     def _load_core_model_classes():
@@ -110,11 +118,11 @@ class DatabaseFixture:
 
         importlib.reload(core.model)
 
-    @staticmethod
-    def create() -> "DatabaseFixture":
-        DatabaseFixture._load_core_model_classes()
-        engine, connection = DatabaseFixture._get_database_connection()
-
+    @classmethod
+    def create(cls) -> DatabaseFixture:
+        cls._load_core_model_classes()
+        engine, connection = cls._get_database_connection()
+        cls._initialize_database(connection)
         return DatabaseFixture(engine, connection)
 
     def close(self):
@@ -156,28 +164,19 @@ class DatabaseTransactionFixture:
 
     def _make_default_library(self) -> Library:
         """Ensure that the default library exists in the given database."""
-        library, ignore = get_one_or_create(
-            self._session,
-            Library,
-            create_method_kwargs=dict(
-                uuid=str(uuid.uuid4()),
-                name="default",
-            ),
-            short_name="default",
+        library = self.library("default", "default")
+        collection = self.collection(
+            "Default Collection",
+            protocol=ExternalIntegration.OPDS_IMPORT,
+            data_source_name="OPDS",
         )
-        collection, ignore = get_one_or_create(
-            self._session, Collection, name="Default Collection"
-        )
-        integration = collection.create_external_integration(
-            ExternalIntegration.OPDS_IMPORT
-        )
-        integration.goal = ExternalIntegration.LICENSE_GOAL
+        collection.integration_configuration.for_library(library.id, create=True)
         if collection not in library.collections:
             library.collections.append(collection)
         return library
 
     @staticmethod
-    def create(database: DatabaseFixture) -> "DatabaseTransactionFixture":
+    def create(database: DatabaseFixture) -> DatabaseTransactionFixture:
         # Create a new connection to the database.
         session = SessionManager.session_from_connection(database.connection)
 
@@ -192,9 +191,6 @@ class DatabaseTransactionFixture:
         # test, whether in the session that was just closed or some
         # other session.
         self._transaction.rollback()
-
-        # Reset the Analytics singleton between tests.
-        Analytics._reset_singleton_instance()
 
         Configuration.SITE_CONFIGURATION_LAST_UPDATE = None
         Configuration.LAST_CHECKED_FOR_SITE_CONFIGURATION_UPDATE = None
@@ -244,16 +240,50 @@ class DatabaseTransactionFixture:
         return str(self.fresh_id())
 
     def library(
-        self, name: Optional[str] = None, short_name: Optional[str] = None
+        self,
+        name: Optional[str] = None,
+        short_name: Optional[str] = None,
+        settings: Optional[LibrarySettings] = None,
     ) -> Library:
+        # Just a dummy key used for testing.
+        key_string = """\
+            -----BEGIN RSA PRIVATE KEY-----
+            MIIBOQIBAAJBALFOBYf91uHhGQufTEOCZ9/L/Ge0/Lw4DRDuFBh9p+BpOxQJE9gi
+            4FaJc16Wh53Sg5vQTOZMEGgjjTaP7K6NWgECAwEAAQJAEsR4b2meCjDCbumAsBCo
+            oBa+c9fDfMTOFUGuHN2IHIe5zObxWAKD3xq73AO+mpeEl+KpeLeq2IJNqCZdf1yK
+            MQIhAOGeurU6vgn/yA9gXECzvWYaxiAzHsOeW4RDhb/+14u1AiEAyS3VWo6jPt0i
+            x8oiahujtCqaKLy611rFHQuK+yKNfJ0CIFuQVIuaNGfQc3uyCp6Dk3jtoryMoo6X
+            JOLvmEdMAGQFAiB4D+psiQPT2JWRNokjWitwspweA8ReEcXhd6oSBqT54QIgaVc5
+            wNybPDDs9mU+du+r0U+5iXaZzS5StYZpo9B4KjA=
+            -----END RSA PRIVATE KEY-----
+        """
+        # Because key generation takes a significant amount of time, and we
+        # create a lot of new libraries in our tests, we just use the same
+        # dummy key for all of them.
+        private_key = import_key(dedent(key_string))
+        public_key = private_key.public_key()
+
         name = name or self.fresh_str()
         short_name = short_name or self.fresh_str()
+        settings_dict = settings.dict() if settings else {}
+
+        # Make sure we have defaults for settings that are required
+        if "website" not in settings_dict:
+            settings_dict["website"] = "http://library.com"
+        if "help_web" not in settings_dict and "help_email" not in settings_dict:
+            settings_dict["help_web"] = "http://library.com/support"
+
         library, ignore = get_one_or_create(
             self.session,
             Library,
             name=name,
             short_name=short_name,
-            create_method_kwargs=dict(uuid=str(uuid.uuid4())),
+            create_method_kwargs=dict(
+                uuid=str(uuid.uuid4()),
+                public_key=public_key.export_key("PEM").decode("utf-8"),
+                private_key=private_key.export_key("DER"),
+                settings_dict=settings_dict,
+            ),
         )
         return library
 
@@ -272,9 +302,13 @@ class DatabaseTransactionFixture:
         collection.external_account_id = external_account_id
         integration = collection.create_external_integration(protocol)
         integration.goal = ExternalIntegration.LICENSE_GOAL
-        integration.url = url
-        integration.username = username
-        integration.password = password
+        config = collection.create_integration_configuration(protocol)
+        config.goal = Goals.LICENSE_GOAL
+        config.settings_dict = {
+            "url": url,
+            "username": username,
+            "password": password,
+        }
 
         if data_source_name:
             collection.data_source = data_source_name
@@ -295,7 +329,6 @@ class DatabaseTransactionFixture:
         presentation_edition=None,
         collection=None,
         data_source_name=None,
-        self_hosted=False,
         unlimited_access=False,
     ):
         """Create a Work.
@@ -330,16 +363,12 @@ class DatabaseTransactionFixture:
                 data_source_name=data_source_name,
                 series=series,
                 collection=collection,
-                self_hosted=self_hosted,
                 unlimited_access=unlimited_access,
             )
             if with_license_pool:
                 presentation_edition, pool = presentation_edition
                 if with_open_access_download:
                     pool.open_access = True
-                if self_hosted:
-                    pool.open_access = False
-                    pool.self_hosted = True
                 if unlimited_access:
                     pool.open_access = False
                     pool.unlimited_access = True
@@ -375,7 +404,6 @@ class DatabaseTransactionFixture:
             # This is probably going to be used in an OPDS feed, so
             # fake that the work is presentation ready.
             work.presentation_ready = True
-            work.calculate_opds_entries(verbose=False)
 
         return work
 
@@ -398,7 +426,6 @@ class DatabaseTransactionFixture:
         series=None,
         collection=None,
         publication_date=None,
-        self_hosted=False,
         unlimited_access=False,
     ):
         id = identifier_id or self.fresh_str()
@@ -438,7 +465,6 @@ class DatabaseTransactionFixture:
                 data_source_name=data_source_name,
                 with_open_access_download=with_open_access_download,
                 collection=collection,
-                self_hosted=self_hosted,
                 unlimited_access=unlimited_access,
             )
 
@@ -454,7 +480,6 @@ class DatabaseTransactionFixture:
         with_open_access_download=False,
         set_edition_as_presentation=False,
         collection=None,
-        self_hosted=False,
         unlimited_access=False,
     ):
         source = DataSource.lookup(self.session, data_source_name)
@@ -470,7 +495,6 @@ class DatabaseTransactionFixture:
             data_source=source,
             collection=collection,
             availability_time=utc_now(),
-            self_hosted=self_hosted,
             unlimited_access=unlimited_access,
         )
 
@@ -601,16 +625,6 @@ class DatabaseTransactionFixture:
             id_value = self.fresh_str()
         return Identifier.for_foreign_id(self.session, identifier_type, id_value)[0]
 
-    def integration_client(self, url=None, shared_secret=None) -> IntegrationClient:
-        url = url or self.fresh_url()
-        secret = shared_secret or "secret"
-        return get_one_or_create(
-            self.session,
-            IntegrationClient,
-            shared_secret=secret,
-            create_method_kwargs=dict(url=url),
-        )[0]
-
     def fresh_url(self) -> str:
         return "http://foo.com/" + self.fresh_str()
 
@@ -698,30 +712,45 @@ class DatabaseTransactionFixture:
 
         return integration
 
-    def external_integration_link(
-        self,
-        integration=None,
-        library=None,
-        other_integration=None,
-        purpose="covers_mirror",
+    def integration_configuration(
+        self, protocol: str, goal=None, libraries=None, name=None, **kwargs
     ):
-        integration = integration or self.external_integration("some protocol")
-        other_integration = other_integration or self.external_integration(
-            "some other protocol"
-        )
-
-        library_id = library.id if library else None
-
-        external_integration_link, ignore = get_one_or_create(
+        integration, ignore = get_one_or_create(
             self.session,
-            ExternalIntegrationLink,
-            library_id=library_id,
-            external_integration_id=integration.id,
-            other_integration_id=other_integration.id,
-            purpose=purpose,
+            IntegrationConfiguration,
+            protocol=protocol,
+            goal=goal,
+            name=(name or random_string(16)),
         )
+        if libraries and not isinstance(libraries, list):
+            libraries = [libraries]
+        else:
+            libraries = []
 
-        return external_integration_link
+        for library in libraries:
+            integration.for_library(library.id, create=True)
+
+        integration.settings_dict = kwargs
+        return integration
+
+    @classmethod
+    def set_settings(
+        cls,
+        config: IntegrationConfiguration | IntegrationLibraryConfiguration,
+        *keyvalues,
+        **kwargs,
+    ):
+        settings = config.settings_dict.copy()
+
+        # Alternating key: value in the args
+        for ix, item in enumerate(keyvalues):
+            if ix % 2 == 0:
+                key = item
+            else:
+                settings[key] = item
+
+        settings.update(kwargs)
+        config.settings_dict = settings
 
     def work_coverage_record(
         self, work, operation=None, status=CoverageRecord.SUCCESS
@@ -804,7 +833,6 @@ class DatabaseTransactionFixture:
         """
         work = self.work(*args, **kwargs)
         work.calculate_presentation_edition()
-        work.calculate_opds_entries(verbose=False)
         return work
 
     def sample_ecosystem(self):
@@ -887,7 +915,7 @@ class TemporaryDirectoryConfigurationFixture:
     _directory: str
 
     @classmethod
-    def create(cls) -> "TemporaryDirectoryConfigurationFixture":
+    def create(cls) -> TemporaryDirectoryConfigurationFixture:
         fix = TemporaryDirectoryConfigurationFixture()
         fix._directory = tempfile.mkdtemp(dir="/tmp")
         assert isinstance(fix._directory, str)
@@ -907,16 +935,16 @@ class TemporaryDirectoryConfigurationFixture:
 
 
 @pytest.fixture(scope="function")
-def temporary_directory_configuration() -> Iterable[
-    TemporaryDirectoryConfigurationFixture
-]:
+def temporary_directory_configuration() -> (
+    Iterable[TemporaryDirectoryConfigurationFixture]
+):
     fix = TemporaryDirectoryConfigurationFixture.create()
     yield fix
     fix.close()
 
 
 @pytest.fixture(scope="session")
-def application(mock_config_key_pair: KeyPairFixture) -> Iterable[ApplicationFixture]:
+def application() -> Iterable[ApplicationFixture]:
     app = ApplicationFixture.create()
     yield app
     app.close()
@@ -938,51 +966,77 @@ def db(
     tr.close()
 
 
-@pytest.fixture
-def default_library(db: DatabaseTransactionFixture) -> Library:
-    return db.default_library()
+class IntegrationConfigurationFixture:
+    def __init__(self, db: DatabaseTransactionFixture):
+        self.db = db
+
+    def __call__(
+        self, protocol: Optional[str], goal: Goals, settings_dict: Optional[dict] = None
+    ) -> IntegrationConfiguration:
+        integration, _ = create(
+            self.db.session,
+            IntegrationConfiguration,
+            name=self.db.fresh_str(),
+            protocol=protocol,
+            goal=goal,
+            settings_dict=settings_dict or {},
+        )
+        return integration
+
+    def discovery_service(
+        self, protocol: Optional[str] = None, url: Optional[str] = None
+    ) -> IntegrationConfiguration:
+        registry = DiscoveryRegistry()
+        if protocol is None:
+            protocol = registry.get_protocol(OpdsRegistrationService)
+            assert protocol is not None
+
+        if url is not None:
+            settings_obj = registry[protocol].settings_class().construct(url=url)  # type: ignore[arg-type]
+            settings_dict = settings_obj.dict()
+        else:
+            settings_dict = {}
+
+        return self(
+            protocol=protocol, goal=Goals.DISCOVERY_GOAL, settings_dict=settings_dict
+        )
 
 
 @pytest.fixture
 def create_integration_configuration(
     db: DatabaseTransactionFixture,
-) -> Callable[..., IntegrationConfiguration]:
-    def create_integration(
-        protocol: str, goal: Goals, settings: Optional[dict] = None
-    ) -> IntegrationConfiguration:
+) -> IntegrationConfigurationFixture:
+    fixture = IntegrationConfigurationFixture(db)
+    return fixture
+
+
+class IntegrationLibraryConfigurationFixture:
+    def __init__(self, db: DatabaseTransactionFixture):
+        self.db = db
+
+    def __call__(
+        self,
+        library: Library,
+        parent: IntegrationConfiguration,
+        settings_dict: Optional[dict] = None,
+    ) -> IntegrationLibraryConfiguration:
+        settings_dict = settings_dict or {}
         integration, _ = create(
-            db.session,
-            IntegrationConfiguration,
-            name=db.fresh_str(),
-            protocol=protocol,
-            goal=goal,
-            settings=settings or {},
+            self.db.session,
+            IntegrationLibraryConfiguration,
+            parent=parent,
+            library=library,
+            settings_dict=settings_dict,
         )
         return integration
-
-    return create_integration
 
 
 @pytest.fixture
 def create_integration_library_configuration(
     db: DatabaseTransactionFixture,
-) -> Callable[..., IntegrationLibraryConfiguration]:
-    def create_library_integration(
-        library: Library,
-        parent: IntegrationConfiguration,
-        settings: Optional[dict] = None,
-    ) -> IntegrationLibraryConfiguration:
-        settings = settings or {}
-        integration, _ = create(
-            db.session,
-            IntegrationLibraryConfiguration,
-            parent=parent,
-            library=library,
-            settings=settings,
-        )
-        return integration
-
-    return create_library_integration
+) -> IntegrationLibraryConfigurationFixture:
+    fixture = IntegrationLibraryConfigurationFixture(db)
+    return fixture
 
 
 class DBStatementCounter:

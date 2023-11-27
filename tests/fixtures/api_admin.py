@@ -5,7 +5,7 @@ import flask
 import pytest
 
 from api.admin.controller import setup_admin_controllers
-from api.admin.routes import setup_admin
+from api.app import initialize_admin
 from api.config import Configuration
 from api.controller import CirculationManager
 from core.integration.goals import Goals
@@ -32,14 +32,18 @@ class AdminControllerFixture:
             controller_fixture.db.session, Configuration.SECRET_KEY
         ).value = "a secret"
 
-        setup_admin(controller_fixture.db.session)
+        initialize_admin(controller_fixture.db.session)
         setup_admin_controllers(controller_fixture.manager)
         self.admin, ignore = create(
             controller_fixture.db.session,
             Admin,
             email="example@nypl.org",
         )
-        self.admin.password = "password"
+        # This is a hash for 'password', we use the hash directly to avoid the cost
+        # of doing the password hashing during test setup.
+        self.admin.password_hashed = (
+            "$2a$12$Dw74btoAgh49.vtOB56xPuumtcOY9HCZKS3RYImR42lR5IiT7PIOW"
+        )
 
     @contextmanager
     def request_context_with_admin(self, route, *args, **kwargs):
@@ -134,3 +138,18 @@ def settings_ctrl_fixture(
     controller_fixture: ControllerFixture,
 ) -> SettingsControllerFixture:
     return SettingsControllerFixture(controller_fixture)
+
+
+class AdminLibrarianFixture(AdminControllerFixture):
+    def __init__(self, controller_fixture: ControllerFixture):
+        super().__init__(controller_fixture)
+        self.admin.add_role(
+            AdminRole.LIBRARIAN, controller_fixture.db.default_library()
+        )
+
+
+@pytest.fixture(scope="function")
+def admin_librarian_fixture(
+    controller_fixture: ControllerFixture,
+) -> AdminLibrarianFixture:
+    return AdminLibrarianFixture(controller_fixture)

@@ -2,6 +2,7 @@ import datetime
 import json
 import urllib.parse
 from typing import Any, Dict
+from unittest.mock import MagicMock
 
 import feedparser
 import flask
@@ -18,15 +19,16 @@ from api.lanes import (
     SeriesLane,
 )
 from api.novelist import MockNoveListAPI
-from api.opds import LibraryAnnotator
 from api.problem_details import NO_SUCH_LANE, NOT_FOUND_ON_REMOTE
 from core.classifier import Classifier
 from core.entrypoint import AudiobooksEntryPoint
 from core.external_search import SortKeyPagination, mock_search_index
+from core.feed.acquisition import OPDSAcquisitionFeed
+from core.feed.annotator.circulation import LibraryAnnotator
+from core.feed.types import WorkEntry
 from core.lane import Facets, FeaturedFacets
 from core.metadata_layer import ContributorData, Metadata
 from core.model import (
-    CachedFeed,
     DataSource,
     Edition,
     Identifier,
@@ -37,7 +39,6 @@ from core.model import (
     tuple_to_numericrange,
 )
 from core.model.work import Work
-from core.opds import AcquisitionFeed
 from core.problem_details import INVALID_INPUT
 from core.util.datetime_helpers import utc_now
 from core.util.flask_util import Response
@@ -45,7 +46,7 @@ from core.util.opds_writer import OPDSFeed
 from core.util.problem_detail import ProblemDetail
 from tests.fixtures.api_controller import CirculationControllerFixture
 from tests.fixtures.database import DatabaseTransactionFixture
-from tests.fixtures.vendor_id import VendorIDFixture
+from tests.mocks.search import fake_hits
 
 
 class WorkFixture(CirculationControllerFixture):
@@ -54,24 +55,23 @@ class WorkFixture(CirculationControllerFixture):
     datasource: DataSource
     edition: Edition
 
-    def __init__(
-        self, db: DatabaseTransactionFixture, vendor_id_fixture: VendorIDFixture
-    ):
-        super().__init__(db, vendor_id_fixture)
+    def __init__(self, db: DatabaseTransactionFixture):
+        super().__init__(db)
         [self.lp] = self.english_1.license_pools
         self.edition = self.lp.presentation_edition
         self.datasource = self.lp.data_source.name  # type: ignore
-        self.identifier = self.lp.identifier  # type: ignore
+        self.identifier = self.lp.identifier
 
 
 @pytest.fixture(scope="function")
-def work_fixture(db: DatabaseTransactionFixture, vendor_id_fixture: VendorIDFixture):
-    return WorkFixture(db, vendor_id_fixture)
+def work_fixture(db: DatabaseTransactionFixture):
+    return WorkFixture(db)
 
 
 class TestWorkController:
     def test_contributor(self, work_fixture: WorkFixture):
         m = work_fixture.manager.work_controller.contributor
+        work_fixture.collection.data_source = None
 
         # Find a real Contributor put in the system through the setup
         # process.
@@ -139,12 +139,7 @@ class TestWorkController:
         facet_links = [
             link for link in links if link["rel"] == "http://opds-spec.org/facet"
         ]
-        assert 8 == len(facet_links)
-
-        # The feed was cached.
-        cached = work_fixture.db.session.query(CachedFeed).one()
-        assert CachedFeed.CONTRIBUTOR_TYPE == cached.type
-        assert "John Bull-eng,spa-Children,Young+Adult" == cached.unique_key
+        assert 10 == len(facet_links)
 
         # At this point we don't want to generate real feeds anymore.
         # We can't do a real end-to-end test without setting up a real
@@ -167,7 +162,9 @@ class TestWorkController:
             @classmethod
             def page(cls, **kwargs):
                 self.called_with = kwargs
-                return Response("An OPDS feed")
+                resp = MagicMock()
+                resp.as_response.return_value = Response("An OPDS feed")
+                return resp
 
         # Test a basic request with custom faceting, pagination, and a
         # language and audience restriction. This will exercise nearly
@@ -294,12 +291,12 @@ class TestWorkController:
                 work_fixture.identifier.type, work_fixture.identifier.identifier
             )
             annotator = LibraryAnnotator(None, None, work_fixture.db.default_library())
-            expect = AcquisitionFeed.single_entry(
-                work_fixture.db.session, work_fixture.english_1, annotator
-            ).data
+            feed = OPDSAcquisitionFeed.single_entry(work_fixture.english_1, annotator)
+            assert isinstance(feed, WorkEntry)
+            expect = OPDSAcquisitionFeed.entry_as_response(feed)
 
         assert 200 == response.status_code
-        assert expect == response.get_data()
+        assert expect.data == response.get_data()
         assert OPDSFeed.ENTRY_TYPE == response.headers["Content-Type"]
 
     def test_permalink_does_not_return_fulfillment_links_for_authenticated_patrons_without_loans(
@@ -337,9 +334,9 @@ class TestWorkController:
                 work_fixture.db.default_library(),
                 active_loans_by_work=active_loans_by_work,
             )
-            expect = AcquisitionFeed.single_entry(
-                work_fixture.db.session, work, annotator
-            ).data
+            feed = OPDSAcquisitionFeed.single_entry(work, annotator)
+            assert isinstance(feed, WorkEntry)
+            expect = OPDSAcquisitionFeed.entry_as_response(feed).data
 
             response = work_fixture.manager.work_controller.permalink(
                 identifier_type, identifier
@@ -385,9 +382,9 @@ class TestWorkController:
                 work_fixture.db.default_library(),
                 active_loans_by_work=active_loans_by_work,
             )
-            expect = AcquisitionFeed.single_entry(
-                work_fixture.db.session, work, annotator
-            ).data
+            feed = OPDSAcquisitionFeed.single_entry(work, annotator)
+            assert isinstance(feed, WorkEntry)
+            expect = OPDSAcquisitionFeed.entry_as_response(feed).data
 
             response = work_fixture.manager.work_controller.permalink(
                 identifier_type, identifier
@@ -478,9 +475,9 @@ class TestWorkController:
                 work_fixture.db.default_library(),
                 active_loans_by_work=active_loans_by_work,
             )
-            expect = AcquisitionFeed.single_entry(
-                work_fixture.db.session, work, annotator
-            ).data
+            feed = OPDSAcquisitionFeed.single_entry(work, annotator)
+            assert isinstance(feed, WorkEntry)
+            expect = OPDSAcquisitionFeed.entry_as_response(feed).data
 
             response = work_fixture.manager.work_controller.permalink(
                 identifier_type, identifier
@@ -495,8 +492,8 @@ class TestWorkController:
         # external service.
         [self.lp] = work_fixture.english_1.license_pools
         self.edition = self.lp.presentation_edition
-        self.datasource = self.lp.data_source.name  # type: ignore
-        self.identifier = self.lp.identifier  # type: ignore
+        self.datasource = self.lp.data_source.name
+        self.identifier = self.lp.identifier
 
         # Prep an empty recommendation.
         source = DataSource.lookup(work_fixture.db.session, self.datasource)
@@ -504,7 +501,7 @@ class TestWorkController:
         mock_api = MockNoveListAPI(work_fixture.db.session)
 
         args = [self.identifier.type, self.identifier.identifier]
-        kwargs = dict(novelist_api=mock_api)
+        kwargs: dict[str, Any] = dict(novelist_api=mock_api)
 
         # We get a 400 response if the pagination data is bad.
         with work_fixture.request_context_with_library("/?size=abc"):
@@ -529,9 +526,7 @@ class TestWorkController:
 
         # If no NoveList API is configured, the lane does not exist.
         with work_fixture.request_context_with_library("/"):
-            response = work_fixture.manager.work_controller.recommendations(
-                *args, novelist_api=None
-            )
+            response = work_fixture.manager.work_controller.recommendations(*args)
         assert 404 == response.status_code
         assert "http://librarysimplified.org/terms/problem/unknown-lane" == response.uri
         assert "Recommendations not available" == response.detail
@@ -539,11 +534,11 @@ class TestWorkController:
         # If the NoveList API is configured, the search index is asked
         # about its recommendations.
         #
-        # In this test it doesn't matter whether NoveList actually
-        # provides any recommendations. The Filter object will be
-        # created with .return_nothing set, but our mock
-        # ExternalSearchIndex will ignore that setting and return
-        # everything in its index -- as it always does.
+        # This test no longer makes sense, the external_search no longer blindly returns information
+        # The query_works is not overidden, so we mock it manually
+        work_fixture.manager.external_search.query_works = MagicMock(
+            return_value=fake_hits([work_fixture.english_1])
+        )
         with work_fixture.request_context_with_library("/"):
             response = work_fixture.manager.work_controller.recommendations(
                 *args, **kwargs
@@ -566,7 +561,9 @@ class TestWorkController:
             @classmethod
             def page(cls, **kwargs):
                 cls.called_with = kwargs
-                return Response("A bunch of titles")
+                resp = MagicMock()
+                resp.as_response.return_value = Response("A bunch of titles")
+                return resp
 
         kwargs["feed_class"] = Mock
         with work_fixture.request_context_with_library(
@@ -683,8 +680,7 @@ class TestWorkController:
         same_author_and_series = work_fixture.db.work(
             title="Same author and series", with_license_pool=True
         )
-        work_fixture.manager.external_search.docs = {}
-        work_fixture.manager.external_search.bulk_update([same_author_and_series])
+        work_fixture.manager.external_search.mock_query_works([same_author_and_series])
 
         mock_api = MockNoveListAPI(work_fixture.db.session)
 
@@ -759,7 +755,9 @@ class TestWorkController:
             @classmethod
             def groups(cls, **kwargs):
                 cls.called_with = kwargs
-                return Response("An OPDS feed")
+                resp = MagicMock()
+                resp.as_response.return_value = Response("An OPDS feed")
+                return resp
 
         mock_api.setup_method(metadata)
         with work_fixture.request_context_with_library("/?entrypoint=Audio"):
@@ -823,7 +821,7 @@ class TestWorkController:
                 **url_kwargs,
             )
         assert kwargs.pop("url") == expect_url
-
+        assert kwargs.pop("pagination") == None
         # That's it!
         assert {} == kwargs
 
@@ -835,6 +833,7 @@ class TestWorkController:
         work: Work = db.work(with_license_pool=True)
         identifier = work.presentation_edition.primary_identifier
         pool = get_one(db.session, LicensePool, work_id=work.id)
+        assert isinstance(pool, LicensePool)
         pool.work_id = None
         db.session.commit()
 
@@ -845,6 +844,7 @@ class TestWorkController:
         assert result == NOT_FOUND_ON_REMOTE
 
     def test_series(self, work_fixture: WorkFixture):
+        work_fixture.collection.data_source = None
         # Test the ability of the series() method to generate an OPDS
         # feed representing all the books in a given series, subject
         # to an optional language and audience restriction.
@@ -881,8 +881,7 @@ class TestWorkController:
         # that is the job of a non-mocked search engine.
         work = work_fixture.db.work(with_open_access_download=True)
         search_engine = work_fixture.manager.external_search
-        search_engine.docs = {}
-        search_engine.bulk_update([work])
+        search_engine.mock_query_works([work])
 
         # If a series is provided, a feed for that series is returned.
         with work_fixture.request_context_with_library("/"):
@@ -906,21 +905,13 @@ class TestWorkController:
         facet_links = [
             link for link in links if link["rel"] == "http://opds-spec.org/facet"
         ]
-        assert 9 == len(facet_links)
+        assert 11 == len(facet_links)
 
         # The facet link we care most about is the default sort order,
         # put into place by SeriesFacets.
         [series_position] = [x for x in facet_links if x["title"] == "Series Position"]
         assert "Sort by" == series_position["opds:facetgroup"]
         assert "true" == series_position["opds:activefacet"]
-
-        # The feed was cached.
-        cached = work_fixture.db.session.query(CachedFeed).one()
-        assert CachedFeed.SERIES_TYPE == cached.type
-        assert (
-            "Like As If Whatever Mysteries-eng,spa-Children,Young+Adult"
-            == cached.unique_key
-        )
 
         # At this point we don't want to generate real feeds anymore.
         # We can't do a real end-to-end test without setting up a real
@@ -942,7 +933,9 @@ class TestWorkController:
             @classmethod
             def page(cls, **kwargs):
                 self.called_with = kwargs
-                return Response("An OPDS feed")
+                resp = MagicMock()
+                resp.as_response.return_value = Response("An OPDS feed")
+                return resp
 
         # Test a basic request with custom faceting, pagination, and a
         # language and audience restriction. This will exercise nearly

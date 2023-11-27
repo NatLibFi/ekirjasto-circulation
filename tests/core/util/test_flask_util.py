@@ -14,7 +14,9 @@ from core.util.flask_util import (
     OPDSEntryResponse,
     OPDSFeedResponse,
     Response,
+    _snake_to_camel_case,
     boolean_value,
+    str_comma_list_validator,
 )
 from core.util.opds_writer import OPDSFeed
 
@@ -191,3 +193,28 @@ def add_request_context(request, model, form=None) -> None:
         body = model.parse_obj(parse_multi_dict(form))
 
     request.context = Context(query, body, None, None)
+
+
+def test_snake_to_camel_case():
+    assert _snake_to_camel_case("a_snake_case_word") == "aSnakeCaseWord"  # liar
+    assert _snake_to_camel_case("double__scores") == "doubleScores"
+    assert _snake_to_camel_case("__magic") == "magic"
+    assert (
+        _snake_to_camel_case("SnakesAreInnocent_snokes_are_not")
+        == "snakesareinnocentSnokesAreNot"
+    )
+
+    # Error case
+    with pytest.raises(ValueError):
+        _snake_to_camel_case("_")
+
+
+def test_str_comma_list_validator():
+    assert str_comma_list_validator(5) == ["5"]
+    assert str_comma_list_validator(1.2) == ["1.2"]
+    assert str_comma_list_validator("1,2,3") == ["1", "2", "3"]
+    assert str_comma_list_validator("") == [""]
+
+    # Unsupported types
+    assert pytest.raises(TypeError, str_comma_list_validator, None)
+    assert pytest.raises(TypeError, str_comma_list_validator, [])

@@ -1,29 +1,20 @@
 from __future__ import annotations
 
-# Credential, DRMDeviceIdentifier, DelegatedPatronIdentifier
 import datetime
 import uuid
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING
 
-from sqlalchemy import (
-    Column,
-    DateTime,
-    ForeignKey,
-    Index,
-    Integer,
-    String,
-    UniqueConstraint,
-)
-from sqlalchemy.orm import Mapped, backref, relationship
+from sqlalchemy import Column, DateTime, ForeignKey, Index, Integer, String
+from sqlalchemy.orm import Mapped, relationship
 from sqlalchemy.orm.session import Session
 from sqlalchemy.sql.expression import and_
 
-from ..util import is_session
-from ..util.datetime_helpers import utc_now
-from . import Base, get_one, get_one_or_create
+from core.model import Base, get_one, get_one_or_create
+from core.util import is_session
+from core.util.datetime_helpers import utc_now
 
 if TYPE_CHECKING:
-    from core.model import Patron
+    from core.model import Collection, DataSource, Patron
 
 
 class Credential(Base):
@@ -32,16 +23,18 @@ class Credential(Base):
     __tablename__ = "credentials"
     id = Column(Integer, primary_key=True)
     data_source_id = Column(Integer, ForeignKey("datasources.id"), index=True)
+    data_source: Mapped[DataSource] = relationship(
+        "DataSource", back_populates="credentials"
+    )
     patron_id = Column(Integer, ForeignKey("patrons.id"), index=True)
+    patron: Mapped[Patron] = relationship("Patron", back_populates="credentials")
     collection_id = Column(Integer, ForeignKey("collections.id"), index=True)
+    collection: Mapped[Collection] = relationship(
+        "Collection", back_populates="credentials"
+    )
     type = Column(String(255), index=True)
     credential = Column(String)
     expires = Column(DateTime(timezone=True), index=True)
-
-    # One Credential can have many associated DRMDeviceIdentifiers.
-    drm_device_identifiers: Mapped[List[DRMDeviceIdentifier]] = relationship(
-        "DRMDeviceIdentifier", backref=backref("credential", lazy="joined")
-    )
 
     __table_args__ = (
         # Unique indexes to prevent the creation of redundant credentials.
@@ -133,8 +126,8 @@ class Credential(Base):
         allow_empty_token=False,
         collection=None,
         force_refresh=False,
-    ):
-        from .datasource import DataSource
+    ) -> Credential:
+        from core.model.datasource import DataSource
 
         if isinstance(data_source, str):
             data_source = DataSource.lookup(_db, data_source)
@@ -194,7 +187,7 @@ class Credential(Base):
         :param auto_create_datasource: Boolean value indicating whether
             a data source should be created in the case it doesn't
         """
-        from .patron import Patron
+        from core.model.patron import Patron
 
         if not is_session(_db):
             raise ValueError('"_db" argument must be a valid SQLAlchemy session')
@@ -209,7 +202,7 @@ class Credential(Base):
         if not isinstance(auto_create_datasource, bool):
             raise ValueError('"auto_create_datasource" argument must be boolean')
 
-        from .datasource import DataSource
+        from core.model.datasource import DataSource
 
         data_source = DataSource.lookup(
             _db, data_source_name, autocreate=auto_create_datasource
@@ -218,7 +211,11 @@ class Credential(Base):
             _db, Credential, data_source=data_source, type=token_type, patron=patron
         )
 
-        return cls._filter_invalid_credential(credential, allow_persistent_token)
+        return (
+            cls._filter_invalid_credential(credential, allow_persistent_token)
+            if credential
+            else None
+        )
 
     @classmethod
     def lookup_and_expire_temporary_token(cls, _db, data_source, type, token):
@@ -267,27 +264,6 @@ class Credential(Base):
         credential.expires = None
         return credential, is_new
 
-    # A Credential may have many associated DRMDeviceIdentifiers.
-    def register_drm_device_identifier(self, device_identifier):
-        _db = Session.object_session(self)
-        return get_one_or_create(
-            _db,
-            DRMDeviceIdentifier,
-            credential=self,
-            device_identifier=device_identifier,
-        )
-
-    def deregister_drm_device_identifier(self, device_identifier):
-        _db = Session.object_session(self)
-        device_id_obj = get_one(
-            _db,
-            DRMDeviceIdentifier,
-            credential=self,
-            device_identifier=device_identifier,
-        )
-        if device_id_obj:
-            _db.delete(device_id_obj)
-
     def __repr__(self):
         return (
             "<Credential("
@@ -305,72 +281,3 @@ class Credential(Base):
                 self.expires,
             )
         )
-
-
-class DRMDeviceIdentifier(Base):
-    """A device identifier for a particular DRM scheme.
-    Associated with a Credential, most commonly a patron's "Identifier
-    for Adobe account ID purposes" Credential.
-    """
-
-    __tablename__ = "drmdeviceidentifiers"
-    id = Column(Integer, primary_key=True)
-    credential_id = Column(Integer, ForeignKey("credentials.id"), index=True)
-    device_identifier = Column(String(255), index=True)
-
-
-class DelegatedPatronIdentifier(Base):
-    """This library is in charge of coming up with, and storing,
-    identifiers associated with the patrons of some other library.
-    e.g. NYPL provides Adobe IDs for patrons of all libraries that use
-    the SimplyE app.
-    Those identifiers are stored here.
-    """
-
-    ADOBE_ACCOUNT_ID = "Adobe Account ID"
-
-    __tablename__ = "delegatedpatronidentifiers"
-    id = Column(Integer, primary_key=True)
-    type = Column(String(255), index=True)
-    library_uri = Column(String(255), index=True)
-
-    # This is the ID the foreign library gives us when referring to
-    # this patron.
-    patron_identifier = Column(String(255), index=True)
-
-    # This is the identifier we made up for the patron. This is what the
-    # foreign library is trying to look up.
-    delegated_identifier = Column(String)
-
-    __table_args__ = (UniqueConstraint("type", "library_uri", "patron_identifier"),)
-
-    @classmethod
-    def get_one_or_create(
-        cls, _db, library_uri, patron_identifier, identifier_type, create_function
-    ):
-        """Look up the delegated identifier for the given patron. If there is
-        none, create one.
-
-        :param library_uri: A URI identifying the patron's library.
-        :param patron_identifier: An identifier used by that library to
-            distinguish between this patron and others. This should be
-            an identifier created solely for the purpose of identifying the
-            patron with _this_ library, and not (e.g.) the patron's barcode.
-        :param identifier_type: The type of the delegated identifier
-            to look up. (probably ADOBE_ACCOUNT_ID)
-        :param create_function: If this patron does not have a
-            DelegatedPatronIdentifier, one will be created, and this
-            function will be called to determine the value of
-            DelegatedPatronIdentifier.delegated_identifier.
-        :return: A 2-tuple (DelegatedPatronIdentifier, is_new)
-        """
-        identifier, is_new = get_one_or_create(
-            _db,
-            DelegatedPatronIdentifier,
-            library_uri=library_uri,
-            patron_identifier=patron_identifier,
-            type=identifier_type,
-        )
-        if is_new:
-            identifier.delegated_identifier = create_function()
-        return identifier, is_new

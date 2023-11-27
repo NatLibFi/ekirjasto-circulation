@@ -9,7 +9,6 @@ from enum import Enum
 class DataSourceConstants:
     GUTENBERG = "Gutenberg"
     OVERDRIVE = "Overdrive"
-    ODILO = "Odilo"
     PROJECT_GITENBERG = "Project GITenberg"
     STANDARD_EBOOKS = "Standard Ebooks"
     UNGLUE_IT = "unglue.it"
@@ -40,7 +39,6 @@ class DataSourceConstants:
     FEEDBOOKS = "FeedBooks"
     BIBBLIO = "Bibblio"
     ENKI = "Enki"
-    LCP = "LCP"
     PROQUEST = "ProQuest"
 
     DEPRECATED_NAMES = {"3M": BIBLIOTHECA}
@@ -146,7 +144,6 @@ class EditionConstants:
 class IdentifierConstants:
     # Common types of identifiers.
     OVERDRIVE_ID = "Overdrive ID"
-    ODILO_ID = "Odilo ID"
     BIBLIOTHECA_ID = "Bibliotheca ID"
     GUTENBERG_ID = "Gutenberg ID"
     AXIS_360_ID = "Axis 360 ID"
@@ -174,7 +171,6 @@ class IdentifierConstants:
     LICENSE_PROVIDING_IDENTIFIER_TYPES = [
         BIBLIOTHECA_ID,
         OVERDRIVE_ID,
-        ODILO_ID,
         AXIS_360_ID,
         GUTENBERG_ID,
         ELIB_ID,
@@ -196,7 +192,6 @@ class IdentifierType(Enum):
     """Enumeration of all available identifier types."""
 
     OVERDRIVE_ID = IdentifierConstants.OVERDRIVE_ID
-    ODILO_ID = IdentifierConstants.ODILO_ID
     BIBLIOTHECA_ID = IdentifierConstants.BIBLIOTHECA_ID
     GUTENBERG_ID = IdentifierConstants.GUTENBERG_ID
     AXIS_360_ID = IdentifierConstants.AXIS_360_ID
@@ -231,14 +226,10 @@ class LinkRelations:
     SHORT_DESCRIPTION = "http://librarysimplified.org/terms/rel/short-description"
     AUTHOR = "http://schema.org/author"
     ALTERNATE = "alternate"
+    FACET_REL = "http://opds-spec.org/facet"
 
     # The rel for a link we feed to clients for samples/previews.
     CLIENT_SAMPLE = "preview"
-
-    # A uri rel type for authentication documents with a vendor specific "link"
-    PATRON_PASSWORD_RESET = (
-        "http://librarysimplified.org/terms/rel/patron-password-reset"
-    )
 
     # opds/opds2 auth token rel
     TOKEN_AUTH = "token_endpoint"
@@ -246,6 +237,9 @@ class LinkRelations:
     # TODO: Is this the appropriate relation?
     DRM_ENCRYPTED_DOWNLOAD = "http://opds-spec.org/acquisition/"
     BORROW = "http://opds-spec.org/acquisition/borrow"
+
+    TIME_TRACKING = "http://palaceproject.io/terms/timeTracking"
+    DEVICE_REGISTRATION = "http://palaceproject.io/terms/deviceRegistration"
 
     CIRCULATION_ALLOWED = [
         OPEN_ACCESS_DOWNLOAD,
@@ -265,8 +259,6 @@ class LinkRelations:
         ALTERNATE,
         SAMPLE,
     ]
-    MIRRORED = [OPEN_ACCESS_DOWNLOAD, GENERIC_OPDS_ACQUISITION, IMAGE, THUMBNAIL_IMAGE]
-    SELF_HOSTED_BOOKS = list(set(CIRCULATION_ALLOWED) & set(MIRRORED))
 
 
 class MediaTypes:
@@ -383,3 +375,9 @@ class MediaTypes:
             # multiple media types have the same extension, the most
             # common media type will be used.
             MEDIA_TYPE_FOR_EXTENSION[_extension] = _media_type
+
+
+class NotificationConstants:
+    ACTIVITY_SYNC_TYPE = "ActivitySync"
+    LOAN_EXPIRY_TYPE = "LoanExpiry"
+    HOLD_AVAILABLE_TYPE = "HoldAvailable"

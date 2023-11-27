@@ -3,15 +3,15 @@ from __future__ import annotations
 import json
 import logging
 import os
-import warnings
-from typing import TYPE_CHECKING, Any, Dict, Generator, List, Union
+from typing import Any, Generator, List, Literal, Tuple, Type, TypeVar
 
+from contextlib2 import contextmanager
 from psycopg2.extensions import adapt as sqlescape
 from psycopg2.extras import NumericRange
 from pydantic.json import pydantic_encoder
 from sqlalchemy import create_engine
-from sqlalchemy.engine import Connection, Engine
-from sqlalchemy.exc import IntegrityError, SAWarning
+from sqlalchemy.engine import Connection
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
@@ -20,14 +20,43 @@ from sqlalchemy.sql.expression import literal_column, table
 
 Base = declarative_base()
 
-from .. import classifier
-from .constants import (
+from core import classifier
+from core.model.constants import (
     DataSourceConstants,
     EditionConstants,
     IdentifierConstants,
     LinkRelations,
     MediaTypes,
 )
+
+# This is the lock ID used to ensure that only one circulation manager
+# initializes or migrates the database at a time.
+LOCK_ID_DB_INIT = 1000000001
+
+# This is the lock ID used to ensure that only one circulation manager
+# initializes an application instance at a time.
+LOCK_ID_APP_INIT = 1000000002
+
+
+@contextmanager
+def pg_advisory_lock(
+    connection: Connection | Session, lock_id: int | None
+) -> Generator[None, None, None]:
+    """
+    Application wide locking based on Lock IDs
+
+    If lock_id is None, no lock is acquired.
+    """
+    if lock_id is None:
+        yield
+    else:
+        # Create the lock
+        connection.execute(text(f"SELECT pg_advisory_lock({lock_id});"))
+        try:
+            yield
+        finally:
+            # Close the lock
+            connection.execute(text(f"SELECT pg_advisory_unlock({lock_id});"))
 
 
 def flush(db):
@@ -45,7 +74,12 @@ def flush(db):
         db.flush()
 
 
-def create(db, model, create_method="", create_method_kwargs=None, **kwargs):
+T = TypeVar("T")
+
+
+def create(
+    db: Session, model: Type[T], create_method="", create_method_kwargs=None, **kwargs
+) -> Tuple[T, Literal[True]]:
     kwargs.update(create_method_kwargs or {})
     created = getattr(model, create_method, model)(**kwargs)
     db.add(created)
@@ -53,7 +87,9 @@ def create(db, model, create_method="", create_method_kwargs=None, **kwargs):
     return created, True
 
 
-def get_one(db, model, on_multiple="error", constraint=None, **kwargs):
+def get_one(
+    db: Session, model: Type[T], on_multiple="error", constraint=None, **kwargs
+) -> T | None:
     """Gets an object from the database based on its attributes.
 
     :param constraint: A single clause that can be passed into
@@ -84,9 +120,12 @@ def get_one(db, model, on_multiple="error", constraint=None, **kwargs):
             return q.one()
     except NoResultFound:
         return None
+    return None
 
 
-def get_one_or_create(db, model, create_method="", create_method_kwargs=None, **kwargs):
+def get_one_or_create(
+    db: Session, model: Type[T], create_method="", create_method_kwargs=None, **kwargs
+) -> Tuple[T, bool]:
     one = get_one(db, model, **kwargs)
     if one:
         return one, False
@@ -171,7 +210,6 @@ class PresentationCalculationPolicy:
         choose_summary=True,
         calculate_quality=True,
         choose_cover=True,
-        regenerate_opds_entries=False,
         regenerate_marc_record=False,
         update_search_index=False,
         verbose=True,
@@ -193,8 +231,6 @@ class PresentationCalculationPolicy:
            quality of the Work?
         :param choose_cover: Should we reconsider which of the
            available cover images is the best?
-        :param regenerate_opds_entries: Should we recreate the OPDS entries
-           for this Work?
         :param regenerate_marc_record: Should we regenerate the MARC record
            for this Work?
         :param update_search_index: Should we reindex this Work's
@@ -229,14 +265,9 @@ class PresentationCalculationPolicy:
         self.calculate_quality = calculate_quality
         self.choose_cover = choose_cover
 
-        # We will regenerate OPDS entries if any of the metadata
-        # changes, but if regenerate_opds_entries is True we will
-        # _always_ do so. This is so we can regenerate _all_ the OPDS
-        # entries if the OPDS presentation algorithm changes.
-        # The same is true for the MARC records, except that they will
+        # Regenerate MARC records, except that they will
         # never be generated unless a MARC organization code is set
         # in a sitewide configuration setting.
-        self.regenerate_opds_entries = regenerate_opds_entries
         self.regenerate_marc_record = regenerate_marc_record
 
         # Similarly for update_search_index.
@@ -254,7 +285,6 @@ class PresentationCalculationPolicy:
         everything, even when it doesn't seem necessary.
         """
         return PresentationCalculationPolicy(
-            regenerate_opds_entries=True,
             regenerate_marc_record=True,
             update_search_index=True,
         )
@@ -305,12 +335,9 @@ def json_serializer(*args, **kwargs) -> str:
 
 
 class SessionManager:
-
     # A function that calculates recursively equivalent identifiers
     # is also defined in SQL.
     RECURSIVE_EQUIVALENTS_FUNCTION = "recursive_equivalents.sql"
-
-    engine_for_url: Dict[str, Engine] = {}
 
     @classmethod
     def engine(cls, url=None):
@@ -348,85 +375,15 @@ class SessionManager:
         return os.path.join(base_path, "files")
 
     @classmethod
-    def initialize(cls, url, initialize_data=True, initialize_schema=True):
-        """Initialize the database.
-
-        This includes the schema, the custom functions, and the
-        initial content.
-        """
-        if url in cls.engine_for_url:
-            engine = cls.engine_for_url[url]
-            return engine, engine.connect()
-
-        engine = cls.engine(url)
-        if initialize_schema:
-            cls.initialize_schema(engine)
-        connection = engine.connect()
-
-        # Check if the recursive equivalents function exists already.
-        query = (
-            select([literal_column("proname")])
-            .select_from(table("pg_proc"))
-            .where(literal_column("proname") == "fn_recursive_equivalents")
-        )
-        result = connection.execute(query)
-        result = list(result)
-
-        # If it doesn't, create it.
-        if not result and initialize_data:
-            resource_file = os.path.join(
-                cls.resource_directory(), cls.RECURSIVE_EQUIVALENTS_FUNCTION
-            )
-            if not os.path.exists(resource_file):
-                raise OSError(
-                    "Could not load recursive equivalents function from %s: file does not exist."
-                    % resource_file
-                )
-            sql = open(resource_file).read()
-            connection.execute(sql)
-
-        if initialize_data:
-            with cls.session_from_connection(connection) as session:
-                cls.initialize_data(session)
-
-        if connection:
-            connection.close()
-
-        if initialize_schema and initialize_data:
-            # Only cache the engine if all initialization has been performed.
-            #
-            # Some pieces of code (e.g. the script that runs
-            # migrations) have a legitimate need to bypass some of the
-            # initialization, but normal operation of the site
-            # requires that everything be initialized.
-            #
-            # Until someone tells this method to initialize
-            # everything, we can't short-circuit this method with a
-            # cache.
-            cls.engine_for_url[url] = engine
-        return engine, engine.connect()
-
-    @classmethod
     def initialize_schema(cls, engine):
         """Initialize the database schema."""
         # Use SQLAlchemy to create all the tables.
-        to_create = [
-            table_obj
-            for name, table_obj in list(Base.metadata.tables.items())
-            if not name.startswith("mv_")
-        ]
-        Base.metadata.create_all(engine, tables=to_create)
+        Base.metadata.create_all(engine)
 
     @classmethod
     def session(cls, url, initialize_data=True, initialize_schema=True):
-        engine = connection = 0
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=SAWarning)
-            engine, connection = cls.initialize(
-                url,
-                initialize_data=initialize_data,
-                initialize_schema=initialize_schema,
-            )
+        engine = cls.engine(url)
+        connection = engine.connect()
         return cls.session_from_connection(connection)
 
     @classmethod
@@ -436,11 +393,32 @@ class SessionManager:
         return session
 
     @classmethod
-    def initialize_data(cls, session, set_site_configuration=True):
+    def initialize_data(cls, session: Session):
+        # Check if the recursive equivalents function exists already.
+        query = (
+            select([literal_column("proname")])
+            .select_from(table("pg_proc"))
+            .where(literal_column("proname") == "fn_recursive_equivalents")
+        )
+        result = session.execute(query).all()
+
+        # If it doesn't, create it.
+        if not result:
+            resource_file = os.path.join(
+                cls.resource_directory(), cls.RECURSIVE_EQUIVALENTS_FUNCTION
+            )
+            if not os.path.exists(resource_file):
+                raise OSError(
+                    "Could not load recursive equivalents function from %s: file does not exist."
+                    % resource_file
+                )
+            sql = open(resource_file).read()
+            session.execute(text(sql))
+
         # Create initial content.
-        from .classification import Genre
-        from .datasource import DataSource
-        from .licensing import DeliveryMechanism
+        from core.model.classification import Genre
+        from core.model.datasource import DataSource
+        from core.model.licensing import DeliveryMechanism
 
         list(DataSource.well_known_sources(session))
 
@@ -488,17 +466,6 @@ def production_session(initialize_data=True) -> Session:
         url = url[1:]
     logging.debug("Database url: %s", url)
     _db = SessionManager.session(url, initialize_data=initialize_data)
-
-    # The first thing to do after getting a database connection is to
-    # set up the logging configuration.
-    #
-    # If called during a unit test, this will configure logging
-    # incorrectly, but 1) this method isn't normally called during
-    # unit tests, and 2) package_setup() will call initialize() again
-    # with the right arguments.
-    from ..log import LogConfiguration
-
-    LogConfiguration.initialize(_db)
     return _db
 
 
@@ -547,35 +514,38 @@ from api.saml.metadata.federations.model import (
     SAMLFederatedIdentityProvider,
     SAMLFederation,
 )
-
-from .admin import Admin, AdminRole
-from .cachedfeed import CachedFeed, CachedMARCFile, WillNotGenerateExpensiveFeed
-from .circulationevent import CirculationEvent
-from .classification import Classification, Genre, Subject
-from .collection import (
+from core.model.admin import Admin, AdminRole
+from core.model.cachedfeed import CachedMARCFile
+from core.model.circulationevent import CirculationEvent
+from core.model.classification import Classification, Genre, Subject
+from core.model.collection import (
     Collection,
     CollectionIdentifier,
     CollectionMissing,
     collections_identifiers,
 )
-from .configuration import (
-    ConfigurationSetting,
-    ExternalIntegration,
-    ExternalIntegrationLink,
+from core.model.configuration import ConfigurationSetting, ExternalIntegration
+from core.model.contributor import Contribution, Contributor
+from core.model.coverage import (
+    BaseCoverageRecord,
+    CoverageRecord,
+    Timestamp,
+    WorkCoverageRecord,
 )
-from .contributor import Contribution, Contributor
-from .coverage import BaseCoverageRecord, CoverageRecord, Timestamp, WorkCoverageRecord
-from .credential import Credential, DelegatedPatronIdentifier, DRMDeviceIdentifier
-from .customlist import CustomList, CustomListEntry
-from .datasource import DataSource
-from .devicetokens import DeviceToken
-from .edition import Edition
-from .hassessioncache import HasSessionCache
-from .identifier import Equivalency, Identifier
-from .integration import IntegrationError
-from .integrationclient import IntegrationClient
-from .library import Library
-from .licensing import (
+from core.model.credential import Credential
+from core.model.customlist import CustomList, CustomListEntry
+from core.model.datasource import DataSource
+from core.model.devicetokens import DeviceToken
+from core.model.discovery_service_registration import DiscoveryServiceRegistration
+from core.model.edition import Edition
+from core.model.hassessioncache import HasSessionCache
+from core.model.identifier import Equivalency, Identifier
+from core.model.integration import (
+    IntegrationConfiguration,
+    IntegrationLibraryConfiguration,
+)
+from core.model.library import Library
+from core.model.licensing import (
     DeliveryMechanism,
     License,
     LicensePool,
@@ -583,9 +553,9 @@ from .licensing import (
     PolicyException,
     RightsStatus,
 )
-from .listeners import *
-from .measurement import Measurement
-from .patron import (
+from core.model.listeners import *
+from core.model.measurement import Measurement
+from core.model.patron import (
     Annotation,
     Hold,
     Loan,
@@ -593,5 +563,14 @@ from .patron import (
     Patron,
     PatronProfileStorage,
 )
-from .resource import Hyperlink, Representation, Resource, ResourceTransformation
-from .work import Work, WorkGenre
+from core.model.resource import (
+    Hyperlink,
+    Representation,
+    Resource,
+    ResourceTransformation,
+)
+from core.model.time_tracking import PlaytimeEntry, PlaytimeSummary
+from core.model.work import Work, WorkGenre
+
+# Import order important here to avoid an import cycle.
+from core.lane import Lane, LaneGenre  # isort:skip

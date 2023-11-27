@@ -31,6 +31,7 @@ import re
 import socket
 import ssl
 import tempfile
+import time
 from enum import Enum
 from typing import Callable, Optional
 
@@ -38,6 +39,7 @@ import certifi
 
 from api.sip.dialect import Dialect
 from core.util.datetime_helpers import utc_now
+from core.util.log import LoggerMixin
 
 # SIP2 defines a large number of fields which are used in request and
 # response messages. This library focuses on defining the response
@@ -222,10 +224,7 @@ class Constants:
     TERMINATOR_CHAR = "\r"
 
 
-class SIPClient(Constants):
-
-    log = client_logger
-
+class SIPClient(Constants, LoggerMixin):
     # Maximum retries of a SIP message before failing.
     MAXIMUM_RETRIES = 5
     # Timeout in seconds
@@ -373,7 +372,7 @@ class SIPClient(Constants):
 
     def end_session(self, *args, **kwargs):
         """Send end session message."""
-        if self.dialect_config.sendEndSession:
+        if self.dialect_config.send_end_session:
             return self.make_request(
                 self.end_session_message,
                 self.end_session_response_parser,
@@ -580,7 +579,7 @@ class SIPClient(Constants):
             36,
             fixed.end_session,
             fixed.transaction_date,
-            named.institution_id.required,
+            named.institution_id,
             named.patron_identifier.required,
             named.screen_message,
             named.print_line,
@@ -690,7 +689,7 @@ class SIPClient(Constants):
             fixed.fine_items_count,
             fixed.recall_items_count,
             fixed.unavailable_holds_count,
-            named.institution_id.required,
+            named.institution_id,
             named.patron_identifier.required,
             named.personal_name.required,
             named.hold_items_limit,
@@ -843,8 +842,10 @@ class SIPClient(Constants):
 
     def now(self):
         """Return the current time, formatted as SIP expects it."""
+        tz_spaces = self.dialect_config.tz_spaces
         now = utc_now()
-        return datetime.datetime.strftime(now, "%Y%m%d0000%H%M%S")
+        zzzz = " " * 4 if tz_spaces else "0" * 4
+        return datetime.datetime.strftime(now, f"%Y%m%d{zzzz}%H%M%S")
 
     def summary(
         self,
@@ -877,7 +878,7 @@ class SIPClient(Constants):
         if summary.count("Y") > 1:
             # This violates the spec but in my tests it seemed to
             # work, so we'll allow it.
-            self.log.warn(
+            self.log.warning(
                 "Summary requested too many kinds of detailed information: %s" % summary
             )
         return summary
@@ -892,16 +893,22 @@ class SIPClient(Constants):
 
         This method exists only to be subclassed by MockSIPClient.
         """
-        self.connection.send(data)
+        start_time = time.time()
+        self.connection.sendall(data)
+        time_taken = time.time() - start_time
+        self.log.info("Sent %s bytes in %.2f seconds", len(data), time_taken)
 
     def read_message(self, max_size=1024 * 1024):
         """Read a SIP2 message from the socket connection.
 
         A SIP2 message ends with a \\r character.
         """
+        start_time = time.time()
         done = False
         data = b""
         while not done:
+            if time.time() - start_time > self.TIMEOUT:
+                raise OSError("Timeout reading from socket.")
             tmp = self.connection.recv(4096)
             data = data + tmp
             if not tmp:
@@ -910,6 +917,8 @@ class SIPClient(Constants):
                 done = True
             if len(data) > max_size:
                 raise OSError("SIP2 response too large.")
+        time_taken = time.time() - start_time
+        self.log.info("Received %s bytes in %.2f seconds", len(data), time_taken)
         return data
 
     def append_checksum(self, text, include_sequence_number=True):

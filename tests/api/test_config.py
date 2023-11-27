@@ -1,42 +1,28 @@
 import json
+import os
 from collections import Counter
+from contextlib import nullcontext as does_not_raise
+from unittest.mock import patch
 
+import pytest
 from Crypto.Cipher import PKCS1_OAEP
 from Crypto.PublicKey import RSA
 
 from api.config import Configuration
-from core.config import Configuration as CoreConfiguration
-from core.model import ConfigurationSetting
+from core.config import CannotLoadConfiguration
+from core.configuration.library import LibrarySettings
 from tests.fixtures.database import DatabaseTransactionFixture
+from tests.fixtures.files import FilesFixture
+from tests.fixtures.library import LibraryFixture
+
+
+@pytest.fixture()
+def notifications_files_fixture() -> FilesFixture:
+    """Provides access to notifications test files."""
+    return FilesFixture("util/notifications")
 
 
 class TestConfiguration:
-    def test_key_pair(self, db: DatabaseTransactionFixture):
-        # Test the ability to create, replace, or look up a
-        # public/private key pair in a ConfigurationSetting.
-        setting = ConfigurationSetting.sitewide(db.session, Configuration.KEY_PAIR)
-        setting.value = "nonsense"
-
-        # If you pass in a ConfigurationSetting that is missing its
-        # value, or whose value is not a public key pair, a new key
-        # pair is created.
-        public_key, private_key = Configuration.key_pair(setting)
-        assert "BEGIN PUBLIC KEY" in public_key
-        assert "BEGIN RSA PRIVATE KEY" in private_key
-        assert [public_key, private_key] == setting.json_value
-
-        setting.value = None
-        public_key, private_key = Configuration.key_pair(setting)
-        assert "BEGIN PUBLIC KEY" in public_key
-        assert "BEGIN RSA PRIVATE KEY" in private_key
-        assert [public_key, private_key] == setting.json_value
-
-        # If the setting has a good value already, the key pair is
-        # returned as is.
-        new_public, new_private = Configuration.key_pair(setting)
-        assert new_public == public_key
-        assert new_private == private_key
-
     def test_cipher(self, db: DatabaseTransactionFixture):
         # Test the cipher() helper method.
 
@@ -64,88 +50,47 @@ class TestConfiguration:
         library = db.default_library()
 
         # We haven't set any of these values.
-        for key in [
-            C.LARGE_COLLECTION_LANGUAGES,
-            C.SMALL_COLLECTION_LANGUAGES,
-            C.TINY_COLLECTION_LANGUAGES,
-        ]:
-            assert None == ConfigurationSetting.for_library(key, library).value
+        assert library.settings.large_collection_languages is None
+        assert library.settings.small_collection_languages is None
+        assert library.settings.tiny_collection_languages is None
 
         # So how does this happen?
-        assert ["eng"] == C.large_collection_languages(library)
-        assert [] == C.small_collection_languages(library)
-        assert [] == C.tiny_collection_languages(library)
+        assert C.large_collection_languages(library) == ["eng"]
+        assert C.small_collection_languages(library) == []
+        assert C.tiny_collection_languages(library) == []
 
         # It happens because the first time we call one of those
         # *_collection_languages, it estimates values for all three
         # configuration settings, based on the library's current
         # holdings.
-        large_setting = ConfigurationSetting.for_library(
-            C.LARGE_COLLECTION_LANGUAGES, library
-        )
-        assert ["eng"] == large_setting.json_value
-        assert (
-            []
-            == ConfigurationSetting.for_library(
-                C.SMALL_COLLECTION_LANGUAGES, library
-            ).json_value
-        )
-        assert (
-            []
-            == ConfigurationSetting.for_library(
-                C.TINY_COLLECTION_LANGUAGES, library
-            ).json_value
-        )
+        assert library.settings.large_collection_languages == ["eng"]
+        assert library.settings.small_collection_languages == []
+        assert library.settings.tiny_collection_languages == []
 
         # We can change these values.
-        large_setting.value = json.dumps(["spa", "jpn"])
-        assert ["spa", "jpn"] == C.large_collection_languages(library)
-
-        # If we enter an invalid value, or a value that's not a list,
-        # the estimate is re-calculated the next time we look.
-        large_setting.value = "this isn't json"
-        assert ["eng"] == C.large_collection_languages(library)
-
-        large_setting.value = '"this is json but it\'s not a list"'
-        assert ["eng"] == C.large_collection_languages(library)
+        library.update_settings(
+            LibrarySettings.construct(large_collection_languages=["spa", "jpn"])
+        )
+        assert C.large_collection_languages(library) == ["spa", "jpn"]
 
     def test_estimate_language_collection_for_library(
-        self, db: DatabaseTransactionFixture
+        self, db: DatabaseTransactionFixture, library_fixture: LibraryFixture
     ):
-        library = db.default_library()
-
         # We thought we'd have big collections.
-        old_settings = {
-            Configuration.LARGE_COLLECTION_LANGUAGES: ["spa", "fre"],
-            Configuration.SMALL_COLLECTION_LANGUAGES: ["chi"],
-            Configuration.TINY_COLLECTION_LANGUAGES: ["rus"],
-        }
-
-        for key, value in list(old_settings.items()):
-            ConfigurationSetting.for_library(key, library).value = json.dumps(value)
+        settings = library_fixture.mock_settings()
+        settings.large_collection_languages = ["spa", "fre"]
+        settings.small_collection_languages = ["chi"]
+        settings.tiny_collection_languages = ["rus"]
+        library = library_fixture.library(settings=settings)
 
         # But there's nothing in our database, so when we call
         # Configuration.estimate_language_collections_for_library...
         Configuration.estimate_language_collections_for_library(library)
 
         # ...it gets reset to the default.
-        assert ["eng"] == ConfigurationSetting.for_library(
-            Configuration.LARGE_COLLECTION_LANGUAGES, library
-        ).json_value
-
-        assert (
-            []
-            == ConfigurationSetting.for_library(
-                Configuration.SMALL_COLLECTION_LANGUAGES, library
-            ).json_value
-        )
-
-        assert (
-            []
-            == ConfigurationSetting.for_library(
-                Configuration.TINY_COLLECTION_LANGUAGES, library
-            ).json_value
-        )
+        assert library.settings.large_collection_languages == ["eng"]
+        assert library.settings.small_collection_languages == []
+        assert library.settings.tiny_collection_languages == []
 
     def test_classify_holdings(self, db: DatabaseTransactionFixture):
         m = Configuration.classify_holdings
@@ -167,31 +112,117 @@ class TestConfiguration:
         )
         assert [["fre", "jpn"], ["spa", "ukr", "ira"], ["nav"]] == m(different_sizes)
 
-    def test_max_outstanding_fines(self, db: DatabaseTransactionFixture):
+    def test_max_outstanding_fines(
+        self, db: DatabaseTransactionFixture, library_fixture: LibraryFixture
+    ):
         m = Configuration.max_outstanding_fines
 
-        # By default, fines are not enforced.
-        assert None == m(db.default_library())
+        library = library_fixture.library()
+        settings = library_fixture.settings(library)
 
-        # The maximum fine value is determined by this
-        # ConfigurationSetting.
-        setting = ConfigurationSetting.for_library(
-            Configuration.MAX_OUTSTANDING_FINES, db.default_library()
-        )
+        # By default, fines are not enforced.
+        assert m(library) is None
 
         # Any amount of fines is too much.
-        setting.value = "$0"
-        max_fines = m(db.default_library())
+        settings.max_outstanding_fines = 0
+        max_fines = m(library)
+        assert max_fines is not None
         assert 0 == max_fines.amount
 
         # A more lenient approach.
-        setting.value = "100"
-        max_fines = m(db.default_library())
+        settings.max_outstanding_fines = 100.0
+        max_fines = m(library)
+        assert max_fines is not None
         assert 100 == max_fines.amount
 
-    def test_default_opds_format(self):
-        # Initializing the Configuration object modifies the corresponding
-        # object in core, so that core code will behave appropriately.
-        assert (
-            Configuration.DEFAULT_OPDS_FORMAT == CoreConfiguration.DEFAULT_OPDS_FORMAT
+    @patch.object(os, "environ", new=dict())
+    def test_fcm_credentials(self, notifications_files_fixture):
+        invalid_json = "{ this is invalid JSON }"
+        valid_credentials_json = notifications_files_fixture.sample_text(
+            "fcm-credentials-valid-json.json"
         )
+        valid_credentials_object = json.loads(valid_credentials_json)
+
+        # No FCM credentials environment variable present.
+        with pytest.raises(
+            CannotLoadConfiguration,
+            match=r"FCM Credentials configuration environment variable not defined.",
+        ):
+            Configuration.fcm_credentials()
+
+        # Non-existent file.
+        os.environ[
+            Configuration.FCM_CREDENTIALS_FILE_ENVIRONMENT_VARIABLE
+        ] = "filedoesnotexist.deleteifitdoes"
+        with pytest.raises(
+            FileNotFoundError,
+            match=r"The FCM credentials file .* does not exist.",
+        ):
+            Configuration.fcm_credentials()
+
+        # Valid JSON file.
+        os.environ[
+            Configuration.FCM_CREDENTIALS_FILE_ENVIRONMENT_VARIABLE
+        ] = notifications_files_fixture.sample_path("fcm-credentials-valid-json.json")
+        assert valid_credentials_object == Configuration.fcm_credentials()
+
+        # Setting more than one FCM credentials environment variable is not valid.
+        os.environ[
+            Configuration.FCM_CREDENTIALS_JSON_ENVIRONMENT_VARIABLE
+        ] = valid_credentials_json
+        with pytest.raises(
+            CannotLoadConfiguration,
+            match=r"Both JSON .* and file-based .* FCM Credential environment variables are defined, but only one is allowed.",
+        ):
+            Configuration.fcm_credentials()
+
+        # Down to just the JSON FCM credentials environment variable.
+        del os.environ[Configuration.FCM_CREDENTIALS_FILE_ENVIRONMENT_VARIABLE]
+        assert valid_credentials_object == Configuration.fcm_credentials()
+
+        # But we should get an exception if the JSON is invalid.
+        os.environ[
+            Configuration.FCM_CREDENTIALS_JSON_ENVIRONMENT_VARIABLE
+        ] = invalid_json
+        with pytest.raises(
+            CannotLoadConfiguration,
+            match=r"Cannot parse value of FCM credential environment variable .* as JSON.",
+        ):
+            Configuration.fcm_credentials()
+
+    @pytest.mark.parametrize(
+        "env_var_value, expected_result, raises_exception",
+        [
+            ["true", True, False],
+            ["True", True, False],
+            [None, False, False],
+            ["", False, False],
+            ["false", False, False],
+            ["False", False, False],
+            ["3", None, True],
+            ["X", None, True],
+        ],
+    )
+    @patch.object(os, "environ", new=dict())
+    def test_basic_token_auth_is_enabled(
+        self, env_var_value, expected_result, raises_exception
+    ):
+        env_var = Configuration.BASIC_TOKEN_AUTH_ENABLED_ENVVAR
+
+        # Simulate an unset environment variable with the `None` value.
+        if env_var_value is None:
+            del os.environ[env_var]
+        else:
+            os.environ[env_var] = env_var_value
+
+        expected_exception = (
+            pytest.raises(
+                CannotLoadConfiguration,
+                match=f"Invalid value for {env_var} environment variable.",
+            )
+            if raises_exception
+            else does_not_raise()
+        )
+
+        with expected_exception:
+            assert expected_result == Configuration.basic_token_auth_is_enabled()

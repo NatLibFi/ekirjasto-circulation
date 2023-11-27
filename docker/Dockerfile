@@ -1,27 +1,27 @@
 ###############################################################################
-## lcpencrypt
+# Common build step
+#
+# This is a multi-stage build, so we can use the same build steps for
+# both the webapp and the scripts images, since they are largely the same.
+# The only difference are what services are enabled.
 ###############################################################################
 
-FROM golang:1.17 AS builder
+ARG BASE_IMAGE=ghcr.io/thepalaceproject/circ-baseimage:latest
+
+FROM ${BASE_IMAGE} AS common
+
+# Copy startup scripts
+COPY docker/startup /etc/my_init.d/
+
+# Setup logrotate
+COPY --chmod=644 docker/services/logrotate /etc/
+
+# Copy our poetry files into the image and install our dependencies.
+COPY --chown=simplified:simplified poetry.lock pyproject.toml /var/www/circulation/
+RUN . env/bin/activate && \
+    poetry install --only main,pg --sync
 
 ENV TZ=Europe/Helsinki
-
-LABEL maintainer="The Palace Project <info@thepalaceproject.org>"
-
-RUN go get -v github.com/readium/readium-lcp-server/lcpencrypt && \
-    echo Europe/Helsinki >/etc/timezone && \
-    ln -sf /usr/share/zoneinfo/Europe/Helsinki /etc/localtime && \
-    dpkg-reconfigure -f noninteractive tzdata
-
-###############################################################################
-## Base Image
-###############################################################################
-
-FROM phusion/baseimage:focal-1.1.0 As base
-
-ENV TZ=Europe/Helsinki
-
-COPY --from=builder /go/bin/lcpencrypt /go/bin/lcpencrypt
 
 # Copy over all Palace build files for this image
 COPY ./docker /ls_build
@@ -36,13 +36,10 @@ COPY --chown=1000:1000 . /var/www/circulation
 ## Circ-exec Image
 ###############################################################################
 
-FROM base as exec
+FROM common AS exec
 
 ENV TZ=Europe/Helsinki
-ENV SIMPLIFIED_DB_TASK "ignore"
 ENV SIMPLIFIED_SCRIPT_NAME ""
-
-RUN /bin/bash -c "rm -rf /ls_build && /bd_build/cleanup.sh"
 
 VOLUME /var/log
 WORKDIR /home/simplified/circulation/bin
@@ -54,14 +51,15 @@ CMD ["/sbin/my_init", "--skip-runit", "--quiet", "--", \
 ## Circ-scripts Image
 ###############################################################################
 
-FROM base as scripts
+FROM common AS scripts
 
-ENV SIMPLIFIED_DB_TASK "auto"
-# Set the local timezone in /docker/simplified_cron.sh
+# Set the local timezone and setup cron
 ENV TZ=Europe/Helsinki
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && \
+    touch /var/log/cron.log
 
-RUN /bin/bash -c "/ls_build/simplified_cron.sh \
-      && rm -rf /ls_build && /bd_build/cleanup.sh"
+# Copy cron config into container
+COPY docker/services/cron /etc/
 
 VOLUME /var/log
 WORKDIR /home/simplified/circulation/bin
@@ -72,11 +70,21 @@ CMD ["/sbin/my_init"]
 ## Circ-webapp Image
 ###############################################################################
 
-FROM base as webapp
+FROM common AS webapp
 ENV TZ=Europe/Helsinki
 
-ENV SIMPLIFIED_DB_TASK "ignore"
+# Setup nginx
+COPY docker/services/nginx /etc/nginx/
 
+# Setup uwsgi
+COPY docker/services/uwsgi /etc/
+RUN mkdir -p /var/log/uwsgi && \
+    chown -RHh simplified:simplified /var/log/uwsgi && \
+    mkdir /var/run/uwsgi && \
+    chown simplified:simplified /var/run/uwsgi
+
+# Setup runit
+COPY docker/runit /etc/service/
 COPY docker/admin_dist.tar.gz /mnt/admin_dist.tar.gz
 
 RUN /bin/bash -c "/ls_build/nginx.sh && \

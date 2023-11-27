@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import datetime
-import json
 import logging
 from contextlib import contextmanager
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 
 import flask
 import pytest
@@ -18,7 +17,8 @@ from api.integration.registry.patron_auth import PatronAuthRegistry
 from api.lanes import create_default_lanes
 from api.simple_authentication import SimpleAuthenticationProvider
 from api.util.flask import PalaceFlask
-from core.entrypoint import AudiobooksEntryPoint, EbooksEntryPoint, EntryPoint
+from core.configuration.library import LibrarySettings
+from core.entrypoint import AudiobooksEntryPoint, EbooksEntryPoint
 from core.integration.goals import Goals
 from core.lane import Lane
 from core.model import (
@@ -35,10 +35,9 @@ from core.model.integration import (
     IntegrationConfiguration,
     IntegrationLibraryConfiguration,
 )
-from core.util.string_helpers import base64
+from core.util import base64
 from tests.api.mockapi.circulation import MockCirculationManager
 from tests.fixtures.database import DatabaseTransactionFixture
-from tests.fixtures.vendor_id import VendorIDFixture
 
 
 class ControllerFixtureSetupOverrides:
@@ -58,7 +57,7 @@ class ControllerFixture:
     """A test that requires a functional app server."""
 
     app: PalaceFlask
-    authdata: AuthdataUtility
+    authdata: Optional[AuthdataUtility]
     collection: Collection
     collections: list[Collection]
     controller: CirculationManagerController
@@ -68,8 +67,7 @@ class ControllerFixture:
     english_adult_fiction: Lane
     libraries: list[Library]
     library: Library
-    manager: CirculationManager
-    vendor_ids: VendorIDFixture
+    manager: MockCirculationManager
 
     # Authorization headers that will succeed (or fail) against the
     # SimpleAuthenticationProvider set up in ControllerTest.setup().
@@ -83,10 +81,8 @@ class ControllerFixture:
     def __init__(
         self,
         db: DatabaseTransactionFixture,
-        vendor_id_fixture: VendorIDFixture,
         setup_cm: bool,
     ):
-        self.vendor_ids = vendor_id_fixture
         self.db = db
         self.app = app
         self.patron_auth_registry = PatronAuthRegistry()
@@ -165,14 +161,14 @@ class ControllerFixture:
 
         # Set CirculationAPI and top-level lane for the default
         # library, for convenience in tests.
-        self.manager.d_circulation = self.manager.circulation_apis[self.library.id]  # type: ignore
+        self.manager.d_circulation = self.manager.circulation_apis[self.library.id]
         self.manager.d_top_level_lane = self.manager.top_level_lanes[self.library.id]  # type: ignore
         self.controller = CirculationManagerController(self.manager)
 
         # Set a convenient default lane.
         [self.english_adult_fiction] = [
             x
-            for x in self.library.lanes  # type: ignore
+            for x in self.library.lanes
             if x.display_name == "Fiction" and x.languages == ["eng"]
         ]
 
@@ -217,7 +213,7 @@ class ControllerFixture:
                 name=self.db.fresh_str(),
                 protocol=protocol,
                 goal=Goals.PATRON_AUTH_GOAL,
-                settings=settings.dict(),
+                settings_dict=settings.dict(),
             )
             create(
                 _db,
@@ -226,12 +222,12 @@ class ControllerFixture:
                 parent=integration,
             )
 
-        for k, v in [
-            (Configuration.LARGE_COLLECTION_LANGUAGES, []),
-            (Configuration.SMALL_COLLECTION_LANGUAGES, ["eng"]),
-            (Configuration.TINY_COLLECTION_LANGUAGES, ["spa", "chi", "fre"]),
-        ]:
-            ConfigurationSetting.for_library(k, library).value = json.dumps(v)
+        settings = LibrarySettings.construct(
+            large_collection_languages=[],
+            small_collection_languages=["eng"],
+            tiny_collection_languages=["spa", "chi", "fre"],
+        )
+        library.update_settings(settings)
         create_default_lanes(_db, library)
 
     def make_default_libraries(self, _db):
@@ -252,11 +248,9 @@ class ControllerFixture:
 
 
 @pytest.fixture(scope="function")
-def controller_fixture(
-    db: DatabaseTransactionFixture, vendor_id_fixture: VendorIDFixture
-):
+def controller_fixture(db: DatabaseTransactionFixture):
     time_then = datetime.datetime.now()
-    fixture = ControllerFixture(db, vendor_id_fixture, setup_cm=True)
+    fixture = ControllerFixture(db, setup_cm=True)
     time_now = datetime.datetime.now()
     time_diff = time_now - time_then
     logging.info("controller init took %s", time_diff)
@@ -264,11 +258,9 @@ def controller_fixture(
 
 
 @pytest.fixture(scope="function")
-def controller_fixture_without_cm(
-    db: DatabaseTransactionFixture, vendor_id_fixture: VendorIDFixture
-):
+def controller_fixture_without_cm(db: DatabaseTransactionFixture):
     time_then = datetime.datetime.now()
-    fixture = ControllerFixture(db, vendor_id_fixture, setup_cm=False)
+    fixture = ControllerFixture(db, setup_cm=False)
     time_now = datetime.datetime.now()
     time_diff = time_now - time_then
     logging.info("controller init took %s", time_diff)
@@ -309,19 +301,21 @@ class CirculationControllerFixture(ControllerFixture):
         )
     ]
 
-    def __init__(
-        self, db: DatabaseTransactionFixture, vendor_id_fixture: VendorIDFixture
-    ):
-        super().__init__(db, vendor_id_fixture, setup_cm=True)
+    def __init__(self, db: DatabaseTransactionFixture):
+        super().__init__(db, setup_cm=True)
         self.works = []
         self.add_works(self.BOOKS)
 
         # Enable the audiobook entry point for the default library -- a lot of
         # tests verify that non-default entry points can be selected.
-        self.db.default_library().setting(
-            EntryPoint.ENABLED_SETTING
-        ).value = json.dumps(
-            [EbooksEntryPoint.INTERNAL_NAME, AudiobooksEntryPoint.INTERNAL_NAME]
+        library = self.db.default_library()
+        library.update_settings(
+            LibrarySettings.construct(
+                enabled_entry_points=[
+                    EbooksEntryPoint.INTERNAL_NAME,
+                    AudiobooksEntryPoint.INTERNAL_NAME,
+                ]
+            )
         )
 
     def add_works(self, works: list[WorkSpec]):
@@ -337,7 +331,11 @@ class CirculationControllerFixture(ControllerFixture):
             setattr(self, spec.variable_name, work)
             work.license_pools[0].collection = self.collection
             self.works.append(work)
-        self.manager.external_search.bulk_update(self.works)
+
+        self.manager.external_search.search_service().index_submit_documents(
+            self.manager.external_search._search_write_pointer, [self.works]
+        )
+        self.manager.external_search.mock_query_works_multi(self.works)
 
     def assert_bad_search_index_gives_problem_detail(self, test_function):
         """Helper method to test that a controller method serves a problem
@@ -368,11 +366,9 @@ class CirculationControllerFixture(ControllerFixture):
 
 
 @pytest.fixture(scope="function")
-def circulation_fixture(
-    db: DatabaseTransactionFixture, vendor_id_fixture: VendorIDFixture
-):
+def circulation_fixture(db: DatabaseTransactionFixture):
     time_then = datetime.datetime.now()
-    fixture = CirculationControllerFixture(db, vendor_id_fixture)
+    fixture = CirculationControllerFixture(db)
     time_now = datetime.datetime.now()
     time_diff = time_now - time_then
     logging.info("circulation controller init took %s", time_diff)

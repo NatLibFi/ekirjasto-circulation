@@ -1,15 +1,15 @@
 import datetime
 import json
-from typing import Callable
-from unittest.mock import patch
+from typing import Callable, Union
+from unittest.mock import MagicMock, patch
 
 import pytest
 
-import core.opds_import
 from api.circulation_exceptions import *
 from api.opds_for_distributors import (
     OPDSForDistributorsAPI,
     OPDSForDistributorsImporter,
+    OPDSForDistributorsImportMonitor,
     OPDSForDistributorsReaperMonitor,
 )
 from core.metadata_layer import CirculationData, LinkData
@@ -21,10 +21,14 @@ from core.model import (
     ExternalIntegration,
     Hyperlink,
     Identifier,
+    LicensePool,
     Loan,
     MediaTypes,
     Representation,
     RightsStatus,
+    Timestamp,
+    create,
+    get_one,
 )
 from core.util.datetime_helpers import utc_now
 from core.util.opds_writer import OPDSFeed
@@ -54,11 +58,11 @@ def authentication_document() -> Callable[[str], str]:
             if not without_links
             else {}
         )
-        doc = {
+        doc: dict[str, list[dict[str, Union[str, list]]]] = {
             "authentication": [
                 {
                     **{"type": "http://opds-spec.org/auth/oauth/client_credentials"},
-                    **links,  # type: ignore
+                    **links,
                 },
             ]
         }
@@ -72,7 +76,9 @@ class OPDSForDistributorsAPIFixture:
         self, db: DatabaseTransactionFixture, files: OPDSForDistributorsFilesFixture
     ):
         self.db = db
-        self.collection = MockOPDSForDistributorsAPI.mock_collection(db.session)
+        self.collection = MockOPDSForDistributorsAPI.mock_collection(
+            db.session, db.default_library()
+        )
         self.api = MockOPDSForDistributorsAPI(db.session, self.collection)
         self.files = files
 
@@ -125,7 +131,7 @@ class TestOPDSForDistributorsAPI:
         # BEARER_TOKEN access control scheme, then X is a supported
         # media type for an OPDS For Distributors collection.
         supported = opds_dist_api_fixture.api.SUPPORTED_MEDIA_TYPES
-        for (format, drm) in DeliveryMechanism.default_client_can_fulfill_lookup:
+        for format, drm in DeliveryMechanism.default_client_can_fulfill_lookup:
             if drm == (DeliveryMechanism.BEARER_TOKEN) and format is not None:
                 assert format in supported
 
@@ -141,7 +147,7 @@ class TestOPDSForDistributorsAPI:
         fulfilled with no underlying loan, if its delivery mechanism
         uses bearer token fulfillment.
         """
-        patron = object()
+        patron = MagicMock()
         pool = opds_dist_api_fixture.db.licensepool(
             edition=None, collection=opds_dist_api_fixture.collection
         )
@@ -150,11 +156,11 @@ class TestOPDSForDistributorsAPI:
         m = opds_dist_api_fixture.api.can_fulfill_without_loan
 
         # No LicensePoolDeliveryMechanism -> False
-        assert False == m(patron, pool, None)
+        assert False == m(patron, pool, MagicMock())
 
         # No LicensePool -> False (there can be multiple LicensePools for
         # a single LicensePoolDeliveryMechanism).
-        assert False == m(patron, None, lpdm)
+        assert False == m(patron, MagicMock(), lpdm)
 
         # No DeliveryMechanism -> False
         old_dm = lpdm.delivery_mechanism
@@ -251,7 +257,9 @@ class TestOPDSForDistributorsAPI:
 
         # Getting a token for a collection should result in a cached credential.
         collection1 = MockOPDSForDistributorsAPI.mock_collection(
-            opds_dist_api_fixture.db.session, name="Collection 1"
+            opds_dist_api_fixture.db.session,
+            opds_dist_api_fixture.db.default_library(),
+            name="Collection 1",
         )
         api1 = MockOPDSForDistributorsAPI(opds_dist_api_fixture.db.session, collection1)
         token1 = opds_dist_api_fixture.db.fresh_str()
@@ -269,7 +277,9 @@ class TestOPDSForDistributorsAPI:
         # Getting a token for a second collection should result in an
         # additional cached credential.
         collection2 = MockOPDSForDistributorsAPI.mock_collection(
-            opds_dist_api_fixture.db.session, name="Collection 2"
+            opds_dist_api_fixture.db.session,
+            opds_dist_api_fixture.db.default_library(),
+            name="Collection 2",
         )
         api2 = MockOPDSForDistributorsAPI(opds_dist_api_fixture.db.session, collection2)
         token2 = opds_dist_api_fixture.db.fresh_str()
@@ -391,7 +401,7 @@ class TestOPDSForDistributorsAPI:
         )
 
         loan_info = opds_dist_api_fixture.api.checkout(
-            patron, "1234", pool, Representation.EPUB_MEDIA_TYPE
+            patron, "1234", pool, MagicMock()
         )
         assert opds_dist_api_fixture.collection.id == loan_info.collection_id
         assert data_source.name == loan_info.data_source_name
@@ -400,6 +410,7 @@ class TestOPDSForDistributorsAPI:
 
         # The loan's start date has been set to the current time.
         now = utc_now()
+        assert loan_info.start_date is not None
         assert (now - loan_info.start_date).seconds < 2
 
         # The loan is of indefinite duration.
@@ -417,6 +428,23 @@ class TestOPDSForDistributorsAPI:
             with_license_pool=True,
             collection=opds_dist_api_fixture.collection,
         )
+        pool.set_delivery_mechanism(
+            Representation.EPUB_MEDIA_TYPE,
+            DeliveryMechanism.BEARER_TOKEN,
+            RightsStatus.IN_COPYRIGHT,
+            None,
+        )
+
+        # Find the correct delivery mechanism
+        delivery_mechanism = None
+        for mechanism in pool.delivery_mechanisms:
+            if (
+                mechanism.delivery_mechanism.drm_scheme
+                == DeliveryMechanism.BEARER_TOKEN
+            ):
+                delivery_mechanism = mechanism
+        assert delivery_mechanism is not None
+
         # This pool doesn't have an acquisition link, so
         # we can't fulfill it yet.
         pytest.raises(
@@ -425,7 +453,7 @@ class TestOPDSForDistributorsAPI:
             patron,
             "1234",
             pool,
-            Representation.EPUB_MEDIA_TYPE,
+            delivery_mechanism,
         )
 
         # Set up an epub acquisition link for the pool.
@@ -436,12 +464,7 @@ class TestOPDSForDistributorsAPI:
             data_source,
             Representation.EPUB_MEDIA_TYPE,
         )
-        pool.set_delivery_mechanism(
-            Representation.EPUB_MEDIA_TYPE,
-            DeliveryMechanism.NO_DRM,
-            RightsStatus.IN_COPYRIGHT,
-            link.resource,
-        )
+        delivery_mechanism.resource = link.resource
 
         # Set the API's auth url so it doesn't have to get it -
         # that's tested in test_get_token.
@@ -452,7 +475,7 @@ class TestOPDSForDistributorsAPI:
 
         fulfillment_time = utc_now()
         fulfillment_info = opds_dist_api_fixture.api.fulfill(
-            patron, "1234", pool, Representation.EPUB_MEDIA_TYPE
+            patron, "1234", pool, delivery_mechanism
         )
         assert opds_dist_api_fixture.collection.id == fulfillment_info.collection_id
         assert data_source.name == fulfillment_info.data_source_name
@@ -461,6 +484,7 @@ class TestOPDSForDistributorsAPI:
         assert None == fulfillment_info.content_link
 
         assert DeliveryMechanism.BEARER_TOKEN == fulfillment_info.content_type
+        assert fulfillment_info.content is not None
         bearer_token_document = json.loads(fulfillment_info.content)
         expires_in = bearer_token_document["expires_in"]
         assert expires_in < 60
@@ -473,6 +497,7 @@ class TestOPDSForDistributorsAPI:
         # bearer token expires to the time at which the title was
         # originally fulfilled.
         expect_expiration = fulfillment_time + datetime.timedelta(seconds=expires_in)
+        assert fulfillment_info.content_expires is not None
         assert (
             abs((fulfillment_info.content_expires - expect_expiration).total_seconds())
             < 5
@@ -534,10 +559,11 @@ class TestOPDSForDistributorsImporter:
             opds_dist_api_fixture.db.session, "Biblioboard", autocreate=True
         )
         collection = MockOPDSForDistributorsAPI.mock_collection(
-            opds_dist_api_fixture.db.session
+            opds_dist_api_fixture.db.session, opds_dist_api_fixture.db.default_library()
         )
-        collection.external_integration.set_setting(
-            Collection.DATA_SOURCE_NAME_SETTING, data_source.name
+        DatabaseTransactionFixture.set_settings(
+            collection.integration_configuration,
+            **{Collection.DATA_SOURCE_NAME_SETTING: data_source.name}
         )
 
         importer = OPDSForDistributorsImporter(
@@ -579,8 +605,8 @@ class TestOPDSForDistributorsImporter:
                 DeliveryMechanism.BEARER_TOKEN
                 == pool.delivery_mechanisms[0].delivery_mechanism.drm_scheme
             )
-            assert 1 == pool.licenses_owned
-            assert 1 == pool.licenses_available
+            assert LicensePool.UNLIMITED_ACCESS == pool.licenses_owned
+            assert LicensePool.UNLIMITED_ACCESS == pool.licenses_available
             assert (pool.work.last_update_time - now).total_seconds() <= 2
 
         [camelot_acquisition_link] = [
@@ -610,7 +636,6 @@ class TestOPDSForDistributorsImporter:
     def test__add_format_data(
         self, opds_dist_api_fixture: OPDSForDistributorsAPIFixture
     ):
-
         # Mock SUPPORTED_MEDIA_TYPES for purposes of test.
         api = OPDSForDistributorsAPI
         old_value = api.SUPPORTED_MEDIA_TYPES
@@ -662,10 +687,13 @@ class TestOPDSForDistributorsImporter:
 
         def setup_collection(*, name: str, datasource: DataSource) -> Collection:
             collection = MockOPDSForDistributorsAPI.mock_collection(
-                opds_dist_api_fixture.db.session, name=name
+                opds_dist_api_fixture.db.session,
+                opds_dist_api_fixture.db.default_library(),
+                name=name,
             )
-            collection.external_integration.set_setting(
-                Collection.DATA_SOURCE_NAME_SETTING, data_source.name
+            DatabaseTransactionFixture.set_settings(
+                collection.integration_configuration,
+                **{Collection.DATA_SOURCE_NAME_SETTING: data_source.name}
             )
             return collection
 
@@ -694,9 +722,7 @@ class TestOPDSForDistributorsImporter:
             collection=collection2,
         )
 
-        with patch(
-            "core.opds_import.get_one", wraps=core.opds_import.get_one
-        ) as get_one_mock:
+        with patch("core.opds_import.get_one", wraps=get_one) as get_one_mock:
             importer1_lp, _ = importer1.update_work_for_edition(edition)
             importer2_lp, _ = importer2.update_work_for_edition(edition)
 
@@ -731,10 +757,12 @@ class TestOPDSForDistributorsReaperMonitor:
             opds_dist_api_fixture.db.session, "Biblioboard", autocreate=True
         )
         collection = MockOPDSForDistributorsAPI.mock_collection(
-            opds_dist_api_fixture.db.session
+            opds_dist_api_fixture.db.session,
+            opds_dist_api_fixture.db.default_library(),
         )
-        collection.external_integration.set_setting(
-            Collection.DATA_SOURCE_NAME_SETTING, data_source.name
+        DatabaseTransactionFixture.set_settings(
+            collection.integration_configuration,
+            **{Collection.DATA_SOURCE_NAME_SETTING: data_source.name}
         )
         monitor = MockOPDSForDistributorsReaperMonitor(
             opds_dist_api_fixture.db.session,
@@ -749,8 +777,8 @@ class TestOPDSForDistributorsReaperMonitor:
             with_license_pool=True,
             collection=collection,
         )
-        now_gone.licenses_owned = 1
-        now_gone.licenses_available = 1
+        now_gone.licenses_owned = LicensePool.UNLIMITED_ACCESS
+        now_gone.licenses_available = LicensePool.UNLIMITED_ACCESS
 
         edition, still_there = opds_dist_api_fixture.db.edition(
             identifier_type=Identifier.URI,
@@ -759,8 +787,8 @@ class TestOPDSForDistributorsReaperMonitor:
             with_license_pool=True,
             collection=collection,
         )
-        still_there.licenses_owned = 1
-        still_there.licenses_available = 1
+        still_there.licenses_owned = LicensePool.UNLIMITED_ACCESS
+        still_there.licenses_available = LicensePool.UNLIMITED_ACCESS
 
         progress = monitor.run_once(monitor.timestamp().to_data())
 
@@ -769,8 +797,8 @@ class TestOPDSForDistributorsReaperMonitor:
         assert 0 == now_gone.licenses_available
 
         # The other is still around.
-        assert 1 == still_there.licenses_owned
-        assert 1 == still_there.licenses_available
+        assert LicensePool.UNLIMITED_ACCESS == still_there.licenses_owned
+        assert LicensePool.UNLIMITED_ACCESS == still_there.licenses_available
 
         # The TimestampData returned by run_once() describes its
         # achievements.
@@ -780,3 +808,39 @@ class TestOPDSForDistributorsReaperMonitor:
         # that will be applied by run().
         assert None == progress.start
         assert None == progress.finish
+
+
+class TestOPDSForDistributorsImportMonitor:
+    def test_opds_import_has_db_failure(
+        self, opds_dist_api_fixture: OPDSForDistributorsAPIFixture
+    ):
+        feed = opds_dist_api_fixture.files.sample_data("biblioboard_mini_feed.opds")
+
+        class MockOPDSForDistributorsImportMonitor(OPDSForDistributorsImportMonitor):
+            """An OPDSForDistributorsImportMonitor that overrides _get."""
+
+            def _get(self, url, headers):
+                # This should cause a database failure on commit
+                ts = create(self._db, Timestamp)
+                return (200, {"content-type": OPDSFeed.ACQUISITION_FEED_TYPE}, feed)
+
+        data_source = DataSource.lookup(
+            opds_dist_api_fixture.db.session, "Biblioboard", autocreate=True
+        )
+        collection = MockOPDSForDistributorsAPI.mock_collection(
+            opds_dist_api_fixture.db.session,
+            opds_dist_api_fixture.db.default_library(),
+        )
+        DatabaseTransactionFixture.set_settings(
+            collection.integration_configuration,
+            **{Collection.DATA_SOURCE_NAME_SETTING: data_source.name}
+        )
+        monitor = MockOPDSForDistributorsImportMonitor(
+            opds_dist_api_fixture.db.session,
+            collection,
+            OPDSForDistributorsImporter,
+        )
+
+        monitor.run()
+
+        assert monitor.timestamp().exception is not None

@@ -1,49 +1,17 @@
 import logging
-import os
 from functools import update_wrapper, wraps
 
 import flask
 from flask import Response, make_response, request
-from flask_babel import lazy_gettext as _
 from flask_cors.core import get_cors_options, set_cors_headers
-from werkzeug.exceptions import HTTPException
+from flask_pydantic_spec import Response as SpecResponse
 
-from core.app_server import ErrorHandler, compressible, returns_problem_detail
+from api.app import api_spec, app
+from api.model.patron_auth import PatronAuthAccessToken
+from api.model.time_tracking import PlaytimeEntriesPost, PlaytimeEntriesPostResponse
+from core.app_server import compressible, returns_problem_detail
 from core.model import HasSessionCache
-from core.util.cache import CachedData
 from core.util.problem_detail import ProblemDetail
-
-from .app import app, babel
-from .config import Configuration
-from .controller import CirculationManager
-from .problem_details import REMOTE_INTEGRATION_FAILED
-
-
-@app.before_first_request
-def initialize_circulation_manager():
-    if os.environ.get("AUTOINITIALIZE") == "False":
-        # It's the responsibility of the importing code to set app.manager
-        # appropriately.
-        pass
-    else:
-        if getattr(app, "manager", None) is None:
-            try:
-                app.manager = CirculationManager(app._db)
-            except Exception:
-                logging.exception("Error instantiating circulation manager!")
-                raise
-            # Make sure that any changes to the database (as might happen
-            # on initial setup) are committed before continuing.
-            app.manager._db.commit()
-
-            # setup the cache data object
-            CachedData.initialize(app._db)
-
-
-@babel.localeselector
-def get_locale():
-    languages = Configuration.localization_languages()
-    return request.accept_languages.best_match(languages)
 
 
 @app.after_request
@@ -131,20 +99,6 @@ def allows_patron_web(f):
     return update_wrapper(wrapped_function, f)
 
 
-h = ErrorHandler(app, app.config["DEBUG"])
-
-
-@app.errorhandler(Exception)
-@allows_patron_web
-def exception_handler(exception):
-    if isinstance(exception, HTTPException):
-        # This isn't an exception we need to handle, it's werkzeug's way
-        # of interrupting normal control flow with a specific HTTP response.
-        # Return the exception and it will be used as the response.
-        return exception
-    return h.handle(exception)
-
-
 def has_library(f):
     """Decorator to extract the library short name from the arguments."""
 
@@ -161,42 +115,6 @@ def has_library(f):
             return f(*args, **kwargs)
 
     return decorated
-
-
-def has_library_through_external_loan_identifier(
-    parameter_name="external_loan_identifier",
-):
-    """Decorator to get a library using the loan's external identifier.
-
-    :param parameter_name: Name of the parameter holding the loan's external identifier
-    :type parameter_name: string
-
-    :return: Decorated function
-    :rtype: Callable
-    """
-
-    def decorator(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            if parameter_name in kwargs:
-                external_loan_identifier = kwargs[parameter_name]
-            else:
-                external_loan_identifier = None
-
-            library = (
-                app.manager.index_controller.library_through_external_loan_identifier(
-                    external_loan_identifier
-                )
-            )
-
-            if isinstance(library, ProblemDetail):
-                return library.response
-            else:
-                return func(*args, **kwargs)
-
-        return wrapper
-
-    return decorator
 
 
 def allows_library(f):
@@ -382,93 +300,6 @@ def crawlable_collection_feed(collection_name):
     return app.manager.opds_feeds.crawlable_collection_feed(collection_name)
 
 
-@library_route("/opds2/publications")
-@has_library
-@allows_patron_web
-@returns_problem_detail
-@compressible
-def opds2_publications():
-    return app.manager.opds2_feeds.publications()
-
-
-@library_route("/opds2/navigation")
-@has_library
-@allows_patron_web
-@returns_problem_detail
-@compressible
-def opds2_navigation():
-    return app.manager.opds2_feeds.navigation()
-
-
-@app.route("/collections/<collection_name>")
-@returns_problem_detail
-def shared_collection_info(collection_name):
-    return app.manager.shared_collection_controller.info(collection_name)
-
-
-@app.route("/collections/<collection_name>/register", methods=["POST"])
-@returns_problem_detail
-def shared_collection_register(collection_name):
-    return app.manager.shared_collection_controller.register(collection_name)
-
-
-@app.route(
-    "/collections/<collection_name>/<identifier_type>/<path:identifier>/borrow",
-    methods=["GET", "POST"],
-    defaults=dict(hold_id=None),
-)
-@app.route(
-    "/collections/<collection_name>/holds/<hold_id>/borrow",
-    methods=["GET", "POST"],
-    defaults=dict(identifier_type=None, identifier=None),
-)
-@returns_problem_detail
-def shared_collection_borrow(collection_name, identifier_type, identifier, hold_id):
-    return app.manager.shared_collection_controller.borrow(
-        collection_name, identifier_type, identifier, hold_id
-    )
-
-
-@app.route("/collections/<collection_name>/loans/<loan_id>")
-@returns_problem_detail
-def shared_collection_loan_info(collection_name, loan_id):
-    return app.manager.shared_collection_controller.loan_info(collection_name, loan_id)
-
-
-@app.route("/collections/<collection_name>/loans/<loan_id>/revoke")
-@returns_problem_detail
-def shared_collection_revoke_loan(collection_name, loan_id):
-    return app.manager.shared_collection_controller.revoke_loan(
-        collection_name, loan_id
-    )
-
-
-@app.route(
-    "/collections/<collection_name>/loans/<loan_id>/fulfill",
-    defaults=dict(mechanism_id=None),
-)
-@app.route("/collections/<collection_name>/loans/<loan_id>/fulfill/<mechanism_id>")
-@returns_problem_detail
-def shared_collection_fulfill(collection_name, loan_id, mechanism_id):
-    return app.manager.shared_collection_controller.fulfill(
-        collection_name, loan_id, mechanism_id
-    )
-
-
-@app.route("/collections/<collection_name>/holds/<hold_id>")
-@returns_problem_detail
-def shared_collection_hold_info(collection_name, hold_id):
-    return app.manager.shared_collection_controller.hold_info(collection_name, hold_id)
-
-
-@app.route("/collections/<collection_name>/holds/<hold_id>/revoke")
-@returns_problem_detail
-def shared_collection_revoke_hold(collection_name, hold_id):
-    return app.manager.shared_collection_controller.revoke_hold(
-        collection_name, hold_id
-    )
-
-
 @library_route("/marc")
 @has_library
 @returns_problem_detail
@@ -521,6 +352,15 @@ def put_patron_devices():
 @returns_problem_detail
 def delete_patron_devices():
     return app.manager.patron_devices.delete_patron_device()
+
+
+@library_dir_route("/patrons/me/token", methods=["POST"])
+@api_spec.validate(resp=SpecResponse(HTTP_200=PatronAuthAccessToken), tags=["patron"])
+@has_library
+@requires_auth
+@returns_problem_detail
+def patron_auth_token():
+    return app.manager.patron_auth_token.get_token()
 
 
 @library_dir_route("/loans", methods=["GET", "HEAD"])
@@ -580,12 +420,12 @@ def borrow(identifier_type, identifier, mechanism_id=None):
 
 @library_route("/works/<license_pool_id>/fulfill")
 @library_route("/works/<license_pool_id>/fulfill/<mechanism_id>")
-@library_route("/works/<license_pool_id>/fulfill/<mechanism_id>/<part>")
+@library_route("/works/<license_pool_id>/fulfill/<mechanism_id>")
 @has_library
 @allows_patron_web
 @returns_problem_detail
-def fulfill(license_pool_id, mechanism_id=None, part=None):
-    return app.manager.loans.fulfill(license_pool_id, mechanism_id, part)
+def fulfill(license_pool_id, mechanism_id=None):
+    return app.manager.loans.fulfill(license_pool_id, mechanism_id)
 
 
 @library_route("/loans/<license_pool_id>/revoke", methods=["GET", "PUT"])
@@ -687,53 +527,23 @@ def track_analytics_event(identifier_type, identifier, event_type):
     )
 
 
-# Adobe Vendor ID implementation
-@library_route("/AdobeAuth/authdata")
+@library_route(
+    "/playtimes/<int:collection_id>/<identifier_type>/<path:identifier>",
+    methods=["POST"],
+)
 @has_library
 @requires_auth
+@api_spec.validate(
+    resp=SpecResponse(HTTP_200=PlaytimeEntriesPostResponse),
+    body=PlaytimeEntriesPost,
+    tags=["analytics"],
+)
 @returns_problem_detail
-def adobe_vendor_id_get_token():
-    if not app.manager.adobe_vendor_id:
-        return REMOTE_INTEGRATION_FAILED.detailed(
-            _("This server does not have an Adobe Vendor ID server configured.")
-        )
-    return app.manager.adobe_vendor_id.create_authdata_handler(flask.request.patron)
-
-
-@library_route("/AdobeAuth/SignIn", methods=["POST"])
-@has_library
-@returns_problem_detail
-def adobe_vendor_id_signin():
-    return app.manager.adobe_vendor_id.signin_handler()
-
-
-@app.route("/AdobeAuth/AccountInfo", methods=["POST"])
-@returns_problem_detail
-def adobe_vendor_id_accountinfo():
-    return app.manager.adobe_vendor_id.userinfo_handler()
-
-
-@app.route("/AdobeAuth/Status")
-@returns_problem_detail
-def adobe_vendor_id_status():
-    return app.manager.adobe_vendor_id.status_handler()
-
-
-# DRM Device Management Protocol implementation for ACS.
-@library_route("/AdobeAuth/devices", methods=["GET", "POST"])
-@has_library
-@requires_auth
-@returns_problem_detail
-def adobe_drm_devices():
-    return app.manager.adobe_device_management.device_id_list_handler()
-
-
-@library_route("/AdobeAuth/devices/<device_id>", methods=["DELETE"])
-@has_library
-@requires_auth
-@returns_problem_detail
-def adobe_drm_device(device_id):
-    return app.manager.adobe_device_management.device_id_handler(device_id)
+def track_playtime_events(collection_id, identifier_type, identifier):
+    """The actual response type is 207, but due to a bug in flask-pydantic-spec we must document it as a 200"""
+    return app.manager.playtime_entries.track_playtimes(
+        collection_id, identifier_type, identifier
+    )
 
 
 # Route that redirects to the authentication URL for a SAML provider
@@ -770,23 +580,6 @@ def ekirjasto_authenticate():
     return app.manager.ekirjasto_controller.authenticate(
         request, app.manager._db
     )
-
-
-@app.route("/<collection_name>/lcp/licenses/<license_id>/hint")
-@app.route("/<collection_name>/lcp/licenses/<path:license_id>/hint")
-@has_library_through_external_loan_identifier(parameter_name="license_id")
-@requires_auth
-@returns_problem_detail
-def lcp_passphrase(collection_name, license_id):
-    return app.manager.lcp_controller.get_lcp_passphrase()
-
-
-@app.route("/<collection_name>/lcp/licenses/<license_id>")
-@has_library_through_external_loan_identifier(parameter_name="license_id")
-@requires_auth
-@returns_problem_detail
-def lcp_license(collection_name, license_id):
-    return app.manager.lcp_controller.get_lcp_license(collection_name, license_id)
 
 
 # Loan notifications for ODL distributors, eg. Feedbooks

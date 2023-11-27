@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import random
 import string
 from pathlib import Path
@@ -8,8 +9,9 @@ from typing import TYPE_CHECKING, Any, Dict, Generator, Optional, Protocol, Unio
 import pytest
 import pytest_alembic
 from pytest_alembic.config import Config
+from sqlalchemy import inspect
 
-from core.model import SessionManager
+from core.model import json_serializer
 from tests.fixtures.database import ApplicationFixture, DatabaseFixture
 
 if TYPE_CHECKING:
@@ -20,17 +22,21 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture(scope="function")
-def database() -> Generator[DatabaseFixture, None, None]:
+def application() -> Generator[ApplicationFixture, None, None]:
+    app = ApplicationFixture.create()
+    yield app
+    app.close()
+
+
+@pytest.fixture(scope="function")
+def database(application: ApplicationFixture) -> Generator[DatabaseFixture, None, None]:
     # This is very similar to the normal database fixture and uses the same object,
     # but because these tests are done outside a transaction, we need this fixture
     # to have function scope, so the database schema is completely reset between
     # tests.
-    app = ApplicationFixture.create()
     db = DatabaseFixture.create()
     yield db
     db.close()
-    app.close()
-    SessionManager.engine_for_url = {}
 
 
 @pytest.fixture
@@ -105,12 +111,70 @@ def create_library(random_name: RandomName) -> CreateLibrary:
             name = random_name()
         if short_name is None:
             short_name = random_name()
+
+        inspector = inspect(connection)
+        columns = [column["name"] for column in inspector.get_columns("libraries")]
+
+        args = {
+            "name": name,
+            "short_name": short_name,
+        }
+
+        # See if we need to include public and private keys
+        if "public_key" in columns:
+            args["public_key"] = random_name()
+            args["private_key"] = random_name()
+
+        # See if we need to include a settings dict
+        if "settings_dict" in columns:
+            settings_dict = {
+                "website": "http://library.com",
+                "help_web": "http://library.com/support",
+            }
+            args["settings_dict"] = json_serializer(settings_dict)
+
+        keys = ",".join(args.keys())
+        values = ",".join([f"'{value}'" for value in args.values()])
         library = connection.execute(
-            f"INSERT INTO libraries (name, short_name) VALUES ('{name}', '{short_name}') returning id"
+            f"INSERT INTO libraries ({keys}) VALUES ({values}) returning id"
         ).fetchone()
+
         assert library is not None
         assert isinstance(library.id, int)
         return library.id
+
+    return fixture
+
+
+class CreateCollection(Protocol):
+    def __call__(
+        self,
+        connection: Connection,
+        name: Optional[str] = None,
+        external_integration_id: Optional[int] = None,
+        external_account_id: Optional[str] = None,
+    ) -> int:
+        ...
+
+
+@pytest.fixture
+def create_collection(random_name: RandomName) -> CreateCollection:
+    def fixture(
+        connection: Connection,
+        name: Optional[str] = None,
+        external_integration_id: Optional[int] = None,
+        external_account_id: Optional[str] = None,
+    ) -> int:
+        if name is None:
+            name = random_name()
+        collection = connection.execute(
+            "INSERT INTO collections (name, external_account_id, external_integration_id) VALUES"
+            + "(%s, %s, %s) returning id",
+            (name, external_account_id, external_integration_id),
+        ).fetchone()
+        assert collection is not None
+        assert isinstance(collection.id, int)
+        return collection.id
 
     return fixture
 
@@ -155,6 +219,7 @@ class CreateConfigSetting(Protocol):
         value: Optional[str] = None,
         integration_id: Optional[int] = None,
         library_id: Optional[int] = None,
+        associate_library: bool = False,
     ) -> int:
         ...
 
@@ -167,13 +232,29 @@ def create_config_setting() -> CreateConfigSetting:
         value: Optional[str] = None,
         integration_id: Optional[int] = None,
         library_id: Optional[int] = None,
+        associate_library: bool = False,
     ) -> int:
+        if type(value) in (tuple, list, dict):
+            value = json.dumps(value)
         setting = connection.execute(
             "INSERT INTO configurationsettings (key, value, external_integration_id, library_id) VALUES (%s, %s, %s, %s) returning id",
             (key, value, integration_id, library_id),
         ).fetchone()
         assert setting is not None
         assert isinstance(setting.id, int)
+
+        # If a library is associated with the setting we must associate the integration as well
+        if library_id and associate_library:
+            relation = connection.execute(
+                "select * from externalintegrations_libraries where externalintegration_id=%s and library_id=%s",
+                (integration_id, library_id),
+            ).fetchone()
+            if not relation:
+                connection.execute(
+                    "INSERT INTO externalintegrations_libraries (externalintegration_id, library_id) VALUES (%s, %s)",
+                    (integration_id, library_id),
+                )
+
         return setting.id
 
     return fixture

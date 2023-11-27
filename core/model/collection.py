@@ -1,9 +1,7 @@
-# Collection, CollectionIdentifier, CollectionMissing
 from __future__ import annotations
 
-import logging
 from abc import ABCMeta, abstractmethod
-from typing import TYPE_CHECKING, Any, List, Optional
+from typing import TYPE_CHECKING, Any, Generator, List, Optional, Tuple, TypeVar
 
 from sqlalchemy import (
     Boolean,
@@ -14,44 +12,36 @@ from sqlalchemy import (
     Unicode,
     UniqueConstraint,
     exists,
-    func,
 )
-from sqlalchemy.orm import (
-    Mapped,
-    backref,
-    contains_eager,
-    joinedload,
-    mapper,
-    relationship,
-)
+from sqlalchemy.orm import Mapped, Query, backref, mapper, relationship
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm.session import Session
 from sqlalchemy.sql.expression import and_, or_
 
+from core.integration.goals import Goals
+from core.model import Base, create, get_one_or_create
+from core.model.configuration import ConfigurationSetting, ExternalIntegration
+from core.model.constants import EditionConstants
+from core.model.coverage import CoverageRecord
+from core.model.datasource import DataSource
+from core.model.edition import Edition
+from core.model.hassessioncache import HasSessionCache
 from core.model.hybrid import hybrid_property
-
-from ..util.string_helpers import base64
-from . import Base, create, get_one, get_one_or_create
-from .configuration import (
-    BaseConfigurationStorage,
-    ConfigurationSetting,
-    ExternalIntegration,
+from core.model.identifier import Identifier
+from core.model.integration import (
+    IntegrationConfiguration,
+    IntegrationLibraryConfiguration,
 )
-from .constants import EditionConstants
-from .coverage import CoverageRecord, WorkCoverageRecord
-from .datasource import DataSource
-from .edition import Edition
-from .hassessioncache import HasSessionCache
-from .identifier import Identifier
-from .integrationclient import IntegrationClient
-from .library import Library
-from .licensing import LicensePool, LicensePoolDeliveryMechanism
-from .work import Work
+from core.model.library import Library
+from core.model.licensing import LicensePool, LicensePoolDeliveryMechanism
+from core.model.work import Work
 
 if TYPE_CHECKING:
-    # This is needed during type checking so we have the
-    # types of related models.
-    from core.model import Credential, CustomList, Timestamp  # noqa: autoflake
+    from core.external_search import ExternalSearchIndex
+    from core.model import Credential, CustomList, Timestamp
+
+
+T = TypeVar("T")
 
 
 class Collection(Base, HasSessionCache):
@@ -83,6 +73,20 @@ class Collection(Base, HasSessionCache):
         Integer, ForeignKey("externalintegrations.id"), unique=True, index=True
     )
     _external_integration: ExternalIntegration
+
+    integration_configuration_id = Column(
+        Integer,
+        ForeignKey("integration_configurations.id", ondelete="SET NULL"),
+        unique=True,
+        index=True,
+    )
+    integration_configuration: Mapped[IntegrationConfiguration] = relationship(
+        "IntegrationConfiguration",
+        uselist=False,
+        back_populates="collection",
+        cascade="all,delete-orphan",
+        single_parent=True,
+    )
 
     # A Collection may specialize some other Collection. For instance,
     # an Overdrive Advantage collection is a specialization of an
@@ -123,13 +127,13 @@ class Collection(Base, HasSessionCache):
 
     # A Collection can have many associated Credentials.
     credentials: Mapped[List[Credential]] = relationship(
-        "Credential", backref="collection", cascade="delete"
+        "Credential", back_populates="collection", cascade="delete"
     )
 
     # A Collection can be monitored by many Monitors, each of which
     # will have its own Timestamp.
     timestamps: Mapped[List[Timestamp]] = relationship(
-        "Timestamp", backref="collection"
+        "Timestamp", back_populates="collection"
     )
 
     catalog: Mapped[List[Identifier]] = relationship(
@@ -156,14 +160,16 @@ class Collection(Base, HasSessionCache):
     # every library.
     GLOBAL_COLLECTION_DATA_SOURCES = [DataSource.ENKI]
 
-    def __repr__(self):
-        return '<Collection "%s"/"%s" ID=%d>' % (self.name, self.protocol, self.id)
+    def __repr__(self) -> str:
+        return f'<Collection "{self.name}"/"{self.protocol}" ID={self.id}>'
 
-    def cache_key(self):
-        return (self.name, self.external_integration.protocol)
+    def cache_key(self) -> Tuple[str | None, str | None]:
+        return self.name, self.external_integration.protocol
 
     @classmethod
-    def by_name_and_protocol(cls, _db, name, protocol):
+    def by_name_and_protocol(
+        cls, _db: Session, name: str, protocol: str
+    ) -> Tuple[Collection, bool]:
         """Find or create a Collection with the given name and the given
         protocol.
 
@@ -173,13 +179,15 @@ class Collection(Base, HasSessionCache):
         """
         key = (name, protocol)
 
-        def lookup_hook():
+        def lookup_hook() -> Tuple[Collection, bool]:
             return cls._by_name_and_protocol(_db, key)
 
         return cls.by_cache_key(_db, key, lookup_hook)
 
     @classmethod
-    def _by_name_and_protocol(cls, _db, cache_key):
+    def _by_name_and_protocol(
+        cls, _db: Session, cache_key: Tuple[str, str]
+    ) -> Tuple[Collection, bool]:
         """Find or create a Collection with the given name and the given
         protocol.
 
@@ -206,10 +214,11 @@ class Collection(Base, HasSessionCache):
                 )
             integration = collection.create_external_integration(protocol=protocol)
             collection.external_integration.protocol = protocol
+            collection.create_integration_configuration(protocol)
         return collection, is_new
 
     @classmethod
-    def by_protocol(cls, _db, protocol):
+    def by_protocol(cls, _db: Session, protocol: str | None) -> Query[Collection]:
         """Query collections that get their licenses through the given protocol.
 
         Collections marked for deletion are not included.
@@ -221,68 +230,88 @@ class Collection(Base, HasSessionCache):
         if protocol:
             qu = (
                 qu.join(
-                    ExternalIntegration,
-                    ExternalIntegration.id == Collection.external_integration_id,
+                    IntegrationConfiguration,
+                    IntegrationConfiguration.id
+                    == Collection.integration_configuration_id,
                 )
-                .filter(ExternalIntegration.goal == ExternalIntegration.LICENSE_GOAL)
-                .filter(ExternalIntegration.protocol == protocol)
+                .filter(IntegrationConfiguration.goal == Goals.LICENSE_GOAL)
+                .filter(IntegrationConfiguration.protocol == protocol)
                 .filter(Collection.marked_for_deletion == False)
             )
 
         return qu
 
     @classmethod
-    def by_datasource(cls, _db, data_source):
+    def by_datasource(
+        cls, _db: Session, data_source: DataSource | str
+    ) -> Query[Collection]:
         """Query collections that are associated with the given DataSource.
 
         Collections marked for deletion are not included.
         """
-        if isinstance(data_source, DataSource):
-            data_source = data_source.name
+        data_source_name = (
+            data_source.name if isinstance(data_source, DataSource) else data_source
+        )
 
         qu = (
             _db.query(cls)
             .join(
-                ExternalIntegration,
-                cls.external_integration_id == ExternalIntegration.id,
+                IntegrationConfiguration,
+                cls.integration_configuration_id == IntegrationConfiguration.id,
             )
-            .join(ExternalIntegration.settings)
-            .filter(ConfigurationSetting.key == Collection.DATA_SOURCE_NAME_SETTING)
-            .filter(ConfigurationSetting.value == data_source)
+            .filter(
+                IntegrationConfiguration.settings_dict[
+                    Collection.DATA_SOURCE_NAME_SETTING
+                ].astext
+                == data_source_name
+            )
             .filter(Collection.marked_for_deletion == False)
         )
         return qu
 
     @hybrid_property
-    def protocol(self):
+    def protocol(self) -> str:
         """What protocol do we need to use to get licenses for this
         collection?
         """
-        return self.external_integration.protocol
+        if self.integration_configuration is None:
+            raise ValueError("Collection has no integration configuration.")
+
+        if self.integration_configuration.protocol is None:
+            raise ValueError(
+                "Collection has integration configuration but no protocol."
+            )
+
+        return self.integration_configuration.protocol
 
     @protocol.setter
-    def protocol(self, new_protocol):
+    def protocol(self, new_protocol: str) -> None:
         """Modify the protocol in use by this Collection."""
         if self.parent and self.parent.protocol != new_protocol:
             raise ValueError(
                 "Proposed new protocol (%s) contradicts parent collection's protocol (%s)."
                 % (new_protocol, self.parent.protocol)
             )
-        self.external_integration.protocol = new_protocol
+        self.integration_configuration.protocol = new_protocol
         for child in self.children:
             child.protocol = new_protocol
 
     @hybrid_property
-    def primary_identifier_source(self):
+    def primary_identifier_source(self) -> str | None:
         """Identify if should try to use another identifier than <id>"""
-        return self.external_integration.primary_identifier_source
+        return self.integration_configuration.settings_dict.get(
+            ExternalIntegration.PRIMARY_IDENTIFIER_SOURCE
+        )
 
     @primary_identifier_source.setter
-    def primary_identifier_source(self, new_primary_identifier_source):
+    def primary_identifier_source(self, new_primary_identifier_source: str) -> None:
         """Modify the primary identifier source in use by this Collection."""
-        self.external_integration.primary_identifier_source = (
-            new_primary_identifier_source
+        self.integration_configuration.settings_dict = (
+            self.integration_configuration.settings_dict.copy()
         )
+        self.integration_configuration.settings_dict[
+            ExternalIntegration.PRIMARY_IDENTIFIER_SOURCE
+        ] = new_primary_identifier_source
 
     # For collections that can control the duration of the loans they
     # create, the durations are stored in these settings and new loans are
@@ -294,55 +323,70 @@ class Collection(Base, HasSessionCache):
     EBOOK_LOAN_DURATION_KEY = "ebook_loan_duration"
     STANDARD_DEFAULT_LOAN_PERIOD = 21
 
-    def default_loan_period(self, library, medium=EditionConstants.BOOK_MEDIUM):
+    def default_loan_period(
+        self, library: Library, medium: str = EditionConstants.BOOK_MEDIUM
+    ) -> int:
         """Until we hear otherwise from the license provider, we assume
         that someone who borrows a non-open-access item from this
         collection has it for this number of days.
         """
-        return (
-            self.default_loan_period_setting(library, medium).int_value
+        value = (
+            self.default_loan_period_setting(library, medium)
             or self.STANDARD_DEFAULT_LOAN_PERIOD
         )
+        return value
 
-    def default_loan_period_setting(self, library, medium=EditionConstants.BOOK_MEDIUM):
+    @classmethod
+    def loan_period_key(cls, medium: str = EditionConstants.BOOK_MEDIUM) -> str:
+        if medium == EditionConstants.AUDIO_MEDIUM:
+            return cls.AUDIOBOOK_LOAN_DURATION_KEY
+        else:
+            return cls.EBOOK_LOAN_DURATION_KEY
+
+    def default_loan_period_setting(
+        self,
+        library: Library,
+        medium: str = EditionConstants.BOOK_MEDIUM,
+    ) -> Optional[int]:
         """Until we hear otherwise from the license provider, we assume
         that someone who borrows a non-open-access item from this
         collection has it for this number of days.
         """
-        _db = Session.object_session(library)
-        if medium == EditionConstants.AUDIO_MEDIUM:
-            key = self.AUDIOBOOK_LOAN_DURATION_KEY
-        else:
-            key = self.EBOOK_LOAN_DURATION_KEY
-        if isinstance(library, Library):
-            return ConfigurationSetting.for_library_and_externalintegration(
-                _db, key, library, self.external_integration
-            )
-        elif isinstance(library, IntegrationClient):
-            return self.external_integration.setting(key)
+        key = self.loan_period_key(medium)
+        if library.id is None:
+            return None
+
+        config = self.integration_configuration.for_library(library.id)
+        if config is None:
+            return None
+
+        return config.settings_dict.get(key)
 
     DEFAULT_RESERVATION_PERIOD_KEY = "default_reservation_period"
     STANDARD_DEFAULT_RESERVATION_PERIOD = 3
 
+    def _set_settings(self, **kwargs: Any) -> None:
+        settings_dict = self.integration_configuration.settings_dict.copy()
+        settings_dict.update(kwargs)
+        self.integration_configuration.settings_dict = settings_dict
+
     @hybrid_property
-    def default_reservation_period(self):
+    def default_reservation_period(self) -> int:
         """Until we hear otherwise from the license provider, we assume
         that someone who puts an item on hold has this many days to
         check it out before it goes to the next person in line.
         """
         return (
-            self.external_integration.setting(
-                self.DEFAULT_RESERVATION_PERIOD_KEY,
-            ).int_value
+            self.integration_configuration.settings_dict.get(
+                self.DEFAULT_RESERVATION_PERIOD_KEY
+            )
             or self.STANDARD_DEFAULT_RESERVATION_PERIOD
         )
 
     @default_reservation_period.setter
-    def default_reservation_period(self, new_value):
+    def default_reservation_period(self, new_value: int) -> None:
         new_value = int(new_value)
-        self.external_integration.setting(
-            self.DEFAULT_RESERVATION_PERIOD_KEY
-        ).value = str(new_value)
+        self._set_settings(**{self.DEFAULT_RESERVATION_PERIOD_KEY: new_value})
 
     # When you import an OPDS feed, you may know the intended audience of the works (e.g. children or researchers),
     # even though the OPDS feed may not contain that information.
@@ -356,9 +400,10 @@ class Collection(Base, HasSessionCache):
 
         :return: Default audience
         """
-        setting = self.external_integration.setting(self.DEFAULT_AUDIENCE_KEY)
-
-        return setting.value_or_default(None)
+        return (
+            self.integration_configuration.settings_dict.get(self.DEFAULT_AUDIENCE_KEY)
+            or ""
+        )
 
     @default_audience.setter
     def default_audience(self, new_value: str) -> None:
@@ -366,11 +411,9 @@ class Collection(Base, HasSessionCache):
 
         :param new_value: New default audience
         """
-        setting = self.external_integration.setting(self.DEFAULT_AUDIENCE_KEY)
+        self._set_settings(**{self.DEFAULT_AUDIENCE_KEY: str(new_value)})
 
-        setting.value = str(new_value)
-
-    def create_external_integration(self, protocol):
+    def create_external_integration(self, protocol: str) -> ExternalIntegration:
         """Create an ExternalIntegration for this Collection.
 
         To be used immediately after creating a new Collection,
@@ -399,6 +442,30 @@ class Collection(Base, HasSessionCache):
         self.external_integration_id = external_integration.id
         return external_integration
 
+    def create_integration_configuration(
+        self, protocol: str
+    ) -> IntegrationConfiguration:
+        _db = Session.object_session(self)
+        goal = Goals.LICENSE_GOAL
+        if self.integration_configuration_id:
+            integration = self.integration_configuration
+        else:
+            integration, is_new = create(
+                _db,
+                IntegrationConfiguration,
+                protocol=protocol,
+                goal=goal,
+                name=self.name,
+            )
+        if integration.protocol != protocol:
+            raise ValueError(
+                "Located ExternalIntegration, but its protocol (%s) does not match desired protocol (%s)."
+                % (integration.protocol, protocol)
+            )
+        self.integration_configuration_id = integration.id
+        # Immediately accessing the relationship fills out the data
+        return self.integration_configuration
+
     @property
     def external_integration(self) -> ExternalIntegration:
         """Find the external integration for this Collection, assuming
@@ -418,30 +485,8 @@ class Collection(Base, HasSessionCache):
             )
         return self._external_integration
 
-    @property
-    def unique_account_id(self):
-        """Identifier that uniquely represents this Collection of works"""
-        if (
-            self.data_source
-            and self.data_source.name in self.GLOBAL_COLLECTION_DATA_SOURCES
-            and not self.parent
-        ):
-            # Every top-level collection from this data source has the
-            # same catalog. Treat them all as one collection named
-            # after the data source.
-            unique_account_id = self.data_source.name
-        else:
-            unique_account_id = self.external_account_id
-
-        if not unique_account_id:
-            raise ValueError("Unique account identifier not set")
-
-        if self.parent:
-            return self.parent.unique_account_id + "+" + unique_account_id
-        return unique_account_id
-
     @hybrid_property
-    def data_source(self):
+    def data_source(self) -> DataSource | None:
         """Find the data source associated with this Collection.
 
         Bibliographic metadata obtained through the collection
@@ -455,140 +500,94 @@ class Collection(Base, HasSessionCache):
         the data source is a Collection-specific setting.
         """
         data_source = None
-        name = ExternalIntegration.DATA_SOURCE_FOR_LICENSE_PROTOCOL.get(self.protocol)
+        name = None
+        if self.protocol is not None:
+            name = ExternalIntegration.DATA_SOURCE_FOR_LICENSE_PROTOCOL.get(
+                self.protocol
+            )
         if not name:
-            name = self.external_integration.setting(
+            name = self.integration_configuration.settings_dict.get(
                 Collection.DATA_SOURCE_NAME_SETTING
-            ).value
+            )
         _db = Session.object_session(self)
         if name:
             data_source = DataSource.lookup(_db, name, autocreate=True)
         return data_source
 
     @data_source.setter
-    def data_source(self, new_value):
-        if isinstance(new_value, DataSource):
-            new_value = new_value.name
-        if self.protocol == new_value:
+    def data_source(self, new_value: DataSource | str) -> None:
+        new_datasource_name = (
+            new_value.name if isinstance(new_value, DataSource) else new_value
+        )
+
+        if self.protocol == new_datasource_name:
             return
 
         # Only set a DataSource for Collections that don't have an
         # implied source.
         if self.protocol not in ExternalIntegration.DATA_SOURCE_FOR_LICENSE_PROTOCOL:
-            setting = self.external_integration.setting(
-                Collection.DATA_SOURCE_NAME_SETTING
+            if new_datasource_name is not None:
+                new_datasource_name = str(new_datasource_name)
+            self._set_settings(
+                **{Collection.DATA_SOURCE_NAME_SETTING: new_datasource_name}
             )
-            if new_value is not None:
-                new_value = str(new_value)
-            setting.value = new_value
 
     @property
-    def parents(self):
-        if self.parent_id:
-            _db = Session.object_session(self)
-            parent = Collection.by_id(_db, self.parent_id)
-            yield parent
-            yield from parent.parents
+    def parents(self) -> Generator[Collection, None, None]:
+        if not self.parent_id:
+            return None
 
-    @property
-    def metadata_identifier(self):
-        """Identifier based on collection details that uniquely represents
-        this Collection on the metadata wrangler. This identifier is
-        composed of the Collection protocol and account identifier.
+        _db = Session.object_session(self)
+        parent = Collection.by_id(_db, self.parent_id)
+        if parent is None:
+            return None
 
-        A circulation manager provides a Collection's metadata
-        identifier as part of collection registration. The metadata
-        wrangler creates a corresponding Collection on its side,
-        *named after* the metadata identifier -- regardless of the name
-        of that collection on the circulation manager side.
-        """
-        account_id = self.unique_account_id
-        if self.protocol == ExternalIntegration.OPDS_IMPORT:
-            # Remove ending / from OPDS url that could duplicate the collection
-            # on the Metadata Wrangler.
-            while account_id.endswith("/"):
-                account_id = account_id[:-1]
+        yield parent
+        yield from parent.parents
 
-        encode = base64.urlsafe_b64encode
-        account_id = encode(account_id)
-        protocol = encode(self.protocol)
-
-        metadata_identifier = protocol + ":" + account_id
-        return encode(metadata_identifier)
-
-    def disassociate_library(self, library):
+    def disassociate_library(self, library: Library) -> None:
         """Disassociate a Library from this Collection and delete any relevant
         ConfigurationSettings.
         """
-        if library is None or not library in self.libraries:
+        if library is None or library not in self.libraries:
             # No-op.
             return
 
+        _db = Session.object_session(self)
+        if self.external_integration_id:
+            qu = (
+                _db.query(ConfigurationSetting)
+                .filter(ConfigurationSetting.library == library)
+                .filter(
+                    ConfigurationSetting.external_integration
+                    == self.external_integration
+                )
+            )
+            qu.delete()
+        else:
+            raise ValueError(
+                "No known external integration for collection %s" % self.name
+            )
+        if self.integration_configuration_id:
+            qu = (
+                _db.query(IntegrationLibraryConfiguration)
+                .filter(IntegrationLibraryConfiguration.library_id == library.id)
+                .filter(
+                    IntegrationLibraryConfiguration.parent_id
+                    == self.integration_configuration_id
+                )
+            )
+            qu.delete()
+        else:
+            raise ValueError(
+                "No known integration library configuration for collection %s"
+                % self.name
+            )
+
         self.libraries.remove(library)
 
-        _db = Session.object_session(self)
-        qu = (
-            _db.query(ConfigurationSetting)
-            .filter(ConfigurationSetting.library == library)
-            .filter(
-                ConfigurationSetting.external_integration == self.external_integration
-            )
-        )
-        qu.delete()
-
-    @classmethod
-    def _decode_metadata_identifier(cls, metadata_identifier):
-        """Invert the metadata_identifier property."""
-        if not metadata_identifier:
-            raise ValueError("No metadata identifier provided.")
-        try:
-            decode = base64.urlsafe_b64decode
-            details = decode(metadata_identifier)
-            encoded_details = details.split(":", 1)
-            [protocol, account_id] = [decode(d) for d in encoded_details]
-        except (TypeError, ValueError) as e:
-            raise ValueError(
-                "Metadata identifier '%s' is invalid: %s"
-                % (metadata_identifier, str(e))
-            )
-        return protocol, account_id
-
-    @classmethod
-    def from_metadata_identifier(cls, _db, metadata_identifier, data_source=None):
-        """Finds or creates a Collection on the metadata wrangler, based
-        on its unique metadata_identifier.
-        """
-
-        # Decode the metadata identifier into a protocol and an
-        # account ID. If the metadata identifier is invalid, this
-        # will raise an exception.
-        protocol, account_id = cls._decode_metadata_identifier(metadata_identifier)
-
-        # Now that we know the metadata identifier is valid, try to
-        # look up a collection named after it.
-        collection = get_one(_db, Collection, name=metadata_identifier)
-        is_new = False
-
-        if not collection:
-            # Create a collection named after the metadata
-            # identifier. Give it an ExternalIntegration with the
-            # corresponding protocol, and set its data source and
-            # external_account_id.
-            collection, is_new = create(_db, Collection, name=metadata_identifier)
-            collection.create_external_integration(protocol)
-
-        if protocol == ExternalIntegration.OPDS_IMPORT:
-            # For OPDS Import collections only, we store the URL to
-            # the OPDS feed (the "account ID") and the data source.
-            collection.external_account_id = account_id
-            if data_source and not isinstance(data_source, DataSource):
-                data_source = DataSource.lookup(_db, data_source, autocreate=True)
-            collection.data_source = data_source
-
-        return collection, is_new
-
     @property
-    def pools_with_no_delivery_mechanisms(self):
+    def pools_with_no_delivery_mechanisms(self) -> Query[LicensePool]:
         """Find all LicensePools in this Collection that have no delivery
         mechanisms whatsoever.
 
@@ -596,9 +595,9 @@ class Collection(Base, HasSessionCache):
         """
         _db = Session.object_session(self)
         qu = LicensePool.with_no_delivery_mechanisms(_db)
-        return qu.filter(LicensePool.collection == self)
+        return qu.filter(LicensePool.collection == self)  # type: ignore[no-any-return]
 
-    def explain(self, include_secrets=False):
+    def explain(self, include_secrets: bool = False) -> List[str]:
         """Create a series of human-readable strings to explain a collection's
         settings.
 
@@ -612,152 +611,29 @@ class Collection(Base, HasSessionCache):
             lines.append('Name: "%s"' % self.name)
         if self.parent:
             lines.append("Parent: %s" % self.parent.name)
-        integration = self.external_integration
+        integration = self.integration_configuration
         if integration.protocol:
             lines.append('Protocol: "%s"' % integration.protocol)
         for library in self.libraries:
             lines.append('Used by library: "%s"' % library.short_name)
         if self.external_account_id:
             lines.append('External account ID: "%s"' % self.external_account_id)
-        for setting in sorted(integration.settings, key=lambda x: x.key):
-            if (include_secrets or not setting.is_secret) and setting.value is not None:
-                lines.append(f'Setting "{setting.key}": "{setting.value}"')
+        for name in sorted(integration.settings_dict):
+            value = integration.settings_dict[name]
+            if (
+                include_secrets or not ConfigurationSetting._is_secret(name)
+            ) and value is not None:
+                lines.append(f'Setting "{name}": "{value}"')
         return lines
-
-    def catalog_identifier(self, identifier):
-        """Inserts an identifier into a catalog"""
-        self.catalog_identifiers([identifier])
-
-    def catalog_identifiers(self, identifiers):
-        """Inserts identifiers into the catalog"""
-        if not identifiers:
-            # Nothing to do.
-            return
-
-        _db = Session.object_session(identifiers[0])
-        already_in_catalog = (
-            _db.query(Identifier)
-            .join(CollectionIdentifier)
-            .filter(CollectionIdentifier.collection_id == self.id)
-            .filter(Identifier.id.in_([x.id for x in identifiers]))
-            .all()
-        )
-
-        new_catalog_entries = [
-            dict(collection_id=self.id, identifier_id=identifier.id)
-            for identifier in identifiers
-            if identifier not in already_in_catalog
-        ]
-        _db.bulk_insert_mappings(CollectionIdentifier, new_catalog_entries)
-        _db.commit()
-
-    def unresolved_catalog(self, _db, data_source_name, operation):
-        """Returns a query with all identifiers in a Collection's catalog that
-        have unsuccessfully attempted resolution. This method is used on the
-        metadata wrangler.
-
-        :return: a sqlalchemy.Query
-        """
-        coverage_source = DataSource.lookup(_db, data_source_name)
-        is_not_resolved = and_(
-            CoverageRecord.operation == operation,
-            CoverageRecord.data_source_id == coverage_source.id,
-            CoverageRecord.status != CoverageRecord.SUCCESS,
-        )
-
-        query = (
-            _db.query(Identifier)
-            .outerjoin(Identifier.licensed_through)
-            .outerjoin(Identifier.coverage_records)
-            .outerjoin(LicensePool.work)
-            .outerjoin(Identifier.collections)
-            .filter(Collection.id == self.id, is_not_resolved, Work.id == None)
-            .order_by(Identifier.id)
-        )
-
-        return query
-
-    def licensepools_with_works_updated_since(self, _db, timestamp):
-        """Finds all LicensePools in a collection's catalog whose Works' OPDS
-        entries have been updated since the timestamp. Used by the
-        metadata wrangler.
-
-        :param _db: A database connection,
-        :param timestamp: A datetime.timestamp object
-
-        :return: a Query that yields LicensePools. The Work and
-           Identifier associated with each LicensePool have been
-           pre-loaded, giving the caller all the information
-           necessary to create full OPDS entries for the works.
-        """
-        opds_operation = WorkCoverageRecord.GENERATE_OPDS_OPERATION
-        qu = (
-            _db.query(LicensePool)
-            .join(
-                LicensePool.work,
-            )
-            .join(
-                LicensePool.identifier,
-            )
-            .join(
-                Work.coverage_records,
-            )
-            .join(
-                CollectionIdentifier,
-                Identifier.id == CollectionIdentifier.identifier_id,
-            )
-        )
-        qu = qu.filter(
-            WorkCoverageRecord.operation == opds_operation,
-            CollectionIdentifier.collection_id == self.id,
-        )
-        qu = qu.options(
-            contains_eager(LicensePool.work),
-            contains_eager(LicensePool.identifier),
-        )
-
-        if timestamp:
-            qu = qu.filter(WorkCoverageRecord.timestamp > timestamp)
-
-        qu = qu.order_by(WorkCoverageRecord.timestamp)
-        return qu
-
-    def isbns_updated_since(self, _db, timestamp):
-        """Finds all ISBNs in a collection's catalog that have been updated
-        since the timestamp but don't have a Work to show for it. Used in
-        the metadata wrangler.
-
-        :return: a Query
-        """
-        isbns = (
-            _db.query(Identifier, func.max(CoverageRecord.timestamp).label("latest"))
-            .join(Identifier.collections)
-            .join(Identifier.coverage_records)
-            .outerjoin(Identifier.licensed_through)
-            .group_by(Identifier.id)
-            .order_by("latest")
-            .filter(
-                Collection.id == self.id,
-                LicensePool.work_id == None,
-                CoverageRecord.status == CoverageRecord.SUCCESS,
-            )
-            .enable_eagerloads(False)
-            .options(joinedload(Identifier.coverage_records))
-        )
-
-        if timestamp:
-            isbns = isbns.filter(CoverageRecord.timestamp > timestamp)
-
-        return isbns
 
     @classmethod
     def restrict_to_ready_deliverable_works(
         cls,
-        query,
-        collection_ids=None,
-        show_suppressed=False,
-        allow_holds=True,
-    ):
+        query: Query[T],
+        collection_ids: List[int] | None = None,
+        show_suppressed: bool = False,
+        allow_holds: bool = True,
+    ) -> Query[T]:
         """Restrict a query to show only presentation-ready works present in
         an appropriate collection which the default client can
         fulfill.
@@ -814,7 +690,6 @@ class Collection(Base, HasSessionCache):
                 LicensePool.licenses_owned > 0,
                 LicensePool.open_access,
                 LicensePool.unlimited_access,
-                LicensePool.self_hosted,
             )
         )
 
@@ -828,13 +703,12 @@ class Collection(Base, HasSessionCache):
                 or_(
                     LicensePool.licenses_available > 0,
                     LicensePool.open_access,
-                    LicensePool.self_hosted,
                     LicensePool.unlimited_access,
                 )
             )
         return query
 
-    def delete(self, search_index=None):
+    def delete(self, search_index: ExternalSearchIndex | None = None) -> None:
         """Delete a collection.
 
         Collections can have hundreds of thousands of
@@ -871,16 +745,6 @@ class Collection(Base, HasSessionCache):
         # Delete the ExternalIntegration associated with this
         # Collection, assuming it wasn't deleted already.
         if self.external_integration:
-            for link in self.external_integration.links:
-                if (
-                    link.other_integration
-                    and link.other_integration.goal == ExternalIntegration.STORAGE_GOAL
-                ):
-                    logging.info(
-                        f"Deletion of collection {self.name} is disassociating "
-                        f"storage integration {link.other_integration.name}."
-                    )
-
             _db.delete(self.external_integration)
 
         # Now delete the Collection itself.
@@ -924,6 +788,7 @@ collections_identifiers: Table = Table(
     ),
     UniqueConstraint("collection_id", "identifier_id"),
 )
+
 
 # Create an ORM model for the collections_identifiers join table
 # so it can be used in a bulk_insert_mappings call.
@@ -981,55 +846,3 @@ class HasExternalIntegrationPerCollection(metaclass=ABCMeta):
         :return: External integration associated with the collection
         """
         raise NotImplementedError()
-
-
-class CollectionConfigurationStorage(BaseConfigurationStorage):
-    """Serializes and deserializes values as library's configuration settings"""
-
-    def __init__(
-        self,
-        external_integration_association: HasExternalIntegrationPerCollection,
-        collection: Collection,
-    ):
-        """Initializes a new instance of ConfigurationStorage class
-
-        :param external_integration_association: Association with an external integtation
-        :param collection: Collection object
-        """
-        self._integration_owner = external_integration_association
-        self._collection_id = collection.id
-
-    def save(self, db: Session, setting_name: str, value: Any):
-        """Save the value as a new configuration setting
-
-        :param db: Database session
-        :param setting_name: Name of the library's configuration setting
-        :param value: Value to be saved
-        """
-        if self._collection_id is None:
-            raise ValueError("Collection ID is not set")
-        collection = Collection.by_id(db, self._collection_id)
-        integration = self._integration_owner.collection_external_integration(
-            collection
-        )
-        ConfigurationSetting.for_externalintegration(
-            setting_name, integration
-        ).value = value
-
-    def load(self, db: Session, setting_name: str) -> Any:
-        """Loads and returns the library's configuration setting
-
-        :param db: Database session
-        :param setting_name: Name of the library's configuration setting
-        """
-        if self._collection_id is None:
-            raise ValueError("Collection ID is not set")
-        collection = Collection.by_id(db, self._collection_id)
-        integration = self._integration_owner.collection_external_integration(
-            collection
-        )
-        value = ConfigurationSetting.for_externalintegration(
-            setting_name, integration
-        ).value
-
-        return value

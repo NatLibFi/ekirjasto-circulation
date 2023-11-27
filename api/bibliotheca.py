@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import hashlib
 import hmac
 import html
@@ -7,18 +9,37 @@ import logging
 import re
 import time
 import urllib.parse
+from abc import ABC
 from datetime import datetime, timedelta
-from io import BytesIO, StringIO
-from typing import Dict
+from io import BytesIO
+from typing import Dict, Generator, List, Tuple, Type, TypeVar, Union
 
 import dateutil.parser
+from dependency_injector.wiring import Provide, inject
 from flask_babel import lazy_gettext as _
-from lxml import etree
+from lxml.etree import _Element
 from pymarc import parse_xml_to_array
 
+from api.circulation import (
+    BaseCirculationAPI,
+    BaseCirculationLoanSettings,
+    FulfillmentInfo,
+    HoldInfo,
+    LoanInfo,
+    PatronActivityCirculationAPI,
+)
+from api.circulation_exceptions import *
+from api.selftest import HasCollectionSelfTests, SelfTestResult
+from api.web_publication_manifest import FindawayManifest, SpineItem
 from core.analytics import Analytics
 from core.config import CannotLoadConfiguration
 from core.coverage import BibliographicCoverageProvider
+from core.integration.settings import (
+    BaseSettings,
+    ConfigurationFormItem,
+    ConfigurationFormItemType,
+    FormField,
+)
 from core.metadata_layer import (
     CirculationData,
     ContributorData,
@@ -42,7 +63,9 @@ from core.model import (
     Hyperlink,
     Identifier,
     LicensePool,
+    LicensePoolDeliveryMechanism,
     Measurement,
+    Patron,
     Representation,
     Session,
     Subject,
@@ -52,20 +75,55 @@ from core.model import (
 from core.model.configuration import ConfigurationAttributeValue
 from core.monitor import CollectionMonitor, IdentifierSweepMonitor, TimelineMonitor
 from core.scripts import RunCollectionMonitorScript
+from core.service.container import Services
+from core.util import base64
 from core.util.datetime_helpers import datetime_utc, strptime_utc, to_utc, utc_now
 from core.util.http import HTTP
-from core.util.string_helpers import base64
-from core.util.xmlparser import XMLParser
-
-from .circulation import BaseCirculationAPI, FulfillmentInfo, HoldInfo, LoanInfo
-from .circulation_exceptions import *
-from .selftest import HasSelfTests, SelfTestResult
-from .web_publication_manifest import FindawayManifest, SpineItem
+from core.util.xmlparser import XMLParser, XMLProcessor
 
 
-class BibliothecaAPI(BaseCirculationAPI, HasSelfTests):
+class BibliothecaSettings(BaseSettings):
+    username: str = FormField(
+        form=ConfigurationFormItem(
+            label=_("Account ID"),
+            required=True,
+        )
+    )
+    password: str = FormField(
+        form=ConfigurationFormItem(
+            label=_("Account Key"),
+            required=True,
+        )
+    )
+    external_account_id: Optional[str] = FormField(
+        form=ConfigurationFormItem(
+            label=_("Library ID"),
+            required=True,
+        )
+    )
 
-    NAME = ExternalIntegration.BIBLIOTHECA
+
+class BibliothecaLibrarySettings(BaseCirculationLoanSettings):
+    dont_display_reserves: Optional[str] = FormField(
+        form=ConfigurationFormItem(
+            label=_("Show/Hide Titles with No Available Loans"),
+            required=False,
+            description=_(
+                "Titles with no available loans will not be displayed in the Catalog view."
+            ),
+            type=ConfigurationFormItemType.SELECT,
+            options={
+                ConfigurationAttributeValue.YESVALUE.value: "Show",
+                ConfigurationAttributeValue.NOVALUE.value: "Hide",
+            },
+        )
+    )
+
+
+class BibliothecaAPI(
+    PatronActivityCirculationAPI[BibliothecaSettings, BibliothecaLibrarySettings],
+    HasCollectionSelfTests,
+):
     AUTH_TIME_FORMAT = "%a, %d %b %Y %H:%M:%S GMT"
     ARGUMENT_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S"
     AUTHORIZATION_FORMAT = "3MCLAUTH %s:%s"
@@ -74,45 +132,8 @@ class BibliothecaAPI(BaseCirculationAPI, HasSelfTests):
     AUTHORIZATION_HEADER = "3mcl-Authorization"
     VERSION_HEADER = "3mcl-Version"
 
-    log = logging.getLogger("Bibliotheca API")
-
     DEFAULT_VERSION = "2.0"
     DEFAULT_BASE_URL = "https://partner.yourcloudlibrary.com/"
-
-    SETTINGS = [
-        {
-            "key": ExternalIntegration.USERNAME,
-            "label": _("Account ID"),
-            "required": True,
-        },
-        {
-            "key": ExternalIntegration.PASSWORD,
-            "label": _("Account Key"),
-            "required": True,
-        },
-        {
-            "key": Collection.EXTERNAL_ACCOUNT_ID_KEY,
-            "label": _("Library ID"),
-            "required": True,
-        },
-    ] + BaseCirculationAPI.SETTINGS
-
-    LIBRARY_SETTINGS = BaseCirculationAPI.LIBRARY_SETTINGS + [
-        BaseCirculationAPI.DEFAULT_LOAN_DURATION_SETTING,
-        {
-            "key": ExternalIntegration.DISPLAY_RESERVES,
-            "label": _("Show/Hide Titles with No Available Loans"),
-            "required": False,
-            "description": _(
-                "Titles with no available loans will not be displayed in the Catalog view."
-            ),
-            "type": "select",
-            "options": [
-                {"key": ConfigurationAttributeValue.YESVALUE.value, "label": "Show"},
-                {"key": ConfigurationAttributeValue.NOVALUE.value, "label": "Hide"},
-            ],
-        },
-    ]
 
     MAX_AGE = timedelta(days=730).seconds
     CAN_REVOKE_HOLD_WHEN_RESERVED = False
@@ -120,36 +141,38 @@ class BibliothecaAPI(BaseCirculationAPI, HasSelfTests):
 
     SERVICE_NAME = "Bibliotheca"
 
-    # Create a lookup table between common DeliveryMechanism identifiers
-    # and Overdrive format types.
-    adobe_drm = DeliveryMechanism.ADOBE_DRM
-    findaway_drm = DeliveryMechanism.FINDAWAY_DRM
-    delivery_mechanism_to_internal_format = {
-        (Representation.EPUB_MEDIA_TYPE, adobe_drm): "ePub",
-        (Representation.PDF_MEDIA_TYPE, adobe_drm): "PDF",
-        (None, findaway_drm): "MP3",
-    }
-    internal_format_to_delivery_mechanism = {
-        v: k for k, v in list(delivery_mechanism_to_internal_format.items())
-    }
+    @classmethod
+    def settings_class(cls):
+        return BibliothecaSettings
+
+    @classmethod
+    def library_settings_class(cls):
+        return BibliothecaLibrarySettings
+
+    @classmethod
+    def label(cls):
+        return ExternalIntegration.BIBLIOTHECA
+
+    @classmethod
+    def description(cls):
+        return ""
 
     def __init__(self, _db, collection):
-
         if collection.protocol != ExternalIntegration.BIBLIOTHECA:
             raise ValueError(
                 "Collection protocol is %s, but passed into BibliothecaAPI!"
                 % collection.protocol
             )
 
+        super().__init__(_db, collection)
+
         self._db = _db
-        self.version = (
-            collection.external_integration.setting("version").value
-            or self.DEFAULT_VERSION
-        )
-        self.account_id = collection.external_integration.username
-        self.account_key = collection.external_integration.password
+        settings = self.settings
+        self.version = self.DEFAULT_VERSION
+        self.account_id = settings.username
+        self.account_key = settings.password
         self.library_id = collection.external_account_id
-        self.base_url = collection.external_integration.url or self.DEFAULT_BASE_URL
+        self.base_url = self.DEFAULT_BASE_URL
 
         if not self.account_id or not self.account_key or not self.library_id:
             raise CannotLoadConfiguration("Bibliotheca configuration is incomplete.")
@@ -275,7 +298,7 @@ class BibliothecaAPI(BaseCirculationAPI, HasSelfTests):
         )
         response = self.request(url)
         if response.status_code != 200:
-            raise ErrorParser().process_all(response.content)
+            raise ErrorParser().process_first(response.content)
         yield from parse_xml_to_array(BytesIO(response.content))
 
     def bibliographic_lookup_request(self, identifiers):
@@ -306,7 +329,7 @@ class BibliothecaAPI(BaseCirculationAPI, HasSelfTests):
             identifier_strings.append(i)
 
         data = self.bibliographic_lookup_request(identifier_strings)
-        return [metadata for metadata in self.item_list_parser.parse(data)]
+        return [metadata for metadata in self.item_list_parser.process_all(data)]
 
     def _request_with_timeout(self, method, url, *args, **kwargs):
         """This will be overridden in MockBibliothecaAPI."""
@@ -387,8 +410,13 @@ class BibliothecaAPI(BaseCirculationAPI, HasSelfTests):
 
     TEMPLATE = "<%(request_type)s><ItemId>%(item_id)s</ItemId><PatronId>%(patron_id)s</PatronId></%(request_type)s>"
 
-    def checkout(self, patron_obj, patron_password, licensepool, delivery_mechanism):
-
+    def checkout(
+        self,
+        patron_obj: Patron,
+        patron_password: str,
+        licensepool: LicensePool,
+        delivery_mechanism: LicensePoolDeliveryMechanism,
+    ) -> LoanInfo:
         """Check out a book on behalf of a patron.
 
         :param patron_obj: a Patron object for the patron who wants
@@ -418,7 +446,7 @@ class BibliothecaAPI(BaseCirculationAPI, HasSelfTests):
             start_date = None
         else:
             # Error condition.
-            error = ErrorParser().process_all(response.content)
+            error = ErrorParser().process_first(response.content)
             if isinstance(error, AlreadyCheckedOut):
                 # It's already checked out. No problem.
                 pass
@@ -426,7 +454,7 @@ class BibliothecaAPI(BaseCirculationAPI, HasSelfTests):
                 raise error
 
         # At this point we know we have a loan.
-        loan_expires = CheckoutResponseParser().process_all(response.content)
+        loan_expires = CheckoutResponseParser().process_first(response.content)
         loan = LoanInfo(
             licensepool.collection,
             DataSource.BIBLIOTHECA,
@@ -437,18 +465,18 @@ class BibliothecaAPI(BaseCirculationAPI, HasSelfTests):
         )
         return loan
 
-    def fulfill(self, patron, password, pool, internal_format, **kwargs):
-        """Get the actual resource file to the patron.
-
-        :param kwargs: A container for standard arguments to fulfill()
-           which are not relevant to this implementation.
-
-        :return: a FulfillmentInfo object.
-        """
-        media_type, drm_scheme = self.internal_format_to_delivery_mechanism.get(
-            internal_format, internal_format
-        )
-        if drm_scheme == DeliveryMechanism.FINDAWAY_DRM:
+    def fulfill(
+        self,
+        patron: Patron,
+        password: str,
+        pool: LicensePool,
+        delivery_mechanism: LicensePoolDeliveryMechanism,
+    ) -> FulfillmentInfo:
+        """Get the actual resource file to the patron."""
+        if (
+            delivery_mechanism.delivery_mechanism.drm_scheme
+            == DeliveryMechanism.FINDAWAY_DRM
+        ):
             fulfill_method = self.get_audio_fulfillment_file
             content_transformation = self.findaway_license_to_webpub_manifest
         else:
@@ -521,7 +549,7 @@ class BibliothecaAPI(BaseCirculationAPI, HasSelfTests):
             response_content = response.content.decode("utf-8")
         if response.status_code in (200, 201):
             start_date = utc_now()
-            end_date = HoldResponseParser().process_all(response_content)
+            end_date = HoldResponseParser().process_first(response_content)
             return HoldInfo(
                 licensepool.collection,
                 DataSource.BIBLIOTHECA,
@@ -534,7 +562,7 @@ class BibliothecaAPI(BaseCirculationAPI, HasSelfTests):
         else:
             if not response_content:
                 raise CannotHold()
-            error = ErrorParser().process_all(response_content)
+            error = ErrorParser().process_first(response_content)
             if isinstance(error, Exception):
                 raise error
             else:
@@ -620,17 +648,15 @@ class DummyBibliothecaAPIResponse:
         self.content = content
 
 
-class ItemListParser(XMLParser):
-
+class ItemListParser(XMLProcessor[Metadata]):
     DATE_FORMAT = "%Y-%m-%d"
     YEAR_FORMAT = "%Y"
 
-    NAMESPACES: Dict[str, str] = {}
-
     unescape_entity_references = html.unescape
 
-    def parse(self, xml):
-        yield from self.process_all(xml, "//Item")
+    @property
+    def xpath_expression(self) -> str:
+        return "//Item"
 
     parenthetical = re.compile(r" \([^)]+\)$")
 
@@ -642,8 +668,10 @@ class ItemListParser(XMLParser):
     }
 
     @classmethod
-    def contributors_from_string(cls, string, role=Contributor.AUTHOR_ROLE):
-        contributors = []
+    def contributors_from_string(
+        cls, string: Optional[str], role: str = Contributor.AUTHOR_ROLE
+    ) -> List[ContributorData]:
+        contributors: List[ContributorData] = []
         if not string:
             return contributors
 
@@ -660,8 +688,8 @@ class ItemListParser(XMLParser):
         return contributors
 
     @classmethod
-    def parse_genre_string(self, s):
-        genres = []
+    def parse_genre_string(self, s: Optional[str]) -> List[SubjectData]:
+        genres: List[SubjectData] = []
         if not s:
             return genres
         for i in s.split(","):
@@ -683,16 +711,14 @@ class ItemListParser(XMLParser):
             )
         return genres
 
-    def process_one(self, tag, namespaces):
+    def process_one(
+        self, tag: _Element, namespaces: Optional[Dict[str, str]]
+    ) -> Metadata:
         """Turn an <item> tag into a Metadata and an encompassed CirculationData
         objects, and return the Metadata."""
 
         def value(bibliotheca_key):
             return self.text_of_optional_subtag(tag, bibliotheca_key)
-
-        links = dict()
-        identifiers = dict()
-        subjects = []
 
         primary_identifier = IdentifierData(Identifier.BIBLIOTHECA_ID, value("ItemId"))
 
@@ -846,11 +872,14 @@ class ItemListParser(XMLParser):
         return medium, [format]
 
 
-class BibliothecaParser(XMLParser):
+T = TypeVar("T")
 
+
+class BibliothecaParser(XMLProcessor[T], ABC):
     INPUT_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S"
 
-    def parse_date(self, value):
+    @classmethod
+    def parse_date(cls, value):
         """Parse the string Bibliotheca sends as a date.
 
         Usually this is a string in INPUT_TIME_FORMAT, but it might be None.
@@ -859,7 +888,7 @@ class BibliothecaParser(XMLParser):
             value = None
         else:
             try:
-                value = strptime_utc(value, self.INPUT_TIME_FORMAT)
+                value = strptime_utc(value, cls.INPUT_TIME_FORMAT)
             except ValueError as e:
                 logging.error(
                     'Unable to parse Bibliotheca date: "%s"', value, exc_info=e
@@ -891,7 +920,7 @@ class WorkflowException(BibliothecaException):
         )
 
 
-class ErrorParser(BibliothecaParser):
+class ErrorParser(BibliothecaParser[Exception]):
     """Turn an error document from the Bibliotheca web service into a CheckoutException"""
 
     wrong_status = re.compile(
@@ -907,23 +936,31 @@ class ErrorParser(BibliothecaParser):
         "The patron has no eBooks checked out": NotCheckedOut,
     }
 
-    def process_all(self, string):
+    @property
+    def xpath_expression(self) -> str:
+        return "//Error"
+
+    def process_first(self, string: str | bytes) -> Exception:
         try:
-            for i in super().process_all(string, "//Error"):
-                return i
+            return_val = super().process_first(string)
         except Exception as e:
             # The server sent us an error with an incorrect or
             # nonstandard syntax.
             return RemoteInitiatedServerError(string, BibliothecaAPI.SERVICE_NAME)
 
-        # We were not able to interpret the result as an error.
-        # The most likely cause is that the Bibliotheca app server is down.
-        return RemoteInitiatedServerError(
-            "Unknown error",
-            BibliothecaAPI.SERVICE_NAME,
-        )
+        if return_val is None:
+            # We were not able to interpret the result as an error.
+            # The most likely cause is that the Bibliotheca app server is down.
+            return RemoteInitiatedServerError(
+                "Unknown error",
+                BibliothecaAPI.SERVICE_NAME,
+            )
 
-    def process_one(self, error_tag, namespaces):
+        return return_val
+
+    def process_one(
+        self, error_tag: _Element, namespaces: Optional[Dict[str, str]]
+    ) -> Exception:
         message = self.text_of_optional_subtag(error_tag, "Message")
         if not message:
             return RemoteInitiatedServerError(
@@ -986,7 +1023,7 @@ class ErrorParser(BibliothecaParser):
         return BibliothecaException(message)
 
 
-class PatronCirculationParser(BibliothecaParser):
+class PatronCirculationParser(XMLParser):
 
     """Parse Bibliotheca's patron circulation status document into a list of
     LoanInfo and HoldInfo objects.
@@ -994,39 +1031,45 @@ class PatronCirculationParser(BibliothecaParser):
 
     id_type = Identifier.BIBLIOTHECA_ID
 
-    def __init__(self, collection, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, collection: Collection) -> None:
         self.collection = collection
 
-    def process_all(self, string):
-        parser = etree.XMLParser()
-        # If the data is an HTTP response, it is a bytestring and
-        # must be converted before it is parsed.
-        if isinstance(string, bytes):
-            string = string.decode("utf-8")
-        root = etree.parse(StringIO(string), parser)
-        sup = super()
-        loans = sup.process_all(root, "//Checkouts/Item", handler=self.process_one_loan)
-        holds = sup.process_all(root, "//Holds/Item", handler=self.process_one_hold)
-        reserves = sup.process_all(
-            root, "//Reserves/Item", handler=self.process_one_reserve
+    def process_all(
+        self, string: bytes | str
+    ) -> itertools.chain[Union[LoanInfo, HoldInfo]]:
+        xml = self._load_xml(string)
+        loans = self._process_all(
+            xml, "//Checkouts/Item", namespaces={}, handler=self.process_one_loan
         )
+        holds = self._process_all(
+            xml, "//Holds/Item", namespaces={}, handler=self.process_one_hold
+        )
+        reserves = self._process_all(
+            xml, "//Reserves/Item", namespaces={}, handler=self.process_one_reserve
+        )
+        return itertools.chain(loans, holds, reserves)
 
-        everything = itertools.chain(loans, holds, reserves)
-        return [x for x in everything if x]
-
-    def process_one_loan(self, tag, namespaces):
+    def process_one_loan(
+        self, tag: _Element, namespaces: Dict[str, str]
+    ) -> Optional[LoanInfo]:
         return self.process_one(tag, namespaces, LoanInfo)
 
-    def process_one_hold(self, tag, namespaces):
+    def process_one_hold(
+        self, tag: _Element, namespaces: Dict[str, str]
+    ) -> Optional[HoldInfo]:
         return self.process_one(tag, namespaces, HoldInfo)
 
-    def process_one_reserve(self, tag, namespaces):
+    def process_one_reserve(
+        self, tag: _Element, namespaces: Dict[str, str]
+    ) -> Optional[HoldInfo]:
         hold_info = self.process_one(tag, namespaces, HoldInfo)
-        hold_info.hold_position = 0
+        if hold_info is not None:
+            hold_info.hold_position = 0
         return hold_info
 
-    def process_one(self, tag, namespaces, source_class):
+    def process_one(
+        self, tag: _Element, namespaces: Dict[str, str], source_class: Type[T]
+    ) -> Optional[T]:
         if not tag.xpath("ItemId"):
             # This happens for events associated with books
             # no longer in our collection.
@@ -1056,23 +1099,20 @@ class PatronCirculationParser(BibliothecaParser):
         return source_class(*a)
 
 
-class DateResponseParser(BibliothecaParser):
+class DateResponseParser(BibliothecaParser[Optional[datetime]], ABC):
     """Extract a date from a response."""
 
     RESULT_TAG_NAME: Optional[str] = None
     DATE_TAG_NAME: Optional[str] = None
 
-    def process_all(self, string):
-        parser = etree.XMLParser()
-        # If the data is an HTTP response, it is a bytestring and
-        # must be converted before it is parsed.
-        if isinstance(string, bytes):
-            string = string.decode("utf-8")
-        root = etree.parse(StringIO(string), parser)
-        m = root.xpath(f"/{self.RESULT_TAG_NAME}/{self.DATE_TAG_NAME}")
-        if not m:
-            return None
-        due_date = m[0].text
+    @property
+    def xpath_expression(self) -> str:
+        return f"/{self.RESULT_TAG_NAME}/{self.DATE_TAG_NAME}"
+
+    def process_one(
+        self, tag: _Element, namespaces: Optional[Dict[str, str]]
+    ) -> Optional[datetime]:
+        due_date = tag.text
         if not due_date:
             return None
         return strptime_utc(due_date, EventParser.INPUT_TIME_FORMAT)
@@ -1082,16 +1122,18 @@ class CheckoutResponseParser(DateResponseParser):
 
     """Extract due date from a checkout response."""
 
-    RESULT_TAG_NAME = "CheckoutResult"
-    DATE_TAG_NAME = "DueDateInUTC"
+    @property
+    def xpath_expression(self) -> str:
+        return f"/CheckoutResult/DueDateInUTC"
 
 
 class HoldResponseParser(DateResponseParser):
 
     """Extract availability date from a hold response."""
 
-    RESULT_TAG_NAME = "PlaceHoldResult"
-    DATE_TAG_NAME = "AvailabilityDateInUTC"
+    @property
+    def xpath_expression(self) -> str:
+        return f"/PlaceHoldResult/AvailabilityDateInUTC"
 
 
 class EventParser(BibliothecaParser):
@@ -1112,9 +1154,17 @@ class EventParser(BibliothecaParser):
         "REMOVED": CirculationEvent.DISTRIBUTOR_LICENSE_REMOVE,
     }
 
-    def process_all(self, string, no_events_error=False):
+    @property
+    def xpath_expression(self) -> str:
+        return "//CloudLibraryEvent"
+
+    def process_all(
+        self, string: bytes | str, no_events_error=False
+    ) -> Generator[
+        Tuple[str, str, Optional[str], datetime, Optional[datetime], str], None, None
+    ]:
         has_events = False
-        for i in super().process_all(string, "//CloudLibraryEvent"):
+        for i in super().process_all(string):
             yield i
             has_events = True
 
@@ -1133,7 +1183,9 @@ class EventParser(BibliothecaParser):
                 BibliothecaAPI.SERVICE_NAME,
             )
 
-    def process_one(self, tag, namespaces):
+    def process_one(
+        self, tag: _Element, namespaces: Optional[Dict[str, str]]
+    ) -> Tuple[str, str, Optional[str], datetime, Optional[datetime], str]:
         isbn = self.text_of_subtag(tag, "ISBN")
         bibliotheca_id = self.text_of_subtag(tag, "ItemId")
         patron_id = self.text_of_optional_subtag(tag, "PatronId")
@@ -1218,7 +1270,7 @@ class BibliothecaCirculationSweep(IdentifierSweepMonitor):
                 continue
             if pool.licenses_owned > 0:
                 self.log.warn("Removing %s from circulation.", identifier.identifier)
-            pool.update_availability(0, 0, 0, 0, self.analytics, as_of=now)
+            pool.update_availability(0, 0, 0, 0, as_of=now)
 
     def _process_metadata(
         self,
@@ -1249,7 +1301,14 @@ class BibliothecaTimelineMonitor(CollectionMonitor, TimelineMonitor):
     PROTOCOL = ExternalIntegration.BIBLIOTHECA
     LOG_DATE_FORMAT = "%Y-%m-%dT%H:%M:%S"
 
-    def __init__(self, _db, collection, api_class=BibliothecaAPI, analytics=None):
+    @inject
+    def __init__(
+        self,
+        _db,
+        collection,
+        api_class=BibliothecaAPI,
+        analytics: Analytics = Provide[Services.analytics.analytics],
+    ):
         """Initializer.
 
         :param _db: Database session object.
@@ -1262,7 +1321,7 @@ class BibliothecaTimelineMonitor(CollectionMonitor, TimelineMonitor):
         :param analytics: An optional Analytics object.
         :type analytics: Optional[Analytics]
         """
-        self.analytics = analytics or Analytics(_db)
+        self.analytics = analytics
         super().__init__(_db, collection)
         if isinstance(api_class, BibliothecaAPI):
             # We were given an actual API object. Just use it.

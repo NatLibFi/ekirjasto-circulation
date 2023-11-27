@@ -27,11 +27,11 @@ from core.util.problem_detail import ProblemDetail
 
 # TODO: we can drop this when we drop support for Python 3.6 and 3.7
 from tests.fixtures.api_controller import CirculationControllerFixture
+from tests.fixtures.library import LibraryFixture
 
 
 class TestBaseController:
     def test_unscoped_session(self, circulation_fixture: CirculationControllerFixture):
-
         """Compare to TestScopedSession.test_scoped_session to see
         how database sessions will be handled in production.
         """
@@ -111,7 +111,7 @@ class TestBaseController:
                     circulation_fixture.controller.authenticated_patron_from_request()
                 )
                 assert isinstance(result, ProblemDetail)
-                assert REMOTE_INTEGRATION_FAILED.uri == result.uri  # type: ignore
+                assert REMOTE_INTEGRATION_FAILED.uri == result.uri
                 assert "Error in authentication service" == result.detail
                 assert None == flask.request.patron  # type: ignore
 
@@ -173,7 +173,7 @@ class TestBaseController:
             # The test neighborhood configured in the SimpleAuthenticationProvider
             # has been associated with the authenticated Patron object for the
             # duration of this request.
-            assert "Unit Test West" == value.neighborhood  # type: ignore
+            assert "Unit Test West" == value.neighborhood
 
     def test_authentication_sends_proper_headers(
         self, circulation_fixture: CirculationControllerFixture
@@ -199,7 +199,6 @@ class TestBaseController:
     def test_handle_conditional_request(
         self, circulation_fixture: CirculationControllerFixture
     ):
-
         # First, test success: the client provides If-Modified-Since
         # and it is _not_ earlier than the 'last modified' date known by
         # the server.
@@ -345,7 +344,7 @@ class TestBaseController:
             "bad identifier type",
             i1.identifier,
         )
-        assert NO_LICENSES.uri == problem_detail.uri  # type: ignore
+        assert NO_LICENSES.uri == problem_detail.uri
         expect = (
             "The item you're asking about (bad identifier type/%s) isn't in this collection."
             % i1.identifier
@@ -359,7 +358,7 @@ class TestBaseController:
             lp5.identifier.type,
             lp5.identifier.identifier,
         )
-        assert NO_LICENSES.uri == problem_detail.uri  # type: ignore
+        assert NO_LICENSES.uri == problem_detail.uri
 
     def test_load_work(self, circulation_fixture: CirculationControllerFixture):
         # Create a Work with two LicensePools.
@@ -379,7 +378,7 @@ class TestBaseController:
         # age-appropriate for that patron, or this method will return
         # a problem detail.
         headers = dict(Authorization=circulation_fixture.valid_auth)
-        for retval, expect in ((True, work), (False, NOT_AGE_APPROPRIATE)):  # type: ignore
+        for retval, expect in ((True, work), (False, NOT_AGE_APPROPRIATE)):
             work.age_appropriate_for_patron = MagicMock(return_value=retval)
             with circulation_fixture.request_context_with_library("/", headers=headers):
                 assert expect == circulation_fixture.controller.load_work(
@@ -444,7 +443,7 @@ class TestBaseController:
         problem_detail = circulation_fixture.controller.load_licensepooldelivery(
             adobe_licensepool, lpdm.delivery_mechanism.id
         )
-        assert BAD_DELIVERY_MECHANISM.uri == problem_detail.uri  # type: ignore
+        assert BAD_DELIVERY_MECHANISM.uri == problem_detail.uri
 
     def test_apply_borrowing_policy_succeeds_for_unlimited_access_books(
         self, circulation_fixture: CirculationControllerFixture
@@ -459,7 +458,6 @@ class TestBaseController:
             )
             [pool] = work.license_pools
             pool.open_access = False
-            pool.self_hosted = False
             pool.unlimited_access = True
 
             # Act
@@ -470,33 +468,10 @@ class TestBaseController:
             # Assert
             assert problem is None
 
-    def test_apply_borrowing_policy_succeeds_for_self_hosted_books(
-        self, circulation_fixture: CirculationControllerFixture
-    ):
-        with circulation_fixture.request_context_with_library("/"):
-            # Arrange
-            patron = circulation_fixture.controller.authenticated_patron(
-                circulation_fixture.valid_credentials
-            )
-            work = circulation_fixture.db.work(
-                with_license_pool=True, with_open_access_download=False
-            )
-            [pool] = work.license_pools
-            pool.licenses_available = 0
-            pool.licenses_owned = 0
-            pool.open_access = False
-            pool.self_hosted = True
-
-            # Act
-            problem = circulation_fixture.controller.apply_borrowing_policy(
-                patron, pool
-            )
-
-            # Assert
-            assert problem is None
-
     def test_apply_borrowing_policy_when_holds_prohibited(
-        self, circulation_fixture: CirculationControllerFixture
+        self,
+        circulation_fixture: CirculationControllerFixture,
+        library_fixture: LibraryFixture,
     ):
         with circulation_fixture.request_context_with_library("/"):
             patron = circulation_fixture.controller.authenticated_patron(
@@ -504,7 +479,7 @@ class TestBaseController:
             )
             # This library does not allow holds.
             library = circulation_fixture.db.default_library()
-            library.setting(library.ALLOW_HOLDS).value = "False"
+            library_fixture.settings(library).allow_holds = False
 
             # This is an open-access work.
             work = circulation_fixture.db.work(
@@ -527,7 +502,7 @@ class TestBaseController:
             problem = circulation_fixture.controller.apply_borrowing_policy(
                 patron, pool
             )
-            assert FORBIDDEN_BY_POLICY.uri == problem.uri  # type: ignore
+            assert FORBIDDEN_BY_POLICY.uri == problem.uri
 
     def test_apply_borrowing_policy_for_age_inappropriate_book(
         self, circulation_fixture: CirculationControllerFixture
@@ -566,7 +541,7 @@ class TestBaseController:
             problem = circulation_fixture.controller.apply_borrowing_policy(
                 patron, pool
             )
-            assert FORBIDDEN_BY_POLICY.uri == problem.uri  # type: ignore
+            assert FORBIDDEN_BY_POLICY.uri == problem.uri
 
             # If the lane is expanded to allow the book's age range, there's
             # no problem.
@@ -589,7 +564,7 @@ class TestBaseController:
     ):
         with circulation_fixture.app.test_request_context("/"):
             value = circulation_fixture.controller.library_for_request("not-a-library")
-            assert LIBRARY_NOT_FOUND == value  # type: ignore
+            assert LIBRARY_NOT_FOUND == value
 
         with circulation_fixture.app.test_request_context("/"):
             value = circulation_fixture.controller.library_for_request(
@@ -616,7 +591,7 @@ class TestBaseController:
         assert new_name not in circulation_fixture.manager.auth.library_authenticators
         with circulation_fixture.app.test_request_context("/"):
             problem = circulation_fixture.controller.library_for_request(new_name)
-            assert LIBRARY_NOT_FOUND == problem  # type: ignore
+            assert LIBRARY_NOT_FOUND == problem
 
         # Make the change.
         circulation_fixture.db.default_library().short_name = new_name
@@ -673,7 +648,7 @@ class TestBaseController:
             for bad_id in ("nosuchlane", -1):
                 not_found = circulation_fixture.controller.load_lane(bad_id)
                 assert isinstance(not_found, ProblemDetail)
-                assert not_found.uri == NO_SUCH_LANE.uri  # type: ignore
+                assert not_found.uri == NO_SUCH_LANE.uri
                 assert (
                     "Lane %s does not exist or is not associated with library %s"
                     % (bad_id, circulation_fixture.db.default_library().id)
@@ -699,7 +674,7 @@ class TestBaseController:
             # denies it exists.
             result = circulation_fixture.controller.load_lane(lane.id)
             assert isinstance(result, ProblemDetail)
-            assert result.uri == NO_SUCH_LANE.uri  # type: ignore
+            assert result.uri == NO_SUCH_LANE.uri
             lane.accessible_to.assert_called_once_with(
                 circulation_fixture.default_patron
             )

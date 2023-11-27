@@ -1,9 +1,7 @@
 import datetime
 from unittest.mock import PropertyMock, create_autospec
 
-import feedparser
 import pytest
-from lxml import etree
 
 from core.model import PresentationCalculationPolicy
 from core.model.constants import MediaTypes
@@ -14,9 +12,7 @@ from core.model.identifier import (
     ProQuestIdentifierParser,
     RecursiveEquivalencyCache,
 )
-from core.model.resource import Hyperlink, Representation
-from core.util.datetime_helpers import utc_now
-from core.util.opds_writer import AtomFeed
+from core.model.resource import Hyperlink
 from tests.core.models.test_coverage import ExampleEquivalencyCoverageRecordFixture
 from tests.fixtures.database import DatabaseTransactionFixture
 
@@ -172,9 +168,6 @@ class TestIdentifier:
         # already exist.
         isbn_urn = "urn:isbn:9781453219539"
         urns = [new_urn, isbn_urn]
-        only_overdrive = [Identifier.OVERDRIVE_ID]
-        only_isbn = [Identifier.OVERDRIVE_ID]
-        everything = []
 
         success, failure = Identifier.parse_urns(
             db.session, urns, allowed_types=[Identifier.OVERDRIVE_ID]
@@ -209,6 +202,7 @@ class TestIdentifier:
         )
         isbn_urn = "urn:isbn:1449358063"
         isbn_identifier, ignore = Identifier.parse_urn(db.session, isbn_urn)
+        assert isinstance(isbn_identifier, Identifier)
         assert Identifier.ISBN == isbn_identifier.type
         assert "9781449358068" == isbn_identifier.identifier
 
@@ -219,24 +213,28 @@ class TestIdentifier:
         # We can parse ordinary http: or https: URLs into URI
         # identifiers.
         http_identifier, ignore = Identifier.parse_urn(db.session, "http://example.com")
+        assert isinstance(http_identifier, Identifier)
         assert Identifier.URI == http_identifier.type
         assert "http://example.com" == http_identifier.identifier
 
         https_identifier, ignore = Identifier.parse_urn(
             db.session, "https://example.com"
         )
+        assert isinstance(https_identifier, Identifier)
         assert Identifier.URI == https_identifier.type
         assert "https://example.com" == https_identifier.identifier
 
         # we can parse Gutenberg identifiers
         gut_identifier = "http://www.gutenberg.org/ebooks/9781449358068"
         gut_identifier2, ignore = Identifier.parse_urn(db.session, gut_identifier)
+        assert isinstance(gut_identifier2, Identifier)
         assert gut_identifier2.type == Identifier.GUTENBERG_ID
         assert gut_identifier2.identifier == "9781449358068"
 
         # we can parse ProQuest identifiers
         pq_identifier = "urn:proquest.com/document-id/1543720"
         pq_identifier2, ignore = Identifier.parse_urn(db.session, pq_identifier)
+        assert isinstance(pq_identifier2, Identifier)
         assert pq_identifier2.type == Identifier.PROQUEST_ID
         assert pq_identifier2.identifier == "1543720"
 
@@ -244,6 +242,7 @@ class TestIdentifier:
         uuid_identifier, ignore = Identifier.parse_urn(
             db.session, "urn:uuid:04377e87-ab69-41c8-a2a4-812d55dc0952"
         )
+        assert isinstance(uuid_identifier, Identifier)
         assert Identifier.URI == uuid_identifier.type
         assert (
             "urn:uuid:04377e87-ab69-41c8-a2a4-812d55dc0952"
@@ -610,6 +609,7 @@ class TestIdentifier:
 
         # The CoverageRecord knows when the coverage was provided.
         timestamp = coverage.timestamp
+        assert isinstance(timestamp, datetime.datetime)
 
         # If we ask for Identifiers that are missing coverage records
         # as of that time, we see nothing.
@@ -628,88 +628,6 @@ class TestIdentifier:
             oclc,
             count_as_missing_before=timestamp + datetime.timedelta(seconds=1),
         ).all()
-
-    def test_opds_entry(self, db: DatabaseTransactionFixture):
-        identifier = db.identifier()
-        source = DataSource.lookup(db.session, DataSource.CONTENT_CAFE)
-
-        summary = identifier.add_link(
-            Hyperlink.DESCRIPTION,
-            "http://description",
-            source,
-            media_type=Representation.TEXT_PLAIN,
-            content="a book",
-        )[0]
-        cover = identifier.add_link(
-            Hyperlink.IMAGE,
-            "http://cover",
-            source,
-            media_type=Representation.JPEG_MEDIA_TYPE,
-        )[0]
-
-        def get_entry_dict(entry):
-            return feedparser.parse(etree.tostring(entry, encoding="unicode")).entries[
-                0
-            ]
-
-        # The entry includes the urn, description, and cover link.
-        entry = get_entry_dict(identifier.opds_entry())
-        assert identifier.urn == entry.id
-        assert "a book" == entry.summary
-        [cover_link] = entry.links
-        assert "http://cover" == cover_link.href
-
-        # The 'updated' time is set to the latest timestamp associated
-        # with the Identifier.
-        assert [] == identifier.coverage_records
-
-        # This may be the time the cover image was mirrored.
-        cover.resource.representation.set_as_mirrored(db.fresh_url())
-        now = utc_now()
-        cover.resource.representation.mirrored_at = now
-        entry = get_entry_dict(identifier.opds_entry())
-        assert AtomFeed._strftime(now) == entry.updated
-
-        # Or it may be a timestamp on a coverage record associated
-        # with the Identifier.
-
-        # For whatever reason, this coverage record is missing its
-        # timestamp. This indicates an error elsewhere, but it
-        # doesn't crash the method we're testing.
-        no_timestamp = db.coverage_record(identifier, source, operation="bad operation")
-        no_timestamp.timestamp = None
-
-        # If a coverage record is dated after the cover image's mirror
-        # time, That becomes the new updated time.
-        record = db.coverage_record(identifier, source)
-        the_future = now + datetime.timedelta(minutes=60)
-        record.timestamp = the_future
-        identifier.opds_entry()
-        entry = get_entry_dict(identifier.opds_entry())
-        assert AtomFeed._strftime(record.timestamp) == entry.updated
-
-        # Basically the latest date is taken from either a coverage record
-        # or a representation.
-        even_later = now + datetime.timedelta(minutes=120)
-        thumbnail = identifier.add_link(
-            Hyperlink.THUMBNAIL_IMAGE,
-            "http://thumb",
-            source,
-            media_type=Representation.JPEG_MEDIA_TYPE,
-        )[0]
-        thumb_rep = thumbnail.resource.representation
-        cover_rep = cover.resource.representation
-        thumbnail.resource.representation.thumbnail_of_id = cover_rep.id
-        cover_rep.thumbnails.append(thumb_rep)
-        thumbnail.resource.representation.mirrored_at = even_later
-
-        entry = get_entry_dict(identifier.opds_entry())
-        # The thumbnail has been added to the links.
-        assert 2 == len(entry.links)
-        assert any(filter(lambda l: l.href == "http://thumb", entry.links))
-        # And the updated time has been changed accordingly.
-        expected = thumbnail.resource.representation.mirrored_at
-        assert AtomFeed._strftime(even_later) == entry.updated
 
     @pytest.mark.parametrize(
         "_,identifier_type,identifier,title",
@@ -809,6 +727,7 @@ class TestRecursiveEquivalencyCache:
             )
             .first()
         )
+        assert isinstance(rec_eq, RecursiveEquivalencyCache)
         assert rec_eq.is_parent == True
 
     def test_identifier_delete_cascade_parent(

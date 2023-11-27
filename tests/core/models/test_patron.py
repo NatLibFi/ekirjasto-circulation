@@ -5,13 +5,14 @@ import pytest
 
 from core.classifier import Classifier
 from core.model import create, tuple_to_numericrange
+from core.model.constants import LinkRelations
 from core.model.credential import Credential
 from core.model.datasource import DataSource
-from core.model.library import Library
 from core.model.licensing import PolicyException
 from core.model.patron import Annotation, Hold, Loan, Patron, PatronProfileStorage
 from core.util.datetime_helpers import datetime_utc, utc_now
 from tests.fixtures.database import DatabaseTransactionFixture
+from tests.fixtures.library import LibraryFixture
 
 
 class TestAnnotation:
@@ -74,7 +75,6 @@ class TestHold:
         patron = db.patron()
         edition = db.edition()
         pool = db.licensepool(edition)
-        db.default_library().setting(Library.ALLOW_HOLDS).value = True
         hold, is_new = pool.on_hold_to(patron, now, later, 4)
         assert True == is_new
         assert now == hold.start
@@ -90,27 +90,15 @@ class TestHold:
         assert later == hold.end
         assert 0 == hold.position
 
-        # Make sure we can also hold this book for an IntegrationClient.
-        client = db.integration_client()
-        hold, was_new = pool.on_hold_to(client)
-        assert True == was_new
-        assert client == hold.integration_client
-        assert pool == hold.license_pool
-
-        # Holding the book twice for the same IntegrationClient creates two holds,
-        # since they might be for different patrons on the client.
-        hold2, was_new = pool.on_hold_to(client)
-        assert True == was_new
-        assert client == hold2.integration_client
-        assert pool == hold2.license_pool
-        assert hold != hold2
-
-    def test_holds_not_allowed(self, db: DatabaseTransactionFixture):
-        patron = db.patron()
+    def test_holds_not_allowed(
+        self, db: DatabaseTransactionFixture, library_fixture: LibraryFixture
+    ):
+        settings = library_fixture.mock_settings()
+        settings.allow_holds = False
+        library = library_fixture.library(settings=settings)
+        patron = db.patron(library=library)
         edition = db.edition()
         pool = db.licensepool(edition)
-
-        db.default_library().setting(Library.ALLOW_HOLDS).value = False
         with pytest.raises(PolicyException) as excinfo:
             pool.on_hold_to(patron, utc_now(), 4)
         assert "Holds are disabled for this library." in str(excinfo.value)
@@ -125,7 +113,6 @@ class TestHold:
         assert work == hold.work
 
     def test_until(self, db: DatabaseTransactionFixture):
-
         one_day = datetime.timedelta(days=1)
         two_days = datetime.timedelta(days=2)
 
@@ -320,21 +307,6 @@ class TestLoans:
         assert loan == loan2
         assert False == was_new
 
-        # Make sure we can also loan this book to an IntegrationClient.
-        client = db.integration_client()
-        loan, was_new = pool.loan_to(client)
-        assert True == was_new
-        assert client == loan.integration_client
-        assert pool == loan.license_pool
-
-        # Loaning the book to the same IntegrationClient twice creates two loans,
-        # since these loans could be on behalf of different patrons on the client.
-        loan2, was_new = pool.loan_to(client)
-        assert True == was_new
-        assert client == loan2.integration_client
-        assert pool == loan2.license_pool
-        assert loan != loan2
-
     def test_work(self, db: DatabaseTransactionFixture):
         """Test the attribute that finds the Work for a Loan or Hold."""
         patron = db.patron()
@@ -368,11 +340,6 @@ class TestLoans:
         assert db.default_library() == loan.library
 
         loan.patron = None
-        client = db.integration_client()
-        loan.integration_client = client
-        assert None == loan.library
-
-        loan.integration_client = None
         assert None == loan.library
 
         patron.library = db.library()
@@ -550,11 +517,11 @@ class TestPatron:
         assert recently == patron.last_loan_activity_sync
 
         # If it's _not_ relatively recent, attempting to access it
-        # clears it out.
+        # doesn't clear it out, but accessor returns None
         patron.last_loan_activity_sync = long_ago
         assert long_ago == patron._last_loan_activity_sync
         assert None == patron.last_loan_activity_sync
-        assert None == patron._last_loan_activity_sync
+        assert long_ago == patron._last_loan_activity_sync
 
     def test_root_lane(self, db: DatabaseTransactionFixture):
         root_1 = db.lane()
@@ -618,7 +585,7 @@ class TestPatron:
         patron = db.patron()
         mock = MagicMock(side_effect=mock_age_appropriate)
         patron.age_appropriate_match = mock
-        self.calls = []
+        self.calls: list = []
         self.return_true_for = None
 
         # If the patron has no root lane, age_appropriate_match is not
@@ -784,6 +751,13 @@ class TestPatron:
                     )
 
 
+def mock_url_for(url, **kwargs):
+    item_list = [f"{k}={v}" for k, v in kwargs.items()]
+    item_list.sort()  # Ensure repeatable order
+    items = ";".join(item_list)
+    return f"{url} : {items}"
+
+
 class ExamplePatronProfileStorageFixture:
     patron: Patron
     store: PatronProfileStorage
@@ -795,7 +769,7 @@ class ExamplePatronProfileStorageFixture:
     ) -> "ExamplePatronProfileStorageFixture":
         data = ExamplePatronProfileStorageFixture()
         data.patron = transaction.patron()
-        data.store = PatronProfileStorage(data.patron)
+        data.store = PatronProfileStorage(data.patron, url_for=mock_url_for)
         data.transaction = transaction
         return data
 
@@ -821,6 +795,14 @@ class TestPatronProfileStorage:
     ):
         data = example_patron_profile_fixture
 
+        links = [
+            dict(
+                rel=LinkRelations.DEVICE_REGISTRATION,
+                type="application/json",
+                href="put_patron_devices : _external=True;library_short_name=default",
+            )
+        ]
+
         # synchronize_annotations always shows up as settable, even if
         # the current value is None.
         data.patron.authorization_identifier = "abcd"
@@ -829,6 +811,7 @@ class TestPatronProfileStorage:
         assert {
             "simplified:authorization_identifier": "abcd",
             "settings": {"simplified:synchronize_annotations": None},
+            "links": links,
         } == rep
 
         data.patron.synchronize_annotations = True
@@ -838,6 +821,7 @@ class TestPatronProfileStorage:
             "simplified:authorization_expires": "2016-01-01T10:20:30Z",
             "simplified:authorization_identifier": "abcd",
             "settings": {"simplified:synchronize_annotations": True},
+            "links": links,
         } == rep
 
     def test_update(

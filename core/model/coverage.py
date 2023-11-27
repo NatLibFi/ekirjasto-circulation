@@ -18,11 +18,11 @@ from sqlalchemy.orm import Mapped, relationship
 from sqlalchemy.orm.session import Session
 from sqlalchemy.sql.expression import and_, literal, literal_column, or_
 
-from ..util.datetime_helpers import utc_now
-from . import Base, SessionBulkOperation, get_one, get_one_or_create
+from core.model import Base, SessionBulkOperation, get_one, get_one_or_create
+from core.util.datetime_helpers import utc_now
 
 if TYPE_CHECKING:
-    from . import Equivalency
+    from core.model import Collection, DataSource, Equivalency, Identifier, Work
 
 
 class BaseCoverageRecord:
@@ -130,6 +130,9 @@ class Timestamp(Base):
     # run separately on a number of collections.
     collection_id = Column(
         Integer, ForeignKey("collections.id"), index=True, nullable=True
+    )
+    collection: Mapped[Collection] = relationship(
+        "Collection", back_populates="timestamps"
     )
 
     # The last time the service _started_ running.
@@ -291,7 +294,7 @@ class Timestamp(Base):
 
     def to_data(self):
         """Convert this Timestamp to an unfinalized TimestampData."""
-        from ..metadata_layer import TimestampData
+        from core.metadata_layer import TimestampData
 
         return TimestampData(
             start=self.start,
@@ -318,10 +321,16 @@ class CoverageRecord(Base, BaseCoverageRecord):
 
     id = Column(Integer, primary_key=True)
     identifier_id = Column(Integer, ForeignKey("identifiers.id"), index=True)
+    identifier: Mapped[Identifier] = relationship(
+        "Identifier", back_populates="coverage_records"
+    )
 
     # If applicable, this is the ID of the data source that took the
     # Identifier as input.
     data_source_id = Column(Integer, ForeignKey("datasources.id"))
+    data_source: Mapped[DataSource] = relationship(
+        "DataSource", back_populates="coverage_records"
+    )
     operation = Column(String(255), default=None)
 
     timestamp = Column(DateTime(timezone=True), index=True)
@@ -388,9 +397,9 @@ class CoverageRecord(Base, BaseCoverageRecord):
     def lookup(
         cls, edition_or_identifier, data_source, operation=None, collection=None
     ):
-        from .datasource import DataSource
-        from .edition import Edition
-        from .identifier import Identifier
+        from core.model.datasource import DataSource
+        from core.model.edition import Edition
+        from core.model.identifier import Identifier
 
         cls.assert_coverage_operation(operation, collection)
 
@@ -427,8 +436,8 @@ class CoverageRecord(Base, BaseCoverageRecord):
         status=BaseCoverageRecord.SUCCESS,
         collection=None,
     ):
-        from .edition import Edition
-        from .identifier import Identifier
+        from core.model.edition import Edition
+        from core.model.identifier import Identifier
 
         cls.assert_coverage_operation(operation, collection)
 
@@ -468,7 +477,7 @@ class CoverageRecord(Base, BaseCoverageRecord):
         """Create and update CoverageRecords so that every Identifier in
         `identifiers` has an identical record.
         """
-        from .identifier import Identifier
+        from core.model.identifier import Identifier
 
         if not identifiers:
             # Nothing to do.
@@ -605,12 +614,12 @@ class WorkCoverageRecord(Base, BaseCoverageRecord):
     CLASSIFY_OPERATION = "classify"
     SUMMARY_OPERATION = "summary"
     QUALITY_OPERATION = "quality"
-    GENERATE_OPDS_OPERATION = "generate-opds"
     GENERATE_MARC_OPERATION = "generate-marc"
     UPDATE_SEARCH_INDEX_OPERATION = "update-search-index"
 
     id = Column(Integer, primary_key=True)
     work_id = Column(Integer, ForeignKey("works.id"), index=True)
+    work: Mapped[Work] = relationship("Work", back_populates="coverage_records")
     operation = Column(String(255), index=True, default=None)
 
     timestamp = Column(DateTime(timezone=True), index=True)
@@ -671,7 +680,7 @@ class WorkCoverageRecord(Base, BaseCoverageRecord):
         """Create and update WorkCoverageRecords so that every Work in
         `works` has an identical record.
         """
-        from .work import Work
+        from core.model.work import Work
 
         if not works:
             # Nothing to do.

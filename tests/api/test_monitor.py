@@ -7,7 +7,7 @@ from api.monitor import (
     LoanlikeReaperMonitor,
     LoanReaper,
 )
-from api.odl import ODLAPI, SharedODLAPI
+from api.odl import ODLAPI
 from core.model import Annotation, DataSource, ExternalIntegration
 from core.util.datetime_helpers import utc_now
 from tests.fixtures.database import DatabaseTransactionFixture
@@ -21,8 +21,7 @@ class TestLoanlikeReaperMonitor:
         will be exempt from the reaper.
         """
         for i in (
-            ODLAPI.NAME,
-            SharedODLAPI.NAME,
+            ODLAPI.label(),
             ExternalIntegration.OPDS_FOR_DISTRIBUTORS,
         ):
             assert i in LoanlikeReaperMonitor.SOURCE_OF_TRUTH_PROTOCOLS
@@ -50,7 +49,10 @@ class TestLoanlikeReaperMonitor:
             edition, open_access=False, data_source_name=DataSource.AXIS_360
         )
         not_open_access_4 = db.licensepool(
-            edition, open_access=False, data_source_name=DataSource.ODILO
+            edition, open_access=False, data_source_name=DataSource.BIBBLIO
+        )
+        unlimited_access = db.licensepool(
+            edition, unlimited_access=True, data_source_name=DataSource.AMAZON
         )
 
         # Here's a collection that is the source of truth for its
@@ -114,6 +116,11 @@ class TestLoanlikeReaperMonitor:
             end=None,
         )
 
+        # An unlimited loan should not get reaped regardless of age
+        unlimited_access_loan, ignore = unlimited_access.loan_to(
+            inactive_patron, start=a_long_time_ago, end=None
+        )
+
         # This loan has not expired yet.
         not_open_access_1.loan_to(current_patron, start=now, end=the_future)
 
@@ -137,7 +144,7 @@ class TestLoanlikeReaperMonitor:
             inactive_patron, start=a_long_time_ago, end=a_long_time_ago
         )
 
-        assert 4 == len(inactive_patron.loans)
+        assert 5 == len(inactive_patron.loans)
         assert 3 == len(inactive_patron.holds)
 
         assert 2 == len(current_patron.loans)
@@ -153,7 +160,9 @@ class TestLoanlikeReaperMonitor:
         # which will never be reaped.
         #
         # Holds are unaffected.
-        assert {open_access_loan, sot_loan} == set(inactive_patron.loans)
+        assert {open_access_loan, sot_loan, unlimited_access_loan} == set(
+            inactive_patron.loans
+        )
         assert 3 == len(inactive_patron.holds)
 
         # The active patron's loans and holds are unaffected, either
@@ -163,8 +172,8 @@ class TestLoanlikeReaperMonitor:
         assert 2 == len(current_patron.holds)
 
         # Now fire up the hold reaper.
-        monitor = HoldReaper(db.session)
-        monitor.run()
+        hold_monitor = HoldReaper(db.session)
+        hold_monitor.run()
 
         # All of the inactive patron's holds have been reaped,
         # except for the one from the source-of-truth collection.
@@ -175,7 +184,6 @@ class TestLoanlikeReaperMonitor:
 
 class TestIdlingAnnotationReaper:
     def test_where_clause(self, db: DatabaseTransactionFixture):
-
         # Two books.
         ignore, lp1 = db.edition(with_license_pool=True)
         ignore, lp2 = db.edition(with_license_pool=True)

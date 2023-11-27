@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import TYPE_CHECKING, Dict, List
+from typing import TYPE_CHECKING, Dict, List, Set
 
 from sqlalchemy import Column, ForeignKey, Integer, Unicode, UniqueConstraint
 from sqlalchemy.dialects.postgresql import ARRAY, JSON
@@ -12,9 +12,9 @@ from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy.orm import Mapped, relationship
 from sqlalchemy.orm.session import Session
 
-from ..util.personal_names import display_name_to_sort_name
-from . import Base, flush, get_one, get_one_or_create
-from .hybrid import hybrid_property
+from core.model import Base, flush, get_one, get_one_or_create
+from core.model.hybrid import hybrid_property
+from core.util.personal_names import display_name_to_sort_name
 
 if TYPE_CHECKING:
     from core.model import Edition  # noqa: autoflake
@@ -93,7 +93,7 @@ class Contributor(Base):
     COPYRIGHT_HOLDER_ROLE = "Copyright holder"
     TRANSCRIBER_ROLE = "Transcriber"
     DESIGNER_ROLE = "Designer"
-    AUTHOR_ROLES = {PRIMARY_AUTHOR_ROLE, AUTHOR_ROLE}
+    AUTHOR_ROLES: Set[str] = {PRIMARY_AUTHOR_ROLE, AUTHOR_ROLE}
 
     # Map our recognized roles to MARC relators.
     # https://www.loc.gov/marc/relators/relaterm.html

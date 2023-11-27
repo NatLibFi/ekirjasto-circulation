@@ -1,144 +1,29 @@
 from __future__ import annotations
 
 # ExternalIntegration, ExternalIntegrationLink, ConfigurationSetting
-import inspect
 import json
 import logging
 from abc import ABCMeta, abstractmethod
-from contextlib import contextmanager
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Iterable, Iterator, List, Optional, TypeVar
+from typing import TYPE_CHECKING, List, Optional
 
-from flask_babel import lazy_gettext as _
-from sqlalchemy import Column, DateTime
-from sqlalchemy import Enum as saEnum
-from sqlalchemy import ForeignKey, Index, Integer, Unicode
+from sqlalchemy import Column, ForeignKey, Index, Integer, Unicode
 from sqlalchemy.orm import Mapped, relationship
 from sqlalchemy.orm.session import Session
 from sqlalchemy.sql.expression import and_
 
+from core.config import CannotLoadConfiguration, Configuration
+from core.model import Base, get_one, get_one_or_create
+from core.model.constants import DataSourceConstants
+from core.model.hassessioncache import HasSessionCache
 from core.model.hybrid import hybrid_property
-
-from ..config import CannotLoadConfiguration, Configuration
-from ..mirror import MirrorUploader
-from ..util.datetime_helpers import utc_now
-from ..util.string_helpers import random_string
-from . import Base, get_one, get_one_or_create
-from .constants import DataSourceConstants
-from .hassessioncache import HasSessionCache
-from .library import Library, externalintegrations_libraries
+from core.model.library import Library, externalintegrations_libraries
+from core.util.string_helpers import random_string
 
 if TYPE_CHECKING:
     # This is needed during type checking so we have the
     # types of related models.
-    from core.configuration.ignored_identifier import (  # noqa: autoflake
-        IgnoredIdentifierConfiguration,
-    )
     from core.model import Collection  # noqa: autoflake
-
-
-class ExternalIntegrationLink(Base, HasSessionCache):
-
-    __tablename__ = "externalintegrationslinks"
-
-    NO_MIRROR_INTEGRATION = "NO_MIRROR"
-    # Possible purposes that a storage external integration can be used for.
-    # These string literals may be stored in the database, so changes to them
-    # may need to be accompanied by a DB migration.
-    COVERS = "covers_mirror"
-    COVERS_KEY = f"{COVERS}_integration_id"
-
-    OPEN_ACCESS_BOOKS = "books_mirror"
-    OPEN_ACCESS_BOOKS_KEY = f"{OPEN_ACCESS_BOOKS}_integration_id"
-
-    PROTECTED_ACCESS_BOOKS = "protected_access_books_mirror"
-    PROTECTED_ACCESS_BOOKS_KEY = f"{PROTECTED_ACCESS_BOOKS}_integration_id"
-
-    ANALYTICS = "analytics_mirror"
-    ANALYTICS_KEY = f"{ANALYTICS}_integration_id"
-
-    MARC = "MARC_mirror"
-
-    id = Column(Integer, primary_key=True)
-    external_integration_id = Column(
-        Integer, ForeignKey("externalintegrations.id"), index=True
-    )
-    library_id = Column(Integer, ForeignKey("libraries.id"), index=True)
-    other_integration_id = Column(
-        Integer, ForeignKey("externalintegrations.id"), index=True
-    )
-    purpose = Column(Unicode, index=True)
-
-    mirror_settings = [
-        {
-            "key": COVERS_KEY,
-            "type": COVERS,
-            "description_type": "cover images",
-            "label": "Covers Mirror",
-        },
-        {
-            "key": OPEN_ACCESS_BOOKS_KEY,
-            "type": OPEN_ACCESS_BOOKS,
-            "description_type": "free books",
-            "label": "Open Access Books Mirror",
-        },
-        {
-            "key": PROTECTED_ACCESS_BOOKS_KEY,
-            "type": PROTECTED_ACCESS_BOOKS,
-            "description_type": "self-hosted, commercially licensed books",
-            "label": "Protected Access Books Mirror",
-        },
-        {
-            "key": ANALYTICS_KEY,
-            "type": ANALYTICS,
-            "description_type": "Analytics",
-            "label": "Analytics Mirror",
-        },
-    ]
-    settings = []
-
-    for mirror_setting in mirror_settings:
-        mirror_type = mirror_setting["type"]
-        mirror_description_type = mirror_setting["description_type"]
-        mirror_label = mirror_setting["label"]
-
-        settings.append(
-            {
-                "key": f"{mirror_type.lower()}_integration_id",
-                "label": _(mirror_label),
-                "description": _(
-                    "Any {} encountered while importing content from this collection "
-                    "can be mirrored to a server you control.".format(
-                        mirror_description_type
-                    )
-                ),
-                "type": "select",
-                "options": [
-                    {
-                        "key": NO_MIRROR_INTEGRATION,
-                        "label": _(f"None - Do not mirror {mirror_description_type}"),
-                    }
-                ],
-            }
-        )
-
-    COLLECTION_MIRROR_SETTINGS = settings
-
-
-class ExternalIntegrationError(Base):
-    __tablename__ = "externalintegrationerrors"
-
-    id = Column(Integer, primary_key=True)
-    time = Column(DateTime, default=utc_now)
-    error = Column(Unicode)
-    external_integration_id = Column(
-        Integer,
-        ForeignKey(
-            "externalintegrations.id",
-            name="fk_error_externalintegrations_id",
-            ondelete="CASCADE",
-        ),
-    )
 
 
 class ExternalIntegration(Base):
@@ -146,11 +31,6 @@ class ExternalIntegration(Base):
     """An external integration contains configuration for connecting
     to a third-party API.
     """
-
-    GREEN = "green"
-    RED = "red"
-
-    STATUS = saEnum(GREEN, RED, name="external_integration_status")
 
     # Possible goals of ExternalIntegrations.
     #
@@ -172,10 +52,6 @@ class ExternalIntegration(Base):
     METADATA_GOAL = "metadata"
 
     # These integrations are associated with external services such as
-    # S3 that provide access to book covers.
-    STORAGE_GOAL = MirrorUploader.STORAGE_GOAL
-
-    # These integrations are associated with external services such as
     # Opensearch that provide indexed search.
     SEARCH_GOAL = "search"
 
@@ -186,10 +62,6 @@ class ExternalIntegration(Base):
     # These integrations are associated with external services such as
     # Adobe Vendor ID, which manage access to DRM-dependent content.
     DRM_GOAL = "drm"
-
-    # These integrations are associated with external services that
-    # help patrons find libraries.
-    DISCOVERY_GOAL = "discovery"
 
     # These integrations are associated with external services that
     # collect logs of server-side events.
@@ -203,7 +75,6 @@ class ExternalIntegration(Base):
     OPDS_IMPORT = "OPDS Import"
     OPDS2_IMPORT = "OPDS 2.0 Import"
     OVERDRIVE = DataSourceConstants.OVERDRIVE
-    ODILO = DataSourceConstants.ODILO
     BIBLIOTHECA = DataSourceConstants.BIBLIOTHECA
     AXIS_360 = DataSourceConstants.AXIS_360
     OPDS_FOR_DISTRIBUTORS = "OPDS for Distributors"
@@ -211,8 +82,6 @@ class ExternalIntegration(Base):
     FEEDBOOKS = DataSourceConstants.FEEDBOOKS
     ODL = "ODL"
     ODL2 = "ODL 2.0"
-    LCP = DataSourceConstants.LCP
-    MANUAL = DataSourceConstants.MANUAL
     PROQUEST = DataSourceConstants.PROQUEST
 
     # These protocols were used on the Content Server when mirroring
@@ -226,19 +95,16 @@ class ExternalIntegration(Base):
     LICENSE_PROTOCOLS = [
         OPDS_IMPORT,
         OVERDRIVE,
-        ODILO,
         BIBLIOTHECA,
         AXIS_360,
         GUTENBERG,
         ENKI,
-        MANUAL,
     ]
 
     # Some integrations with LICENSE_GOAL imply that the data and
     # licenses come from a specific data source.
     DATA_SOURCE_FOR_LICENSE_PROTOCOL = {
         OVERDRIVE: DataSourceConstants.OVERDRIVE,
-        ODILO: DataSourceConstants.ODILO,
         BIBLIOTHECA: DataSourceConstants.BIBLIOTHECA,
         AXIS_360: DataSourceConstants.AXIS_360,
         ENKI: DataSourceConstants.ENKI,
@@ -253,26 +119,11 @@ class ExternalIntegration(Base):
     NYT = "New York Times"
     CONTENT_SERVER = "Content Server"
 
-    # Integrations with STORAGE_GOAL
-    S3 = "Amazon S3"
-    MINIO = "MinIO"
-    LCP = "LCP"
-
     # Integrations with SEARCH_GOAL
     OPENSEARCH = "Opensearch"
 
-    # Integrations with DRM_GOAL
-    ADOBE_VENDOR_ID = "Adobe Vendor ID"
-
-    # Integrations with DISCOVERY_GOAL
-    OPDS_REGISTRATION = "OPDS Registration"
-
     # Integrations with ANALYTICS_GOAL
     GOOGLE_ANALYTICS = "Google Analytics"
-
-    # Integrations with LOGGING_GOAL
-    INTERNAL_LOGGING = "Internal logging"
-    CLOUDWATCH = "AWS Cloudwatch Logs"
 
     # Integrations with CATALOG_GOAL
     MARC_EXPORT = "MARC Export"
@@ -303,6 +154,9 @@ class ExternalIntegration(Base):
     # The token auth for an opds/opds2 feed
     TOKEN_AUTH = "token_auth_endpoint"
 
+    # The JWE Patron Auth protocol
+    PATRON_AUTH_JWE = "patron_auth_jwe"
+
     __tablename__ = "externalintegrations"
     id = Column(Integer, primary_key=True)
 
@@ -318,14 +172,11 @@ class ExternalIntegration(Base):
     # used to identify ExternalIntegrations from command-line scripts.
     name = Column(Unicode, nullable=True, unique=True)
 
-    status: Mapped[str] = Column(STATUS, server_default=str(GREEN))
-    last_status_update = Column(DateTime, nullable=True)
-
     # Any additional configuration information goes into
     # ConfigurationSettings.
     settings: Mapped[List[ConfigurationSetting]] = relationship(
         "ConfigurationSetting",
-        backref="external_integration",
+        back_populates="external_integration",
         cascade="all, delete",
         uselist=True,
     )
@@ -336,20 +187,6 @@ class ExternalIntegration(Base):
         "Collection",
         backref="_external_integration",
         foreign_keys="Collection.external_integration_id",
-    )
-
-    links: Mapped[List[ExternalIntegrationLink]] = relationship(
-        "ExternalIntegrationLink",
-        backref="integration",
-        foreign_keys="ExternalIntegrationLink.external_integration_id",
-        cascade="all, delete-orphan",
-    )
-
-    other_links: Mapped[List[ExternalIntegrationLink]] = relationship(
-        "ExternalIntegrationLink",
-        backref="other_integration",
-        foreign_keys="ExternalIntegrationLink.other_integration_id",
-        cascade="all, delete-orphan",
     )
 
     libraries: Mapped[List[Library]] = relationship(
@@ -375,42 +212,7 @@ class ExternalIntegration(Base):
         return integrations
 
     @classmethod
-    def for_collection_and_purpose(cls, _db, collection, purpose):
-        """Find the ExternalIntegration for the collection.
-
-        :param collection: Use the mirror configuration for this Collection.
-        :param purpose: Use the purpose of the mirror configuration.
-        """
-        qu = (
-            _db.query(cls)
-            .join(
-                ExternalIntegrationLink,
-                ExternalIntegrationLink.other_integration_id == cls.id,
-            )
-            .filter(
-                ExternalIntegrationLink.external_integration_id
-                == collection.external_integration_id,
-                ExternalIntegrationLink.purpose == purpose,
-            )
-        )
-        integrations = qu.all()
-        if not integrations:
-            raise CannotLoadConfiguration(
-                "No storage integration for collection '%s' and purpose '%s' is configured."
-                % (collection.name, purpose)
-            )
-        if len(integrations) > 1:
-            raise CannotLoadConfiguration(
-                "Multiple integrations found for collection '%s' and purpose '%s'"
-                % (collection.name, purpose)
-            )
-
-        [integration] = integrations
-        return integration
-
-    @classmethod
     def lookup(cls, _db, protocol, goal, library=None):
-
         integrations = _db.query(cls).filter(cls.protocol == protocol, cls.goal == goal)
 
         if library:
@@ -610,7 +412,14 @@ class ConfigurationSetting(Base, HasSessionCache):
     external_integration_id = Column(
         Integer, ForeignKey("externalintegrations.id"), index=True
     )
+    external_integration: ExternalIntegration = relationship(
+        "ExternalIntegration", back_populates="settings"
+    )
+
     library_id = Column(Integer, ForeignKey("libraries.id"), index=True)
+    library: Mapped[Library] = relationship(
+        "Library", back_populates="external_integration_settings"
+    )
     key = Column(Unicode)
     _value = Column("value", Unicode)
 
@@ -700,12 +509,6 @@ class ConfigurationSetting(Base, HasSessionCache):
         return cls.for_library_and_externalintegration(_db, key, None, None)
 
     @classmethod
-    def for_library(cls, key, library):
-        """Find or create a ConfigurationSetting for the given Library."""
-        _db = Session.object_session(library)
-        return cls.for_library_and_externalintegration(_db, key, library, None)
-
-    @classmethod
     def for_externalintegration(cls, key, externalintegration):
         """Find or create a ConfigurationSetting for the given
         ExternalIntegration.
@@ -758,7 +561,6 @@ class ConfigurationSetting(Base, HasSessionCache):
 
     @hybrid_property
     def value(self):
-
         """What's the current value of this configuration setting?
         If not present, the value may be inherited from some other
         ConfigurationSetting.
@@ -891,558 +693,8 @@ class HasExternalIntegration(metaclass=ABCMeta):
         raise NotImplementedError()
 
 
-class BaseConfigurationStorage(metaclass=ABCMeta):
-    """Serializes and deserializes values as configuration settings"""
-
-    @abstractmethod
-    def save(self, db: Session, setting_name: str, value: Any):
-        """Save the value as as a new configuration setting
-
-        :param db: Database session
-        :param setting_name: Name of the configuration setting
-        :param value: Value to be saved
-        """
-        raise NotImplementedError()
-
-    @abstractmethod
-    def load(self, db: Session, setting_name: str) -> Any:
-        """Loads and returns the library's configuration setting
-
-        :param db: Database session
-        :param setting_name: Name of the configuration setting
-        """
-        raise NotImplementedError()
-
-
-class ConfigurationStorage(BaseConfigurationStorage):
-    """Serializes and deserializes values as configuration settings"""
-
-    def __init__(self, integration_association: HasExternalIntegration):
-        """Initializes a new instance of ConfigurationStorage class
-
-        :param integration_association: Association with an external integration
-        """
-        self._integration_association = integration_association
-
-    def save(self, db: Session, setting_name: str, value: Any):
-        """Save the value as as a new configuration setting
-
-        :param db: Database session
-        :param setting_name: Name of the configuration setting
-        :param value: Value to be saved
-        """
-        integration = self._integration_association.external_integration(db)
-        ConfigurationSetting.for_externalintegration(
-            setting_name, integration
-        ).value = value
-
-    def load(self, db: Session, setting_name: str) -> Any:
-        """Loads and returns the library's configuration setting
-
-        :param db: Database session
-        :param setting_name: Name of the library's configuration setting
-        """
-        integration = self._integration_association.external_integration(db)
-        value = ConfigurationSetting.for_externalintegration(
-            setting_name, integration
-        ).value
-
-        return value
-
-
-class ConfigurationAttributeType(Enum):
-    """Enumeration of configuration setting types"""
-
-    TEXT = "text"
-    TEXTAREA = "textarea"
-    SELECT = "select"
-    NUMBER = "number"
-    LIST = "list"
-    MENU = "menu"
-
-    def to_control_type(self) -> str | None:
-        """Converts the value to a attribute type understandable by circulation-admin
-
-        :return: String representation of attribute's type
-        """
-        # NOTE: For some reason, circulation-admin converts "text" into <text> so we have to turn it into None
-        # In this case circulation-admin will use <input>
-        # TODO: To be fixed in https://jira.nypl.org/browse/SIMPLY-3008
-        if self.value == ConfigurationAttributeType.TEXT.value:
-            return None
-        else:
-            return self.value
-
-
-class ConfigurationAttribute(Enum):
-    """Enumeration of configuration setting attributes"""
-
-    KEY = "key"
-    LABEL = "label"
-    DESCRIPTION = "description"
-    TYPE = "type"
-    REQUIRED = "required"
-    DEFAULT = "default"
-    OPTIONS = "options"
-    CATEGORY = "category"
-    FORMAT = "format"
-
-
 class ConfigurationAttributeValue(Enum):
     """Enumeration of common configuration attribute values"""
 
     YESVALUE = "yes"
     NOVALUE = "no"
-
-
-class ConfigurationOption:
-    """Key-value pair containing information about configuration attribute option"""
-
-    def __init__(self, key: str, label: str) -> None:
-        """Initializes a new instance of ConfigurationOption class
-
-        :param key: Key
-        :param label: Label
-        """
-        self._key = key
-        self._label = label
-
-    def __eq__(self, other: object) -> bool:
-        """Compares two ConfigurationOption objects
-
-        :param other: ConfigurationOption object
-
-        :return: Boolean value indicating whether two items are equal
-        """
-        if not isinstance(other, ConfigurationOption):
-            return False
-
-        return self.key == other.key and self.label == other.label
-
-    @property
-    def key(self) -> str:
-        """Returns option's key
-
-        :return: Option's key
-        """
-        return self._key
-
-    @property
-    def label(self) -> str:
-        """Returns option's label
-
-        :return: Option's label
-        """
-        return self._label
-
-    def to_settings(self) -> dict[str, str]:
-        """Returns a dictionary containing option metadata in the SETTINGS format
-
-        :return: Dictionary containing option metadata in the SETTINGS format
-        """
-        return {"key": self.key, "label": self.label}
-
-    @staticmethod
-    def from_enum(cls: type[Enum]) -> list[ConfigurationOption]:
-        """Convers Enum to a list of options in the SETTINGS format
-
-        :param cls: Enum type
-
-        :return: List of options in the SETTINGS format
-        """
-        if not issubclass(cls, Enum):
-            raise ValueError("Class should be descendant of Enum")
-
-        return [ConfigurationOption(element.value, element.name) for element in cls]
-
-
-class HasConfigurationSettings(metaclass=ABCMeta):
-    """Interface representing class containing ConfigurationMetadata properties"""
-
-    @abstractmethod
-    def get_setting_value(self, setting_name: str) -> Any:
-        """Returns a settings'value
-
-        :param setting_name: Name of the setting
-
-        :return: Setting's value
-        """
-        raise NotImplementedError()
-
-    @abstractmethod
-    def set_setting_value(self, setting_name: str, setting_value: Any):
-        """Sets setting's value
-
-        :param setting_name: Name of the setting
-
-        :param setting_value: New value of the setting
-        """
-        raise NotImplementedError()
-
-
-class ConfigurationMetadata:
-    """Contains configuration metadata"""
-
-    _counter = 0
-
-    def __init__(
-        self,
-        key: str,
-        label: str,
-        description: str,
-        type: ConfigurationAttributeType,
-        required: bool = False,
-        default: Any | None = None,
-        options: list[ConfigurationOption] | None = None,
-        category: str | None = None,
-        format=None,
-        index=None,
-    ):
-        """Initializes a new instance of ConfigurationMetadata class
-
-        :param key: Setting's key
-        :param label: Setting's label
-        :param description: Setting's description
-        :param type: Setting's type
-        :param required: Boolean value indicating whether the setting is required or not
-        :param default: Setting's default value
-        :param options: Setting's options (used in the case of select)
-        :param category: Setting's category
-        """
-        self._key = key
-        self._label = label
-        self._description = description
-        self._type = type
-        self._required = required
-        self._default = default
-        self._options = options
-        self._category = category
-        self._format = format
-
-        if index is not None:
-            self._index = index
-        else:
-            ConfigurationMetadata._counter += 1
-            self._index = ConfigurationMetadata._counter
-
-    def __get__(
-        self,
-        owner_instance: HasConfigurationSettings
-        | IgnoredIdentifierConfiguration
-        | None,
-        owner_type: type | None,
-    ) -> Any:
-        """Returns a value of the setting
-
-        :param owner_instance: Instance of the owner, class having instance of ConfigurationMetadata as an attribute
-        :param owner_type: Owner's class
-
-        :return: ConfigurationMetadata instance (when called via a static method) or
-            the setting's value (when called via an instance method)
-        """
-        # If owner_instance is empty, it means that this method was called
-        # via a static method of ConfigurationMetadataOwner (for example, ConfigurationBucket.to_settings).
-        # In this case we need to return the metadata instance itself
-        if owner_instance is None:
-            return self
-
-        if not isinstance(owner_instance, HasConfigurationSettings):
-            raise Exception(
-                "owner must be an instance of HasConfigurationSettings type"
-            )
-
-        setting_value = owner_instance.get_setting_value(self._key)
-
-        if setting_value is None:
-            setting_value = self.default
-        elif self.type == ConfigurationAttributeType.NUMBER:
-            try:
-                setting_value = float(setting_value)
-            except ValueError:
-                if setting_value != "":
-                    # A non-empty value is a "bad" value, and should raise an exception
-                    raise CannotLoadConfiguration(
-                        f"Could not covert {self.label}'s value '{setting_value}'."
-                    )
-                setting_value = self.default
-        else:
-            # LIST and MENU configuration settings are stored as JSON-serialized lists in the database.
-            # We need to deserialize them to get actual values.
-            if self.type in (
-                ConfigurationAttributeType.LIST,
-                ConfigurationAttributeType.MENU,
-            ):
-                if isinstance(setting_value, str):
-                    setting_value = json.loads(setting_value)
-                else:
-                    # We assume that LIST and MENU values can be either JSON or empty.
-                    if setting_value is not None:
-                        raise ValueError(
-                            f"{self._type} configuration setting '{self._key}' has an incorrect format. "
-                            f"Expected JSON-serialized list but got {setting_value}."
-                        )
-
-                    setting_value = []
-
-        return setting_value
-
-    def __set__(
-        self,
-        owner_instance: HasConfigurationSettings
-        | IgnoredIdentifierConfiguration
-        | None,
-        value: Any,
-    ) -> Any:
-        """Updates the setting's value
-
-        :param owner_instance: Instance of the owner, class having instance of ConfigurationMetadata as an attribute
-
-        :param value: New setting's value
-        """
-        if not isinstance(owner_instance, HasConfigurationSettings):
-            raise Exception(
-                "owner must be an instance of HasConfigurationSettings type"
-            )
-
-        return owner_instance.set_setting_value(self._key, value)
-
-    @property
-    def key(self) -> str:
-        """Returns the setting's key
-
-        :return: Setting's key
-        """
-        return self._key
-
-    @property
-    def label(self) -> str:
-        """Returns the setting's label
-
-        :return: Setting's label
-        """
-        return self._label
-
-    @property
-    def description(self) -> str:
-        """Returns the setting's description
-
-        :return: Setting's description
-        """
-        return self._description
-
-    @property
-    def type(self) -> ConfigurationAttributeType:
-        """Returns the setting's type
-
-        :return: Setting's type
-        """
-        return self._type
-
-    @property
-    def required(self) -> bool:
-        """Returns the boolean value indicating whether the setting is required or not
-
-        :return: Boolean value indicating whether the setting is required or not
-        """
-        return self._required
-
-    @property
-    def default(self) -> Any | None:
-        """Returns the setting's default value
-
-        :return: Setting's default value
-        """
-        return self._default
-
-    @property
-    def options(self) -> list[ConfigurationOption] | None:
-        """Returns the setting's options (used in the case of select)
-
-        :return: Setting's options (used in the case of select)
-        """
-        return self._options
-
-    @property
-    def category(self) -> str | None:
-        """Returns the setting's category
-
-        :return: Setting's category
-        """
-        return self._category
-
-    @property
-    def format(self) -> str:
-        """Returns the setting's format
-
-        :return: Setting's format
-        """
-        return self._format
-
-    @property
-    def index(self):
-        return self._index
-
-    @staticmethod
-    def get_configuration_metadata(cls) -> list[tuple[str, ConfigurationMetadata]]:
-        """Returns a list of 2-tuples containing information ConfigurationMetadata properties in the specified class
-
-        :param cls: Class
-        :return: List of 2-tuples containing information ConfigurationMetadata properties in the specified class
-        """
-        members = inspect.getmembers(cls)
-        configuration_metadata = []
-
-        for name, member in members:
-            if isinstance(member, ConfigurationMetadata):
-                configuration_metadata.append((name, member))
-
-        configuration_metadata.sort(key=lambda pair: pair[1].index)
-
-        return configuration_metadata
-
-    def to_settings(self):
-        return {
-            ConfigurationAttribute.KEY.value: self.key,
-            ConfigurationAttribute.LABEL.value: self.label,
-            ConfigurationAttribute.DESCRIPTION.value: self.description,
-            ConfigurationAttribute.TYPE.value: self.type.to_control_type(),
-            ConfigurationAttribute.REQUIRED.value: self.required,
-            ConfigurationAttribute.DEFAULT.value: self.default,
-            ConfigurationAttribute.OPTIONS.value: [
-                option.to_settings() for option in self.options
-            ]
-            if self.options
-            else None,
-            ConfigurationAttribute.CATEGORY.value: self.category,
-            ConfigurationAttribute.FORMAT.value: self.format,
-        }
-
-    @staticmethod
-    def to_bool(metadata: ConfigurationMetadata) -> bool:
-        """Return a boolean scalar indicating whether the configuration setting
-            contains a value that can be treated as True (see ConfigurationSetting.MEANS_YES).
-
-        :param metadata: ConfigurationMetadata object
-        :return: Boolean scalar indicating
-            whether this configuration setting contains a value that can be treated as True
-        """
-        return str(metadata).lower() in ConfigurationSetting.MEANS_YES
-
-
-class ConfigurationGrouping(HasConfigurationSettings):
-    """Base class for all classes containing configuration settings
-
-    NOTE: Be aware that it's valid only while a database session is valid and must not be stored between requests
-    """
-
-    def __init__(
-        self, configuration_storage: BaseConfigurationStorage, db: Session
-    ) -> None:
-        """Initializes a new instance of ConfigurationGrouping
-
-        :param configuration_storage: ConfigurationStorage object
-        :param db: Database session
-        """
-        self._logger = logging.getLogger()
-        self._configuration_storage = configuration_storage
-        self._db = db
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self._db = None
-
-    def get_setting_value(self, setting_name: str) -> Any:
-        """Returns a settings'value
-
-        :param setting_name: Name of the setting
-        :return: Setting's value
-        """
-        return self._configuration_storage.load(self._db, setting_name)
-
-    def set_setting_value(self, setting_name: str, setting_value: Any) -> Any:
-        """Sets setting's value
-
-        :param setting_name: Name of the setting
-        :param setting_value: New value of the setting
-        """
-        self._configuration_storage.save(self._db, setting_name, setting_value)
-
-    @classmethod
-    def to_settings_generator(cls) -> Iterable[dict]:
-        """Return a generator object returning settings in a format understandable by circulation-admin.
-
-        :return: list of settings in a format understandable by circulation-admin.
-        """
-        for name, member in ConfigurationMetadata.get_configuration_metadata(cls):
-            key_attribute = getattr(member, ConfigurationAttribute.KEY.value, None)
-            label_attribute = getattr(member, ConfigurationAttribute.LABEL.value, None)
-            description_attribute = getattr(
-                member, ConfigurationAttribute.DESCRIPTION.value, None
-            )
-            type_attribute = getattr(member, ConfigurationAttribute.TYPE.value, None)
-            control_type = (
-                type_attribute.to_control_type() if type_attribute is not None else None
-            )
-            required_attribute = getattr(
-                member, ConfigurationAttribute.REQUIRED.value, None
-            )
-            default_attribute = getattr(
-                member, ConfigurationAttribute.DEFAULT.value, None
-            )
-            options_attribute = getattr(
-                member, ConfigurationAttribute.OPTIONS.value, None
-            )
-            category_attribute = getattr(
-                member, ConfigurationAttribute.CATEGORY.value, None
-            )
-
-            yield {
-                ConfigurationAttribute.KEY.value: key_attribute,
-                ConfigurationAttribute.LABEL.value: label_attribute,
-                ConfigurationAttribute.DESCRIPTION.value: description_attribute,
-                ConfigurationAttribute.TYPE.value: control_type,
-                ConfigurationAttribute.REQUIRED.value: required_attribute,
-                ConfigurationAttribute.DEFAULT.value: default_attribute,
-                ConfigurationAttribute.OPTIONS.value: [
-                    option.to_settings() for option in options_attribute
-                ]
-                if options_attribute
-                else None,
-                ConfigurationAttribute.CATEGORY.value: category_attribute,
-            }
-
-    @classmethod
-    def to_settings(cls) -> list[dict[str, Any]]:
-        """Return a list of settings in a format understandable by circulation-admin.
-
-        :return: list of settings in a format understandable by circulation-admin.
-        """
-        return list(cls.to_settings_generator())
-
-
-C = TypeVar("C", bound="ConfigurationGrouping")
-
-
-class ConfigurationFactory:
-    """Factory creating new instances of ConfigurationGrouping class descendants."""
-
-    @contextmanager
-    def create(
-        self,
-        configuration_storage: ConfigurationStorage,
-        db: Session,
-        configuration_grouping_class: type[C],
-    ) -> Iterator[C]:
-        """Create a new instance of ConfigurationGrouping.
-
-        :param configuration_storage: ConfigurationStorage object
-        :param db: Database session
-        :param configuration_grouping_class: Configuration bucket's class
-        :return: ConfigurationGrouping instance
-        """
-        with configuration_grouping_class(
-            configuration_storage, db
-        ) as configuration_bucket:
-            yield configuration_bucket

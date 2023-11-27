@@ -7,18 +7,17 @@ from typing import Union
 from sqlalchemy import event, text
 from sqlalchemy.orm import Session
 
+from core.config import Configuration
+from core.model import Base
 from core.model.before_flush_decorator import Listener, ListenerState
+from core.model.collection import Collection
+from core.model.configuration import ConfigurationSetting, ExternalIntegration
 from core.model.identifier import Equivalency, Identifier, RecursiveEquivalencyCache
+from core.model.library import Library
+from core.model.licensing import LicensePool
+from core.model.work import Work, add_work_to_customlists_for_collection
 from core.query.coverage import EquivalencyCoverageQueries
-
-from ..config import Configuration
-from ..util.datetime_helpers import utc_now
-from . import Base
-from .collection import Collection
-from .configuration import ConfigurationSetting, ExternalIntegration
-from .library import Library
-from .licensing import LicensePool
-from .work import Work, add_work_to_customlists_for_collection
+from core.util.datetime_helpers import utc_now
 
 site_configuration_has_changed_lock = RLock()
 
@@ -115,8 +114,6 @@ def _site_configuration_has_changed(_db, cooldown=1):
 @event.listens_for(ExternalIntegration.settings, "remove")
 @event.listens_for(Library.integrations, "append")
 @event.listens_for(Library.integrations, "remove")
-@event.listens_for(Library.settings, "append")
-@event.listens_for(Library.settings, "remove")
 def configuration_relevant_collection_change(target, value, initiator):
     site_configuration_has_changed(target)
 
@@ -164,7 +161,6 @@ def licensepool_collection_change(target, value, oldvalue, initiator):
 
 
 @event.listens_for(LicensePool.open_access, "set")
-@event.listens_for(LicensePool.self_hosted, "set")
 def licensepool_storage_status_change(target, value, oldvalue, initiator):
     """A Work may need to have its search document re-indexed if one of
     its LicensePools changes its open-access status.

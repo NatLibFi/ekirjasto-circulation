@@ -1,22 +1,25 @@
-import base64
 import json
-import logging
-import math
-import operator
-import os
-import tempfile
-from functools import reduce
-from io import BytesIO
 
 import feedparser
 import flask
 import pytest
-from PIL import Image
-from werkzeug.datastructures import ImmutableMultiDict, MultiDict
+from werkzeug.datastructures import ImmutableMultiDict
 
-from api.admin.controller import CustomListsController
-from api.admin.exceptions import *
-from api.admin.problem_details import *
+from api.admin.controller.custom_lists import CustomListsController
+from api.admin.exceptions import AdminNotAuthorized
+from api.admin.problem_details import (
+    EROTICA_FOR_ADULTS_ONLY,
+    INCOMPATIBLE_GENRE,
+    INVALID_DATE_FORMAT,
+    INVALID_EDIT,
+    INVALID_RATING,
+    INVALID_SERIES_POSITION,
+    METADATA_REFRESH_FAILURE,
+    MISSING_CUSTOM_LIST,
+    UNKNOWN_LANGUAGE,
+    UNKNOWN_MEDIUM,
+    UNKNOWN_ROLE,
+)
 from core.classifier import SimplifiedGenreClassifier
 from core.model import (
     AdminRole,
@@ -27,15 +30,10 @@ from core.model import (
     DataSource,
     Edition,
     Genre,
-    Hyperlink,
-    Representation,
-    ResourceTransformation,
     RightsStatus,
     Subject,
     create,
 )
-from core.model.configuration import ExternalIntegrationLink
-from core.s3 import MockS3Uploader
 from core.util.datetime_helpers import datetime_utc
 from tests.core.mock import (
     AlwaysSuccessfulCoverageProvider,
@@ -60,7 +58,7 @@ class WorkFixture(AdminControllerFixture):
         self.english_1.license_pools[0].collection = self.ctrl.collection
         self.works = [self.english_1]
 
-        self.manager.external_search.bulk_update(self.works)
+        self.manager.external_search.mock_query_works(self.works)
 
         self.admin.add_role(AdminRole.LIBRARIAN, self.ctrl.db.default_library())
 
@@ -290,11 +288,8 @@ class TestWorkController:
             )
             assert 200 == response.status_code
             assert "New title" == work_fixture.english_1.title
-            assert "New title" in work_fixture.english_1.simple_opds_entry
             assert "New subtitle" == work_fixture.english_1.subtitle
-            assert "New subtitle" in work_fixture.english_1.simple_opds_entry
             assert "New Author" == work_fixture.english_1.author
-            assert "New Author" in work_fixture.english_1.simple_opds_entry
             [author, narrator] = sorted(
                 work_fixture.english_1.presentation_edition.contributions,
                 key=lambda x: x.contributor.display_name,
@@ -306,9 +301,7 @@ class TestWorkController:
             assert "Narrator, New" == narrator.contributor.sort_name
             assert "Narrator" == narrator.role
             assert "New series" == work_fixture.english_1.series
-            assert "New series" in work_fixture.english_1.simple_opds_entry
             assert 144 == work_fixture.english_1.series_position
-            assert "144" in work_fixture.english_1.simple_opds_entry
             assert "Audio" == work_fixture.english_1.presentation_edition.medium
             assert "fre" == work_fixture.english_1.presentation_edition.language
             assert "New Publisher" == work_fixture.english_1.publisher
@@ -319,10 +312,6 @@ class TestWorkController:
             )
             assert 0.25 == work_fixture.english_1.quality
             assert "<p>New summary</p>" == work_fixture.english_1.summary_text
-            assert (
-                "&lt;p&gt;New summary&lt;/p&gt;"
-                in work_fixture.english_1.simple_opds_entry
-            )
             assert 1 == staff_edition_count()
 
         with work_fixture.request_context_with_library_and_admin("/"):
@@ -353,7 +342,6 @@ class TestWorkController:
             )
             assert 200 == response.status_code
             assert "abcd" == work_fixture.english_1.summary_text
-            assert "New summary" not in work_fixture.english_1.simple_opds_entry
             [author, narrator, author2] = sorted(
                 work_fixture.english_1.presentation_edition.contributions,
                 key=lambda x: x.contributor.display_name,
@@ -397,11 +385,6 @@ class TestWorkController:
             assert None == work_fixture.english_1.series
             assert None == work_fixture.english_1.series_position
             assert "" == work_fixture.english_1.summary_text
-            assert "New subtitle" not in work_fixture.english_1.simple_opds_entry
-            assert "Narrator" not in work_fixture.english_1.simple_opds_entry
-            assert "New series" not in work_fixture.english_1.simple_opds_entry
-            assert "144" not in work_fixture.english_1.simple_opds_entry
-            assert "abcd" not in work_fixture.english_1.simple_opds_entry
             assert 1 == staff_edition_count()
 
         with work_fixture.request_context_with_library_and_admin("/"):
@@ -423,13 +406,6 @@ class TestWorkController:
             assert "Final series" == work_fixture.english_1.series
             assert 169 == work_fixture.english_1.series_position
             assert "<p>Final summary</p>" == work_fixture.english_1.summary_text
-            assert "Final subtitle" in work_fixture.english_1.simple_opds_entry
-            assert "Final series" in work_fixture.english_1.simple_opds_entry
-            assert "169" in work_fixture.english_1.simple_opds_entry
-            assert (
-                "&lt;p&gt;Final summary&lt;/p&gt;"
-                in work_fixture.english_1.simple_opds_entry
-            )
             assert 1 == staff_edition_count()
 
         # Make sure a non-librarian of this library can't edit.
@@ -475,7 +451,7 @@ class TestWorkController:
 
         # make no changes
         with work_fixture.request_context_with_library_and_admin("/"):
-            flask.request.form = MultiDict(
+            flask.request.form = ImmutableMultiDict(
                 [
                     ("audience", "Adult"),
                     ("fiction", "fiction"),
@@ -512,7 +488,7 @@ class TestWorkController:
 
         # remove all genres
         with work_fixture.request_context_with_library_and_admin("/"):
-            flask.request.form = MultiDict(
+            flask.request.form = ImmutableMultiDict(
                 [("audience", "Adult"), ("fiction", "fiction")]
             )
             response = work_fixture.manager.admin_work_controller.edit_classifications(
@@ -542,7 +518,7 @@ class TestWorkController:
 
         # completely change genres
         with work_fixture.request_context_with_library_and_admin("/"):
-            flask.request.form = MultiDict(
+            flask.request.form = ImmutableMultiDict(
                 [
                     ("audience", "Adult"),
                     ("fiction", "fiction"),
@@ -567,11 +543,11 @@ class TestWorkController:
 
         # remove some genres and change audience and target age
         with work_fixture.request_context_with_library_and_admin("/"):
-            flask.request.form = MultiDict(
+            flask.request.form = ImmutableMultiDict(
                 [
                     ("audience", "Young Adult"),
-                    ("target_age_min", 16),
-                    ("target_age_max", 18),
+                    ("target_age_min", "16"),
+                    ("target_age_max", "18"),
                     ("fiction", "fiction"),
                     ("genres", "Urban Fantasy"),
                 ]
@@ -594,11 +570,11 @@ class TestWorkController:
 
         # try to add a nonfiction genre
         with work_fixture.request_context_with_library_and_admin("/"):
-            flask.request.form = MultiDict(
+            flask.request.form = ImmutableMultiDict(
                 [
                     ("audience", "Young Adult"),
-                    ("target_age_min", 16),
-                    ("target_age_max", 18),
+                    ("target_age_min", "16"),
+                    ("target_age_max", "18"),
                     ("fiction", "fiction"),
                     ("genres", "Cooking"),
                     ("genres", "Urban Fantasy"),
@@ -618,11 +594,11 @@ class TestWorkController:
 
         # try to add Erotica
         with work_fixture.request_context_with_library_and_admin("/"):
-            flask.request.form = MultiDict(
+            flask.request.form = ImmutableMultiDict(
                 [
                     ("audience", "Young Adult"),
-                    ("target_age_min", 16),
-                    ("target_age_max", 18),
+                    ("target_age_min", "16"),
+                    ("target_age_max", "18"),
                     ("fiction", "fiction"),
                     ("genres", "Erotica"),
                     ("genres", "Urban Fantasy"),
@@ -643,11 +619,11 @@ class TestWorkController:
         # try to set min target age greater than max target age
         # othe edits should not go through
         with work_fixture.request_context_with_library_and_admin("/"):
-            flask.request.form = MultiDict(
+            flask.request.form = ImmutableMultiDict(
                 [
                     ("audience", "Young Adult"),
-                    ("target_age_min", 16),
-                    ("target_age_max", 14),
+                    ("target_age_min", "16"),
+                    ("target_age_max", "14"),
                     ("fiction", "nonfiction"),
                     ("genres", "Cooking"),
                 ]
@@ -664,11 +640,11 @@ class TestWorkController:
 
         # change to nonfiction with nonfiction genres and new target age
         with work_fixture.request_context_with_library_and_admin("/"):
-            flask.request.form = MultiDict(
+            flask.request.form = ImmutableMultiDict(
                 [
                     ("audience", "Young Adult"),
-                    ("target_age_min", 15),
-                    ("target_age_max", 17),
+                    ("target_age_min", "15"),
+                    ("target_age_max", "17"),
                     ("fiction", "nonfiction"),
                     ("genres", "Cooking"),
                 ]
@@ -687,7 +663,7 @@ class TestWorkController:
 
         # set to Adult and make sure that target ages is set automatically
         with work_fixture.request_context_with_library_and_admin("/"):
-            flask.request.form = MultiDict(
+            flask.request.form = ImmutableMultiDict(
                 [
                     ("audience", "Adult"),
                     ("fiction", "nonfiction"),
@@ -708,7 +684,7 @@ class TestWorkController:
             AdminRole.LIBRARIAN, work_fixture.ctrl.db.default_library()
         )
         with work_fixture.request_context_with_library_and_admin("/"):
-            flask.request.form = MultiDict(
+            flask.request.form = ImmutableMultiDict(
                 [
                     ("audience", "Children"),
                     ("fiction", "nonfiction"),
@@ -882,383 +858,6 @@ class TestWorkController:
                 lp.identifier.identifier,
             )
 
-    def test_validate_cover_image(self, work_fixture: WorkFixture):
-        base_path = os.path.split(__file__)[0]
-        folder = os.path.dirname(base_path)
-        resource_path = os.path.join(folder, "..", "files", "images")
-
-        path = os.path.join(resource_path, "blue_small.jpg")
-        too_small = Image.open(path)
-
-        result = work_fixture.manager.admin_work_controller._validate_cover_image(
-            too_small
-        )
-        assert INVALID_IMAGE.uri == result.uri
-        assert (
-            "Cover image must be at least 600px in width and 900px in height."
-            == result.detail
-        )
-
-        path = os.path.join(resource_path, "blue.jpg")
-        valid = Image.open(path)
-        result = work_fixture.manager.admin_work_controller._validate_cover_image(valid)
-        assert True == result
-
-    @pytest.mark.parametrize(
-        "original_file_path,processed_file_path,title_position",
-        [
-            # Without a title position, the image won't be changed.
-            pytest.param("blue.jpg", "blue.jpg", "none", id="no_title_position"),
-            # Here the title and author are added in the center. Compare the result
-            # with a pre-generated version.
-            pytest.param(
-                "blue_with_title_author.png",
-                "blue.jpg",
-                "center",
-                id="center_title_position",
-            ),
-        ],
-    )
-    def test_process_cover_image(
-        self,
-        work_fixture: WorkFixture,
-        original_file_path: str,
-        processed_file_path: str,
-        title_position: str,
-    ):
-        work = work_fixture.ctrl.db.work(
-            with_license_pool=True, title="Title", authors="Author"
-        )
-
-        base_path = os.path.split(__file__)[0]
-        folder = os.path.dirname(base_path)
-        resource_path = os.path.join(folder, "..", "files", "images")
-
-        original_path = os.path.join(resource_path, original_file_path)
-        processed_path = os.path.join(resource_path, processed_file_path)
-        original = Image.open(original_path)
-        processed = Image.open(processed_path)
-
-        tmpfile_before = tempfile.NamedTemporaryFile(
-            prefix="image-before-no-title_", suffix=".png", delete=False
-        )
-        tmpfile_after = tempfile.NamedTemporaryFile(
-            prefix="image-after-no-title_", suffix=".png", delete=False
-        )
-        logging.info("image before processing (no title): %s", tmpfile_before.name)
-        logging.info("image after processing (no title): %s", tmpfile_after.name)
-
-        processed = work_fixture.manager.admin_work_controller._process_cover_image(
-            work, processed, title_position
-        )
-
-        original.save(fp=tmpfile_before.name, format="PNG")
-        processed.save(fp=tmpfile_after.name, format="PNG")
-
-        image_histogram = original.histogram()
-        expected_histogram = processed.histogram()
-
-        root_mean_square = math.sqrt(
-            reduce(
-                operator.add,
-                list(
-                    map(lambda a, b: (a - b) ** 2, image_histogram, expected_histogram)
-                ),
-            )
-            / len(image_histogram)
-        )
-        assert root_mean_square < 12
-
-        # Remove temporary files if we've gotten this far. Assertion failures should leave
-        # the files intact for manual inspection.
-        for f in [tmpfile_before, tmpfile_after]:
-            os.remove(f.name)
-
-    def test_preview_book_cover(self, work_fixture: WorkFixture):
-        work = work_fixture.ctrl.db.work(with_license_pool=True)
-        identifier = work.license_pools[0].identifier
-
-        with work_fixture.request_context_with_library_and_admin("/"):
-            response = work_fixture.manager.admin_work_controller.preview_book_cover(
-                identifier.type, identifier.identifier
-            )
-            assert INVALID_IMAGE.uri == response.uri
-            assert "Image file or image URL is required." == response.detail
-
-        with work_fixture.request_context_with_library_and_admin("/"):
-            flask.request.form = MultiDict(
-                [
-                    ("cover_url", "bad_url"),
-                ]
-            )
-            response = work_fixture.manager.admin_work_controller.preview_book_cover(
-                identifier.type, identifier.identifier
-            )
-            assert INVALID_URL.uri == response.uri
-            assert '"bad_url" is not a valid URL.' == response.detail
-
-        class TestFileUpload(BytesIO):
-            headers = {"Content-Type": "image/png"}
-
-        base_path = os.path.split(__file__)[0]
-        folder = os.path.dirname(base_path)
-        resource_path = os.path.join(folder, "..", "files", "images")
-        path = os.path.join(resource_path, "blue.jpg")
-        original = Image.open(path)
-        buffer = BytesIO()
-        original.save(buffer, format="PNG")
-        image_data = buffer.getvalue()
-
-        with work_fixture.request_context_with_library_and_admin("/"):
-            flask.request.form = MultiDict([("title_position", "none")])
-            flask.request.files = MultiDict(
-                [
-                    ("cover_file", TestFileUpload(image_data)),
-                ]
-            )
-            response = work_fixture.manager.admin_work_controller.preview_book_cover(
-                identifier.type, identifier.identifier
-            )
-            assert 200 == response.status_code
-            assert "data:image/png;base64,%s" % base64.b64encode(
-                image_data
-            ) == response.get_data(as_text=True)
-
-        work_fixture.admin.remove_role(
-            AdminRole.LIBRARIAN, work_fixture.ctrl.db.default_library()
-        )
-        with work_fixture.request_context_with_library_and_admin("/"):
-            pytest.raises(
-                AdminNotAuthorized,
-                work_fixture.manager.admin_work_controller.preview_book_cover,
-                identifier.type,
-                identifier.identifier,
-            )
-
-    def test_change_book_cover(self, work_fixture: WorkFixture):
-        # Mock image processing which has been tested in other methods.
-        process_called_with = []
-
-        def mock_process(work, image, position):
-            # Modify the image to ensure it gets a different generic URI.
-            image.thumbnail((500, 500))
-            process_called_with.append((work, image, position))
-            return image
-
-        old_process = work_fixture.manager.admin_work_controller._process_cover_image
-        work_fixture.manager.admin_work_controller._process_cover_image = mock_process
-
-        work = work_fixture.ctrl.db.work(with_license_pool=True)
-        identifier = work.license_pools[0].identifier
-        mirror_type = ExternalIntegrationLink.COVERS
-        mirrors = dict(covers_mirror=MockS3Uploader(), books_mirror=None)
-
-        with work_fixture.request_context_with_library_and_admin("/"):
-            flask.request.form = MultiDict(
-                [
-                    ("rights_status", RightsStatus.CC_BY),
-                    ("rights_explanation", "explanation"),
-                ]
-            )
-            response = work_fixture.manager.admin_work_controller.change_book_cover(
-                identifier.type, identifier.identifier, mirrors
-            )
-            assert INVALID_IMAGE.uri == response.uri
-            assert "Image file or image URL is required." == response.detail
-
-        with work_fixture.request_context_with_library_and_admin("/"):
-            flask.request.form = MultiDict(
-                [
-                    ("cover_url", "http://example.com"),
-                    ("title_position", "none"),
-                ]
-            )
-            flask.request.files = MultiDict([])
-            response = work_fixture.manager.admin_work_controller.change_book_cover(
-                identifier.type, identifier.identifier
-            )
-            assert INVALID_IMAGE.uri == response.uri
-            assert "You must specify the image's license." == response.detail
-
-        with work_fixture.request_context_with_library_and_admin("/"):
-            flask.request.form = MultiDict(
-                [
-                    ("cover_url", "bad_url"),
-                    ("title_position", "none"),
-                    ("rights_status", RightsStatus.CC_BY),
-                ]
-            )
-            response = work_fixture.manager.admin_work_controller.change_book_cover(
-                identifier.type, identifier.identifier, mirrors
-            )
-            assert INVALID_URL.uri == response.uri
-            assert '"bad_url" is not a valid URL.' == response.detail
-
-        with work_fixture.request_context_with_library_and_admin("/"):
-            flask.request.form = MultiDict(
-                [
-                    ("cover_url", "http://example.com"),
-                    ("title_position", "none"),
-                    ("rights_status", RightsStatus.CC_BY),
-                    ("rights_explanation", "explanation"),
-                ]
-            )
-            flask.request.files = MultiDict([])
-            response = work_fixture.manager.admin_work_controller.change_book_cover(
-                identifier.type, identifier.identifier
-            )
-            assert INVALID_CONFIGURATION_OPTION.uri == response.uri
-            assert "Could not find a storage integration" in response.detail
-
-        class TestFileUpload(BytesIO):
-            headers = {"Content-Type": "image/png"}
-
-        base_path = os.path.split(__file__)[0]
-        folder = os.path.dirname(base_path)
-        resource_path = os.path.join(folder, "..", "files", "images")
-        path = os.path.join(resource_path, "blue.jpg")
-        original = Image.open(path)
-        buffer = BytesIO()
-        original.save(buffer, format="PNG")
-        image_data = buffer.getvalue()
-
-        staff_data_source = DataSource.lookup(
-            work_fixture.ctrl.db.session, DataSource.LIBRARY_STAFF
-        )
-
-        # Upload a new cover image but don't modify it.
-        with work_fixture.request_context_with_library_and_admin("/"):
-            flask.request.form = MultiDict(
-                [
-                    ("title_position", "none"),
-                    ("rights_status", RightsStatus.CC_BY),
-                    ("rights_explanation", "explanation"),
-                ]
-            )
-            flask.request.files = MultiDict(
-                [
-                    ("cover_file", TestFileUpload(image_data)),
-                ]
-            )
-            response = work_fixture.manager.admin_work_controller.change_book_cover(
-                identifier.type, identifier.identifier, mirrors
-            )
-            assert 200 == response.status_code
-
-            [link] = identifier.links
-            assert Hyperlink.IMAGE == link.rel
-            assert staff_data_source == link.data_source
-
-            resource = link.resource
-            assert identifier.urn in resource.url
-            assert staff_data_source == resource.data_source
-            assert RightsStatus.CC_BY == resource.rights_status.uri
-            assert "explanation" == resource.rights_explanation
-
-            representation = resource.representation
-            [thumbnail] = resource.representation.thumbnails
-
-            assert resource.url == representation.url
-            assert Representation.PNG_MEDIA_TYPE == representation.media_type
-            assert Representation.PNG_MEDIA_TYPE == thumbnail.media_type
-            assert image_data == representation.content
-            assert identifier.identifier in representation.mirror_url
-            assert identifier.identifier in thumbnail.mirror_url
-
-            assert [] == process_called_with
-            assert [representation, thumbnail] == mirrors[mirror_type].uploaded
-            assert [representation.mirror_url, thumbnail.mirror_url] == mirrors[
-                mirror_type
-            ].destinations
-
-        work = work_fixture.ctrl.db.work(with_license_pool=True)
-        identifier = work.license_pools[0].identifier
-
-        # Upload a new cover image and add the title and author to it.
-        # Both the original image and the generated image will become resources.
-        with work_fixture.request_context_with_library_and_admin("/"):
-            flask.request.form = MultiDict(
-                [
-                    ("title_position", "center"),
-                    ("rights_status", RightsStatus.CC_BY),
-                    ("rights_explanation", "explanation"),
-                ]
-            )
-            flask.request.files = MultiDict(
-                [
-                    ("cover_file", TestFileUpload(image_data)),
-                ]
-            )
-            response = work_fixture.manager.admin_work_controller.change_book_cover(
-                identifier.type, identifier.identifier, mirrors
-            )
-            assert 200 == response.status_code
-
-            [link] = identifier.links
-            assert Hyperlink.IMAGE == link.rel
-            assert staff_data_source == link.data_source
-
-            resource = link.resource
-            assert identifier.urn in resource.url
-            assert staff_data_source == resource.data_source
-            assert RightsStatus.CC_BY == resource.rights_status.uri
-            assert (
-                "The original image license allows derivatives."
-                == resource.rights_explanation
-            )
-
-            transformation = (
-                work_fixture.ctrl.db.session.query(ResourceTransformation)
-                .filter(ResourceTransformation.derivative_id == resource.id)
-                .one()
-            )
-            original_resource = transformation.original
-            assert resource != original_resource
-            assert identifier.urn in original_resource.url
-            assert staff_data_source == original_resource.data_source
-            assert RightsStatus.CC_BY == original_resource.rights_status.uri
-            assert "explanation" == original_resource.rights_explanation
-            assert image_data == original_resource.representation.content
-            assert None == original_resource.representation.mirror_url
-            assert "center" == transformation.settings.get("title_position")
-            assert (
-                resource.representation.content
-                != original_resource.representation.content
-            )
-            assert image_data != resource.representation.content
-
-            assert work == process_called_with[0][0]
-            assert "center" == process_called_with[0][2]
-
-            assert [] == original_resource.representation.thumbnails
-            [thumbnail] = resource.representation.thumbnails
-            assert Representation.PNG_MEDIA_TYPE == thumbnail.media_type
-            assert image_data != thumbnail.content
-            assert resource.representation.content != thumbnail.content
-            assert identifier.identifier in resource.representation.mirror_url
-            assert identifier.identifier in thumbnail.mirror_url
-
-            assert [resource.representation, thumbnail] == mirrors[
-                mirror_type
-            ].uploaded[2:]
-            assert [
-                resource.representation.mirror_url,
-                thumbnail.mirror_url,
-            ] == mirrors[mirror_type].destinations[2:]
-
-        work_fixture.admin.remove_role(
-            AdminRole.LIBRARIAN, work_fixture.ctrl.db.default_library()
-        )
-        with work_fixture.request_context_with_library_and_admin("/"):
-            pytest.raises(
-                AdminNotAuthorized,
-                work_fixture.manager.admin_work_controller.preview_book_cover,
-                identifier.type,
-                identifier.identifier,
-            )
-
-        work_fixture.manager.admin_work_controller._process_cover_image = old_process
-
     def test_custom_lists_get(self, work_fixture: WorkFixture):
         staff_data_source = DataSource.lookup(
             work_fixture.ctrl.db.session, DataSource.LIBRARY_STAFF
@@ -1299,7 +898,7 @@ class TestWorkController:
         identifier = work.presentation_edition.primary_identifier
 
         with work_fixture.request_context_with_library_and_admin("/", method="POST"):
-            form = MultiDict(
+            form = ImmutableMultiDict(
                 [
                     ("id", "4"),
                     ("name", "name"),
@@ -1337,7 +936,7 @@ class TestWorkController:
 
         # Add the list to the work.
         with work_fixture.request_context_with_library_and_admin("/", method="POST"):
-            flask.request.form = MultiDict(
+            flask.request.form = ImmutableMultiDict(
                 [("lists", json.dumps([{"id": str(list.id), "name": list.name}]))]
             )
             response = work_fixture.manager.admin_work_controller.custom_lists(
@@ -1349,15 +948,10 @@ class TestWorkController:
             assert list == work.custom_list_entries[0].customlist
             assert True == work.custom_list_entries[0].featured
 
-            # Lane.size will not be updated until the work is
-            # reindexed with its new list memebership and lane sizes
-            # are recalculated.
-            assert 2 == lane.size
-
         # Now remove the work from the list.
         work_fixture.ctrl.controller.search_engine.docs = dict(id1="doc1")
         with work_fixture.request_context_with_library_and_admin("/", method="POST"):
-            flask.request.form = MultiDict(
+            flask.request.form = ImmutableMultiDict(
                 [
                     ("lists", json.dumps([])),
                 ]
@@ -1369,12 +963,9 @@ class TestWorkController:
         assert 0 == len(work.custom_list_entries)
         assert 0 == len(list.entries)
 
-        # The lane size was recalculated once again.
-        assert 1 == lane.size
-
         # Add a list that didn't exist before.
         with work_fixture.request_context_with_library_and_admin("/", method="POST"):
-            flask.request.form = MultiDict(
+            flask.request.form = ImmutableMultiDict(
                 [("lists", json.dumps([{"name": "new list"}]))]
             )
             response = work_fixture.manager.admin_work_controller.custom_lists(
@@ -1395,7 +986,7 @@ class TestWorkController:
             AdminRole.LIBRARIAN, work_fixture.ctrl.db.default_library()
         )
         with work_fixture.request_context_with_library_and_admin("/", method="POST"):
-            flask.request.form = MultiDict(
+            flask.request.form = ImmutableMultiDict(
                 [("lists", json.dumps([{"name": "another new list"}]))]
             )
             pytest.raises(

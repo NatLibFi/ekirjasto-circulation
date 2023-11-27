@@ -2,21 +2,40 @@ import logging
 import os
 import urllib.parse
 
+import flask_babel
+from flask import request
 from flask_babel import Babel
 from flask_pydantic_spec import FlaskPydanticSpec
 
+from api.admin.controller import setup_admin_controllers
 from api.config import Configuration
-from core.flask_sqlalchemy_session import flask_scoped_session
-from core.log import LogConfiguration
-from core.model import SessionManager
-from core.util import LanguageCodes
-
-from .util.flask import PalaceFlask
-from .util.profilers import (
+from api.controller import CirculationManager
+from api.util.flask import PalaceFlask
+from api.util.profilers import (
     PalaceCProfileProfiler,
     PalacePyInstrumentProfiler,
     PalaceXrayProfiler,
 )
+from core.app_server import ErrorHandler
+from core.flask_sqlalchemy_session import flask_scoped_session
+from core.model import (
+    LOCK_ID_APP_INIT,
+    ConfigurationSetting,
+    SessionManager,
+    pg_advisory_lock,
+)
+from core.service.container import Services, container_instance
+from core.util import LanguageCodes
+from core.util.cache import CachedData
+from core.util.http import HTTP
+from scripts import InstanceInitializationScript
+
+
+def get_locale():
+    """The localization selection function to be used with flask-babel"""
+    languages = Configuration.localization_languages()
+    return request.accept_languages.best_match(languages, "en")
+
 
 app = PalaceFlask(__name__)
 app._db = None  # type: ignore [assignment]
@@ -24,7 +43,7 @@ app.config["BABEL_DEFAULT_LOCALE"] = LanguageCodes.three_to_two[
     Configuration.localization_languages()[0]
 ]
 app.config["BABEL_TRANSLATION_DIRECTORIES"] = "../translations"
-babel = Babel(app)
+babel = Babel(app, locale_selector=get_locale)
 
 # The autodoc spec, can be accessed at "/apidoc/swagger"
 api_spec = FlaskPydanticSpec(
@@ -42,27 +61,70 @@ PalaceCProfileProfiler.configure(app)
 PalaceXrayProfiler.configure(app)
 
 
-@app.before_first_request
-def initialize_database(autoinitialize=True):
-    testing = "TESTING" in os.environ
+def initialize_admin(_db=None):
+    if getattr(app, "manager", None) is not None:
+        setup_admin_controllers(app.manager)
+    _db = _db or app._db
+    # The secret key is used for signing cookies for admin login
+    app.secret_key = ConfigurationSetting.sitewide_secret(_db, Configuration.SECRET_KEY)
 
-    db_url = Configuration.database_url()
-    if autoinitialize:
-        SessionManager.initialize(db_url)
-    session_factory = SessionManager.sessionmaker(db_url)
+
+def initialize_circulation_manager(container: Services):
+    if os.environ.get("AUTOINITIALIZE") == "False":
+        # It's the responsibility of the importing code to set app.manager
+        # appropriately.
+        pass
+    else:
+        if getattr(app, "manager", None) is None:
+            try:
+                app.manager = CirculationManager(app._db)
+            except Exception:
+                logging.exception("Error instantiating circulation manager!")
+                raise
+            # Make sure that any changes to the database (as might happen
+            # on initial setup) are committed before continuing.
+            app.manager._db.commit()
+
+            # setup the cache data object
+            CachedData.initialize(app._db)
+
+
+def initialize_database():
+    session_factory = SessionManager.sessionmaker()
     _db = flask_scoped_session(session_factory, app)
     app._db = _db
 
-    log_level = LogConfiguration.initialize(_db, testing=testing)
-    debug = log_level == "DEBUG"
-    app.config["DEBUG"] = debug
-    app.debug = debug
-    _db.commit()
-    logging.getLogger().info("Application debug mode==%r" % app.debug)
+
+from api import routes  # noqa
+from api.admin import routes as admin_routes  # noqa
 
 
-from . import routes  # noqa
-from .admin import routes as admin_routes  # noqa
+def initialize_application() -> PalaceFlask:
+    HTTP.set_quick_failure_settings()
+    with app.app_context(), flask_babel.force_locale("en"):
+        initialize_database()
+
+        # Load the application service container
+        container = container_instance()
+
+        # Initialize the application services container, this will make sure
+        # that the logging system is initialized.
+        container.init_resources()
+
+        # Initialize the applications error handler.
+        error_handler = ErrorHandler(app, container.config.logging.level())
+        app.register_error_handler(Exception, error_handler.handle)
+
+        # TODO: Remove this lock once our settings are moved to integration settings.
+        # We need this lock, so that only one instance of the application is
+        # initialized at a time. This prevents database conflicts when multiple
+        # CM instances try to create the same configurationsettings at the same
+        # time during initialization. This should be able to go away once we
+        # move our settings off the configurationsettings system.
+        with pg_advisory_lock(app._db, LOCK_ID_APP_INIT):
+            initialize_circulation_manager(container)
+            initialize_admin()
+    return app
 
 
 def run(url=None):
@@ -87,6 +149,10 @@ def run(url=None):
 
         socket.setdefaulttimeout(None)
 
+    # Setup database by initializing it or running migrations
+    InstanceInitializationScript().run()
+    initialize_application()
     logging.info("Starting app on %s:%s", host, port)
+
     sslContext = "adhoc" if scheme == "https" else None
     app.run(debug=debug, host=host, port=port, threaded=True, ssl_context=sslContext)

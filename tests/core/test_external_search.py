@@ -4,6 +4,7 @@ import time
 import uuid
 from datetime import datetime
 from typing import Callable, Collection, List
+from unittest.mock import MagicMock
 
 import pytest
 from opensearch_dsl import Q
@@ -20,18 +21,15 @@ from opensearch_dsl.query import (
 )
 from opensearch_dsl.query import Query as opensearch_dsl_query
 from opensearch_dsl.query import Range, Term, Terms
-from opensearchpy.exceptions import OpenSearchException
 from psycopg2.extras import NumericRange
+from sqlalchemy.sql import Delete as sqlaDelete
 
 from core.classifier import Classifier
-from core.config import CannotLoadConfiguration, Configuration
+from core.config import Configuration
 from core.external_search import (
-    CurrentMapping,
     ExternalSearchIndex,
     Filter,
     JSONQuery,
-    MockExternalSearchIndex,
-    MockSearchResult,
     Query,
     QueryParseException,
     QueryParser,
@@ -39,7 +37,6 @@ from core.external_search import (
     SearchIndexCoverageProvider,
     SortKeyPagination,
     WorkSearchResult,
-    mock_search_index,
 )
 from core.lane import Facets, FeaturedFacets, Pagination, SearchFacets, WorkList
 from core.metadata_layer import ContributorData, IdentifierData
@@ -58,6 +55,11 @@ from core.model import (
 from core.model.classification import Subject
 from core.model.work import Work
 from core.problem_details import INVALID_INPUT
+from core.scripts import RunWorkCoverageProviderScript
+from core.search.document import SearchMappingDocument
+from core.search.revision import SearchSchemaRevision
+from core.search.revision_directory import SearchRevisionDirectory
+from core.search.v5 import SearchV5
 from core.util.cache import CachedData
 from core.util.datetime_helpers import datetime_utc, from_timestamp
 from tests.fixtures.database import (
@@ -65,204 +67,20 @@ from tests.fixtures.database import (
     DBStatementCounter,
     PerfTimer,
 )
-from tests.fixtures.search import EndToEndSearchFixture, ExternalSearchFixture
+from tests.fixtures.library import LibraryFixture
+from tests.fixtures.search import (
+    EndToEndSearchFixture,
+    ExternalSearchFixture,
+    ExternalSearchFixtureFake,
+)
+from tests.mocks.search import SearchServiceFailureMode
 
 RESEARCH = Term(audience=Classifier.AUDIENCE_RESEARCH.lower())
 
 
 class TestExternalSearch:
-    def test_load(self, external_search_fixture: ExternalSearchFixture):
-        session = external_search_fixture.db.session
-
-        # Normally, load() returns a brand new ExternalSearchIndex
-        # object.
-        loaded = ExternalSearchIndex.load(session, in_testing=True)
-        assert isinstance(loaded, ExternalSearchIndex)
-
-        # However, inside the mock_search_index context manager,
-        # load() returns whatever object was mocked.
-        mock = object()
-        with mock_search_index(mock):
-            assert mock == ExternalSearchIndex.load(session, in_testing=True)
-
-    def test_constructor(self, external_search_fixture: ExternalSearchFixture):
-        session = external_search_fixture.db.session
-
-        # The configuration of the search ExternalIntegration becomes the
-        # configuration of the ExternalSearchIndex.
-        #
-        # This basically just verifies that the test search term is taken
-        # from the ExternalIntegration.
-        class MockIndex(ExternalSearchIndex):
-            def set_works_index_and_alias(self, _db):
-                self.set_works_index_and_alias_called_with = _db
-
-        index = MockIndex(session)
-        assert session == index.set_works_index_and_alias_called_with
-        assert "test_search_term" == index.test_search_term
-
     # TODO: would be good to check the put_script calls, but the
     # current constructor makes put_script difficult to mock.
-
-    def test_opensearch_error_in_constructor_becomes_cannotloadconfiguration(
-        self, external_search_fixture: ExternalSearchFixture
-    ):
-        session = external_search_fixture.db.session
-
-        """If we're unable to establish a connection to the Opensearch
-        server, CannotLoadConfiguration (which the circulation manager can
-        understand) is raised instead of an Opensearch-specific exception.
-        """
-
-        # Unlike other tests in this module, this one runs even if no
-        # OpenSearch server is running, since it's testing what
-        # happens if there's a problem communicating with that server.
-        class Mock(ExternalSearchIndex):
-            def set_works_index_and_alias(self, _db):
-                raise OpenSearchException("very bad")
-
-        with pytest.raises(CannotLoadConfiguration) as excinfo:
-            Mock(session)
-        assert "Exception communicating with Search server: " in str(excinfo.value)
-        assert "very bad" in str(excinfo.value)
-
-    def test_works_index_name(self, external_search_fixture: ExternalSearchFixture):
-        session = external_search_fixture.db.session
-
-        """The name of the search index is the prefix (defined in
-        ExternalSearchTest.setup) plus a version number associated
-        with this version of the core code.
-        """
-        version = external_search_fixture.search.mapping.VERSION_NAME
-        assert (
-            f"test_index-{version}"
-            == external_search_fixture.search.works_index_name(session)
-        )
-
-    def test_setup_index_creates_new_index(
-        self, external_search_fixture: ExternalSearchFixture
-    ):
-        current_index = external_search_fixture.search.works_index
-        # This calls self.search.setup_index (which is what we're testing)
-        # and also registers the index to be torn down at the end of the test.
-        external_search_fixture.setup_index("the_other_index")
-
-        # Both indices exist.
-        assert True == external_search_fixture.search.indices.exists(current_index)
-        assert True == external_search_fixture.search.indices.exists("the_other_index")
-
-        # The index for the app's search is still the original index.
-        assert current_index == external_search_fixture.search.works_index
-
-        # The alias hasn't been passed over to the new index.
-        alias = "test_index-" + external_search_fixture.search.CURRENT_ALIAS_SUFFIX
-        assert alias == external_search_fixture.search.works_alias
-        assert True == external_search_fixture.search.indices.exists_alias(
-            alias, index=current_index
-        )
-        assert False == external_search_fixture.search.indices.exists_alias(
-            alias, index="the_other_index"
-        )
-
-    def test_set_works_index_and_alias(
-        self, external_search_fixture: ExternalSearchFixture
-    ):
-        session = external_search_fixture.db.session
-        search = external_search_fixture.search
-
-        # If the index or alias don't exist, set_works_index_and_alias
-        # will create them.
-        external_search_fixture.integration.set_setting(
-            ExternalSearchIndex.WORKS_INDEX_PREFIX_KEY, "banana"
-        )
-        search.set_works_index_and_alias(session)
-
-        expected_index = "banana-" + CurrentMapping.version_name()
-        expected_alias = "banana-" + search.CURRENT_ALIAS_SUFFIX
-        assert expected_index == search.works_index
-        assert expected_alias == search.works_alias
-
-        # If the index and alias already exist, set_works_index_and_alias
-        # does nothing.
-        search.set_works_index_and_alias(session)
-        assert expected_index == search.works_index
-        assert expected_alias == search.works_alias
-
-    def test_setup_current_alias(self, external_search_fixture: ExternalSearchFixture):
-        session = external_search_fixture.db.session
-        search = external_search_fixture.search
-
-        # The index was generated from the string in configuration.
-        version = CurrentMapping.version_name()
-        index_name = "test_index-" + version
-        assert index_name == search.works_index
-        assert True == search.indices.exists(index_name)
-
-        # The alias is also created from the configuration.
-        alias = "test_index-" + search.CURRENT_ALIAS_SUFFIX
-        assert alias == search.works_alias
-        assert True == search.indices.exists_alias(alias, index_name)
-
-        # If the -current alias is already set on a different index, it
-        # won't be reassigned. Instead, search will occur against the
-        # index itself.
-        ExternalSearchIndex.reset()
-        external_search_fixture.integration.set_setting(
-            ExternalSearchIndex.WORKS_INDEX_PREFIX_KEY, "my-app"
-        )
-        self.search = ExternalSearchIndex(session)
-
-        assert "my-app-%s" % version == self.search.works_index
-        assert "my-app-" + self.search.CURRENT_ALIAS_SUFFIX == self.search.works_alias
-
-    def test_transfer_current_alias(
-        self, external_search_fixture: ExternalSearchFixture
-    ):
-        session = external_search_fixture.db.session
-        search = external_search_fixture.search
-
-        # An error is raised if you try to set the alias to point to
-        # an index that doesn't already exist.
-        pytest.raises(
-            ValueError, search.transfer_current_alias, session, "no-such-index"
-        )
-
-        original_index = search.works_index
-
-        # If the -current alias doesn't exist, it's created
-        # and everything is updated accordingly.
-        search.indices.delete_alias(
-            index=original_index, name="test_index-current", ignore=[404]
-        )
-        search.setup_index(new_index="test_index-v9999")
-        search.transfer_current_alias(session, "test_index-v9999")
-        assert "test_index-v9999" == search.works_index
-        assert "test_index-current" == search.works_alias
-
-        # If the -current alias already exists on the index,
-        # it's used without a problem.
-        search.transfer_current_alias(session, "test_index-v9999")
-        assert "test_index-v9999" == search.works_index
-        assert "test_index-current" == search.works_alias
-
-        # If the -current alias is being used on a different version of the
-        # index, it's deleted from that index and placed on the new one.
-        search.setup_index(original_index)
-        search.transfer_current_alias(session, original_index)
-        assert original_index == search.works_index
-        assert "test_index-current" == search.works_alias
-
-        # It has been removed from other index.
-        assert False == search.indices.exists_alias(
-            index="test_index-v9999", name="test_index-current"
-        )
-
-        # And only exists on the new index.
-        alias_indices = list(search.indices.get_alias(name="test_index-current").keys())
-        assert [original_index] == alias_indices
-
-        # If the index doesn't have the same base name, an error is raised.
-        pytest.raises(ValueError, search.transfer_current_alias, session, "banana-v10")
 
     def test_query_works(self):
         # Verify that query_works operates by calling query_works_multi.
@@ -314,28 +132,34 @@ class TestExternalSearch:
         assert pagination.offset == default.offset
         assert pagination.size == default.size
 
-    def test__run_self_tests(self, external_search_fixture: ExternalSearchFixture):
-        transaction = external_search_fixture.db
+    def test__run_self_tests(self, end_to_end_search_fixture: EndToEndSearchFixture):
+        transaction = end_to_end_search_fixture.db
         session = transaction.session
-        index = MockExternalSearchIndex()
+        index = end_to_end_search_fixture.external_search_index
+
+        # Intrusively set the search term to something useful.
+        index._test_search_term = "How To Search"
+
+        # Start with an up-to-date but empty index.
+        index.start_migration().finish()
 
         # First, see what happens when the search returns no results.
-        test_results = [x for x in index._run_self_tests(session, in_testing=True)]
+        test_results = [x for x in index._run_self_tests(session)]
 
-        assert "Search results for 'a search term':" == test_results[0].name
+        assert "Search results for 'How To Search':" == test_results[0].name
         assert True == test_results[0].success
         assert [] == test_results[0].result
 
-        assert "Search document for 'a search term':" == test_results[1].name
+        assert "Search document for 'How To Search':" == test_results[1].name
         assert True == test_results[1].success
-        assert "[]" == test_results[1].result
+        assert {} != test_results[1].result
 
-        assert "Raw search results for 'a search term':" == test_results[2].name
+        assert "Raw search results for 'How To Search':" == test_results[2].name
         assert True == test_results[2].success
         assert [] == test_results[2].result
 
         assert (
-            "Total number of search results for 'a search term':"
+            "Total number of search results for 'How To Search':"
             == test_results[3].name
         )
         assert True == test_results[3].success
@@ -350,34 +174,29 @@ class TestExternalSearch:
         assert "{}" == test_results[5].result
 
         # Set up the search index so it will return a result.
-        collection = transaction.collection()
+        work = end_to_end_search_fixture.external_search.default_work(
+            title="How To Search"
+        )
+        work.presentation_ready = True
+        work.presentation_edition.subtitle = "How To Search"
+        work.presentation_edition.series = "Classics"
+        work.summary_text = "How To Search!"
+        work.presentation_edition.publisher = "Project Gutenberg"
+        work.last_update_time = datetime_utc(2019, 1, 1)
+        work.license_pools[0].licenses_available = 100000
 
-        search_result = MockSearchResult("Sample Book Title", "author", {}, "id")
-        index.index("index", "id", search_result)
-        test_results = [x for x in index._run_self_tests(session, in_testing=True)]
+        docs = index.start_updating_search_documents()
+        docs.add_documents(index.create_search_documents_from_works([work]))
+        docs.finish()
 
-        assert "Search results for 'a search term':" == test_results[0].name
+        test_results = [x for x in index._run_self_tests(session)]
+
+        assert "Search results for 'How To Search':" == test_results[0].name
         assert True == test_results[0].success
-        assert ["Sample Book Title (author)"] == test_results[0].result
-
-        assert "Search document for 'a search term':" == test_results[1].name
-        assert True == test_results[1].success
-        result = json.loads(test_results[1].result)
-        sample_book = {
-            "author": "author",
-            "meta": {"id": "id", "_sort": ["Sample Book Title", "author", "id"]},
-            "id": "id",
-            "title": "Sample Book Title",
-        }
-        assert sample_book == result
-
-        assert "Raw search results for 'a search term':" == test_results[2].name
-        assert True == test_results[2].success
-        result = json.loads(test_results[2].result[0])
-        assert sample_book == result
+        assert [f"How To Search ({work.author})"] == test_results[0].result
 
         assert (
-            "Total number of search results for 'a search term':"
+            "Total number of search results for 'How To Search':"
             == test_results[3].name
         )
         assert True == test_results[3].success
@@ -390,32 +209,17 @@ class TestExternalSearch:
         assert "Total number of documents per collection:" == test_results[5].name
         assert True == test_results[5].success
         result = json.loads(test_results[5].result)
-        assert {collection.name: 1} == result
-
-    def test_update_mapping(self, external_search_fixture: ExternalSearchFixture):
-        search = external_search_fixture.search
-
-        search.mapping.add_properties({"long": ["new_long_property"]})
-        put_mapping = search._update_index_mapping(dry_run=True)
-        assert "new_long_property" in put_mapping
-        put_mapping = search._update_index_mapping(dry_run=False)
-        assert "new_long_property" in put_mapping
-        put_mapping = search._update_index_mapping(dry_run=True)
-        assert "new_long_property" not in put_mapping
-
-        new_mapping = search.indices.get_mapping(search.works_index)
-        new_mapping = new_mapping[search.works_index]["mappings"]
-        assert "new_long_property" in new_mapping["properties"]
+        assert {"Default Collection": 1} == result
 
 
-class TestCurrentMapping:
+class TestSearchV5:
     def test_character_filters(self):
         # Verify the functionality of the regular expressions we tell
         # Opensearch to use when normalizing fields that will be used
         # for searching.
         filters = []
-        for filter_name in CurrentMapping.AUTHOR_CHAR_FILTER_NAMES:
-            configuration = CurrentMapping.CHAR_FILTERS[filter_name]
+        for filter_name in SearchV5.AUTHOR_CHAR_FILTER_NAMES:
+            configuration = SearchV5.CHAR_FILTERS[filter_name]
             find = re.compile(configuration["pattern"])
             replace = configuration["replacement"]
             # Hack to (imperfectly) convert Java regex format to Python format.
@@ -661,7 +465,6 @@ class TestExternalSearchWithWorks:
             with_license_pool=True,
             collection=result.tiny_collection,
         )
-        result.tiny_book.license_pools[0].self_hosted = True
 
         # Both collections contain 'The Adventures of Sherlock
         # Holmes", but each collection licenses the book through a
@@ -700,6 +503,7 @@ class TestExternalSearchWithWorks:
         transaction = fixture.external_search.db
         session = transaction.session
 
+        fixture.external_search_index.start_migration().finish()
         data = self._populate_works(fixture)
         fixture.populate_search_index()
 
@@ -722,7 +526,7 @@ class TestExternalSearchWithWorks:
 
         # Set up convenient aliases for methods we'll be calling a
         # lot.
-        query = fixture.external_search.search.query_works
+        query = fixture.external_search_index.query_works
         expect = fixture.expect_results
 
         # First, test pagination.
@@ -1163,13 +967,18 @@ class TestExternalSearchWithWorks:
             """
             pagination = SortKeyPagination(size=2)
             facets = Facets(
-                transaction.default_library(), None, None, order=Facets.ORDER_TITLE
+                transaction.default_library(),
+                None,
+                None,
+                order=Facets.ORDER_TITLE,
+                distributor=None,
+                collection_name=None,
             )
             pages = []
             while pagination:
                 pages.append(
                     worklist.works(
-                        session, facets, pagination, fixture.external_search.search
+                        session, facets, pagination, fixture.external_search_index
                     )
                 )
                 pagination = pagination.next_page
@@ -1300,8 +1109,8 @@ class TestExternalSearchWithWorks:
         search = end_to_end_search_fixture.external_search.search
         data = self._populate_works(end_to_end_search_fixture)
         end_to_end_search_fixture.populate_search_index()
-        search.remove_work(data.moby_dick)
-        search.remove_work(data.moby_duck)
+        end_to_end_search_fixture.external_search_index.remove_work(data.moby_dick)
+        end_to_end_search_fixture.external_search_index.remove_work(data.moby_duck)
 
         # Immediately querying never works, the search index needs to refresh its cache/index/data
         search.indices.refresh()
@@ -1355,7 +1164,7 @@ class TestFacetFilters:
 
         # Add all the works created in the setup to the search index.
         SearchIndexCoverageProvider(
-            session, search_index_client=fixture.external_search.search
+            session, search_index_client=fixture.external_search_index
         ).run_once_and_update_timestamp()
 
         # Sleep to give the index time to catch up.
@@ -1367,6 +1176,8 @@ class TestFacetFilters:
                 availability,
                 collection,
                 order=Facets.ORDER_TITLE,
+                distributor=None,
+                collection_name=None,
             )
             fixture.expect_results(works, None, Filter(facets=facets), ordered=False)
 
@@ -1642,6 +1453,8 @@ class TestSearchOrder:
                 Facets.COLLECTION_FULL,
                 Facets.AVAILABLE_ALL,
                 order=sort_field,
+                distributor=None,
+                collection_name=None,
                 order_ascending=True,
             )
             expect(order, None, Filter(facets=facets, **filter_kwargs))
@@ -2244,7 +2057,11 @@ class TestFeaturedFacets:
 
         def works(worklist, facets):
             return worklist.works(
-                session, facets, None, fixture.external_search.search, debug=True
+                session,
+                facets,
+                None,
+                search_engine=fixture.external_search_index,
+                debug=True,
             )
 
         def assert_featured(description, worklist, facets, expect):
@@ -2296,7 +2113,7 @@ class TestFeaturedFacets:
         # available books will show up before all of the unavailable
         # books.
         only_availability_matters = worklist.works(
-            session, facets, None, fixture.external_search.search, debug=True
+            session, facets, None, fixture.external_search_index, debug=True
         )
         assert 5 == len(only_availability_matters)
         last_two = only_availability_matters[-2:]
@@ -2723,7 +2540,7 @@ class TestQuery:
             return built
 
         # When using the 'featured' collection...
-        built = from_facets(Facets.COLLECTION_FEATURED, None, None)
+        built = from_facets(Facets.COLLECTION_FEATURED, None, None, None, None)
 
         # There is no nested filter.
         assert [] == built.nested_filter_calls
@@ -2733,12 +2550,14 @@ class TestQuery:
         quality_range = Filter._match_range(
             "quality",
             "gte",
-            db.default_library().minimum_featured_quality,
+            db.default_library().settings.minimum_featured_quality,
         )
         assert Q("bool", must=[quality_range], must_not=[RESEARCH]) == quality_filter
 
         # When using the AVAILABLE_OPEN_ACCESS availability restriction...
-        built = from_facets(Facets.COLLECTION_FULL, Facets.AVAILABLE_OPEN_ACCESS, None)
+        built = from_facets(
+            Facets.COLLECTION_FULL, Facets.AVAILABLE_OPEN_ACCESS, None, None, None
+        )
 
         # An additional nested filter is applied.
         [available_now] = built.nested_filter_calls
@@ -2751,7 +2570,9 @@ class TestQuery:
         assert nested_filter.to_dict() == {"bool": {"filter": [open_access]}}
 
         # When using the AVAILABLE_NOW restriction...
-        built = from_facets(Facets.COLLECTION_FULL, Facets.AVAILABLE_NOW, None)
+        built = from_facets(
+            Facets.COLLECTION_FULL, Facets.AVAILABLE_NOW, None, None, None
+        )
 
         # An additional nested filter is applied.
         [available_now] = built.nested_filter_calls
@@ -2776,7 +2597,9 @@ class TestQuery:
         }
 
         # When using the AVAILABLE_NOT_NOW restriction...
-        built = from_facets(Facets.COLLECTION_FULL, Facets.AVAILABLE_NOT_NOW, None)
+        built = from_facets(
+            Facets.COLLECTION_FULL, Facets.AVAILABLE_NOT_NOW, None, None, None
+        )
 
         # An additional nested filter is applied.
         [not_available_now] = built.nested_filter_calls
@@ -2797,6 +2620,34 @@ class TestQuery:
             }
         }
 
+        # Distributor builds
+        _id = DataSource.lookup(db.session, DataSource.OVERDRIVE).id
+        built = from_facets(
+            Facets.COLLECTION_FULL,
+            Facets.AVAILABLE_ALL,
+            None,
+            DataSource.OVERDRIVE,
+            None,
+        )
+        [datasource_only] = built.nested_filter_calls
+        nested_filter = datasource_only["query"]
+        assert nested_filter.to_dict() == {
+            "bool": {"filter": [{"terms": {"licensepools.data_source_id": [_id]}}]}
+        }
+
+        # Collection Name builds
+        collection = db.default_collection()
+        built = from_facets(
+            Facets.COLLECTION_FULL, Facets.AVAILABLE_ALL, None, None, collection.name
+        )
+        [collection_only] = built.nested_filter_calls
+        nested_filter = collection_only["query"]
+        assert nested_filter.to_dict() == {
+            "bool": {
+                "filter": [{"terms": {"licensepools.collection_id": [collection.id]}}]
+            }
+        }
+
         # If the Filter specifies script fields, those fields are
         # added to the Query through a call to script_fields()
         script_fields = dict(field1="Definition1", field2="Definition2")
@@ -2809,7 +2660,12 @@ class TestQuery:
         # used to convert it to appropriate Opensearch syntax, and
         # the MockSearch object is modified appropriately.
         built = from_facets(
-            None, None, order=Facets.ORDER_AUTHOR, order_ascending=False
+            None,
+            None,
+            order=Facets.ORDER_AUTHOR,
+            distributor=None,
+            collection_name=None,
+            order_ascending=False,
         )
 
         # We asked for sorting by author, and that's the primary
@@ -2846,7 +2702,6 @@ class TestQuery:
         # to find the most likely hypothesis for any given book.
 
         class Mock(Query):
-
             _match_phrase_called_with = []
             _boosts = {}
             _filters = {}
@@ -3686,7 +3541,9 @@ class TestFilter:
             Filter(no_such_keyword="nope")
         assert "Unknown keyword arguments" in str(excinfo.value)
 
-    def test_from_worklist(self, filter_fixture: FilterFixture):
+    def test_from_worklist(
+        self, filter_fixture: FilterFixture, library_fixture: LibraryFixture
+    ):
         data, transaction, session = (
             filter_fixture,
             filter_fixture.transaction,
@@ -3706,7 +3563,7 @@ class TestFilter:
         excluded_audio_sources.value = json.dumps([])
 
         library = transaction.default_library()
-        assert True == library.allow_holds
+        assert library.settings.allow_holds is True
 
         parent = transaction.lane(display_name="Parent Lane", library=library)
         parent.media = Edition.AUDIO_MEDIUM
@@ -3794,9 +3651,10 @@ class TestFilter:
 
         # If the library does not allow holds, this information is
         # propagated to its Filter.
-        library.setting(library.ALLOW_HOLDS).value = False
+        settings = library_fixture.settings(library)
+        settings.allow_holds = False
         filter = Filter.from_worklist(session, parent, facets)
-        assert False == library.allow_holds
+        assert library.settings.allow_holds is False
 
         # Any excluded audio sources in the sitewide settings
         # will be propagated to all Filters.
@@ -4306,7 +4164,10 @@ class TestFilter:
         assert {} == sort
 
         # The script is the 'simplified.work_last_update' stored script.
-        assert CurrentMapping.script_name("work_last_update") == script.pop("stored")
+        script_name = (
+            SearchRevisionDirectory.create().highest().script_name("work_last_update")
+        )
+        assert script_name == script.pop("stored")
 
         # Two parameters are passed into the script -- the IDs of the
         # collections and the lists relevant to the query. This is so
@@ -4398,8 +4259,13 @@ class TestFilter:
         # an author about whom absolutely nothing is known, it's okay
         # to return no books.
 
-    def test_target_age_filter(self):
+    def test_target_age_filter(self, filter_fixture: FilterFixture):
         # Test an especially complex subfilter for target age.
+
+        transaction, session = (
+            filter_fixture.transaction,
+            filter_fixture.transaction.session,
+        )
 
         # We're going to test the construction of this subfilter using
         # a number of inputs.
@@ -4479,12 +4345,32 @@ class TestFilter:
         } == more_than_twelve.to_dict()
         assert_matches_nonexistent_field(no_upper_limit, "target_age.upper")
 
-        # Finally, test filters that put no restriction on target age.
+        # Test filters that put no restriction on target age.
         no_target_age = Filter()
         assert None == no_target_age.target_age_filter
 
         no_target_age = Filter(target_age=(None, None))
         assert None == no_target_age.target_age_filter
+
+        # Test that children lanes include only works with defined target age range
+        children_lane = transaction.lane("Children lane")
+        children_lane.target_age = (0, 3)
+        assert Classifier.AUDIENCE_CHILDREN in children_lane.audiences
+
+        children_filter = Filter.from_worklist(session, children_lane, None)
+
+        target_age_filter_that_only_includes_from_0_to_3 = {
+            "bool": {
+                "must": [
+                    {"range": {"target_age.lower": {"gte": 0}}},
+                    {"range": {"target_age.upper": {"lte": 3}}},
+                ]
+            }
+        }
+        assert (
+            target_age_filter_that_only_includes_from_0_to_3
+            == children_filter.target_age_filter.to_dict()
+        )
 
     def test__scrub(self):
         # Test the _scrub helper method, which transforms incoming strings
@@ -4812,107 +4698,102 @@ class TestSortKeyPagination:
 
 class TestBulkUpdate:
     def test_works_not_presentation_ready_kept_in_index(
-        self, db: DatabaseTransactionFixture
+        self,
+        db: DatabaseTransactionFixture,
+        external_search_fake_fixture: ExternalSearchFixtureFake,
     ):
         w1 = db.work()
         w1.set_presentation_ready()
         w2 = db.work()
         w2.set_presentation_ready()
         w3 = db.work()
-        index = MockExternalSearchIndex()
-        successes, failures = index.bulk_update([w1, w2, w3])
+        index = external_search_fake_fixture.external_search
+
+        docs = index.start_updating_search_documents()
+        failures = docs.add_documents(
+            index.create_search_documents_from_works([w1, w2, w3])
+        )
+        docs.finish()
 
         # All three works are regarded as successes, because their
         # state was successfully mirrored to the index.
-        assert {w1, w2, w3} == set(successes)
         assert [] == failures
 
         # All three works were inserted into the index, even the one
         # that's not presentation-ready.
-        ids = {x[-1] for x in list(index.docs.keys())}
+        ids = set(
+            map(lambda d: d["_id"], external_search_fake_fixture.search.documents_all())
+        )
         assert {w1.id, w2.id, w3.id} == ids
 
         # If a work stops being presentation-ready, it is kept in the
         # index.
         w2.presentation_ready = False
-        successes, failures = index.bulk_update([w1, w2, w3])
-        assert {w1.id, w2.id, w3.id} == {x[-1] for x in list(index.docs.keys())}
-        assert {w1, w2, w3} == set(successes)
+        docs = index.start_updating_search_documents()
+        failures = docs.add_documents(
+            index.create_search_documents_from_works([w1, w2, w3])
+        )
+        docs.finish()
+        assert {w1.id, w2.id, w3.id} == set(
+            map(lambda d: d["_id"], external_search_fake_fixture.search.documents_all())
+        )
         assert [] == failures
 
 
 class TestSearchErrors:
     def test_search_connection_timeout(
-        self, external_search_fixture: ExternalSearchFixture
+        self, external_search_fake_fixture: ExternalSearchFixtureFake
     ):
         search, transaction = (
-            external_search_fixture,
-            external_search_fixture.db,
+            external_search_fake_fixture,
+            external_search_fake_fixture.db,
         )
 
-        attempts = []
-
-        def bulk_with_timeout(docs, raise_on_error=False, raise_on_exception=False):
-            attempts.append(docs)
-
-            def error(doc):
-                return dict(
-                    index=dict(
-                        status="TIMEOUT",
-                        exception="ConnectionTimeout",
-                        error="Connection Timeout!",
-                        _id=doc["_id"],
-                        data=doc,
-                    )
-                )
-
-            errors = list(map(error, docs))
-            return 0, errors
-
-        search.search.bulk = bulk_with_timeout
-
+        search.search.set_failing_mode(
+            mode=SearchServiceFailureMode.FAIL_INDEXING_DOCUMENTS_TIMEOUT
+        )
         work = transaction.work()
         work.set_presentation_ready()
-        successes, failures = search.search.bulk_update([work])
-        assert [] == successes
-        assert 1 == len(failures)
-        assert work == failures[0][0]
-        assert "Connection Timeout!" == failures[0][1]
 
-        # When all the documents fail, it tries again once with the same arguments.
-        assert [work.id, work.id] == [docs[0]["_id"] for docs in attempts]
+        docs = search.external_search.start_updating_search_documents()
+        failures = docs.add_documents(
+            search.external_search.create_search_documents_from_works([work])
+        )
+        assert 1 == len(failures)
+        assert work.id == failures[0].id
+        assert "Connection Timeout!" == failures[0].error_message
+
+        # Submissions are not retried by the base service
+        assert [work.id] == [
+            docs["_id"] for docs in search.search.document_submission_attempts
+        ]
 
     def test_search_single_document_error(
-        self, external_search_fixture: ExternalSearchFixture
+        self, external_search_fake_fixture: ExternalSearchFixtureFake
     ):
         search, transaction = (
-            external_search_fixture,
-            external_search_fixture.db,
+            external_search_fake_fixture,
+            external_search_fake_fixture.db,
         )
 
-        successful_work = transaction.work()
-        successful_work.set_presentation_ready()
-        failing_work = transaction.work()
-        failing_work.set_presentation_ready()
+        search.search.set_failing_mode(
+            mode=SearchServiceFailureMode.FAIL_INDEXING_DOCUMENTS
+        )
+        work = transaction.work()
+        work.set_presentation_ready()
 
-        def bulk_with_error(docs, raise_on_error=False, raise_on_exception=False):
-            failures = [
-                dict(
-                    data=dict(_id=failing_work.id),
-                    error="There was an error!",
-                    exception="Exception",
-                )
-            ]
-            success_count = 1
-            return success_count, failures
-
-        search.search.bulk = bulk_with_error
-
-        successes, failures = search.search.bulk_update([successful_work, failing_work])
-        assert [successful_work] == successes
+        docs = search.external_search.start_updating_search_documents()
+        failures = docs.add_documents(
+            search.external_search.create_search_documents_from_works([work])
+        )
         assert 1 == len(failures)
-        assert failing_work == failures[0][0]
-        assert "There was an error!" == failures[0][1]
+        assert work.id == failures[0].id
+        assert "There was an error!" == failures[0].error_message
+
+        # Submissions are not retried by the base service
+        assert [work.id] == [
+            docs["_id"] for docs in search.search.document_submission_attempts
+        ]
 
 
 class TestWorkSearchResult:
@@ -4936,8 +4817,12 @@ class TestWorkSearchResult:
 
 
 class TestSearchIndexCoverageProvider:
-    def test_operation(self, db: DatabaseTransactionFixture):
-        index = MockExternalSearchIndex()
+    def test_operation(
+        self,
+        db: DatabaseTransactionFixture,
+        external_search_fake_fixture: ExternalSearchFixtureFake,
+    ):
+        index = external_search_fake_fixture.external_search
         provider = SearchIndexCoverageProvider(db.session, search_index_client=index)
         assert WorkCoverageRecord.UPDATE_SEARCH_INDEX_OPERATION == provider.operation
 
@@ -5041,10 +4926,14 @@ class TestSearchIndexCoverageProvider:
         assert result["title"] == None
         assert result["target_age"]["lower"] == None
 
-    def test_success(self, db: DatabaseTransactionFixture):
+    def test_success(
+        self,
+        db: DatabaseTransactionFixture,
+        external_search_fake_fixture: ExternalSearchFixtureFake,
+    ):
         work = db.work()
         work.set_presentation_ready()
-        index = MockExternalSearchIndex()
+        index = external_search_fake_fixture.external_search
         provider = SearchIndexCoverageProvider(db.session, search_index_client=index)
         results = provider.process_batch([work])
 
@@ -5052,25 +4941,21 @@ class TestSearchIndexCoverageProvider:
         assert [work] == results
 
         # The work was added to the search index.
-        assert 1 == len(index.docs)
+        search_service = external_search_fake_fixture.search
+        assert 1 == len(search_service.documents_all())
 
-    def test_failure(self, db: DatabaseTransactionFixture):
-        class DoomedExternalSearchIndex(MockExternalSearchIndex):
-            """All documents sent to this index will fail."""
-
-            def bulk(self, docs, **kwargs):
-                return 0, [
-                    dict(
-                        data=dict(_id=failing_work["_id"]),
-                        error="There was an error!",
-                        exception="Exception",
-                    )
-                    for failing_work in docs
-                ]
-
+    def test_failure(
+        self,
+        db: DatabaseTransactionFixture,
+        external_search_fake_fixture: ExternalSearchFixtureFake,
+    ):
         work = db.work()
         work.set_presentation_ready()
-        index = DoomedExternalSearchIndex()
+        index = external_search_fake_fixture.external_search
+        external_search_fake_fixture.search.set_failing_mode(
+            SearchServiceFailureMode.FAIL_INDEXING_DOCUMENTS
+        )
+
         provider = SearchIndexCoverageProvider(db.session, search_index_client=index)
         results = provider.process_batch([work])
 
@@ -5078,7 +4963,77 @@ class TestSearchIndexCoverageProvider:
         [record] = results
         assert work == record.obj
         assert True == record.transient
-        assert "There was an error!" == record.exception
+        assert "There was an error!" in record.exception
+
+    def test_migration_available(
+        self, external_search_fake_fixture: ExternalSearchFixtureFake
+    ):
+        search = external_search_fake_fixture.external_search
+        directory = search._revision_directory
+
+        # Create a new highest version
+        directory._available[10000] = SearchV10000()
+        search._revision = directory._available[10000]
+        search._search_service.index_is_populated = lambda x: False
+
+        mock_db = MagicMock()
+        provider = SearchIndexCoverageProvider(mock_db, search_index_client=search)
+
+        assert provider.migration is not None
+        assert provider.receiver is None
+        # Execute is called once with a Delete statement
+        assert mock_db.execute.call_count == 1
+        assert len(mock_db.execute.call_args[0]) == 1
+        assert mock_db.execute.call_args[0][0].__class__ == sqlaDelete
+
+    def test_migration_not_available(
+        self, end_to_end_search_fixture: EndToEndSearchFixture
+    ):
+        search = end_to_end_search_fixture.external_search_index
+        db = end_to_end_search_fixture.db
+
+        migration = search.start_migration()
+        assert migration is not None
+        migration.finish()
+
+        provider = SearchIndexCoverageProvider(db.session, search_index_client=search)
+        assert provider.migration is None
+        assert provider.receiver is not None
+
+    def test_complete_run_from_script(
+        self, end_to_end_search_fixture: EndToEndSearchFixture
+    ):
+        search = end_to_end_search_fixture.external_search_index
+        db = end_to_end_search_fixture.db
+        work = db.work(title="A Test Work", with_license_pool=True)
+        work.set_presentation_ready(search_index_client=search)
+
+        class _SearchIndexCoverageProvider(SearchIndexCoverageProvider):
+            _did_call_on_completely_finished = False
+
+            def on_completely_finished(self):
+                self._did_call_on_completely_finished = True
+                super().on_completely_finished()
+
+        # Run as the search_index_refresh script would
+        provider = RunWorkCoverageProviderScript(
+            _SearchIndexCoverageProvider, _db=db.session, search_index_client=search
+        )
+        provider.run()
+
+        # The run ran till the end
+        assert provider.providers[0]._did_call_on_completely_finished == True
+        # The single available work was indexed
+        results = search.query_works(None)
+        assert len(results) == 1
+        assert results[0]["work_id"] == work.id
+
+
+class SearchV10000(SearchSchemaRevision):
+    SEARCH_VERSION = 10000
+
+    def mapping_document(self) -> SearchMappingDocument:
+        return {}
 
 
 class TestJSONQuery:
@@ -5350,9 +5305,41 @@ class TestJSONQuery:
         q = self._jq(self._leaf("data_source", DataSource.GUTENBERG, "gt"))
         with pytest.raises(QueryParseException) as exc:
             q.search_query
-        assert "Operator 'gt' is not allowed for 'data_source'. Only use ['eq']" == str(
-            exc.value
+        assert (
+            "Operator 'gt' is not allowed for 'data_source'. Only use ['eq', 'neq']"
+            == str(exc.value)
         )
+
+    def test_allowed_operators_for_data_source(self, db: DatabaseTransactionFixture):
+        # If we're running this unit test alone, we must intialize the data first
+        CachedData.initialize(db.session)
+
+        gutenberg = (
+            db.session.query(DataSource)
+            .filter(DataSource.name == DataSource.GUTENBERG)
+            .first()
+        )
+        q = self._jq(self._leaf("data_source", DataSource.GUTENBERG, "neq"))
+        assert q.search_query.to_dict() == {
+            "nested": {
+                "path": "licensepools",
+                "query": {
+                    "bool": {
+                        "must_not": [
+                            {"term": {"licensepools.data_source_id": gutenberg.id}}
+                        ]
+                    }
+                },
+            }
+        }
+
+        q = self._jq(self._leaf("data_source", DataSource.GUTENBERG, "eq"))
+        assert q.search_query.to_dict() == {
+            "nested": {
+                "path": "licensepools",
+                "query": {"term": {"licensepools.data_source_id": gutenberg.id}},
+            }
+        }
 
     @pytest.mark.parametrize(
         "key,value,is_text",
@@ -5456,7 +5443,7 @@ class TestExternalSearchJSONQuery:
         works,
     ):
         query = dict(query=partial_query)
-        resp = fixture.external_search.search.query_works(query, data.filter)
+        resp = fixture.external_search_index.query_works(query, data.filter)
 
         assert len(resp.hits) == len(works)
 

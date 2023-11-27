@@ -1,23 +1,26 @@
 import json
 from typing import Any, Dict
 from unittest.mock import MagicMock
+from urllib.parse import quote_plus
 
 import feedparser
 from flask import url_for
-from werkzeug.urls import url_quote_plus
 
 from api.controller import CirculationManager
 from api.lanes import HasSeriesFacets, JackpotFacets, JackpotWorkList
-from api.opds import LibraryAnnotator
 from api.problem_details import REMOTE_INTEGRATION_FAILED
 from core.app_server import load_facets_from_request
-from core.entrypoint import AudiobooksEntryPoint, EntryPoint, EverythingEntryPoint
+from core.entrypoint import AudiobooksEntryPoint, EverythingEntryPoint
 from core.external_search import SortKeyPagination
-from core.lane import Facets, FeaturedFacets, Lane, Pagination, SearchFacets, WorkList
-from core.model import CachedFeed, ConfigurationSetting, Edition
-from core.opds import AcquisitionFeed, NavigationFacets, NavigationFeed
+from core.feed.acquisition import OPDSAcquisitionFeed
+from core.feed.annotator.circulation import LibraryAnnotator
+from core.feed.navigation import NavigationFeed
+from core.feed.opds import NavigationFacets
+from core.lane import Facets, FeaturedFacets, Pagination, SearchFacets, WorkList
+from core.model import Edition
 from core.util.flask_util import Response
 from tests.fixtures.api_controller import CirculationControllerFixture, WorkSpec
+from tests.fixtures.library import LibraryFixture
 
 
 class TestOPDSFeedController:
@@ -36,7 +39,11 @@ class TestOPDSFeedController:
     page_called_with: Any
     called_with: Any
 
-    def test_feed(self, circulation_fixture: CirculationControllerFixture):
+    def test_feed(
+        self,
+        circulation_fixture: CirculationControllerFixture,
+        library_fixture: LibraryFixture,
+    ):
         circulation_fixture.add_works(self._EXTRA_BOOKS)
 
         # Test the feed() method.
@@ -80,13 +87,11 @@ class TestOPDSFeedController:
 
         # Set up configuration settings for links and entry points
         library = circulation_fixture.db.default_library()
-        for rel, value in [
-            (LibraryAnnotator.TERMS_OF_SERVICE, "a"),
-            (LibraryAnnotator.PRIVACY_POLICY, "b"),
-            (LibraryAnnotator.COPYRIGHT, "c"),
-            (LibraryAnnotator.ABOUT, "d"),
-        ]:
-            ConfigurationSetting.for_library(rel, library).value = value
+        settings = library_fixture.settings(library)
+        settings.terms_of_service = "a"  # type: ignore[assignment]
+        settings.privacy_policy = "b"  # type: ignore[assignment]
+        settings.copyright = "c"  # type: ignore[assignment]
+        settings.about = "d"  # type: ignore[assignment]
 
         # Make a real OPDS feed and poke at it.
         with circulation_fixture.request_context_with_library(
@@ -104,9 +109,6 @@ class TestOPDSFeedController:
             # index.
 
             assert 200 == response.status_code
-            assert (
-                "max-age=%d" % Lane.MAX_CACHE_AGE in response.headers["Cache-Control"]
-            )
             feed = feedparser.parse(response.data)
             assert {x.title for x in circulation_fixture.works} == {
                 x["title"] for x in feed["entries"]
@@ -127,10 +129,10 @@ class TestOPDSFeedController:
                 else:
                     by_rel[i["rel"]] = i["href"]
 
-            assert "a" == by_rel[LibraryAnnotator.TERMS_OF_SERVICE]
-            assert "b" == by_rel[LibraryAnnotator.PRIVACY_POLICY]
-            assert "c" == by_rel[LibraryAnnotator.COPYRIGHT]
-            assert "d" == by_rel[LibraryAnnotator.ABOUT]
+            assert "a" == by_rel["terms-of-service"]
+            assert "b" == by_rel["privacy-policy"]
+            assert "c" == by_rel["copyright"]
+            assert "d" == by_rel["about"]
 
             next_link = by_rel["next"]
             lane_str = str(lane_id)
@@ -146,7 +148,9 @@ class TestOPDSFeedController:
                 last_item.sort_author,
                 last_item.id,
             ]
-            expect = "key=%s" % url_quote_plus(json.dumps(expected_pagination_key))
+            expect = "key=%s" % quote_plus(
+                json.dumps(expected_pagination_key), safe=","
+            )
             assert expect in next_link
 
             search_link = by_rel["search"]
@@ -168,11 +172,14 @@ class TestOPDSFeedController:
             @classmethod
             def page(cls, **kwargs):
                 self.called_with = kwargs
-                return Response("An OPDS feed")
+                resp = MagicMock()
+                resp.as_response.return_value = Response("An OPDS feed")
+                return resp
 
         sort_key = ["sort", "pagination", "key"]
         with circulation_fixture.request_context_with_library(
-            "/?entrypoint=Audio&size=36&key=%s&order=added" % (json.dumps(sort_key))
+            "/?entrypoint=Audio&size=36&key=%s&order=added&max_age=10"
+            % (json.dumps(sort_key))
         ):
             response = circulation_fixture.manager.opds_feeds.feed(
                 circulation_fixture.english_adult_fiction.id, feed_class=Mock
@@ -227,7 +234,11 @@ class TestOPDSFeedController:
         # No other arguments were passed into page().
         assert {} == kwargs
 
-    def test_groups(self, circulation_fixture: CirculationControllerFixture):
+    def test_groups(
+        self,
+        circulation_fixture: CirculationControllerFixture,
+        library_fixture: LibraryFixture,
+    ):
         circulation_fixture.add_works(self._EXTRA_BOOKS)
 
         # AcquisitionFeed.groups is tested in core/test_opds.py, and a
@@ -235,8 +246,9 @@ class TestOPDSFeedController:
         # index, so we're just going to test that groups() (or, in one
         # case, page()) is called properly.
         library = circulation_fixture.db.default_library()
-        library.setting(library.MINIMUM_FEATURED_QUALITY).value = 0.15
-        library.setting(library.FEATURED_LANE_SIZE).value = 2
+        settings = library_fixture.settings(library)
+        settings.minimum_featured_quality = 0.15  # type: ignore[assignment]
+        settings.featured_lane_size = 2
 
         # Patron with root lane -> redirect to root lane
         lane = circulation_fixture.db.lane()
@@ -281,7 +293,9 @@ class TestOPDSFeedController:
                 # the grouped feed controller is activated.
                 self.groups_called_with = kwargs
                 self.page_called_with = None
-                return Response("A grouped feed")
+                resp = MagicMock()
+                resp.as_response.return_value = Response("A grouped feed")
+                return resp
 
             @classmethod
             def page(cls, **kwargs):
@@ -289,7 +303,9 @@ class TestOPDSFeedController:
                 # ends up being called instead.
                 self.groups_called_with = None
                 self.page_called_with = kwargs
-                return Response("A paginated feed")
+                resp = MagicMock()
+                resp.as_response.return_value = Response("A paginated feed")
+                return resp
 
         # Earlier we tested an authenticated request for a patron with an
         # external type. Now try an authenticated request for a patron with
@@ -315,7 +331,6 @@ class TestOPDSFeedController:
 
             # The Response returned by Mock.groups() has been converted
             # into a Flask response.
-            assert 200 == response.status_code
             assert "A grouped feed" == response.get_data(as_text=True)
 
             # While we're in request context, generate the URL we
@@ -449,7 +464,11 @@ class TestOPDSFeedController:
             )
             assert "OpenSearchDescription" in response.get_data(as_text=True)
 
-    def test_search(self, circulation_fixture: CirculationControllerFixture):
+    def test_search(
+        self,
+        circulation_fixture: CirculationControllerFixture,
+        library_fixture: LibraryFixture,
+    ):
         circulation_fixture.add_works(self._EXTRA_BOOKS)
 
         # Test the search() controller method.
@@ -488,7 +507,9 @@ class TestOPDSFeedController:
             @classmethod
             def search(cls, **kwargs):
                 self.called_with = kwargs
-                return "An OPDS feed"
+                resp = MagicMock()
+                resp.as_response.return_value = "An OPDS feed"
+                return resp
 
         with circulation_fixture.request_context_with_library(
             "/?q=t&size=99&after=22&media=Music"
@@ -551,7 +572,7 @@ class TestOPDSFeedController:
                 library_short_name=library.short_name,
                 **dict(list(facets.items())),
                 q=query,
-                _external=True
+                _external=True,
             )
         assert expect_url == kwargs.pop("url")
 
@@ -575,9 +596,9 @@ class TestOPDSFeedController:
 
         # When only a single entry point is enabled, it's used as the
         # default.
-        library.setting(EntryPoint.ENABLED_SETTING).value = json.dumps(
-            [AudiobooksEntryPoint.INTERNAL_NAME]
-        )
+        library_fixture.settings(library).enabled_entry_points = [
+            AudiobooksEntryPoint.INTERNAL_NAME
+        ]
         with circulation_fixture.request_context_with_library("/?q=t"):
             response = circulation_fixture.manager.opds_feeds.search(
                 None, feed_class=Mock
@@ -589,6 +610,61 @@ class TestOPDSFeedController:
                 None, feed_class=Mock
             )
             assert self.called_with["facets"].search_type == "json"
+
+    def test_lane_search_params(
+        self,
+        circulation_fixture: CirculationControllerFixture,
+    ):
+        # Tests some of the lane search parameters.
+        # TODO: Add test for valid `distributor`.
+
+        valid_lane_id = circulation_fixture.english_adult_fiction.id
+        valid_collection_name = circulation_fixture.collection.name
+        invalid_collection_name = "__non-existent-collection__"
+        invalid_distributor = "__non-existent-distributor__"
+
+        with circulation_fixture.request_context_with_library("/?collectionName=All"):
+            response = circulation_fixture.manager.opds_feeds.search(valid_lane_id)
+            assert 200 == response.status_code
+            assert "application/opensearchdescription+xml" == response.headers.get(
+                "content-type"
+            )
+
+        with circulation_fixture.request_context_with_library(
+            f"/?collectionName={valid_collection_name}"
+        ):
+            response = circulation_fixture.manager.opds_feeds.search(valid_lane_id)
+            assert 200 == response.status_code
+            assert "application/opensearchdescription+xml" == response.headers.get(
+                "content-type"
+            )
+
+        with circulation_fixture.request_context_with_library(
+            f"/?collectionName={invalid_collection_name}"
+        ):
+            response = circulation_fixture.manager.opds_feeds.search(valid_lane_id)
+            assert 400 == response.status_code
+            assert (
+                f"I don't understand which collection '{invalid_collection_name}' refers to."
+                == response.detail
+            )
+
+        with circulation_fixture.request_context_with_library("/?distributor=All"):
+            response = circulation_fixture.manager.opds_feeds.search(valid_lane_id)
+            assert 200 == response.status_code
+            assert "application/opensearchdescription+xml" == response.headers.get(
+                "content-type"
+            )
+
+        with circulation_fixture.request_context_with_library(
+            f"/?distributor={invalid_distributor}"
+        ):
+            response = circulation_fixture.manager.opds_feeds.search(valid_lane_id)
+            assert 400 == response.status_code
+            assert (
+                f"I don't understand which distributor '{invalid_distributor}' refers to."
+                == response.detail
+            )
 
     def test_misconfigured_search(
         self, circulation_fixture: CirculationControllerFixture
@@ -672,7 +748,7 @@ class TestOPDSFeedController:
         assert expect_url == kwargs.pop("url")  # type: ignore
 
         # These feeds are never to be cached.
-        assert CachedFeed.IGNORE_CACHE == kwargs.pop("max_age")  # type: ignore
+        assert 0 == kwargs.pop("max_age")  # type: ignore
 
         # To improve performance, a Pagination object was created that
         # limits each lane in the test feed to a single Work.
@@ -704,7 +780,7 @@ class TestOPDSFeedController:
         # JackpotWorkList and passes it into _qa_feed.
 
         mock = MagicMock(return_value="an OPDS feed")
-        circulation_fixture.manager.opds_feeds._qa_feed = mock  # type: ignore[method-assign]
+        circulation_fixture.manager.opds_feeds._qa_feed = mock
 
         response = circulation_fixture.manager.opds_feeds.qa_feed()
         [call] = mock.mock_calls
@@ -712,7 +788,7 @@ class TestOPDSFeedController:
 
         # For the most part, we're verifying that the expected values
         # are passed in to _qa_feed.
-        assert AcquisitionFeed.groups == kwargs.pop("feed_factory")  # type: ignore
+        assert OPDSAcquisitionFeed.groups == kwargs.pop("feed_factory")  # type: ignore
         assert JackpotFacets == kwargs.pop("facet_class")  # type: ignore
         assert "qa_feed" == kwargs.pop("controller_name")  # type: ignore
         assert "QA test feed" == kwargs.pop("feed_title")  # type: ignore
@@ -743,7 +819,7 @@ class TestOPDSFeedController:
         # JackpotWorkList and passes it into _qa_feed.
 
         mock = MagicMock(return_value="an OPDS feed")
-        circulation_fixture.manager.opds_feeds._qa_feed = mock  # type: ignore[method-assign]
+        circulation_fixture.manager.opds_feeds._qa_feed = mock
 
         response = circulation_fixture.manager.opds_feeds.qa_feed()
         [call] = mock.mock_calls
@@ -751,7 +827,7 @@ class TestOPDSFeedController:
 
         # For the most part, we're verifying that the expected values
         # are passed in to _qa_feed.
-        assert AcquisitionFeed.groups == kwargs.pop("feed_factory")  # type: ignore
+        assert OPDSAcquisitionFeed.groups == kwargs.pop("feed_factory")  # type: ignore
         assert JackpotFacets == kwargs.pop("facet_class")  # type: ignore
         assert "qa_feed" == kwargs.pop("controller_name")  # type: ignore
         assert "QA test feed" == kwargs.pop("feed_title")  # type: ignore
@@ -783,7 +859,7 @@ class TestOPDSFeedController:
         # instructions to use HasSeriesFacets.
 
         mock = MagicMock(return_value="an OPDS feed")
-        circulation_fixture.manager.opds_feeds._qa_feed = mock  # type: ignore[method-assign]
+        circulation_fixture.manager.opds_feeds._qa_feed = mock
 
         response = circulation_fixture.manager.opds_feeds.qa_series_feed()
         [call] = mock.mock_calls
@@ -794,7 +870,7 @@ class TestOPDSFeedController:
 
         # Note that the feed_method is different from the one in qa_feed.
         # We want to generate an ungrouped feed rather than a grouped one.
-        assert AcquisitionFeed.page == kwargs.pop("feed_factory")  # type: ignore
+        assert OPDSAcquisitionFeed.page == kwargs.pop("feed_factory")  # type: ignore
         assert HasSeriesFacets == kwargs.pop("facet_class")  # type: ignore
         assert "qa_series_feed" == kwargs.pop("controller_name")  # type: ignore
         assert "QA series test feed" == kwargs.pop("feed_title")  # type: ignore

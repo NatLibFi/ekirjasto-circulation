@@ -2,9 +2,16 @@ import json
 
 import flask
 import pytest
-from werkzeug.datastructures import MultiDict
+from werkzeug.datastructures import ImmutableMultiDict
 
-from api.admin.exceptions import *
+from api.admin.exceptions import AdminNotAuthorized
+from api.admin.problem_details import (
+    CANNOT_CHANGE_PROTOCOL,
+    INTEGRATION_NAME_ALREADY_IN_USE,
+    MISSING_SERVICE,
+    MULTIPLE_SERVICES_FOR_LIBRARY,
+    UNKNOWN_PROTOCOL,
+)
 from core.marc import MARCExporter
 from core.model import (
     AdminRole,
@@ -13,8 +20,6 @@ from core.model import (
     create,
     get_one,
 )
-from core.model.configuration import ExternalIntegrationLink
-from core.s3 import S3UploaderConfiguration
 from tests.fixtures.api_admin import SettingsControllerFixture
 
 
@@ -91,7 +96,7 @@ class TestCatalogServicesController:
         self, settings_ctrl_fixture: SettingsControllerFixture
     ):
         with settings_ctrl_fixture.request_context_with_admin("/", method="POST"):
-            flask.request.form = MultiDict(
+            flask.request.form = ImmutableMultiDict(
                 [
                     ("protocol", "Unknown"),
                 ]
@@ -102,7 +107,7 @@ class TestCatalogServicesController:
             assert response == UNKNOWN_PROTOCOL
 
         with settings_ctrl_fixture.request_context_with_admin("/", method="POST"):
-            flask.request.form = MultiDict(
+            flask.request.form = ImmutableMultiDict(
                 [
                     ("id", "123"),
                 ]
@@ -121,9 +126,9 @@ class TestCatalogServicesController:
         )
 
         with settings_ctrl_fixture.request_context_with_admin("/", method="POST"):
-            flask.request.form = MultiDict(
+            flask.request.form = ImmutableMultiDict(
                 [
-                    ("id", service.id),
+                    ("id", str(service.id)),
                     ("protocol", ExternalIntegration.MARC_EXPORT),
                 ]
             )
@@ -133,9 +138,9 @@ class TestCatalogServicesController:
             assert response == CANNOT_CHANGE_PROTOCOL
 
         with settings_ctrl_fixture.request_context_with_admin("/", method="POST"):
-            flask.request.form = MultiDict(
+            flask.request.form = ImmutableMultiDict(
                 [
-                    ("name", service.name),
+                    ("name", str(service.name)),
                     ("protocol", ExternalIntegration.MARC_EXPORT),
                 ]
             )
@@ -151,73 +156,17 @@ class TestCatalogServicesController:
             goal=ExternalIntegration.CATALOG_GOAL,
         )
 
-        # Attempt to set an S3 mirror external integration but it does not exist!
-        with settings_ctrl_fixture.request_context_with_admin("/", method="POST"):
-            ME = MARCExporter
-            flask.request.form = MultiDict(
-                [
-                    ("name", "exporter name"),
-                    ("id", service.id),
-                    ("protocol", ME.NAME),
-                    ("mirror_integration_id", "1234"),
-                ]
-            )
-            response = (
-                settings_ctrl_fixture.manager.admin_catalog_services_controller.process_catalog_services()
-            )
-            assert response.uri == MISSING_INTEGRATION.uri
-
-        s3, ignore = create(
-            settings_ctrl_fixture.ctrl.db.session,
-            ExternalIntegration,
-            protocol=ExternalIntegration.S3,
-            goal=ExternalIntegration.STORAGE_GOAL,
-        )
-
-        # Now an S3 integration exists, but it has no MARC bucket configured.
-        with settings_ctrl_fixture.request_context_with_admin("/", method="POST"):
-            ME = MARCExporter
-            flask.request.form = MultiDict(
-                [
-                    ("name", "exporter name"),
-                    ("id", service.id),
-                    ("protocol", ME.NAME),
-                    ("mirror_integration_id", s3.id),
-                ]
-            )
-            response = (
-                settings_ctrl_fixture.manager.admin_catalog_services_controller.process_catalog_services()
-            )
-            assert response.uri == MISSING_INTEGRATION.uri
-
-        settings_ctrl_fixture.admin.remove_role(AdminRole.SYSTEM_ADMIN)
-        settings_ctrl_fixture.ctrl.db.session.flush()
-        with settings_ctrl_fixture.request_context_with_admin("/", method="POST"):
-            flask.request.form = MultiDict(
-                [
-                    ("name", "new name"),
-                    ("protocol", ME.NAME),
-                    ("mirror_integration_id", s3.id),
-                ]
-            )
-            pytest.raises(
-                AdminNotAuthorized,
-                settings_ctrl_fixture.manager.admin_catalog_services_controller.process_catalog_services,
-            )
-
         # This should be the last test to check since rolling back database
         # changes in the test can cause it to crash.
-        s3.setting(S3UploaderConfiguration.MARC_BUCKET_KEY).value = "marc-files"
         service.libraries += [settings_ctrl_fixture.ctrl.db.default_library()]
         settings_ctrl_fixture.admin.add_role(AdminRole.SYSTEM_ADMIN)
 
         with settings_ctrl_fixture.request_context_with_admin("/", method="POST"):
             ME = MARCExporter
-            flask.request.form = MultiDict(
+            flask.request.form = ImmutableMultiDict(
                 [
                     ("name", "new name"),
                     ("protocol", ME.NAME),
-                    ("mirror_integration_id", s3.id),
                     (
                         "libraries",
                         json.dumps(
@@ -242,20 +191,11 @@ class TestCatalogServicesController:
     ):
         ME = MARCExporter
 
-        s3, ignore = create(
-            settings_ctrl_fixture.ctrl.db.session,
-            ExternalIntegration,
-            protocol=ExternalIntegration.S3,
-            goal=ExternalIntegration.STORAGE_GOAL,
-        )
-        s3.setting(S3UploaderConfiguration.MARC_BUCKET_KEY).value = "marc-files"
-
         with settings_ctrl_fixture.request_context_with_admin("/", method="POST"):
-            flask.request.form = MultiDict(
+            flask.request.form = ImmutableMultiDict(
                 [
                     ("name", "exporter name"),
                     ("protocol", ME.NAME),
-                    ("mirror_integration_id", s3.id),
                     (
                         "libraries",
                         json.dumps(
@@ -280,23 +220,12 @@ class TestCatalogServicesController:
             ExternalIntegration,
             goal=ExternalIntegration.CATALOG_GOAL,
         )
-        # There was one S3 integration and it was selected. The service has an
-        # External Integration Link to the storage integration that is created
-        # in a POST with purpose of ExternalIntegrationLink.MARC.
-        integration_link = get_one(
-            settings_ctrl_fixture.ctrl.db.session,
-            ExternalIntegrationLink,
-            external_integration_id=service.id,
-            purpose=ExternalIntegrationLink.MARC,
-        )
+        assert isinstance(service, ExternalIntegration)
 
         assert service.id == int(response.get_data())
         assert ME.NAME == service.protocol
         assert "exporter name" == service.name
         assert [settings_ctrl_fixture.ctrl.db.default_library()] == service.libraries
-        # We expect the Catalog external integration to have a link to the
-        # S3 storage external integration
-        assert s3.id == integration_link.other_integration_id
         assert (
             "false"
             == ConfigurationSetting.for_library_and_externalintegration(
@@ -321,14 +250,6 @@ class TestCatalogServicesController:
     ):
         ME = MARCExporter
 
-        s3, ignore = create(
-            settings_ctrl_fixture.ctrl.db.session,
-            ExternalIntegration,
-            protocol=ExternalIntegration.S3,
-            goal=ExternalIntegration.STORAGE_GOAL,
-        )
-        s3.setting(S3UploaderConfiguration.MARC_BUCKET_KEY).value = "marc-files"
-
         service, ignore = create(
             settings_ctrl_fixture.ctrl.db.session,
             ExternalIntegration,
@@ -338,12 +259,11 @@ class TestCatalogServicesController:
         )
 
         with settings_ctrl_fixture.request_context_with_admin("/", method="POST"):
-            flask.request.form = MultiDict(
+            flask.request.form = ImmutableMultiDict(
                 [
                     ("name", "exporter name"),
-                    ("id", service.id),
+                    ("id", str(service.id)),
                     ("protocol", ME.NAME),
-                    ("mirror_integration_id", s3.id),
                     (
                         "libraries",
                         json.dumps(
@@ -363,16 +283,9 @@ class TestCatalogServicesController:
             )
             assert response.status_code == 200
 
-        integration_link = get_one(
-            settings_ctrl_fixture.ctrl.db.session,
-            ExternalIntegrationLink,
-            external_integration_id=service.id,
-            purpose=ExternalIntegrationLink.MARC,
-        )
         assert service.id == int(response.get_data())
         assert ME.NAME == service.protocol
         assert "exporter name" == service.name
-        assert s3.id == integration_link.other_integration_id
         assert [settings_ctrl_fixture.ctrl.db.default_library()] == service.libraries
         assert (
             "false"
@@ -419,7 +332,7 @@ class TestCatalogServicesController:
             )
             assert response.status_code == 200
 
-        service = get_one(
+        none_service = get_one(
             settings_ctrl_fixture.ctrl.db.session, ExternalIntegration, id=service.id
         )
-        assert None == service
+        assert none_service is None

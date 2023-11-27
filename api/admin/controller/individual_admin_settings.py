@@ -6,12 +6,18 @@ from flask import Response
 from flask_babel import lazy_gettext as _
 from sqlalchemy.exc import ProgrammingError
 
-from api.admin.exceptions import *
-from api.admin.problem_details import *
+from api.admin.controller.settings import SettingsController
+from api.admin.exceptions import AdminNotAuthorized
+from api.admin.problem_details import (
+    ADMIN_AUTH_NOT_CONFIGURED,
+    INCOMPLETE_CONFIGURATION,
+    MISSING_ADMIN,
+    MISSING_PGCRYPTO_EXTENSION,
+    UNKNOWN_ROLE,
+)
+from api.problem_details import LIBRARY_NOT_FOUND
 from core.model import Admin, AdminRole, Library, get_one, get_one_or_create
 from core.util.problem_detail import ProblemDetail
-
-from . import SettingsController
 
 
 class IndividualAdminSettingsController(SettingsController):
@@ -48,7 +54,10 @@ class IndividualAdminSettingsController(SettingsController):
         return highest_role if has_auth else None
 
     def process_get(self):
-        logged_in_admin: Admin = flask.request.admin
+        logged_in_admin: Optional[Admin] = getattr(flask.request, "admin", None)
+        if not logged_in_admin:
+            return ADMIN_AUTH_NOT_CONFIGURED
+
         highest_role: AdminRole = self._highest_authorized_role()
 
         if not highest_role:
@@ -65,7 +74,6 @@ class IndividualAdminSettingsController(SettingsController):
             roles = []
             show_admin = True
             for role in admin.roles:
-
                 # System admin sees all
                 if highest_role.role == AdminRole.SYSTEM_ADMIN:
                     append_role(roles, role)
@@ -309,7 +317,8 @@ class IndividualAdminSettingsController(SettingsController):
 
     def handle_roles(self, admin, roles, settingUp):
         """Compare the admin's existing set of roles against the roles submitted in the form, and,
-        unless there's a problem with the roles or the permissions, modify the admin's roles accordingly"""
+        unless there's a problem with the roles or the permissions, modify the admin's roles accordingly
+        """
 
         # User = person submitting the form; admin = person who the form is about
 

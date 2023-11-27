@@ -2,13 +2,16 @@ import flask
 from flask import Response
 from flask_babel import lazy_gettext as _
 
-from api.admin.problem_details import *
+from api.admin.controller.settings import SettingsController
+from api.admin.problem_details import (
+    INCOMPLETE_CONFIGURATION,
+    MULTIPLE_SITEWIDE_SERVICES,
+    NO_PROTOCOL_FOR_NEW_SERVICE,
+    UNKNOWN_PROTOCOL,
+)
 from core.external_search import ExternalSearchIndex
-from core.log import CloudwatchLogs, SysLogger
 from core.model import ExternalIntegration, get_one_or_create
 from core.util.problem_detail import ProblemDetail
-
-from . import SettingsController
 
 
 class SitewideServicesController(SettingsController):
@@ -102,22 +105,6 @@ class SitewideServicesController(SettingsController):
             return INCOMPLETE_CONFIGURATION
         if protocol and protocol not in [p.get("name") for p in protocols]:
             return UNKNOWN_PROTOCOL
-
-
-class LoggingServicesController(SitewideServicesController):
-    def process_services(self):
-        detail = _(
-            "You tried to create a new logging service, but a logging service is already configured."
-        )
-        return self._manage_sitewide_service(
-            ExternalIntegration.LOGGING_GOAL,
-            [SysLogger, CloudwatchLogs],
-            "logging_services",
-            detail,
-        )
-
-    def process_delete(self, service_id):
-        return self._delete_integration(service_id, ExternalIntegration.LOGGING_GOAL)
 
 
 class SearchServicesController(SitewideServicesController):

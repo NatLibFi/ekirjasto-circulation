@@ -1,6 +1,7 @@
+import json
 import logging
 import os
-from typing import Dict
+from typing import Dict, List
 
 from flask_babel import lazy_gettext as _
 from sqlalchemy.engine.url import make_url
@@ -9,11 +10,8 @@ from sqlalchemy.exc import ArgumentError
 # It's convenient for other modules import IntegrationException
 # from this module, alongside CannotLoadConfiguration.
 from core.exceptions import IntegrationException
-
-from .entrypoint import EntryPoint
-from .facets import FacetConstants
-from .util import LanguageCodes
-from .util.datetime_helpers import to_utc, utc_now
+from core.util import LanguageCodes, ansible_boolean
+from core.util.datetime_helpers import to_utc, utc_now
 
 
 class CannotLoadConfiguration(IntegrationException):
@@ -28,28 +26,24 @@ class CannotLoadConfiguration(IntegrationException):
 
 
 class ConfigurationConstants:
-
-    # Each facet group has two associated per-library keys: one
-    # configuring which facets are enabled for that facet group, and
-    # one configuring which facet is the default.
-    ENABLED_FACETS_KEY_PREFIX = "facets_enabled_"
-    DEFAULT_FACET_KEY_PREFIX = "facets_default_"
-
-    # The "level" property determines which admins will be able to modify the setting.  Level 1 settings can be modified by anyone.
-    # Level 2 settings can be modified only by library managers and system admins (i.e. not by librarians).  Level 3 settings can be changed only by system admins.
-    # If no level is specified, the setting will be treated as Level 1 by default.
-    ALL_ACCESS = 1
-    SYS_ADMIN_OR_MANAGER = 2
-    SYS_ADMIN_ONLY = 3
+    TRUE = "true"
+    FALSE = "false"
 
 
 class Configuration(ConfigurationConstants):
-
     log = logging.getLogger("Configuration file loader")
 
     # Environment variables that contain URLs to the database
     DATABASE_TEST_ENVIRONMENT_VARIABLE = "SIMPLIFIED_TEST_DATABASE"
     DATABASE_PRODUCTION_ENVIRONMENT_VARIABLE = "SIMPLIFIED_PRODUCTION_DATABASE"
+
+    # TODO: We can remove this variable once basic token authentication is fully deployed.
+    # Patron token authentication enabled switch.
+    BASIC_TOKEN_AUTH_ENABLED_ENVVAR = "SIMPLIFIED_ENABLE_BASIC_TOKEN_AUTH"
+
+    # Environment variables for Firebase Cloud Messaging (FCM) service account key
+    FCM_CREDENTIALS_FILE_ENVIRONMENT_VARIABLE = "SIMPLIFIED_FCM_CREDENTIALS_FILE"
+    FCM_CREDENTIALS_JSON_ENVIRONMENT_VARIABLE = "SIMPLIFIED_FCM_CREDENTIALS_JSON"
 
     # Environment variable for Overdrive fulfillment keys
     OD_PREFIX_PRODUCTION_PREFIX = "SIMPLIFIED"
@@ -57,8 +51,18 @@ class Configuration(ConfigurationConstants):
     OD_FULFILLMENT_CLIENT_KEY_SUFFIX = "OVERDRIVE_FULFILLMENT_CLIENT_KEY"
     OD_FULFILLMENT_CLIENT_SECRET_SUFFIX = "OVERDRIVE_FULFILLMENT_CLIENT_SECRET"
 
+    # Quicksight
+    # Comma separated aws arns
+    QUICKSIGHT_AUTHORIZED_ARNS_KEY = "QUICKSIGHT_AUTHORIZED_ARNS"
+
     # Environment variable for SirsiDynix Auth
     SIRSI_DYNIX_APP_ID = "SIMPLIFIED_SIRSI_DYNIX_APP_ID"
+
+    # Environment variable for temporary reporting email
+    REPORTING_EMAIL_ENVIRONMENT_VARIABLE = "SIMPLIFIED_REPORTING_EMAIL"
+
+    # Environment variable for used to distinguish one CM environment from another in reports
+    REPORTING_NAME_ENVIRONMENT_VARIABLE = "PALACE_REPORTING_NAME"
 
     # ConfigurationSetting key for the base url of the app.
     BASE_URL_KEY = "base_url"
@@ -66,29 +70,14 @@ class Configuration(ConfigurationConstants):
     # ConfigurationSetting to enable the MeasurementReaper script
     MEASUREMENT_REAPER = "measurement_reaper_enabled"
 
-    # Lane policies
-    DEFAULT_OPDS_FORMAT = "verbose_opds_entry"
+    # Configuration key for push notifications status
+    PUSH_NOTIFICATIONS_STATUS = "push_notifications_status"
 
     # Integrations
     URL = "url"
     INTEGRATIONS = "integrations"
 
-    # The name of the per-library configuration policy that controls whether
-    # books may be put on hold.
-    ALLOW_HOLDS = "allow_holds"
-
-    # Each library may set a minimum quality for the books that show
-    # up in the 'featured' lanes that show up on the front page.
-    MINIMUM_FEATURED_QUALITY = "minimum_featured_quality"
     DEFAULT_MINIMUM_FEATURED_QUALITY = 0.65
-
-    # Each library may configure the maximum number of books in the
-    # 'featured' lanes.
-    FEATURED_LANE_SIZE = "featured_lane_size"
-
-    WEBSITE_URL = "website"
-    NAME = "name"
-    SHORT_NAME = "short_name"
 
     DEBUG = "DEBUG"
     INFO = "INFO"
@@ -164,133 +153,20 @@ class Configuration(ConfigurationConstants):
             "options": {"true": "true", "false": "false"},
             "default": "true",
         },
+        {
+            "key": PUSH_NOTIFICATIONS_STATUS,
+            "label": _("Push notifications status"),
+            "type": "select",
+            "description": _(
+                "If this settings is 'true' push notification jobs will run as scheduled, and attempt to notify patrons via mobile push notifications."
+            ),
+            "options": [
+                {"key": ConfigurationConstants.TRUE, "label": _("True")},
+                {"key": ConfigurationConstants.FALSE, "label": _("False")},
+            ],
+            "default": ConfigurationConstants.TRUE,
+        },
     ]
-
-    LIBRARY_SETTINGS = (
-        [
-            {
-                "key": NAME,
-                "label": _("Name"),
-                "description": _("The human-readable name of this library."),
-                "category": "Basic Information",
-                "level": ConfigurationConstants.SYS_ADMIN_ONLY,
-                "required": True,
-            },
-            {
-                "key": SHORT_NAME,
-                "label": _("Short name"),
-                "description": _(
-                    "A short name of this library, to use when identifying it in scripts or URLs, e.g. 'NYPL'."
-                ),
-                "category": "Basic Information",
-                "level": ConfigurationConstants.SYS_ADMIN_ONLY,
-                "required": True,
-            },
-            {
-                "key": WEBSITE_URL,
-                "label": _("URL of the library's website"),
-                "description": _(
-                    "The library's main website, e.g. \"https://www.nypl.org/\" (not this Circulation Manager's URL)."
-                ),
-                "required": True,
-                "format": "url",
-                "level": ConfigurationConstants.SYS_ADMIN_ONLY,
-                "category": "Basic Information",
-            },
-            {
-                "key": ALLOW_HOLDS,
-                "label": _("Allow books to be put on hold"),
-                "type": "select",
-                "options": [
-                    {"key": "true", "label": _("Allow holds")},
-                    {"key": "false", "label": _("Disable holds")},
-                ],
-                "default": "true",
-                "category": "Loans, Holds, & Fines",
-                "level": ConfigurationConstants.SYS_ADMIN_ONLY,
-            },
-            {
-                "key": EntryPoint.ENABLED_SETTING,
-                "label": _("Enabled entry points"),
-                "description": _(
-                    "Patrons will see the selected entry points at the top level and in search results. <p>Currently supported audiobook vendors: Bibliotheca, Axis 360"
-                ),
-                "type": "list",
-                "options": [
-                    {
-                        "key": entrypoint.INTERNAL_NAME,
-                        "label": EntryPoint.DISPLAY_TITLES.get(entrypoint),
-                    }
-                    for entrypoint in EntryPoint.ENTRY_POINTS
-                ],
-                "default": [x.INTERNAL_NAME for x in EntryPoint.DEFAULT_ENABLED],
-                "category": "Lanes & Filters",
-                # Renders a component with options that get narrowed down as the user makes selections.
-                "format": "narrow",
-                # Renders an input field that cannot be edited.
-                "readOnly": True,
-                "level": ConfigurationConstants.SYS_ADMIN_ONLY,
-            },
-            {
-                "key": FEATURED_LANE_SIZE,
-                "label": _("Maximum number of books in the 'featured' lanes"),
-                "type": "number",
-                "default": 15,
-                "category": "Lanes & Filters",
-                "level": ConfigurationConstants.ALL_ACCESS,
-            },
-            {
-                "key": MINIMUM_FEATURED_QUALITY,
-                "label": _(
-                    "Minimum quality for books that show up in 'featured' lanes"
-                ),
-                "description": _("Between 0 and 1."),
-                "type": "number",
-                "max": 1,
-                "default": DEFAULT_MINIMUM_FEATURED_QUALITY,
-                "category": "Lanes & Filters",
-                "level": ConfigurationConstants.ALL_ACCESS,
-            },
-        ]
-        + [
-            {
-                "key": ConfigurationConstants.ENABLED_FACETS_KEY_PREFIX + group,
-                "label": description,
-                "type": "list",
-                "options": [
-                    {
-                        "key": facet,
-                        "label": FacetConstants.FACET_DISPLAY_TITLES.get(facet),
-                    }
-                    for facet in FacetConstants.FACETS_BY_GROUP.get(group, [])
-                ],
-                "default": FacetConstants.FACETS_BY_GROUP.get(group),
-                "category": "Lanes & Filters",
-                # Tells the front end that each of these settings is related to the corresponding default setting.
-                "paired": ConfigurationConstants.DEFAULT_FACET_KEY_PREFIX + group,
-                "level": ConfigurationConstants.SYS_ADMIN_OR_MANAGER,
-            }
-            for group, description in FacetConstants.GROUP_DESCRIPTIONS.items()
-        ]
-        + [
-            {
-                "key": ConfigurationConstants.DEFAULT_FACET_KEY_PREFIX + group,
-                "label": _("Default %(group)s", group=display_name),
-                "type": "select",
-                "options": [
-                    {
-                        "key": facet,
-                        "label": FacetConstants.FACET_DISPLAY_TITLES.get(facet),
-                    }
-                    for facet in FacetConstants.FACETS_BY_GROUP.get(group, [])
-                ],
-                "default": FacetConstants.DEFAULT_FACET.get(group),
-                "category": "Lanes & Filters",
-                "skip": True,
-            }
-            for group, display_name in FacetConstants.GROUP_DISPLAY_TITLES.items()
-        ]
-    )
 
     @classmethod
     def database_url(cls):
@@ -336,6 +212,69 @@ class Configuration(ConfigurationConstants):
         logging.info("Connecting to database: %s" % url_obj.__to_string__())
         return url
 
+    # TODO: We can remove this method once basic token authentication is fully deployed.
+    @classmethod
+    def basic_token_auth_is_enabled(cls) -> bool:
+        """Is basic token authentication enabled?
+
+        Return False, if the variable is unset or is an empty string.
+        Raises CannotLoadConfiguration, if the setting is invalid.
+        :raise CannotLoadConfiguration: If the setting contains an unsupported value.
+        """
+        try:
+            return ansible_boolean(
+                os.environ.get(cls.BASIC_TOKEN_AUTH_ENABLED_ENVVAR),
+                label=cls.BASIC_TOKEN_AUTH_ENABLED_ENVVAR,
+                default=False,
+            )
+        except (TypeError, ValueError) as e:
+            raise CannotLoadConfiguration(
+                f"Invalid value for {cls.BASIC_TOKEN_AUTH_ENABLED_ENVVAR} environment variable."
+            ) from e
+
+    @classmethod
+    def fcm_credentials(cls) -> Dict[str, str]:
+        """Returns a dictionary containing Firebase Cloud Messaging credentials.
+
+        Credentials are provided as a JSON string, either (1) directly in an environment
+        variable or (2) in a file that is specified in another environment variable.
+        """
+        config_json = os.environ.get(cls.FCM_CREDENTIALS_JSON_ENVIRONMENT_VARIABLE, "")
+        config_file = os.environ.get(cls.FCM_CREDENTIALS_FILE_ENVIRONMENT_VARIABLE, "")
+        if not config_json and not config_file:
+            raise CannotLoadConfiguration(
+                "FCM Credentials configuration environment variable not defined. "
+                f"Use either '{cls.FCM_CREDENTIALS_JSON_ENVIRONMENT_VARIABLE}' "
+                f"or '{cls.FCM_CREDENTIALS_FILE_ENVIRONMENT_VARIABLE}'."
+            )
+        if config_json and config_file:
+            raise CannotLoadConfiguration(
+                f"Both JSON ('{cls.FCM_CREDENTIALS_JSON_ENVIRONMENT_VARIABLE}') "
+                f"and file-based ('{cls.FCM_CREDENTIALS_FILE_ENVIRONMENT_VARIABLE}') "
+                "FCM Credential environment variables are defined, but only one is allowed."
+            )
+        if config_json:
+            try:
+                return json.loads(config_json, strict=False)
+            except:
+                raise CannotLoadConfiguration(
+                    "Cannot parse value of FCM credential environment variable "
+                    f"'{cls.FCM_CREDENTIALS_JSON_ENVIRONMENT_VARIABLE}' as JSON."
+                )
+
+        # If we make it this far, we are dealing with a configuration file.
+        if not os.path.exists(config_file):
+            raise FileNotFoundError(
+                f"The FCM credentials file ('{config_file}') does not exist."
+            )
+        with open(config_file) as f:
+            try:
+                return json.load(f)
+            except:
+                raise CannotLoadConfiguration(
+                    f"Cannot parse contents of FCM credentials file ('{config_file}') as JSON."
+                )
+
     @classmethod
     def overdrive_fulfillment_keys(cls, testing=False) -> Dict[str, str]:
         prefix = (
@@ -348,6 +287,12 @@ class Configuration(ConfigurationConstants):
         if not key:
             raise CannotLoadConfiguration("Invalid fulfillment credentials.")
         return {"key": key, "secret": secret}
+
+    @classmethod
+    def quicksight_authorized_arns(cls) -> Dict[str, List[str]]:
+        """Split the comma separated arns"""
+        arns_str = os.environ.get(cls.QUICKSIGHT_AUTHORIZED_ARNS_KEY, "")
+        return json.loads(arns_str)
 
     @classmethod
     def localization_languages(cls):
@@ -406,7 +351,7 @@ class Configuration(ConfigurationConstants):
         # NOTE: Currently we never check the database (because timeout is
         # never set to None). This code will hopefully be removed soon.
         if _db and timeout is None:
-            from .model import ConfigurationSetting
+            from core.model import ConfigurationSetting
 
             timeout = ConfigurationSetting.sitewide(
                 _db, cls.SITE_CONFIGURATION_TIMEOUT
@@ -435,7 +380,7 @@ class Configuration(ConfigurationConstants):
         # site_configuration_was_changed() (defined in model.py) was
         # called.
         if not known_value:
-            from .model import Timestamp
+            from core.model import Timestamp
 
             known_value = Timestamp.value(
                 _db, cls.SITE_CONFIGURATION_CHANGED, service_type=None, collection=None

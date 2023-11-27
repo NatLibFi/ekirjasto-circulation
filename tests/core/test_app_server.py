@@ -1,16 +1,19 @@
 import gzip
 import json
+from functools import partial
 from io import BytesIO
-from typing import Iterable
+from typing import Callable, Iterable
+from unittest.mock import MagicMock, PropertyMock
 
 import flask
 import pytest
-from flask import Flask, make_response
+from flask import Flask, Response, make_response
 from flask_babel import Babel
 from flask_babel import lazy_gettext as _
 
 import core
 from api.admin.config import Configuration as AdminUiConfig
+from api.util.flask import PalaceFlask
 from core.app_server import (
     ApplicationVersionController,
     ErrorHandler,
@@ -20,15 +23,15 @@ from core.app_server import (
     load_facets_from_request,
     load_pagination_from_request,
 )
-from core.config import Configuration
-from core.entrypoint import AudiobooksEntryPoint, EbooksEntryPoint, EntryPoint
+from core.entrypoint import AudiobooksEntryPoint, EbooksEntryPoint
+from core.feed.annotator.base import Annotator
 from core.lane import Facets, Pagination, SearchFacets, WorkList
-from core.log import LogConfiguration
-from core.model import ConfigurationSetting, Identifier
-from core.opds import MockAnnotator
+from core.model import Identifier
 from core.problem_details import INVALID_INPUT, INVALID_URN
+from core.service.logging.configuration import LogLevel
 from core.util.opds_writer import OPDSFeed, OPDSMessage
 from tests.fixtures.database import DatabaseTransactionFixture
+from tests.fixtures.library import LibraryFixture
 
 
 class TestApplicationVersionController:
@@ -264,7 +267,7 @@ class TestURNLookupController:
 
         work = data.transaction.work(with_license_pool=True)
         identifier = work.license_pools[0].identifier
-        annotator = MockAnnotator()
+        annotator = Annotator()
         # NOTE: We run this test twice to verify that the controller
         # doesn't keep any state between requests. At one point there
         # was a bug which would have caused a book to show up twice on
@@ -310,7 +313,7 @@ class TestURNLookupController:
         work = data.transaction.work(with_license_pool=True)
         work.license_pools[0].open_access = False
         identifier = work.license_pools[0].identifier
-        annotator = MockAnnotator()
+        annotator = Annotator()
         with data.app.test_request_context("/?urn=%s" % identifier.urn):
             response = data.controller.permalink(identifier.urn, annotator)
 
@@ -339,24 +342,29 @@ def load_methods_fixture(
 
 
 class TestLoadMethods:
-    def test_load_facets_from_request(self, load_methods_fixture: LoadMethodsFixture):
+    def test_load_facets_from_request(
+        self, load_methods_fixture: LoadMethodsFixture, library_fixture: LibraryFixture
+    ):
         fixture, data = load_methods_fixture, load_methods_fixture.transaction
 
         # The library has two EntryPoints enabled.
-        data.default_library().setting(EntryPoint.ENABLED_SETTING).value = json.dumps(
-            [EbooksEntryPoint.INTERNAL_NAME, AudiobooksEntryPoint.INTERNAL_NAME]
-        )
+        settings = library_fixture.mock_settings()
+        settings.enabled_entry_points = [
+            EbooksEntryPoint.INTERNAL_NAME,
+            AudiobooksEntryPoint.INTERNAL_NAME,
+        ]
+        library = data.library(settings=settings)
 
         with fixture.app.test_request_context("/?order=%s" % Facets.ORDER_TITLE):
-            flask.request.library = data.default_library()
+            flask.request.library = library  # type: ignore[attr-defined]
             facets = load_facets_from_request()
             assert Facets.ORDER_TITLE == facets.order
             # Enabled facets are passed in to the newly created Facets,
             # in case the load method received a custom config.
-            assert facets.facets_enabled_at_init != None
+            assert facets.facets_enabled_at_init is not None
 
         with fixture.app.test_request_context("/?order=bad_facet"):
-            flask.request.library = data.default_library()
+            flask.request.library = library  # type: ignore[attr-defined]
             problemdetail = load_facets_from_request()
             assert INVALID_INPUT.uri == problemdetail.uri
 
@@ -364,28 +372,28 @@ class TestLoadMethods:
         # into the Facets object, assuming the EntryPoint is
         # configured on the present library.
         worklist = WorkList()
-        worklist.initialize(data.default_library())
+        worklist.initialize(library)
         with fixture.app.test_request_context("/?entrypoint=Audio"):
-            flask.request.library = data.default_library()
+            flask.request.library = library  # type: ignore[attr-defined]
             facets = load_facets_from_request(worklist=worklist)
             assert AudiobooksEntryPoint == facets.entrypoint
-            assert False == facets.entrypoint_is_default
+            assert facets.entrypoint_is_default is False
 
         # If the requested EntryPoint not configured, the default
         # EntryPoint is used.
         with fixture.app.test_request_context("/?entrypoint=NoSuchEntryPoint"):
-            flask.request.library = data.default_library()
+            flask.request.library = library  # type: ignore[attr-defined]
             default_entrypoint = object()
             facets = load_facets_from_request(
                 worklist=worklist, default_entrypoint=default_entrypoint
             )
             assert default_entrypoint == facets.entrypoint
-            assert True == facets.entrypoint_is_default
+            assert facets.entrypoint_is_default is True
 
         # Load a SearchFacets object that pulls information from an
         # HTTP header.
         with fixture.app.test_request_context("/", headers={"Accept-Language": "ja"}):
-            flask.request.library = data.default_library()
+            flask.request.library = data.default_library()  # type: ignore[attr-defined]
             facets = load_facets_from_request(base_class=SearchFacets)
             assert ["jpn"] == facets.languages
 
@@ -399,6 +407,8 @@ class TestLoadMethods:
         fixture, data = load_methods_fixture, load_methods_fixture.transaction
 
         class MockFacets:
+            called_with: dict
+
             @classmethod
             def from_request(*args, **kwargs):
                 facets = MockFacets()
@@ -407,7 +417,7 @@ class TestLoadMethods:
 
         kwargs = dict(some_arg="some value")
         with fixture.app.test_request_context(""):
-            flask.request.library = data.default_library()
+            flask.request.library = data.default_library()  # type: ignore[attr-defined]
             facets = load_facets_from_request(
                 None, None, base_class=MockFacets, base_class_constructor_kwargs=kwargs
             )
@@ -424,6 +434,7 @@ class TestLoadMethods:
         # default.)
         class Mock:
             DEFAULT_SIZE = 22
+            called_with: tuple
 
             @classmethod
             def from_request(cls, get_arg, default_size, **kwargs):
@@ -474,7 +485,8 @@ class CanBeProblemDetailDocument(Exception):
 
 class ErrorHandlerFixture:
     transaction: DatabaseTransactionFixture
-    app: Flask
+    app: PalaceFlask
+    handler: Callable[..., ErrorHandler]
 
 
 @pytest.fixture()
@@ -483,52 +495,39 @@ def error_handler_fixture(
 ) -> ErrorHandlerFixture:
     session = db.session
 
-    class MockManager:
-        """Simulate an application manager object such as
-        the circulation manager's CirculationManager.
-
-        This gives ErrorHandler access to a database connection.
-        """
-
-        _db = session
+    mock_manager = MagicMock()
+    type(mock_manager)._db = PropertyMock(return_value=session)
 
     data = ErrorHandlerFixture()
     data.transaction = db
-    data.app = Flask(ErrorHandlerFixture.__name__)
-    data.app.manager = MockManager()
+    data.app = PalaceFlask(ErrorHandlerFixture.__name__)
     Babel(data.app)
+    data.app.manager = mock_manager
+    data.handler = partial(ErrorHandler, app=data.app, log_level=LogLevel.error)
     return data
 
 
 class TestErrorHandler:
-    def activate_debug_mode(self, session):
-        """Set a site-wide setting that controls whether
-        detailed exception information is provided.
-        """
-        ConfigurationSetting.sitewide(
-            session, Configuration.DATABASE_LOG_LEVEL
-        ).value = LogConfiguration.DEBUG
-
     def raise_exception(self, cls=Exception):
         """Simulate an exception that happens deep within the stack."""
         raise cls()
 
     def test_unhandled_error(self, error_handler_fixture: ErrorHandlerFixture):
-        handler = ErrorHandler(error_handler_fixture.app)
+        handler = error_handler_fixture.handler()
         with error_handler_fixture.app.test_request_context("/"):
             response = None
             try:
                 self.raise_exception()
             except Exception as exception:
                 response = handler.handle(exception)
+            assert isinstance(response, Response)
             assert 500 == response.status_code
-            assert "An internal error occured" == response.data.decode("utf8")
+            assert "An internal error occurred" == response.data.decode("utf8")
 
     def test_unhandled_error_debug(self, error_handler_fixture: ErrorHandlerFixture):
         # Set the sitewide log level to DEBUG to get a stack trace
         # instead of a generic error message.
-        handler = ErrorHandler(error_handler_fixture.app)
-        self.activate_debug_mode(error_handler_fixture.transaction.session)
+        handler = error_handler_fixture.handler(log_level=LogLevel.debug)
 
         with error_handler_fixture.app.test_request_context("/"):
             response = None
@@ -536,19 +535,21 @@ class TestErrorHandler:
                 self.raise_exception()
             except Exception as exception:
                 response = handler.handle(exception)
+            assert isinstance(response, Response)
             assert 500 == response.status_code
             assert response.data.startswith(b"Traceback (most recent call last)")
 
     def test_handle_error_as_problem_detail_document(
         self, error_handler_fixture: ErrorHandlerFixture
     ):
-        handler = ErrorHandler(error_handler_fixture.app)
+        handler = error_handler_fixture.handler()
         with error_handler_fixture.app.test_request_context("/"):
             try:
                 self.raise_exception(CanBeProblemDetailDocument)
             except Exception as exception:
                 response = handler.handle(exception)
 
+            assert isinstance(response, Response)
             assert 400 == response.status_code
             data = json.loads(response.data.decode("utf8"))
             assert INVALID_URN.title == data["title"]
@@ -562,14 +563,14 @@ class TestErrorHandler:
     ):
         # When in debug mode, the debug_message is preserved and a
         # stack trace is appended to it.
-        handler = ErrorHandler(error_handler_fixture.app)
-        self.activate_debug_mode(error_handler_fixture.transaction.session)
+        handler = error_handler_fixture.handler(log_level=LogLevel.debug)
         with error_handler_fixture.app.test_request_context("/"):
             try:
                 self.raise_exception(CanBeProblemDetailDocument)
             except Exception as exception:
                 response = handler.handle(exception)
 
+            assert isinstance(response, Response)
             assert 400 == response.status_code
             data = json.loads(response.data.decode("utf8"))
             assert INVALID_URN.title == data["title"]

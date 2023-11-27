@@ -7,7 +7,6 @@ from psycopg2.extras import NumericRange
 
 from core.classifier import Classifier, Fantasy, Romance, Science_Fiction
 from core.equivalents_coverage import EquivalentIdentifiersCoverageProvider
-from core.external_search import MockExternalSearchIndex
 from core.model import get_one_or_create, tuple_to_numericrange
 from core.model.classification import Genre, Subject
 from core.model.contributor import Contributor
@@ -21,6 +20,7 @@ from core.model.work import Work, WorkGenre
 from core.util.datetime_helpers import datetime_utc, from_timestamp, utc_now
 from tests.fixtures.database import DatabaseTransactionFixture
 from tests.fixtures.sample_covers import SampleCoversFixture
+from tests.fixtures.search import ExternalSearchFixtureFake
 
 
 class TestWork:
@@ -95,7 +95,11 @@ class TestWork:
         # Because the work's license_pool isn't suppressed, it isn't returned.
         assert [] == result
 
-    def test_calculate_presentation(self, db: DatabaseTransactionFixture):
+    def test_calculate_presentation(
+        self,
+        db: DatabaseTransactionFixture,
+        external_search_fake_fixture: ExternalSearchFixtureFake,
+    ):
         # Test that:
         # - work coverage records are made on work creation and primary edition selection.
         # - work's presentation information (author, title, etc. fields) does a proper job
@@ -204,14 +208,12 @@ class TestWork:
         assert "Alice Adder, Bob Bitshifter" == work.author
 
         # This Work starts out with a single CoverageRecord reflecting
-        # the work done to generate its initial OPDS entry, and then
-        # it adds choose-edition as a primary edition is set. The
+        # the work done to choose-edition as a primary edition is set. The
         # search index CoverageRecord is a marker for work that must
         # be done in the future, and is not tested here.
-        [choose_edition, generate_opds, update_search_index] = sorted(
+        [choose_edition, update_search_index] = sorted(
             work.coverage_records, key=lambda x: x.operation
         )
-        assert generate_opds.operation == WorkCoverageRecord.GENERATE_OPDS_OPERATION
         assert choose_edition.operation == WorkCoverageRecord.CHOOSE_EDITION_OPERATION
 
         # pools aren't yet aware of each other
@@ -221,7 +223,7 @@ class TestWork:
 
         work.last_update_time = None
         work.presentation_ready = True
-        index = MockExternalSearchIndex()
+        index = external_search_fake_fixture.external_search
 
         work.calculate_presentation(search_index_client=index)
 
@@ -252,13 +254,13 @@ class TestWork:
 
         # The summary has now been chosen.
         assert chosen_summary == work.summary.representation.content.decode("utf-8")
-
+        assert work.last_update_time is not None
         # The last update time has been set.
         # Updating availability also modified work.last_update_time.
-        assert (utc_now() - work.last_update_time) < datetime.timedelta(seconds=2)
+        assert (utc_now() - work.last_update_time) < datetime.timedelta(seconds=2)  # type: ignore[unreachable]
 
         # The index has not been updated.
-        assert [] == list(index.docs.items())
+        assert [] == external_search_fake_fixture.search.documents_all()
 
         # The Work now has a complete set of WorkCoverageRecords
         # associated with it, reflecting all the operations that
@@ -276,7 +278,6 @@ class TestWork:
             (wcr.CLASSIFY_OPERATION, success),
             (wcr.SUMMARY_OPERATION, success),
             (wcr.QUALITY_OPERATION, success),
-            (wcr.GENERATE_OPDS_OPERATION, success),
             (wcr.GENERATE_MARC_OPERATION, success),
             (wcr.UPDATE_SEARCH_INDEX_OPERATION, wcr.REGISTERED),
         }
@@ -403,6 +404,8 @@ class TestWork:
         # calculate_presentation().
 
         class Mock(Work):
+            the_summary: str
+
             def set_summary(self, summary):
                 if isinstance(summary, Resource):
                     self.summary_text = summary.representation.unicode_content
@@ -466,24 +469,19 @@ class TestWork:
         assert l1.resource.representation.content.decode("utf-8") == w.summary_text
 
     def test_set_presentation_ready_based_on_content(
-        self, db: DatabaseTransactionFixture
+        self,
+        db: DatabaseTransactionFixture,
+        external_search_fake_fixture: ExternalSearchFixtureFake,
     ):
         work = db.work(with_license_pool=True)
 
-        search = MockExternalSearchIndex()
-        # This is how the work will be represented in the dummy search
-        # index.
-        index_key = (
-            search.works_index,
-            work.id,
-        )
-
+        search = external_search_fake_fixture.external_search
         presentation = work.presentation_edition
         work.set_presentation_ready_based_on_content(search_index_client=search)
         assert True == work.presentation_ready
 
         # The work has not been added to the search index.
-        assert [] == list(search.docs.keys())
+        assert [] == external_search_fake_fixture.search.documents_all()
 
         # But the work of adding it to the search engine has been
         # registered.
@@ -843,6 +841,7 @@ class TestWork:
         self,
         db,
         sample_covers_fixture: SampleCoversFixture,
+        external_search_fake_fixture: ExternalSearchFixtureFake,
     ):
         edition, lp = db.edition(with_open_access_download=True)
 
@@ -887,13 +886,6 @@ class TestWork:
             assert None == work_or_edition.cover_thumbnail_url
             assert True == (cover_link.resource.voted_quality < 0)
             assert True == (cover_link.resource.votes_for_quality > 0)
-
-            if isinstance(work_or_edition, Work):
-                # It also removes the link from the cached OPDS entries.
-                for url in [full_url, thumbnail_url]:
-                    assert url not in work.simple_opds_entry
-                    assert url not in work.verbose_opds_entry
-
             return True
 
         def reset_cover():
@@ -906,12 +898,9 @@ class TestWork:
             work.calculate_presentation(search_index_client=index)
             assert full_url == work.cover_full_url
             assert thumbnail_url == work.cover_thumbnail_url
-            for url in [full_url, thumbnail_url]:
-                assert url in work.simple_opds_entry
-                assert url in work.verbose_opds_entry
 
         # Suppressing the cover removes the cover from the work.
-        index = MockExternalSearchIndex()
+        index = external_search_fake_fixture.external_search
         Work.reject_covers(db.session, [work], search_index_client=index)
         assert has_no_cover(work)
         reset_cover()
@@ -951,6 +940,7 @@ class TestWork:
 
         # But if we disqualify coverage records created before a
         # certain time, it might need coverage again.
+        assert isinstance(record.timestamp, datetime.datetime)
         cutoff = record.timestamp + datetime.timedelta(seconds=1)
 
         assert [work] == Work.missing_coverage_from(
@@ -1441,37 +1431,7 @@ class TestWork:
         work = db.work(presentation_edition=edition)
 
         pool.open_access = False
-        pool.self_hosted = False
         pool.unlimited_access = True
-
-        # Make sure all of this will show up in a database query.
-        db.session.flush()
-
-        search_doc = work.to_search_document()
-
-        # Each LicensePool for the Work is listed in
-        # the 'licensepools' section.
-        licensepools = search_doc["licensepools"]
-        assert 1 == len(licensepools)
-        assert licensepools[0]["open_access"] == False
-        assert licensepools[0]["available"] == True
-
-    def test_self_hosted_books_are_available_by_default(
-        self, db: DatabaseTransactionFixture
-    ):
-        # Set up an edition and work.
-        edition, pool = db.edition(
-            authors=[
-                db.fresh_str(),
-                db.fresh_str(),
-            ],
-            with_license_pool=True,
-        )
-        work = db.work(presentation_edition=edition)
-
-        pool.licenses_owned = 0
-        pool.licenses_available = 0
-        pool.self_hosted = True
 
         # Make sure all of this will show up in a database query.
         db.session.flush()
@@ -1605,13 +1565,17 @@ class TestWork:
             record = find_record(work)
             assert registered == record.status
 
-    def test_reset_coverage(self, db: DatabaseTransactionFixture):
+    def test_reset_coverage(
+        self,
+        db: DatabaseTransactionFixture,
+        external_search_fake_fixture: ExternalSearchFixtureFake,
+    ):
         # Test the methods that reset coverage for works, indicating
         # that some task needs to be performed again.
         WCR = WorkCoverageRecord
         work = db.work()
         work.presentation_ready = True
-        index = MockExternalSearchIndex()
+        index = external_search_fake_fixture.external_search
 
         # Calling _reset_coverage when there is no coverage creates
         # a new WorkCoverageRecord in the REGISTERED state
@@ -1643,7 +1607,7 @@ class TestWork:
         # The work was not added to the search index when we called
         # external_index_needs_updating. That happens later, when the
         # WorkCoverageRecord is processed.
-        assert [] == list(index.docs.values())
+        assert [] == external_search_fake_fixture.search.documents_all()
 
     def test_for_unchecked_subjects(self, db: DatabaseTransactionFixture):
         w1 = db.work(with_license_pool=True)
@@ -1670,32 +1634,8 @@ class TestWork:
         classification2.subject.checked = True
         assert [] == qu.all()
 
-    def test_calculate_opds_entries(self, db: DatabaseTransactionFixture):
-        """Verify that calculate_opds_entries sets both simple and verbose
-        entries.
-        """
-        work = db.work()
-        work.simple_opds_entry = None
-        work.verbose_opds_entry = None
-
-        work.calculate_opds_entries(verbose=False)
-        simple_entry = work.simple_opds_entry
-        assert simple_entry.startswith("<entry")
-        assert None == work.verbose_opds_entry
-
-        work.calculate_opds_entries(verbose=True)
-        # The simple OPDS entry is the same length as before.
-        # It's not necessarily _exactly_ the same because the
-        # <updated> timestamp may be different.
-        assert len(simple_entry) == len(work.simple_opds_entry)
-
-        # The verbose OPDS entry is longer than the simple one.
-        assert work.verbose_opds_entry.startswith("<entry")
-        assert len(work.verbose_opds_entry) > len(simple_entry)
-
     def test_calculate_marc_record(self, db: DatabaseTransactionFixture):
         work = db.work(with_license_pool=True)
-        work.marc_record = None
 
         work.calculate_marc_record()
         assert work.title in work.marc_record
@@ -1920,6 +1860,7 @@ class TestWorkConsolidation:
             "1",
             collection=collection,
         )
+        assert pool is not None
         work, created = pool.calculate_work()
         assert None == work
 

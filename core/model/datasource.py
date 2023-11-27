@@ -5,20 +5,21 @@ from collections import defaultdict
 from typing import TYPE_CHECKING, Dict, List
 from urllib.parse import quote, unquote
 
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String
+from sqlalchemy import Boolean, Column, Integer, String
 from sqlalchemy.dialects.postgresql import JSON
 from sqlalchemy.ext.mutable import MutableDict
-from sqlalchemy.orm import Mapped, backref, relationship
+from sqlalchemy.orm import Mapped, relationship
 
-from . import Base, get_one, get_one_or_create
-from .constants import DataSourceConstants, IdentifierConstants
-from .hassessioncache import HasSessionCache
-from .licensing import LicensePoolDeliveryMechanism
+from core.model import Base, get_one, get_one_or_create
+from core.model.constants import DataSourceConstants, IdentifierConstants
+from core.model.hassessioncache import HasSessionCache
+from core.model.licensing import LicensePoolDeliveryMechanism
 
 if TYPE_CHECKING:
     # This is needed during type checking so we have the
     # types of related models.
-    from core.model import (  # noqa: autoflake
+    from api.lanes import Lane
+    from core.model import (
         Classification,
         CoverageRecord,
         Credential,
@@ -26,7 +27,6 @@ if TYPE_CHECKING:
         Edition,
         Equivalency,
         Hyperlink,
-        IntegrationClient,
         LicensePool,
         Measurement,
         Resource,
@@ -44,18 +44,6 @@ class DataSource(Base, HasSessionCache, DataSourceConstants):
     primary_identifier_type = Column(String, index=True)
     extra: Mapped[Dict[str, str]] = Column(MutableDict.as_mutable(JSON), default={})
 
-    # One DataSource can have one IntegrationClient.
-    integration_client_id = Column(
-        Integer,
-        ForeignKey("integrationclients.id"),
-        unique=True,
-        index=True,
-        nullable=True,
-    )
-    integration_client: Mapped[IntegrationClient] = relationship(
-        "IntegrationClient", backref=backref("data_source", uselist=False)
-    )
-
     # One DataSource can generate many Editions.
     editions: Mapped[List[Edition]] = relationship(
         "Edition", back_populates="data_source", uselist=True
@@ -63,7 +51,7 @@ class DataSource(Base, HasSessionCache, DataSourceConstants):
 
     # One DataSource can generate many CoverageRecords.
     coverage_records: Mapped[List[CoverageRecord]] = relationship(
-        "CoverageRecord", backref="data_source"
+        "CoverageRecord", back_populates="data_source"
     )
 
     # One DataSource can generate many IDEquivalencies.
@@ -84,7 +72,7 @@ class DataSource(Base, HasSessionCache, DataSourceConstants):
 
     # One DataSource can generate many Measurements.
     measurements: Mapped[List[Measurement]] = relationship(
-        "Measurement", backref="data_source"
+        "Measurement", back_populates="data_source"
     )
 
     # One DataSource can provide many Classifications.
@@ -94,12 +82,12 @@ class DataSource(Base, HasSessionCache, DataSourceConstants):
 
     # One DataSource can have many associated Credentials.
     credentials: Mapped[List[Credential]] = relationship(
-        "Credential", backref="data_source"
+        "Credential", back_populates="data_source"
     )
 
     # One DataSource can generate many CustomLists.
     custom_lists: Mapped[List[CustomList]] = relationship(
-        "CustomList", backref="data_source"
+        "CustomList", back_populates="data_source"
     )
 
     # One DataSource can provide many LicensePoolDeliveryMechanisms.
@@ -107,6 +95,18 @@ class DataSource(Base, HasSessionCache, DataSourceConstants):
         "LicensePoolDeliveryMechanism",
         backref="data_source",
         foreign_keys=lambda: [LicensePoolDeliveryMechanism.data_source_id],
+    )
+
+    license_lanes: Mapped[List[Lane]] = relationship(
+        "Lane",
+        back_populates="license_datasource",
+        foreign_keys="Lane.license_datasource_id",
+    )
+
+    list_lanes: Mapped[List[Lane]] = relationship(
+        "Lane",
+        back_populates="_list_datasource",
+        foreign_keys="Lane._list_datasource_id",
     )
 
     def __repr__(self):
@@ -237,7 +237,6 @@ class DataSource(Base, HasSessionCache, DataSourceConstants):
                 IdentifierConstants.BIBLIOTHECA_ID,
                 60 * 60 * 6,
             ),
-            (cls.ODILO, True, False, IdentifierConstants.ODILO_ID, 0),
             (cls.AXIS_360, True, False, IdentifierConstants.AXIS_360_ID, 0),
             (cls.OCLC, False, False, None, None),
             (cls.OCLC_LINKED_DATA, False, False, None, None),
@@ -291,7 +290,6 @@ class DataSource(Base, HasSessionCache, DataSourceConstants):
             (cls.ENKI, True, False, IdentifierConstants.ENKI_ID, None),
             (cls.PROQUEST, True, False, IdentifierConstants.PROQUEST_ID, None),
         ):
-
             obj = DataSource.lookup(
                 _db,
                 name,

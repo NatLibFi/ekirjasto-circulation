@@ -22,18 +22,18 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, relationship
 from sqlalchemy.orm.session import Session
 
+from core.classifier import Classifier
+from core.model import Base, get_one_or_create, numericrange_to_tuple
+from core.model.constants import LinkRelations
+from core.model.credential import Credential
 from core.model.hybrid import hybrid_property
-
-from ..classifier import Classifier
-from ..user_profile import ProfileStorage
-from ..util.datetime_helpers import utc_now
-from . import Base, get_one_or_create, numericrange_to_tuple
-from .credential import Credential
+from core.user_profile import ProfileStorage
+from core.util.datetime_helpers import utc_now
 
 if TYPE_CHECKING:
-    from core.model import IntegrationClient  # noqa: autoflake
-    from core.model.library import Library  # noqa: autoflake
-    from core.model.licensing import LicensePool  # noqa: autoflake
+    from core.model.devicetokens import DeviceToken
+    from core.model.library import Library
+    from core.model.licensing import License, LicensePool, LicensePoolDeliveryMechanism
 
 
 class LoanAndHoldMixin:
@@ -59,7 +59,6 @@ class LoanAndHoldMixin:
 
 
 class Patron(Base):
-
     __tablename__ = "patrons"
     id = Column(Integer, primary_key=True)
 
@@ -174,8 +173,10 @@ class Patron(Base):
 
     # One Patron can have many associated Credentials.
     credentials: Mapped[List[Credential]] = relationship(
-        "Credential", backref="patron", cascade="delete"
+        "Credential", back_populates="patron", cascade="delete"
     )
+
+    device_tokens: list[DeviceToken]
 
     __table_args__ = (
         UniqueConstraint("library_id", "username"),
@@ -190,7 +191,7 @@ class Patron(Base):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.neighborhood: Optional[str] = None
+        self.neighborhood: str | None = None
 
     def __repr__(self):
         def date(d):
@@ -262,6 +263,15 @@ class Patron(Base):
         """
         return 15 * 60
 
+    def is_last_loan_activity_stale(self) -> bool:
+        """Has the last_loan_activity_sync timestamp outlived the loan_activity_max_age seconds"""
+        if not self._last_loan_activity_sync:
+            return True
+
+        return utc_now() > self._last_loan_activity_sync + datetime.timedelta(
+            seconds=self.loan_activity_max_age
+        )
+
     @hybrid_property
     def last_loan_activity_sync(self):
         """When was the last time we asked the vendors about
@@ -270,19 +280,9 @@ class Patron(Base):
         :return: A datetime, or None if we know our loan data is
             stale.
         """
-        value = self._last_loan_activity_sync
-        if not value:
-            return value
-
-        # We have an answer, but it may be so old that we should clear
-        # it out.
-        now = utc_now()
-        expires = value + datetime.timedelta(seconds=self.loan_activity_max_age)
-        if now > expires:
-            # The value has expired. Clear it out.
-            value = None
-            self._last_loan_activity_sync = value
-        return value
+        if self.is_last_loan_activity_stale():
+            return None
+        return self._last_loan_activity_sync
 
     @last_loan_activity_sync.setter
     def last_loan_activity_sync(self, value):
@@ -326,7 +326,7 @@ class Patron(Base):
             return None
 
         _db = Session.object_session(self)
-        from ..lane import Lane
+        from core.lane import Lane
 
         qu = (
             _db.query(Lane)
@@ -529,10 +529,9 @@ Index("ix_patron_library_id_username", Patron.library_id, Patron.username)
 class Loan(Base, LoanAndHoldMixin):
     __tablename__ = "loans"
     id = Column(Integer, primary_key=True)
+
     patron_id = Column(Integer, ForeignKey("patrons.id"), index=True)
-    integration_client_id = Column(
-        Integer, ForeignKey("integrationclients.id"), index=True
-    )
+    patron: Patron  # typing
 
     # A Loan is always associated with a LicensePool.
     license_pool_id = Column(Integer, ForeignKey("licensepools.id"), index=True)
@@ -543,13 +542,18 @@ class Loan(Base, LoanAndHoldMixin):
     # It may also be associated with an individual License if the source
     # provides information about individual licenses.
     license_id = Column(Integer, ForeignKey("licenses.id"), index=True, nullable=True)
+    license: Mapped[License] = relationship("License", back_populates="loans")
 
     fulfillment_id = Column(Integer, ForeignKey("licensepooldeliveries.id"))
+    fulfillment: Mapped[Optional[LicensePoolDeliveryMechanism]] = relationship(
+        "LicensePoolDeliveryMechanism", back_populates="fulfills"
+    )
     start = Column(DateTime(timezone=True), index=True)
     end = Column(DateTime(timezone=True), index=True)
     # Some distributors (e.g. Feedbooks) may have an identifier that can
     # be used to check the status of a specific Loan.
     external_identifier = Column(Unicode, unique=True, nullable=True)
+    patron_last_notified = Column(DateTime, nullable=True)
 
     __table_args__ = (UniqueConstraint("patron_id", "license_pool_id"),)
 
@@ -573,9 +577,6 @@ class Hold(Base, LoanAndHoldMixin):
     __tablename__ = "holds"
     id = Column(Integer, primary_key=True)
     patron_id = Column(Integer, ForeignKey("patrons.id"), index=True)
-    integration_client_id = Column(
-        Integer, ForeignKey("integrationclients.id"), index=True
-    )
     license_pool_id = Column(Integer, ForeignKey("licensepools.id"), index=True)
     license_pool: Mapped[LicensePool] = relationship(
         "LicensePool", back_populates="holds"
@@ -584,12 +585,10 @@ class Hold(Base, LoanAndHoldMixin):
     end = Column(DateTime(timezone=True), index=True)
     position = Column(Integer, index=True)
     external_identifier = Column(Unicode, unique=True, nullable=True)
+    patron_last_notified = Column(DateTime, nullable=True)
 
     patron: Mapped[Patron] = relationship(
         "Patron", back_populates="holds", lazy="joined"
-    )
-    integration_client: Mapped[IntegrationClient] = relationship(
-        "IntegrationClient", back_populates="holds", lazy="joined"
     )
 
     def __lt__(self, other):
@@ -772,6 +771,17 @@ class PatronProfileStorage(ProfileStorage):
             )
         settings = {self.SYNCHRONIZE_ANNOTATIONS: patron.synchronize_annotations}
         doc[self.SETTINGS_KEY] = settings
+        doc["links"] = [
+            dict(
+                rel=LinkRelations.DEVICE_REGISTRATION,
+                type="application/json",
+                href=self.url_for(
+                    "put_patron_devices",
+                    library_short_name=self.patron.library.short_name,
+                    _external=True,
+                ),
+            )
+        ]
         return doc
 
     def update(self, settable, full):

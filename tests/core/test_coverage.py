@@ -4,12 +4,10 @@ import pytest
 
 from core.coverage import (
     BaseCoverageProvider,
-    CatalogCoverageProvider,
     CoverageFailure,
     CoverageProviderProgress,
     IdentifierCoverageProvider,
     MARCRecordWorkCoverageProvider,
-    OPDSEntryWorkCoverageProvider,
     PresentationReadyWorkCoverageProvider,
     WorkClassificationCoverageProvider,
     WorkPresentationEditionCoverageProvider,
@@ -42,15 +40,12 @@ from core.model import (
     Work,
     WorkCoverageRecord,
 )
-from core.model.configuration import ExternalIntegrationLink
-from core.s3 import MockS3Uploader
 from core.util.datetime_helpers import datetime_utc, utc_now
 from tests.core.mock import (
     AlwaysSuccessfulBibliographicCoverageProvider,
     AlwaysSuccessfulCollectionCoverageProvider,
     AlwaysSuccessfulCoverageProvider,
     AlwaysSuccessfulWorkCoverageProvider,
-    DummyHTTPClient,
     NeverSuccessfulBibliographicCoverageProvider,
     NeverSuccessfulCoverageProvider,
     NeverSuccessfulWorkCoverageProvider,
@@ -536,13 +531,13 @@ class TestBaseCoverageProvider:
         e2, p2 = db.edition(with_license_pool=True)
         i2 = e2.primary_identifier
 
-        class MockProvider(AlwaysSuccessfulCoverageProvider):
+        class MockProvider1(AlwaysSuccessfulCoverageProvider):
             OPERATION = "i succeed"
 
             def finalize_batch(self):
                 self.finalized = True
 
-        success_provider = MockProvider(db.session)
+        success_provider = MockProvider1(db.session)
 
         batch = [i1, i2]
         counts, successes = success_provider.process_batch_and_handle_results(batch)
@@ -565,10 +560,10 @@ class TestBaseCoverageProvider:
 
         # Now try a different CoverageProvider which creates transient
         # failures.
-        class MockProvider(TransientFailureCoverageProvider):
+        class MockProvider2(TransientFailureCoverageProvider):
             OPERATION = "i fail transiently"
 
-        transient_failure_provider = MockProvider(db.session)
+        transient_failure_provider = MockProvider2(db.session)
         counts, failures = transient_failure_provider.process_batch_and_handle_results(
             batch
         )
@@ -582,10 +577,10 @@ class TestBaseCoverageProvider:
 
         # Another way of getting transient failures is to just ignore every
         # item you're told to process.
-        class MockProvider(TaskIgnoringCoverageProvider):
+        class MockProvider3(TaskIgnoringCoverageProvider):
             OPERATION = "i ignore"
 
-        task_ignoring_provider = MockProvider(db.session)
+        task_ignoring_provider = MockProvider3(db.session)
         counts, records = task_ignoring_provider.process_batch_and_handle_results(batch)
 
         assert (0, 2, 0) == counts
@@ -601,10 +596,10 @@ class TestBaseCoverageProvider:
         assert [None, None] == [x.exception for x in records]
 
         # Or you can go really bad and have persistent failures.
-        class MockProvider(NeverSuccessfulCoverageProvider):
+        class MockProvider4(NeverSuccessfulCoverageProvider):
             OPERATION = "i will always fail"
 
-        persistent_failure_provider = MockProvider(db.session)
+        persistent_failure_provider = MockProvider4(db.session)
         counts, results = persistent_failure_provider.process_batch_and_handle_results(
             batch
         )
@@ -687,43 +682,44 @@ class TestIdentifierCoverageProvider:
         """Test various acceptable and unacceptable values for the class
         variable INPUT_IDENTIFIER_TYPES.
         """
+
         # It's okay to set INPUT_IDENTIFIER_TYPES to None it means you
         # will cover any and all identifier types.
         class Base(IdentifierCoverageProvider):
             SERVICE_NAME = "Test provider"
             DATA_SOURCE_NAME = DataSource.GUTENBERG
 
-        class MockProvider(Base):
+        class MockProvider1(Base):
             INPUT_IDENTIFIER_TYPES = None
 
-        provider = MockProvider(db.session)
+        provider = MockProvider1(db.session)
         assert None == provider.input_identifier_types
 
         # It's okay to set a single value.
-        class MockProvider(Base):
+        class MockProvider2(Base):
             INPUT_IDENTIFIER_TYPES = Identifier.ISBN
 
-        provider = MockProvider(db.session)
-        assert [Identifier.ISBN] == provider.input_identifier_types
+        provider2 = MockProvider2(db.session)
+        assert [Identifier.ISBN] == provider2.input_identifier_types
 
         # It's okay to set a list of values.
-        class MockProvider(Base):
+        class MockProvider3(Base):
             INPUT_IDENTIFIER_TYPES = [Identifier.ISBN, Identifier.OVERDRIVE_ID]
 
-        provider = MockProvider(db.session)
+        provider3 = MockProvider3(db.session)
         assert [
             Identifier.ISBN,
             Identifier.OVERDRIVE_ID,
-        ] == provider.input_identifier_types
+        ] == provider3.input_identifier_types
 
         # It's not okay to do nothing.
-        class MockProvider(Base):
+        class MockProvider4(Base):
             pass
 
         with pytest.raises(ValueError) as excinfo:
-            MockProvider(db.session)
+            MockProvider4(db.session)
         assert (
-            "MockProvider must define INPUT_IDENTIFIER_TYPES, even if the value is None."
+            "MockProvider4 must define INPUT_IDENTIFIER_TYPES, even if the value is None."
             in str(excinfo.value)
         )
 
@@ -1134,16 +1130,15 @@ class TestIdentifierCoverageProvider:
         assert [identifier] == provider.items_that_need_coverage().all()
 
         # Here's a provider that has no operation set.
-        provider = AlwaysSuccessfulCoverageProvider(db.session)
-        assert None == provider.OPERATION
+        successful_provider = AlwaysSuccessfulCoverageProvider(db.session)
+        assert None == successful_provider.OPERATION
 
         # For purposes of items_that_need_coverage, the identifier is
         # considered covered, because the operations match.
-        assert [] == provider.items_that_need_coverage().all()
+        assert [] == successful_provider.items_that_need_coverage().all()
 
     def test_run_on_specific_identifiers(self, db: DatabaseTransactionFixture):
         provider = AlwaysSuccessfulCoverageProvider(db.session)
-        provider.workset_size = 3
         to_be_tested = [db.identifier() for i in range(6)]
         not_to_be_tested = [db.identifier() for i in range(6)]
         counts, records = provider.run_on_specific_identifiers(to_be_tested)
@@ -1587,19 +1582,6 @@ class TestCollectionCoverageProvider:
         edition, pool = db.edition(with_license_pool=True)
         identifier = edition.primary_identifier
 
-        # All images and open-access content will be fetched through this
-        # 'HTTP client'...
-        http = DummyHTTPClient()
-        http.queue_response(
-            200,
-            content="I am an epub.",
-            media_type=Representation.EPUB_MEDIA_TYPE,
-        )
-
-        # ..and will then be uploaded to this 'mirror'.
-        mirrors = dict(books_mirror=MockS3Uploader())
-        mirror_type = ExternalIntegrationLink.OPEN_ACCESS_BOOKS
-
         class Tripwire(PresentationCalculationPolicy):
             # This class sets a variable if one of its properties is
             # accessed.
@@ -1616,8 +1598,6 @@ class TestCollectionCoverageProvider:
 
         presentation_calculation_policy = Tripwire()
         replacement_policy = ReplacementPolicy(
-            mirrors=mirrors,
-            http_get=http.do_get,
             presentation_calculation_policy=presentation_calculation_policy,
         )
 
@@ -1652,17 +1632,6 @@ class TestCollectionCoverageProvider:
         provider.set_metadata_and_circulation_data(
             identifier, metadata, circulationdata
         )
-
-        # The open-access download was 'downloaded' and 'mirrored'.
-        [mirrored] = mirrors[mirror_type].uploaded
-        assert "http://foo.com/" == mirrored.url
-        assert mirrored.mirror_url.endswith(
-            f"/{identifier.identifier}/{edition.title}.epub"
-        )
-
-        # The book content was removed from the db after it was
-        # mirrored successfully.
-        assert None == mirrored.content
 
         # Our custom PresentationCalculationPolicy was used when
         # determining whether to recalculate the work's
@@ -1938,34 +1907,6 @@ class TestCollectionCoverageProvider:
         assert True == pool.work.presentation_ready
 
 
-class TestCatalogCoverageProvider:
-    def test_items_that_need_coverage(self, db: DatabaseTransactionFixture):
-        c1 = db.collection()
-        c2 = db.collection()
-
-        i1 = db.identifier()
-        c1.catalog_identifier(i1)
-
-        i2 = db.identifier()
-        c2.catalog_identifier(i2)
-
-        i3 = db.identifier()
-
-        # This Identifier is licensed through the Collection c1, but
-        # it's not in the catalog--catalogs are used for different
-        # things.
-        edition, lp = db.edition(with_license_pool=True, collection=c1)
-
-        # We have four identifiers, but only i1 shows up, because
-        # it's the only one in c1's catalog.
-        class Provider(CatalogCoverageProvider):
-            SERVICE_NAME = "test"
-            DATA_SOURCE_NAME = DataSource.OVERDRIVE
-
-        provider = Provider(c1)
-        assert [i1] == provider.items_that_need_coverage().all()
-
-
 class BibliographicCoverageProviderFixture:
     transaction: DatabaseTransactionFixture
     work: Work
@@ -2155,6 +2096,7 @@ class TestWorkCoverageProvider:
         # If we set a cutoff_time which is after the time the
         # WorkCoverageRecord was created, then that work starts
         # showing up again as needing coverage.
+        assert isinstance(record.timestamp, datetime.datetime)
         provider.cutoff_time = record.timestamp + datetime.timedelta(seconds=1)
         assert {w2, w3} == set(provider.items_that_need_coverage([i2, i3]).all())
 
@@ -2223,7 +2165,6 @@ class TestWorkPresentationEditionCoverageProvider:
                 policy.choose_edition,
                 policy.set_edition_metadata,
                 policy.choose_cover,
-                policy.regenerate_opds_entries,
                 policy.update_search_index,
             ]
         )
@@ -2246,33 +2187,12 @@ class TestWorkClassificationCoverageProvider:
                 policy.choose_edition,
                 policy.set_edition_metadata,
                 policy.choose_cover,
-                policy.regenerate_opds_entries,
                 policy.update_search_index,
                 policy.classify,
                 policy.choose_summary,
                 policy.calculate_quality,
             ]
         )
-
-
-class TestOPDSEntryWorkCoverageProvider:
-    def test_run(self, db: DatabaseTransactionFixture):
-        provider = OPDSEntryWorkCoverageProvider(db.session)
-        work = db.work()
-        work.simple_opds_entry = "old junk"
-        work.verbose_opds_entry = "old long junk"
-
-        # The work is not presentation-ready, so nothing happens.
-        provider.run()
-        assert "old junk" == work.simple_opds_entry
-        assert "old long junk" == work.verbose_opds_entry
-
-        # The work is presentation-ready, so its OPDS entries are
-        # regenerated.
-        work.presentation_ready = True
-        provider.run()
-        assert work.simple_opds_entry.startswith("<entry")
-        assert work.verbose_opds_entry.startswith("<entry")
 
 
 class TestMARCRecordWorkCoverageProvider:

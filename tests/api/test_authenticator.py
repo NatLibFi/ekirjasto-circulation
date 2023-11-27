@@ -9,7 +9,7 @@ import os
 import re
 from decimal import Decimal
 from functools import partial
-from typing import TYPE_CHECKING, Callable, Literal, Optional, Tuple, cast
+from typing import TYPE_CHECKING, Callable, Literal, Tuple, cast
 from unittest.mock import MagicMock, PropertyMock, patch
 
 import flask
@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 from werkzeug.datastructures import Authorization
 
 from api.annotations import AnnotationWriter
-from api.announcements import Announcements
+from api.authentication.access_token import AccessTokenProvider
 from api.authentication.base import PatronData
 from api.authentication.basic import (
     BarcodeFormats,
@@ -31,6 +31,7 @@ from api.authentication.basic import (
     Keyboards,
     LibraryIdentifierRestriction,
 )
+from api.authentication.basic_token import BasicTokenAuthenticationProvider
 from api.authenticator import (
     Authenticator,
     BaseSAMLAuthenticationProvider,
@@ -41,7 +42,6 @@ from api.config import CannotLoadConfiguration, Configuration
 from api.custom_patron_catalog import CustomPatronCatalog
 from api.integration.registry.patron_auth import PatronAuthRegistry
 from api.millenium_patron import MilleniumPatronAPI
-from api.opds import LibraryAnnotator
 from api.problem_details import *
 from api.problem_details import PATRON_OF_ANOTHER_LIBRARY
 from api.simple_authentication import SimpleAuthenticationProvider
@@ -51,27 +51,37 @@ from core.analytics import Analytics
 from core.integration.goals import Goals
 from core.integration.registry import IntegrationRegistry
 from core.mock_analytics_provider import MockAnalyticsProvider
-from core.model import CirculationEvent, ConfigurationSetting, Library, Patron, create
+from core.model import CirculationEvent, ConfigurationSetting, Library, Patron
 from core.model.constants import LinkRelations
 from core.model.integration import (
     IntegrationConfiguration,
     IntegrationLibraryConfiguration,
 )
-from core.opds import OPDSFeed
+from core.model.library import LibraryLogo
 from core.user_profile import ProfileController
 from core.util.authentication_for_opds import AuthenticationForOPDSDocument
 from core.util.datetime_helpers import utc_now
 from core.util.http import IntegrationException, RemoteIntegrationException
+from core.util.opds_writer import OPDSFeed
 from core.util.problem_detail import ProblemDetail
+from tests.fixtures.announcements import AnnouncementFixture
+from tests.fixtures.library import LibraryFixture
 
 if TYPE_CHECKING:
-    from ..fixtures.api_controller import ControllerFixture
-    from ..fixtures.authenticator import AuthProviderFixture
-    from ..fixtures.database import DatabaseTransactionFixture
-    from ..fixtures.vendor_id import VendorIDFixture
+    from tests.fixtures.api_controller import ControllerFixture
+    from tests.fixtures.authenticator import (
+        CreateAuthIntegrationFixture,
+        MilleniumAuthIntegrationFixture,
+    )
+    from tests.fixtures.database import DatabaseTransactionFixture
+    from tests.fixtures.vendor_id import VendorIDFixture
 
 
-class MockBasic(BasicAuthenticationProvider):
+class MockBasic(
+    BasicAuthenticationProvider[
+        BasicAuthProviderSettings, BasicAuthProviderLibrarySettings
+    ]
+):
     """A second mock basic authentication provider for use in testing
     the workflow around Basic Auth.
     """
@@ -95,6 +105,14 @@ class MockBasic(BasicAuthenticationProvider):
         if lookup_patrondata is False:
             lookup_patrondata = patrondata
         self.lookup_patrondata = lookup_patrondata
+
+    @classmethod
+    def settings_class(cls) -> type[BasicAuthProviderSettings]:
+        return BasicAuthProviderSettings
+
+    @classmethod
+    def library_settings_class(cls) -> type[BasicAuthProviderLibrarySettings]:
+        return BasicAuthProviderLibrarySettings
 
     @classmethod
     def label(cls) -> str:
@@ -441,7 +459,7 @@ class TestCirculationPatronProfileStorage:
         assert "drm:vendor" not in doc
         assert "drm:clientToken" not in doc
         assert "drm:scheme" not in doc
-        assert "links" not in doc
+        assert len(doc["links"]) == 1
 
         # Now there's authdata configured, and the DRM fields are populated with
         # the vendor ID and a short client token
@@ -457,27 +475,21 @@ class TestCirculationPatronProfileStorage:
         assert (
             adobe["drm:scheme"] == "http://librarysimplified.org/terms/drm/scheme/ACS"
         )
-        [device_link, annotations_link] = doc["links"]
-        assert (
-            device_link["rel"] == "http://librarysimplified.org/terms/drm/rel/devices"
-        )
-        assert (
-            device_link["href"]
-            == "http://host/adobe_drm_devices?library_short_name=default"
-        )
+        [devices_link, annotations_link] = doc["links"]
         assert annotations_link["rel"] == "http://www.w3.org/ns/oa#annotationService"
         assert (
             annotations_link["href"]
             == "http://host/annotations?library_short_name=default"
         )
         assert annotations_link["type"] == AnnotationWriter.CONTENT_TYPE
+        assert devices_link["rel"] == LinkRelations.DEVICE_REGISTRATION
 
 
 class TestAuthenticator:
     def test_init(
         self,
         controller_fixture: ControllerFixture,
-        create_millenium_auth_integration: Callable[..., AuthProviderFixture],
+        create_millenium_auth_integration: MilleniumAuthIntegrationFixture,
     ):
         db = controller_fixture.db
 
@@ -487,7 +499,7 @@ class TestAuthenticator:
         l1.short_name = "l1"
 
         # This library uses Millenium Patron.
-        l2, ignore = create(db.session, Library, short_name="l2")
+        l2 = db.library(short_name="l2")
         create_millenium_auth_integration(l2)
 
         db.session.flush()
@@ -551,15 +563,15 @@ class TestAuthenticator:
             def decode_bearer_token(self, *args, **kwargs):
                 return "decoded bearer token for %s" % self.name
 
-        l1, ignore = create(db.session, Library, short_name="l1")
-        l2, ignore = create(db.session, Library, short_name="l2")
+        l1 = db.library(short_name="l1")
+        l2 = db.library(short_name="l2")
 
         auth = Authenticator(db.session, db.session.query(Library))
         auth.library_authenticators["l1"] = MockLibraryAuthenticator("l1")
         auth.library_authenticators["l2"] = MockLibraryAuthenticator("l2")
 
         # This new library isn't in the authenticator.
-        l3, ignore = create(db.session, Library, short_name="l3")
+        l3 = db.library(short_name="l3")
 
         with app.test_request_context("/"):
             flask.request.library = l3  # type:ignore
@@ -607,7 +619,7 @@ class TestLibraryAuthenticator:
     def test_from_config_basic_auth_only(
         self,
         db: DatabaseTransactionFixture,
-        create_millenium_auth_integration: Callable[..., AuthProviderFixture],
+        create_millenium_auth_integration: MilleniumAuthIntegrationFixture,
     ):
         # Only a basic auth provider.
         create_millenium_auth_integration(db.default_library())
@@ -657,13 +669,14 @@ class TestLibraryAuthenticator:
         authenticator = LibraryAuthenticator.from_config(
             db.session, db.default_library()
         )
-        assert [] == list(authenticator.providers)
+
+        assert len(list(authenticator.providers)) == 0
 
     def test_configuration_exception_during_from_config_stored(
         self,
         db: DatabaseTransactionFixture,
-        create_millenium_auth_integration: Callable[..., AuthProviderFixture],
-        create_auth_integration_configuration: Callable[..., AuthProviderFixture],
+        create_millenium_auth_integration: MilleniumAuthIntegrationFixture,
+        create_auth_integration_configuration: CreateAuthIntegrationFixture,
     ):
         # If the initialization of an AuthenticationProvider from config
         # raises CannotLoadConfiguration or ImportError, the exception
@@ -671,9 +684,6 @@ class TestLibraryAuthenticator:
         # propagated.
         # Create an integration destined to raise CannotLoadConfiguration..
         library = db.default_library()
-        misconfigured, _ = create_millenium_auth_integration(library, url="millenium")
-
-        # ... and one destined to raise ImportError.
         unknown, _ = create_auth_integration_configuration("unknown protocol", library)
 
         auth = LibraryAuthenticator.from_config(db.session, db.default_library())
@@ -681,14 +691,9 @@ class TestLibraryAuthenticator:
         # The LibraryAuthenticator exists but has no AuthenticationProviders.
         assert auth.basic_auth_provider is None
 
-        # Both integrations have left their trace in
-        # initialization_exceptions.
-        not_configured = auth.initialization_exceptions[(misconfigured.id, library.id)]
-        assert isinstance(not_configured, CannotLoadConfiguration)
-        assert "Could not instantiate MilleniumPatronAPI" in str(not_configured)
-
+        # The integration has left its trace in initialization_exceptions.
         not_found = auth.initialization_exceptions[(unknown.id, library.id)]
-        assert isinstance(not_configured, CannotLoadConfiguration)
+        assert isinstance(not_found, CannotLoadConfiguration)
         assert "Unable to load implementation for external integration" in str(
             not_found
         )
@@ -742,9 +747,9 @@ class TestLibraryAuthenticator:
         type(integration.parent).goal = PropertyMock(
             return_value=Goals.PATRON_AUTH_GOAL
         )
-        type(integration.parent).settings = PropertyMock(return_value={})
+        type(integration.parent).settings_dict = PropertyMock(return_value={})
         type(integration).library_id = PropertyMock(return_value=library.id)
-        type(integration).settings = PropertyMock(return_value={})
+        type(integration).settings_dict = PropertyMock(return_value={})
         auth = LibraryAuthenticator(
             _db=db.session, library=library, integration_registry=registry
         )
@@ -758,15 +763,15 @@ class TestLibraryAuthenticator:
     def test_register_provider_basic_auth(
         self,
         db: DatabaseTransactionFixture,
-        create_auth_integration_configuration: Callable[..., AuthProviderFixture],
+        create_auth_integration_configuration: CreateAuthIntegrationFixture,
         patron_auth_registry: PatronAuthRegistry,
     ):
         library = db.default_library()
-        protocol = patron_auth_registry.get_protocol(SIP2AuthenticationProvider)
+        protocol = patron_auth_registry.get_protocol(SIP2AuthenticationProvider, "")
         _, integration = create_auth_integration_configuration(
             protocol,
             library,
-            settings={
+            settings_dict={
                 "url": "http://url/",
                 "password": "secret",
             },
@@ -869,8 +874,10 @@ class TestLibraryAuthenticator:
             neighborhood="Achewood",
         )
         basic = mock_basic(patrondata=patrondata)
-        basic.authenticate = MagicMock(return_value=patron)  # type: ignore[method-assign]
-        basic.integration = PropertyMock(return_value=MagicMock(spec=IntegrationConfiguration))  # type: ignore[method-assign]
+        basic.authenticate = MagicMock(return_value=patron)
+        basic.integration = PropertyMock(
+            return_value=MagicMock(spec=IntegrationConfiguration)
+        )
         authenticator = LibraryAuthenticator(
             _db=db.session,
             library=db.default_library(),
@@ -922,6 +929,36 @@ class TestLibraryAuthenticator:
             assert response == "foo"
             assert saml.authenticated_patron.call_count == 1
 
+    def test_authenticated_patron_bearer_access_token(
+        self,
+        db: DatabaseTransactionFixture,
+        mock_basic: MockBasicFixture,
+    ):
+        basic = mock_basic()
+        # TODO: We can remove this patch once basic token authentication is fully deployed.
+        with patch.object(
+            Configuration, "basic_token_auth_is_enabled", return_value=True
+        ):
+            authenticator = LibraryAuthenticator(
+                _db=db.session, library=db.default_library(), basic_auth_provider=basic
+            )
+
+        token_auth_provider, basic_auth_provider = authenticator.providers
+        [patron_lookup_provider] = authenticator.unique_patron_lookup_providers
+        assert (
+            cast(BasicTokenAuthenticationProvider, token_auth_provider).basic_provider
+            == basic_auth_provider
+        )
+        assert patron_lookup_provider == basic_auth_provider
+
+        patron = db.patron()
+        token = AccessTokenProvider.generate_token(db.session, patron, "pass")
+        auth = Authorization(auth_type="bearer", token=token)
+
+        auth_patron = authenticator.authenticated_patron(db.session, auth)
+        assert type(auth_patron) == Patron
+        assert auth_patron.id == patron.id
+
     def test_authenticated_patron_unsupported_mechanism(
         self, db: DatabaseTransactionFixture
     ):
@@ -935,30 +972,56 @@ class TestLibraryAuthenticator:
         assert UNSUPPORTED_AUTHENTICATION_MECHANISM == problem
 
     def test_get_credential_from_header(
-        self, db: DatabaseTransactionFixture, mock_basic: MockBasicFixture
+        self,
+        db: DatabaseTransactionFixture,
+        mock_basic: MockBasicFixture,
     ):
+        def get_library_authenticator(
+            basic_auth_provider: BasicAuthenticationProvider | None,
+        ) -> LibraryAuthenticator:
+            # TODO: We can remove this patch once basic token authentication is fully deployed.
+            with patch.object(
+                Configuration, "basic_token_auth_is_enabled", return_value=True
+            ):
+                return LibraryAuthenticator(
+                    _db=db.session,
+                    library=db.default_library(),
+                    basic_auth_provider=basic_auth_provider,
+                )
+
         basic = mock_basic()
 
         # We can pull the password out of a Basic Auth credential
         # if a Basic Auth authentication provider is configured.
-        authenticator = LibraryAuthenticator(
-            _db=db.session,
-            library=db.default_library(),
-            basic_auth_provider=basic,
-        )
+        authenticator = get_library_authenticator(basic_auth_provider=basic)
         credential = Authorization(auth_type="basic", data=dict(password="foo"))
         assert "foo" == authenticator.get_credential_from_header(credential)
 
         # We can't pull the password out if no basic auth provider
-        authenticator = LibraryAuthenticator(
-            _db=db.session,
-            library=db.default_library(),
-            basic_auth_provider=None,
-        )
+        authenticator = get_library_authenticator(basic_auth_provider=None)
         assert authenticator.get_credential_from_header(credential) is None
 
+        authenticator = get_library_authenticator(basic_auth_provider=basic)
+        patron = db.patron()
+        token = AccessTokenProvider.generate_token(db.session, patron, "passworx")
+        credential = Authorization(auth_type="bearer", token=token)
+        assert authenticator.get_credential_from_header(credential) == "passworx"
+
+    @pytest.mark.parametrize(
+        "token_auth_enabled, auth_count",
+        [
+            [True, 2],
+            [False, 1],
+        ],
+    )
     def test_create_authentication_document(
-        self, db: DatabaseTransactionFixture, mock_basic: MockBasicFixture
+        self,
+        db: DatabaseTransactionFixture,
+        mock_basic: MockBasicFixture,
+        announcement_fixture: AnnouncementFixture,
+        library_fixture: LibraryFixture,
+        token_auth_enabled: bool,
+        auth_count: int,
     ):
         class MockAuthenticator(LibraryAuthenticator):
             """Mock the _geographic_areas method."""
@@ -969,14 +1032,20 @@ class TestLibraryAuthenticator:
             def _geographic_areas(cls, library):
                 return cls.AREAS
 
-        library = db.default_library()
+        library = library_fixture.library()
+        library_settings = library_fixture.settings(library)
         basic = mock_basic()
         library.name = "A Fabulous Library"
-        authenticator = MockAuthenticator(
-            _db=db.session,
-            library=library,
-            basic_auth_provider=basic,
-        )
+        # TODO: We can remove this patch once basic token authentication is fully deployed.
+        with patch.object(
+            Configuration, "basic_token_auth_is_enabled"
+        ) as token_auth_enabled_method:
+            token_auth_enabled_method.return_value = token_auth_enabled
+            authenticator = MockAuthenticator(
+                _db=db.session,
+                library=library,
+                basic_auth_provider=basic,
+            )
 
         def annotate_authentication_document(library, doc, url_for):
             doc["modified"] = "Kilroy was here"
@@ -997,106 +1066,71 @@ class TestLibraryAuthenticator:
         del os.environ["AUTOINITIALIZE"]
 
         # Set up configuration settings for links.
-        link_config = {
-            LibraryAnnotator.TERMS_OF_SERVICE: "http://terms",
-            LibraryAnnotator.PRIVACY_POLICY: "http://privacy",
-            LibraryAnnotator.COPYRIGHT: "http://copyright",
-            LibraryAnnotator.ABOUT: "http://about",
-            LibraryAnnotator.LICENSE: "http://license/",
-            LibraryAnnotator.REGISTER: "custom-registration-hook://library/",
-            LinkRelations.PATRON_PASSWORD_RESET: "https://example.org/reset",
-            Configuration.LOGO: "image data",
-            Configuration.WEB_CSS_FILE: "http://style.css",
-        }
+        library_settings.terms_of_service = "http://terms.com"  # type: ignore[assignment]
+        library_settings.privacy_policy = "http://privacy.com"  # type: ignore[assignment]
+        library_settings.copyright = "http://copyright.com"  # type: ignore[assignment]
+        library_settings.license = "http://license.ca/"  # type: ignore[assignment]
+        library_settings.about = "http://about.io"  # type: ignore[assignment]
+        library_settings.registration_url = "https://library.org/register"  # type: ignore[assignment]
+        library_settings.patron_password_reset = "https://example.org/reset"  # type: ignore[assignment]
+        library_settings.web_css_file = "http://style.css"  # type: ignore[assignment]
 
-        for rel, value in link_config.items():
-            ConfigurationSetting.for_library(rel, db.default_library()).value = value
+        library.logo = LibraryLogo(content=b"image data")
 
-        ConfigurationSetting.for_library(
-            Configuration.LIBRARY_DESCRIPTION, library
-        ).value = "Just the best."
+        library_settings.library_description = "Just the best."
 
         # Set the URL to the library's web page.
-        ConfigurationSetting.for_library(
-            Configuration.WEBSITE_URL, library
-        ).value = "http://library/"
+        library_settings.website = "http://library.org/"  # type: ignore[assignment]
 
         # Set the color scheme a mobile client should use.
-        ConfigurationSetting.for_library(
-            Configuration.COLOR_SCHEME, library
-        ).value = "plaid"
+        library_settings.color_scheme = "plaid"
 
         # Set the colors a web client should use.
-        ConfigurationSetting.for_library(
-            Configuration.WEB_PRIMARY_COLOR, library
-        ).value = "#012345"
-        ConfigurationSetting.for_library(
-            Configuration.WEB_SECONDARY_COLOR, library
-        ).value = "#abcdef"
+        library_settings.web_primary_color = "#012345"
+        library_settings.web_secondary_color = "#abcdef"
 
         # Configure the various ways a patron can get help.
-        ConfigurationSetting.for_library(
-            Configuration.HELP_EMAIL, library
-        ).value = "help@library"
-        ConfigurationSetting.for_library(
-            Configuration.HELP_WEB, library
-        ).value = "http://library.help/"
-        ConfigurationSetting.for_library(
-            Configuration.HELP_URI, library
-        ).value = "custom:uri"
+        library_settings.help_email = "help@library.org"  # type: ignore[assignment]
+        library_settings.help_web = "http://library.help/"  # type: ignore[assignment]
 
         base_url = ConfigurationSetting.sitewide(db.session, Configuration.BASE_URL_KEY)
         base_url.value = "http://circulation-manager/"
 
-        # Configure three announcements: two active and one
-        # inactive.
-        format = "%Y-%m-%d"
-        today_date = datetime.date.today()
-        yesterday = (today_date - datetime.timedelta(days=1)).strftime(format)
-        two_days_ago = (today_date - datetime.timedelta(days=2)).strftime(format)
-        today = today_date.strftime(format)
-        announcements = [
-            dict(
-                id="a1",
-                content="this is announcement 1",
-                start=yesterday,
-                finish=today,
-            ),
-            dict(
-                id="a2",
-                content="this is announcement 2",
-                start=two_days_ago,
-                finish=yesterday,
-            ),
-            dict(
-                id="a3",
-                content="this is announcement 3",
-                start=yesterday,
-                finish=today,
-            ),
-        ]
-        announcement_setting = ConfigurationSetting.for_library(
-            Announcements.SETTING_NAME, library
+        # Configure three library announcements: two active and one inactive.
+        a1_db = announcement_fixture.create_announcement(
+            db.session,
+            content="this is announcement 1",
+            start=announcement_fixture.yesterday,
+            finish=announcement_fixture.today,
+            library=library,
         )
-        announcement_setting.value = json.dumps(announcements)
-        announcement_for_all_setting = ConfigurationSetting.sitewide(
-            db.session, Announcements.GLOBAL_SETTING_NAME
+        announcement_fixture.create_announcement(
+            db.session,
+            content="this is announcement 2",
+            start=announcement_fixture.a_week_ago,
+            finish=announcement_fixture.yesterday,
+            library=library,
         )
-        announcement_for_all_setting.value = json.dumps(
-            [
-                dict(
-                    id="all1",
-                    content="test announcement",
-                    start=yesterday,
-                    finish=today,
-                ),
-                dict(
-                    id="all2",
-                    content="test announcement",
-                    start=two_days_ago,
-                    finish=yesterday,
-                ),
-            ]
+        a3_db = announcement_fixture.create_announcement(
+            db.session,
+            content="this is announcement 3",
+            start=announcement_fixture.yesterday,
+            finish=announcement_fixture.today,
+            library=library,
+        )
+
+        # Configure two site-wide announcements: one active and one inactive.
+        a4_db = announcement_fixture.create_announcement(
+            db.session,
+            content="this is announcement 4",
+            start=announcement_fixture.yesterday,
+            finish=announcement_fixture.today,
+        )
+        announcement_fixture.create_announcement(
+            db.session,
+            content="this is announcement 5",
+            start=announcement_fixture.a_week_ago,
+            finish=announcement_fixture.yesterday,
         )
 
         with self.app.test_request_context("/"):
@@ -1107,7 +1141,17 @@ class TestLibraryAuthenticator:
             # The main thing we need to test is that the
             # authentication sub-documents are assembled properly and
             # placed in the right position.
-            [basic_doc] = doc["authentication"]
+            # TODO: token doc will be here only when correct environment variable set to true.
+            # If basic token auth is enabled, then there should be two authentication
+            # mechanisms and the first should be for token auth.
+            authenticators = doc["authentication"]
+            assert auth_count > 0
+            assert auth_count == len(authenticators)
+            # TODO: We can remove this `if` block/restructure once basic token authentication is fully deployed.
+            if token_auth_enabled:
+                token_doc = authenticators[0]
+                assert BasicTokenAuthenticationProvider.FLOW_TYPE == token_doc["type"]
+            basic_doc = authenticators[auth_count - 1]
 
             expect_basic = basic.authentication_flow_document(db.session)
             assert expect_basic == basic_doc
@@ -1123,18 +1167,12 @@ class TestLibraryAuthenticator:
             assert "#012345" == doc["web_color_scheme"]["primary"]
             assert "#abcdef" == doc["web_color_scheme"]["secondary"]
 
-            # _geographic_areas was called and provided the library's
-            # focus area and service area.
-            assert "focus area" == doc["focus_area"]
-            assert "service area" == doc["service_area"]
-
             # We also need to test that the links got pulled in
             # from the configuration.
             (
                 about,
                 alternate,
                 copyright,
-                help_uri,
                 help_web,
                 help_email,
                 copyright_agent,
@@ -1149,12 +1187,12 @@ class TestLibraryAuthenticator:
                 stylesheet,
                 terms_of_service,
             ) = sorted(doc["links"], key=lambda x: (x["rel"], x["href"]))
-            assert "http://terms" == terms_of_service["href"]
-            assert "http://privacy" == privacy_policy["href"]
-            assert "http://copyright" == copyright["href"]
-            assert "http://about" == about["href"]
-            assert "http://license/" == license["href"]
-            assert "image data" == logo["href"]
+            assert "http://terms.com" == terms_of_service["href"]
+            assert "http://privacy.com" == privacy_policy["href"]
+            assert "http://copyright.com" == copyright["href"]
+            assert "http://about.io" == about["href"]
+            assert "http://license.ca/" == license["href"]
+            assert "data:image/png;base64,image data" == logo["href"]
             assert "http://style.css" == stylesheet["href"]
 
             assert "/loans" in loans["href"]
@@ -1167,7 +1205,7 @@ class TestLibraryAuthenticator:
 
             expect_start = url_for(
                 "index",
-                library_short_name=db.default_library().short_name,
+                library_short_name=library.short_name,
                 _external=True,
             )
             assert expect_start == start["href"]
@@ -1178,21 +1216,18 @@ class TestLibraryAuthenticator:
             # Most of the other links have type='text/html'
             assert "text/html" == about["type"]
 
-            # The registration link doesn't have a type, because it
-            # uses a non-HTTP URI scheme.
-            assert "type" not in register
-            assert "custom-registration-hook://library/" == register["href"]
+            # The registration link
+            assert "https://library.org/register" == register["href"]
 
             assert "https://example.org/reset" == reset_link["href"]
 
             # The logo link has type "image/png".
             assert "image/png" == logo["type"]
 
-            # We have three help links.
-            assert "custom:uri" == help_uri["href"]
+            # We have two help links.
             assert "http://library.help/" == help_web["href"]
             assert "text/html" == help_web["type"]
-            assert "mailto:help@library" == help_email["href"]
+            assert "mailto:help@library.org" == help_email["href"]
 
             # Since no special address was given for the copyright
             # designated agent, the help address was reused.
@@ -1200,24 +1235,26 @@ class TestLibraryAuthenticator:
                 "http://librarysimplified.org/rel/designated-agent/copyright"
             )
             assert copyright_rel == copyright_agent["rel"]
-            assert "mailto:help@library" == copyright_agent["href"]
+            assert "mailto:help@library.org" == copyright_agent["href"]
 
             # The public key is correct.
-            assert authenticator.public_key == doc["public_key"]["value"]
+            assert authenticator.library is not None
+            assert authenticator.library.public_key is not None
+            assert authenticator.library.public_key == doc["public_key"]["value"]
             assert "RSA" == doc["public_key"]["type"]
 
             # The library's web page shows up as an HTML alternate
             # to the OPDS server.
             assert (
-                dict(rel="alternate", type="text/html", href="http://library/")
+                dict(rel="alternate", type="text/html", href="http://library.org/")
                 == alternate
             )
 
             # Active announcements are published; inactive announcements are not.
-            all1, a1, a3 = doc["announcements"]
-            assert dict(id="a1", content="this is announcement 1") == a1
-            assert dict(id="a3", content="this is announcement 3") == a3
-            assert dict(id="all1", content="test announcement") == all1
+            a4, a1, a3 = doc["announcements"]
+            assert dict(id=str(a1_db.id), content="this is announcement 1") == a1
+            assert dict(id=str(a3_db.id), content="this is announcement 3") == a3
+            assert dict(id=str(a4_db.id), content="this is announcement 4") == a4
 
             # Features that are enabled for this library are communicated
             # through the 'features' item.
@@ -1228,9 +1265,7 @@ class TestLibraryAuthenticator:
             # If a separate copyright designated agent is configured,
             # that email address is used instead of the default
             # patron support address.
-            ConfigurationSetting.for_library(
-                Configuration.COPYRIGHT_DESIGNATED_AGENT_EMAIL, library
-            ).value = "mailto:dmca@library.org"
+            library_settings.copyright_designated_agent_email_address = "dmca@library.org"  # type: ignore[assignment]
             doc = json.loads(authenticator.create_authentication_document())
             [agent] = [x for x in doc["links"] if x["rel"] == copyright_rel]
             assert "mailto:dmca@library.org" == agent["href"]
@@ -1242,15 +1277,16 @@ class TestLibraryAuthenticator:
             for key in ("focus_area", "service_area"):
                 assert key not in doc
 
-            # Only global anouncements
-            announcement_setting.value = None
+            # Only global announcements
+            for announcement in [a1_db, a3_db]:
+                db.session.delete(announcement)
             doc = json.loads(authenticator.create_authentication_document())
-            assert [dict(id="all1", content="test announcement")] == doc[
+            assert [dict(id=str(a4_db.id), content="this is announcement 4")] == doc[
                 "announcements"
             ]
             # If there are no announcements, the list of announcements is present
             # but empty.
-            announcement_for_all_setting.value = None
+            db.session.delete(a4_db)
             doc = json.loads(authenticator.create_authentication_document())
             assert [] == doc["announcements"]
 
@@ -1289,114 +1325,8 @@ class TestLibraryAuthenticator:
             headers = real_authenticator.create_authentication_headers()
             assert "WWW-Authenticate" not in headers
 
-    def test_key_pair(self, db: DatabaseTransactionFixture):
-        """Test the public/private key pair associated with a library."""
-        library = db.default_library()
-
-        # Initially, the KEY_PAIR setting is not set.
-        def keys():
-            return ConfigurationSetting.for_library(
-                Configuration.KEY_PAIR, library
-            ).json_value
-
-        assert None == keys()
-
-        # Instantiating a LibraryAuthenticator for a library automatically
-        # generates a public/private key pair.
-        auth = LibraryAuthenticator.from_config(db.session, library)
-        public, private = keys()
-        assert "BEGIN PUBLIC KEY" in public
-        assert "BEGIN RSA PRIVATE KEY" in private
-
-        # The public key is stored in the
-        # LibraryAuthenticator.public_key property.
-        assert public == auth.public_key
-
-        # The private key is not stored in the LibraryAuthenticator
-        # object, but it can be obtained from the database by
-        # using the key_pair property.
-        assert not hasattr(auth, "private_key")
-        assert (public, private) == auth.key_pair
-
-    def test_key_pair_per_library(self, db: DatabaseTransactionFixture):
-        # Ensure that each library obtains its own key pair.
-        library1 = db.default_library()
-        library2 = db.library()
-
-        # We mock the key_pair function here, and make sure its called twice, with
-        # different settings because the get_mock_config_key_pair mock always returns
-        # the same key. So we need to do a bit more work to verify that different
-        # libraries get different keys.
-        with patch.object(Configuration, "key_pair") as patched:
-            patched.return_value = ("public", "private")
-            LibraryAuthenticator.from_config(db.session, library1)
-            assert patched.call_count == 1
-            LibraryAuthenticator.from_config(db.session, library2)
-            assert patched.call_count == 2
-            assert patched.call_args_list[0] != patched.call_args_list[1]
-
-    def test__geographic_areas(self, db: DatabaseTransactionFixture):
-        """Test the _geographic_areas helper method."""
-
-        class Mock(LibraryAuthenticator):
-            called_with: Optional[Library] = None
-
-            values = {
-                Configuration.LIBRARY_FOCUS_AREA: "focus",
-                Configuration.LIBRARY_SERVICE_AREA: "service",
-            }
-
-            @classmethod
-            def _geographic_area(cls, key, library):
-                cls.called_with = library
-                return cls.values.get(key)
-
-        # _geographic_areas calls _geographic_area twice and
-        # returns the results in a 2-tuple.
-        m = Mock._geographic_areas
-        library = object()
-        assert ("focus", "service") == m(library)  # type: ignore
-        assert library == Mock.called_with
-
-        # If only one value is provided, the same value is given for both
-        # areas.
-        del Mock.values[Configuration.LIBRARY_FOCUS_AREA]
-        assert ("service", "service") == m(library)  # type: ignore
-
-        Mock.values[Configuration.LIBRARY_FOCUS_AREA] = "focus"
-        del Mock.values[Configuration.LIBRARY_SERVICE_AREA]
-        assert ("focus", "focus") == m(library)  # type: ignore
-
-    def test__geographic_area(self, db: DatabaseTransactionFixture):
-        """Test the _geographic_area helper method."""
-        library = db.default_library()
-        key = "a key"
-        setting = ConfigurationSetting.for_library(key, library)
-
-        def m():
-            return LibraryAuthenticator._geographic_area(key, library)
-
-        # A missing value is returned as None.
-        assert m() is None
-
-        # The literal string "everywhere" is returned as is.
-        setting.value = "everywhere"
-        assert "everywhere" == m()
-
-        # A string that makes sense as JSON is returned as its JSON
-        # equivalent.
-        two_states = ["NY", "NJ"]
-        setting.value = json.dumps(two_states)
-        assert two_states == m()
-
-        # A string that does not make sense as JSON is put in a
-        # single-element list.
-        setting.value = "Arvin, CA"
-        assert ["Arvin, CA"] == m()
-
 
 class TestBasicAuthenticationProvider:
-
     credentials = dict(username="user", password="")
 
     def test_authenticated_patron_passes_on_none(
@@ -1628,11 +1558,11 @@ class TestBasicAuthenticationProvider:
         # more than once. This test makes sure that if we have a complete patrondata from remote_authenticate,
         # or from enforce_library_identifier_restriction, we don't call remote_patron_lookup.
         provider = mock_basic()
-        provider.remote_authenticate = MagicMock(return_value=auth_return)  # type: ignore[method-assign]
-        provider.enforce_library_identifier_restriction = MagicMock(  # type: ignore[method-assign]
+        provider.remote_authenticate = MagicMock(return_value=auth_return)
+        provider.enforce_library_identifier_restriction = MagicMock(
             return_value=enforce_return
         )
-        provider.remote_patron_lookup = MagicMock(return_value=lookup_return)  # type: ignore[method-assign]
+        provider.remote_patron_lookup = MagicMock(return_value=lookup_return)
 
         username = "a"
         password = "b"
@@ -1975,7 +1905,7 @@ class TestBasicAuthenticationProvider:
         remote_patrondata = PatronData(
             library_identifier=identifier, authorization_identifier="123"
         )
-        provider.remote_patron_lookup = MagicMock(return_value=remote_patrondata)  # type: ignore[method-assign]
+        provider.remote_patron_lookup = MagicMock(return_value=remote_patrondata)
         if expected:
             assert (
                 provider.enforce_library_identifier_restriction(local_patrondata)
@@ -2065,8 +1995,8 @@ class TestBasicAuthenticationProvider:
             settings=BasicAuthProviderSettings(
                 test_identifier="username",
                 test_password="pw",
-                identifier_regular_expression="idre",  # type: ignore[arg-type]
-                password_regular_expression="pwre",  # type: ignore[arg-type]
+                identifier_regular_expression=re.compile("idre"),
+                password_regular_expression=re.compile("pwre"),
             ),
         )
         assert isinstance(provider.identifier_re, re.Pattern)
@@ -2103,7 +2033,7 @@ class TestBasicAuthenticationProvider:
                 test_password="2",
             )
         )
-        missing_patron.authenticated_patron = MagicMock(return_value=None)  # type: ignore[method-assign]
+        missing_patron.authenticated_patron = MagicMock(return_value=None)
         value = missing_patron.testing_patron(db.session)
         assert (None, "2") == value
         missing_patron.authenticated_patron.assert_called_once()
@@ -2123,7 +2053,9 @@ class TestBasicAuthenticationProvider:
                 test_password="2",
             )
         )
-        problem_patron.authenticated_patron = MagicMock(return_value=PATRON_OF_ANOTHER_LIBRARY)  # type: ignore[method-assign]
+        problem_patron.authenticated_patron = MagicMock(
+            return_value=PATRON_OF_ANOTHER_LIBRARY
+        )
         value = problem_patron.testing_patron(db.session)
         assert (PATRON_OF_ANOTHER_LIBRARY, "2") == value
 
@@ -2138,7 +2070,7 @@ class TestBasicAuthenticationProvider:
         # results in something (non None) that's not a Patron
         # or a problem detail document.
         not_a_patron = "<not a patron>"
-        problem_patron.authenticated_patron = MagicMock(return_value=not_a_patron)  # type: ignore[method-assign]
+        problem_patron.authenticated_patron = MagicMock(return_value=not_a_patron)
         value = problem_patron.testing_patron(db.session)
         assert (not_a_patron, "2") == value
 
@@ -2158,7 +2090,7 @@ class TestBasicAuthenticationProvider:
                 test_password="2",
             )
         )
-        present_patron.authenticated_patron = MagicMock(return_value=patron)  # type: ignore[method-assign]
+        present_patron.authenticated_patron = MagicMock(return_value=patron)
         value = present_patron.testing_patron(db.session)
         assert (patron, "2") == value
 
@@ -2173,7 +2105,7 @@ class TestBasicAuthenticationProvider:
         # aren't even run.
         provider = mock_basic()
         exception = Exception("Nope")
-        provider.testing_patron_or_bust = MagicMock(side_effect=exception)  # type: ignore[method-assign]
+        provider.testing_patron_or_bust = MagicMock(side_effect=exception)
         [result] = list(provider._run_self_tests(_db))
         provider.testing_patron_or_bust.assert_called_once_with(_db)
         assert result.success is False
@@ -2182,8 +2114,8 @@ class TestBasicAuthenticationProvider:
         # If we can authenticate a test patron, the patron and their
         # password are passed into the next test.
         provider = mock_basic()
-        provider.testing_patron_or_bust = MagicMock(return_value=("patron", "password"))  # type: ignore[method-assign]
-        provider.update_patron_metadata = MagicMock(return_value="some metadata")  # type: ignore[method-assign]
+        provider.testing_patron_or_bust = MagicMock(return_value=("patron", "password"))
+        provider.update_patron_metadata = MagicMock(return_value="some metadata")
 
         [get_patron, update_metadata] = provider._run_self_tests(_db)
         provider.testing_patron_or_bust.assert_called_once_with(_db)
@@ -2199,8 +2131,8 @@ class TestBasicAuthenticationProvider:
     def test_server_side_validation(self, mock_basic: MockBasicFixture):
         provider = mock_basic(
             settings=BasicAuthProviderSettings(
-                identifier_regular_expression="foo",  # type: ignore[arg-type]
-                password_regular_expression="bar",  # type: ignore[arg-type]
+                identifier_regular_expression=re.compile("foo"),
+                password_regular_expression=re.compile("bar"),
             )
         )
         assert provider.server_side_validation("food", "barbecue") is True
@@ -2213,8 +2145,8 @@ class TestBasicAuthenticationProvider:
         # and the empty string.
         provider = mock_basic(
             settings=BasicAuthProviderSettings(
-                identifier_regular_expression="foo",  # type: ignore[arg-type]
-                password_regular_expression="bar",  # type: ignore[arg-type]
+                identifier_regular_expression=re.compile("foo"),
+                password_regular_expression=re.compile("bar"),
                 password_keyboard=Keyboards.NULL,
             )
         )
@@ -2236,8 +2168,8 @@ class TestBasicAuthenticationProvider:
         # Test maximum length of identifier and password.
         provider = mock_basic(
             settings=BasicAuthProviderSettings(
-                identifier_maximum_length="5",  # type: ignore[arg-type]
-                password_maximum_length="10",  # type: ignore[arg-type]
+                identifier_maximum_length=5,
+                password_maximum_length=10,
             )
         )
         assert provider.server_side_validation("a", "1234") is True
@@ -2456,7 +2388,9 @@ class TestBasicAuthenticationProviderAuthenticate:
         # set of information. If a remote patron lookup were to happen,
         # it would explode.
         provider = mock_basic(patrondata=complete_patrondata)
-        provider.remote_patron_lookup = MagicMock(side_effect=Exception("Should not be called."))  # type: ignore[method-assign]
+        provider.remote_patron_lookup = MagicMock(
+            side_effect=Exception("Should not be called.")
+        )
 
         # The patron can be authenticated.
         assert patron == provider.authenticate(db.session, self.credentials)
@@ -2492,8 +2426,8 @@ class TestBasicAuthenticationProviderAuthenticate:
         provider = mock_basic(
             patrondata=patrondata,
             settings=BasicAuthProviderSettings(
-                identifier_regular_expression="foo",  # type: ignore[arg-type]
-                password_regular_expression="bar",  # type: ignore[arg-type]
+                identifier_regular_expression=re.compile("foo"),
+                password_regular_expression=re.compile("bar"),
             ),
         )
 

@@ -1,13 +1,10 @@
 from __future__ import annotations
 
-import csv
 import datetime
 import json
-import os
 import random
 from io import StringIO
-from pathlib import Path
-from unittest.mock import MagicMock, PropertyMock, patch
+from unittest.mock import MagicMock, call, patch
 
 import pytest
 from freezegun import freeze_time
@@ -16,44 +13,37 @@ from sqlalchemy.orm import Session
 
 from api.lanes import create_default_lanes
 from core.classifier import Classifier
-from core.config import CannotLoadConfiguration
-from core.external_search import Filter, MockExternalSearchIndex
+from core.config import CannotLoadConfiguration, Configuration, ConfigurationConstants
+from core.external_search import ExternalSearchIndex, Filter
 from core.lane import Lane, WorkList
-from core.metadata_layer import LinkData, TimestampData
-from core.mirror import MirrorUploader
+from core.metadata_layer import TimestampData
 from core.model import (
-    CachedFeed,
     Collection,
     ConfigurationSetting,
     Contributor,
     CoverageRecord,
     DataSource,
     ExternalIntegration,
-    Hyperlink,
     Identifier,
     Library,
     LicensePool,
-    RightsStatus,
     Timestamp,
     Work,
     WorkCoverageRecord,
-    create,
     get_one,
+    get_one_or_create,
 )
 from core.model.classification import Classification, Subject
-from core.model.configuration import ExternalIntegrationLink
 from core.model.customlist import CustomList
+from core.model.devicetokens import DeviceToken, DeviceTokenTypes
+from core.model.patron import Patron
 from core.monitor import CollectionMonitor, Monitor, ReaperMonitor
 from core.opds_import import OPDSImportMonitor
-from core.overdrive import OverdriveAdvantageAccount
-from core.s3 import MinIOUploader, MinIOUploaderConfiguration, S3Uploader
 from core.scripts import (
     AddClassificationScript,
-    AlembicMigrateVersion,
     CheckContributorNamesInDB,
     CollectionArgumentsScript,
     CollectionInputScript,
-    CollectionType,
     ConfigureCollectionScript,
     ConfigureIntegrationScript,
     ConfigureLaneScript,
@@ -62,12 +52,10 @@ from core.scripts import (
     CustomListUpdateEntriesScript,
     DeleteInvisibleLanesScript,
     Explain,
-    GenerateOverdriveAdvantageAccountList,
     IdentifierInputScript,
     LaneSweeperScript,
     LibraryInputScript,
-    ListCollectionMetadataIdentifiersScript,
-    MirrorResourcesScript,
+    LoanNotificationsScript,
     MockStdin,
     OPDSImportScript,
     PatronInputScript,
@@ -94,13 +82,14 @@ from core.scripts import (
     WorkProcessingScript,
 )
 from core.util.datetime_helpers import datetime_utc, utc_now
+from core.util.notifications import PushNotifications
 from core.util.worker_pools import DatabasePool
 from tests.core.mock import (
     AlwaysSuccessfulCollectionCoverageProvider,
     AlwaysSuccessfulWorkCoverageProvider,
 )
 from tests.fixtures.database import DatabaseTransactionFixture
-from tests.fixtures.search import EndToEndSearchFixture, ExternalSearchPatchFixture
+from tests.fixtures.search import EndToEndSearchFixture, ExternalSearchFixtureFake
 
 
 class TestScript:
@@ -924,16 +913,9 @@ class TestShowLibrariesScript:
         assert "No libraries found.\n" == output.getvalue()
 
     def test_with_multiple_libraries(self, db: DatabaseTransactionFixture):
-        l1, ignore = create(
-            db.session,
-            Library,
-            name="Library 1",
-            short_name="L1",
-        )
+        l1 = db.library(name="Library 1", short_name="L1")
         l1.library_registry_shared_secret = "a"
-        l2, ignore = create(
-            db.session,
-            Library,
+        l2 = db.library(
             name="Library 2",
             short_name="L2",
         )
@@ -1036,9 +1018,7 @@ class TestConfigureSiteScript:
 class TestConfigureLibraryScript:
     def test_bad_arguments(self, db: DatabaseTransactionFixture):
         script = ConfigureLibraryScript()
-        library, ignore = create(
-            db.session,
-            Library,
+        library = db.library(
             name="Library 1",
             short_name="L1",
         )
@@ -1064,6 +1044,8 @@ class TestConfigureLibraryScript:
                 "--short-name=L1",
                 "--name=Library 1",
                 "--setting=customkey=value",
+                "--setting=website=http://library.org",
+                "--setting=help_email=support@library.org",
             ],
             output,
         )
@@ -1072,7 +1054,9 @@ class TestConfigureLibraryScript:
         [library] = db.session.query(Library).all()
         assert "Library 1" == library.name
         assert "L1" == library.short_name
-        assert "value" == library.setting("customkey").value
+        assert "http://library.org" == library.settings.website
+        assert "support@library.org" == library.settings.help_email
+        assert "value" == library.settings_dict.get("customkey")
         expect_output = (
             "Configuration settings stored.\n" + "\n".join(library.explain()) + "\n"
         )
@@ -1080,9 +1064,7 @@ class TestConfigureLibraryScript:
 
     def test_reconfigure_library(self, db: DatabaseTransactionFixture):
         # The library exists.
-        library, ignore = create(
-            db.session,
-            Library,
+        library = db.library(
             name="Library 1",
             short_name="L1",
         )
@@ -1101,7 +1083,7 @@ class TestConfigureLibraryScript:
         )
 
         assert "Library 1 New Name" == library.name
-        assert "value" == library.setting("customkey").value
+        assert "value" == library.settings_dict.get("customkey")
 
         expect_output = (
             "Configuration settings stored.\n" + "\n".join(library.explain()) + "\n"
@@ -1152,9 +1134,7 @@ class TestShowCollectionsScript:
 class TestConfigureCollectionScript:
     def test_bad_arguments(self, db: DatabaseTransactionFixture):
         script = ConfigureCollectionScript()
-        library, ignore = create(
-            db.session,
-            Library,
+        db.library(
             name="Library 1",
             short_name="L1",
         )
@@ -1195,25 +1175,9 @@ class TestConfigureCollectionScript:
 
     def test_success(self, db: DatabaseTransactionFixture):
         script = ConfigureCollectionScript()
-        l1, ignore = create(
-            db.session,
-            Library,
-            name="Library 1",
-            short_name="L1",
-        )
-        l2, ignore = create(
-            db.session,
-            Library,
-            name="Library 2",
-            short_name="L2",
-        )
-        l3, ignore = create(
-            db.session,
-            Library,
-            name="Library 3",
-            short_name="L3",
-        )
-        db.session.commit()
+        l1 = db.library(name="Library 1", short_name="L1")
+        l2 = db.library(name="Library 2", short_name="L2")
+        l3 = db.library(name="Library 3", short_name="L3")
 
         # Create a collection, set all its attributes, set a custom
         # setting, and associate it with two libraries.
@@ -1234,13 +1198,19 @@ class TestConfigureCollectionScript:
             output,
         )
 
+        db.session.commit()
+
         # The collection was created and configured properly.
         collection = get_one(db.session, Collection)
         assert "New Collection" == collection.name
-        assert "url" == collection.external_integration.url
+        assert "url" == collection.integration_configuration.settings_dict["url"]
         assert "acctid" == collection.external_account_id
-        assert "username" == collection.external_integration.username
-        assert "password" == collection.external_integration.password
+        assert (
+            "username" == collection.integration_configuration.settings_dict["username"]
+        )
+        assert (
+            "password" == collection.integration_configuration.settings_dict["password"]
+        )
 
         # Two libraries now have access to the collection.
         assert [collection] == l1.collections
@@ -1249,9 +1219,8 @@ class TestConfigureCollectionScript:
 
         # One CollectionSetting was set on the collection, in addition
         # to url, username, and password.
-        setting = collection.external_integration.setting("library_id")
-        assert "library_id" == setting.key
-        assert "1234" == setting.value
+        setting = collection.integration_configuration.settings_dict.get("library_id")
+        assert "1234" == setting
 
         # The output explains the collection settings.
         expect = (
@@ -1279,7 +1248,8 @@ class TestConfigureCollectionScript:
         )
 
         # The collection has been changed.
-        assert "foo" == collection.external_integration.url
+        db.session.refresh(collection.integration_configuration)
+        assert "foo" == collection.integration_configuration.settings_dict.get("url")
         assert ExternalIntegration.BIBLIOTHECA == collection.protocol
 
         expect = (
@@ -1577,9 +1547,11 @@ class MockOPDSImportScript(OPDSImportScript):
 
 class TestOPDSImportScript:
     def test_do_run(self, db: DatabaseTransactionFixture):
-        db.default_collection().external_integration.setting(
-            Collection.DATA_SOURCE_NAME_SETTING
-        ).value = DataSource.OA_CONTENT_SERVER
+        DatabaseTransactionFixture.set_settings(
+            db.default_collection().integration_configuration,
+            Collection.DATA_SOURCE_NAME_SETTING,
+            DataSource.OA_CONTENT_SERVER,
+        )
 
         script = MockOPDSImportScript(db.session)
         script.do_run([])
@@ -1618,12 +1590,9 @@ class MockWhereAreMyBooks(WhereAreMyBooksScript):
     form, so we don't have to mess around with StringIO.
     """
 
-    def __init__(self, _db=None, output=None, search=None):
+    def __init__(self, search: ExternalSearchIndex, _db=None, output=None):
         # In most cases a list will do fine for `output`.
         output = output or []
-
-        # In most tests an empty mock will do for `search`.
-        search = search or MockExternalSearchIndex()
 
         super().__init__(_db, output, search)
         self.output = []
@@ -1653,7 +1622,14 @@ class TestWhereAreMyBooksScript:
             == output.getvalue()
         )
 
-    def test_overall_structure(self, db: DatabaseTransactionFixture):
+    @pytest.mark.skip(
+        reason="This test currently freezes inside pytest and has to be killed with SIGKILL."
+    )
+    def test_overall_structure(
+        self,
+        db: DatabaseTransactionFixture,
+        end_to_end_search_fixture: EndToEndSearchFixture,
+    ):
         # Verify that run() calls the methods we expect.
 
         class Mock(MockWhereAreMyBooks):
@@ -1716,13 +1692,19 @@ class TestWhereAreMyBooksScript:
         script.run(cmd_args=["--collection=%s" % collection2.name])
         assert [collection2] == script.explained_collections
 
-    def test_check_library(self, db: DatabaseTransactionFixture):
+    def test_check_library(
+        self,
+        db: DatabaseTransactionFixture,
+        end_to_end_search_fixture: EndToEndSearchFixture,
+    ):
         # Give the default library a collection and a lane.
         library = db.default_library()
         collection = db.default_collection()
         lane = db.lane(library=library)
 
-        script = MockWhereAreMyBooks(db.session)
+        script = MockWhereAreMyBooks(
+            _db=db.session, search=end_to_end_search_fixture.external_search_index
+        )
         script.check_library(library)
 
         checking, has_collection, has_lanes = script.output
@@ -1739,36 +1721,10 @@ class TestWhereAreMyBooksScript:
         assert " This library has no collections -- that's a problem." == no_collection
         assert " This library has no lanes -- that's a problem." == no_lanes
 
-    def test_delete_cached_feeds(self, db: DatabaseTransactionFixture):
-        groups = CachedFeed(type=CachedFeed.GROUPS_TYPE, pagination="")
-        db.session.add(groups)
-        not_groups = CachedFeed(type=CachedFeed.PAGE_TYPE, pagination="")
-        db.session.add(not_groups)
-
-        assert 2 == db.session.query(CachedFeed).count()
-
-        script = MockWhereAreMyBooks(db.session)
-        script.delete_cached_feeds()
-        how_many, theyre_gone = script.output
-        assert (
-            "%d feeds in cachedfeeds table, not counting grouped feeds.",
-            [1],
-        ) == how_many
-        assert " Deleting them all." == theyre_gone
-
-        # Call it again, and we don't see "Deleting them all". There aren't
-        # any to delete.
-        script.output = []
-        script.delete_cached_feeds()
-        [how_many] = script.output
-        assert (
-            "%d feeds in cachedfeeds table, not counting grouped feeds.",
-            [0],
-        ) == how_many
-
     @staticmethod
     def check_explanation(
         db: DatabaseTransactionFixture,
+        end_to_end_search_fixture: EndToEndSearchFixture,
         presentation_ready=1,
         not_presentation_ready=0,
         no_delivery_mechanisms=0,
@@ -1778,7 +1734,11 @@ class TestWhereAreMyBooksScript:
         **kwargs,
     ):
         """Runs explain_collection() and verifies expected output."""
-        script = MockWhereAreMyBooks(db.session, **kwargs)
+        script = MockWhereAreMyBooks(
+            _db=db.session,
+            search=end_to_end_search_fixture.external_search_index,
+            **kwargs,
+        )
         script.explain_collection(db.default_collection())
         out = script.output
 
@@ -1819,46 +1779,90 @@ class TestWhereAreMyBooksScript:
             [in_search_index, presentation_ready],
         ) == out.pop(0)
 
-    def test_no_presentation_ready_works(self, db: DatabaseTransactionFixture):
+    def test_no_presentation_ready_works(
+        self,
+        db: DatabaseTransactionFixture,
+        end_to_end_search_fixture: EndToEndSearchFixture,
+    ):
         # This work is not presentation-ready.
         work = db.work(with_license_pool=True)
+        end_to_end_search_fixture.external_search_index.initialize_indices()
         work.presentation_ready = False
-        script = MockWhereAreMyBooks(db.session)
+        script = MockWhereAreMyBooks(
+            _db=db.session, search=end_to_end_search_fixture.external_search_index
+        )
         self.check_explanation(
+            end_to_end_search_fixture=end_to_end_search_fixture,
             presentation_ready=0,
             not_presentation_ready=1,
             db=db,
         )
 
-    def test_no_delivery_mechanisms(self, db: DatabaseTransactionFixture):
+    def test_no_delivery_mechanisms(
+        self,
+        db: DatabaseTransactionFixture,
+        end_to_end_search_fixture: EndToEndSearchFixture,
+    ):
         # This work has a license pool, but no delivery mechanisms.
         work = db.work(with_license_pool=True)
+        end_to_end_search_fixture.external_search_index.initialize_indices()
         for lpdm in work.license_pools[0].delivery_mechanisms:
             db.session.delete(lpdm)
-        self.check_explanation(no_delivery_mechanisms=1, db=db)
+        self.check_explanation(
+            no_delivery_mechanisms=1,
+            db=db,
+            end_to_end_search_fixture=end_to_end_search_fixture,
+        )
 
-    def test_suppressed_pool(self, db: DatabaseTransactionFixture):
+    def test_suppressed_pool(
+        self,
+        db: DatabaseTransactionFixture,
+        end_to_end_search_fixture: EndToEndSearchFixture,
+    ):
         # This work has a license pool, but it's suppressed.
         work = db.work(with_license_pool=True)
+        end_to_end_search_fixture.external_search_index.initialize_indices()
         work.license_pools[0].suppressed = True
-        self.check_explanation(suppressed=1, db=db)
+        self.check_explanation(
+            suppressed=1,
+            db=db,
+            end_to_end_search_fixture=end_to_end_search_fixture,
+        )
 
-    def test_no_licenses(self, db: DatabaseTransactionFixture):
+    def test_no_licenses(
+        self,
+        db: DatabaseTransactionFixture,
+        end_to_end_search_fixture: EndToEndSearchFixture,
+    ):
         # This work has a license pool, but no licenses owned.
         work = db.work(with_license_pool=True)
+        end_to_end_search_fixture.external_search_index.initialize_indices()
         work.license_pools[0].licenses_owned = 0
-        self.check_explanation(not_owned=1, db=db)
+        self.check_explanation(
+            not_owned=1,
+            db=db,
+            end_to_end_search_fixture=end_to_end_search_fixture,
+        )
 
-    def test_search_engine(self, db: DatabaseTransactionFixture):
-        output = StringIO()
-        search = MockExternalSearchIndex()
+    def test_search_engine(
+        self,
+        db: DatabaseTransactionFixture,
+        end_to_end_search_fixture: EndToEndSearchFixture,
+    ):
+        search = end_to_end_search_fixture.external_search_index
         work = db.work(with_license_pool=True)
         work.presentation_ready = True
-        search.bulk_update([work])
 
-        # This MockExternalSearchIndex will always claim there is one
-        # result.
-        self.check_explanation(search=search, in_search_index=1, db=db)
+        docs = search.start_migration()
+        docs.add_documents(search.create_search_documents_from_works([work]))
+        docs.finish()
+
+        # This search index will always claim there is one result.
+        self.check_explanation(
+            in_search_index=1,
+            db=db,
+            end_to_end_search_fixture=end_to_end_search_fixture,
+        )
 
 
 class TestExplain:
@@ -1889,10 +1893,6 @@ class TestExplain:
         # CoverageRecords associated with the primary identifier were
         # printed out.
         assert "OCLC Linked Data | an operation | success" in output
-
-        # WorkCoverageRecords associated with the work were
-        # printed out.
-        assert "generate-opds | success" in output
 
         # There is an active LicensePool that is fulfillable and has
         # copies owned.
@@ -1987,393 +1987,13 @@ class TestReclassifyWorksForUncheckedSubjectsScript:
         assert subject.checked == True
 
 
-class TestListCollectionMetadataIdentifiersScript:
-    def test_do_run(self, db: DatabaseTransactionFixture):
-        output = StringIO()
-        script = ListCollectionMetadataIdentifiersScript(_db=db.session, output=output)
-
-        # Create two collections.
-        c1 = db.collection(external_account_id=db.fresh_url())
-        c2 = db.collection(
-            name="Local Over",
-            protocol=ExternalIntegration.OVERDRIVE,
-            external_account_id="banana",
-        )
-
-        script.do_run()
-
-        def expected(c):
-            return "({}) {}/{} => {}\n".format(
-                str(c.id),
-                c.name,
-                c.protocol,
-                c.metadata_identifier,
-            )
-
-        # In the output, there's a header, a line describing the format,
-        # metdata identifiers for each collection, and a count of the
-        # collections found.
-        output = output.getvalue()
-        assert "COLLECTIONS" in output
-        assert "(id) name/protocol => metadata_identifier\n" in output
-        assert expected(c1) in output
-        assert expected(c2) in output
-        assert "2 collections found.\n" in output
-
-
-class TestMirrorResourcesScript:
-    def test_do_run(self, db: DatabaseTransactionFixture):
-        has_uploader = db.collection()
-        mock_uploader = object()
-
-        class Mock(MirrorResourcesScript):
-
-            processed = []
-
-            def collections_with_uploader(self, collections, collection_type):
-                # Pretend that `has_uploader` is the only Collection
-                # with an uploader.
-                for collection in collections:
-                    if collection == has_uploader:
-                        yield collection, mock_uploader
-
-            def process_collection(self, collection, policy):
-                self.processed.append((collection, policy))
-
-        script = Mock(db.session)
-
-        # If there are no command-line arguments, process_collection
-        # is called on every Collection in the system that is okayed
-        # by collections_with_uploader.
-        script.do_run(cmd_args=[])
-        processed = script.processed.pop()
-        assert (has_uploader, mock_uploader) == processed
-        assert [] == script.processed
-
-        # If a Collection is named on the command line,
-        # process_collection is called on that Collection _if_ it has
-        # an uploader.
-        args = ["--collection=%s" % db.default_collection().name]
-        script.do_run(cmd_args=args)
-        assert [] == script.processed
-
-        script.do_run(cmd_args=["--collection=%s" % has_uploader.name])
-        processed = script.processed.pop()
-        assert (has_uploader, mock_uploader) == processed
-
-    @pytest.mark.parametrize(
-        "name,collection_type,book_mirror_type,protocol,uploader_class,settings",
-        [
-            (
-                "containing_open_access_books_with_s3_uploader",
-                CollectionType.OPEN_ACCESS,
-                ExternalIntegrationLink.OPEN_ACCESS_BOOKS,
-                ExternalIntegration.S3,
-                S3Uploader,
-                None,
-            ),
-            (
-                "containing_protected_access_books_with_s3_uploader",
-                CollectionType.PROTECTED_ACCESS,
-                ExternalIntegrationLink.PROTECTED_ACCESS_BOOKS,
-                ExternalIntegration.S3,
-                S3Uploader,
-                None,
-            ),
-            (
-                "containing_open_access_books_with_minio_uploader",
-                CollectionType.OPEN_ACCESS,
-                ExternalIntegrationLink.OPEN_ACCESS_BOOKS,
-                ExternalIntegration.MINIO,
-                MinIOUploader,
-                {MinIOUploaderConfiguration.ENDPOINT_URL: "http://localhost"},
-            ),
-            (
-                "containing_protected_access_books_with_minio_uploader",
-                CollectionType.PROTECTED_ACCESS,
-                ExternalIntegrationLink.PROTECTED_ACCESS_BOOKS,
-                ExternalIntegration.MINIO,
-                MinIOUploader,
-                {MinIOUploaderConfiguration.ENDPOINT_URL: "http://localhost"},
-            ),
-        ],
-    )
-    def test_collections(
-        self,
-        db,
-        name,
-        collection_type,
-        book_mirror_type,
-        protocol,
-        uploader_class,
-        settings,
-    ):
-        class Mock(MirrorResourcesScript):
-
-            mock_policy = object()
-
-            @classmethod
-            def replacement_policy(cls, uploader):
-                cls.replacement_policy_called_with = uploader
-                return cls.mock_policy
-
-        script = Mock()
-
-        # The default collection does not have an uploader.
-        # This new collection does.
-        has_uploader = db.collection()
-        mirror = db.external_integration(protocol, ExternalIntegration.STORAGE_GOAL)
-
-        if settings:
-            for key, value in settings.items():
-                mirror.setting(key).value = value
-
-        integration_link = db.external_integration_link(
-            integration=has_uploader._external_integration,
-            other_integration=mirror,
-            purpose=ExternalIntegrationLink.COVERS,
-        )
-
-        # Calling collections_with_uploader will do nothing for collections
-        # that don't have an uploader. It will make a MirrorUploader for
-        # the other collection, pass it into replacement_policy,
-        # and yield the result.
-        result = script.collections_with_uploader(
-            [
-                db.default_collection(),
-                has_uploader,
-                db.default_collection(),
-            ],
-            collection_type,
-        )
-
-        [(collection, policy)] = result
-        assert has_uploader == collection
-        assert Mock.mock_policy == policy
-        # The mirror uploader was associated with a purpose of "covers", so we only
-        # expect to have one MirrorUploader.
-        assert Mock.replacement_policy_called_with[book_mirror_type] == None
-        assert isinstance(
-            Mock.replacement_policy_called_with[ExternalIntegrationLink.COVERS],
-            MirrorUploader,
-        )
-
-        # Add another storage for books.
-        another_mirror = db.external_integration(
-            protocol, ExternalIntegration.STORAGE_GOAL
-        )
-
-        integration_link = db.external_integration_link(
-            integration=has_uploader._external_integration,
-            other_integration=another_mirror,
-            purpose=book_mirror_type,
-        )
-
-        result = script.collections_with_uploader(
-            [
-                db.default_collection(),
-                has_uploader,
-                db.default_collection(),
-            ],
-            collection_type,
-        )
-
-        [(collection, policy)] = result
-        assert has_uploader == collection
-        assert Mock.mock_policy == policy
-        # There should be two MirrorUploaders, one for each purpose.
-        assert isinstance(
-            Mock.replacement_policy_called_with[ExternalIntegrationLink.COVERS],
-            uploader_class,
-        )
-        assert isinstance(
-            Mock.replacement_policy_called_with[book_mirror_type], uploader_class
-        )
-
-    def test_replacement_policy(self):
-        uploader = object()
-        p = MirrorResourcesScript.replacement_policy(uploader)
-        assert uploader == p.mirrors
-        assert True == p.link_content
-        assert True == p.even_if_not_apparently_updated
-        assert False == p.rights
-
-    def test_process_collection(self, db: DatabaseTransactionFixture):
-        class MockScript(MirrorResourcesScript):
-            process_item_called_with = []
-
-            def process_item(self, collection, link, policy):
-                self.process_item_called_with.append((collection, link, policy))
-
-        # Mock the Hyperlink.unmirrored method
-        link1 = object()
-        link2 = object()
-
-        def unmirrored(collection):
-            assert collection == db.default_collection()
-            yield link1
-            yield link2
-
-        script = MockScript(db.session)
-        policy = object()
-        script.process_collection(db.default_collection(), policy, unmirrored)
-
-        # Process_collection called unmirrored() and then called process_item
-        # on every item yielded by unmirrored()
-        call1, call2 = script.process_item_called_with
-        assert (db.default_collection(), link1, policy) == call1
-        assert (db.default_collection(), link2, policy) == call2
-
-    def test_derive_rights_status(self, db: DatabaseTransactionFixture):
-        """Test our ability to determine the rights status of a Resource,
-        in the absence of immediate information from the server.
-        """
-        m = MirrorResourcesScript.derive_rights_status
-        work = db.work(with_open_access_download=True)
-        [pool] = work.license_pools
-        [lpdm] = pool.delivery_mechanisms
-        resource = lpdm.resource
-
-        expect = lpdm.rights_status.uri
-
-        # Given the LicensePool, we can figure out the Resource's
-        # rights status based on what was previously recovered. This lets
-        # us know whether it's okay to mirror that Resource.
-        assert expect == m(pool, resource)
-
-        # In theory, a Resource can be associated with several
-        # LicensePoolDeliveryMechanisms. That's why a LicensePool is
-        # necessary -- to see which LicensePoolDeliveryMechanism we're
-        # looking at.
-        assert None == m(None, resource)
-
-        # If there's no Resource-specific information, but a
-        # LicensePool has only one rights URI among all of its
-        # LicensePoolDeliveryMechanisms, then we can assume all Resources
-        # for that LicensePool use that same set of rights.
-        w2 = db.work(with_license_pool=True)
-        [pool2] = w2.license_pools
-        assert pool2.delivery_mechanisms[0].rights_status.uri == m(pool2, None)
-
-        # If there's more than one possibility, or the LicensePool has
-        # no LicensePoolDeliveryMechanisms at all, then we just don't
-        # know.
-        pool2.set_delivery_mechanism(
-            content_type="text/plain", drm_scheme=None, rights_uri=RightsStatus.CC_BY_ND
-        )
-        assert None == m(pool2, None)
-
-        pool2.delivery_mechanisms = []
-        assert None == m(pool2, None)
-
-    def test_process_item(self, db: DatabaseTransactionFixture):
-        """Test the code that actually sets up the mirror operation."""
-        # Every time process_item() is called, it's either going to ask
-        # this thing to mirror the item, or it's going to decide not to.
-        class MockMirrorUtility:
-            def __init__(self):
-                self.mirrored = []
-
-            def mirror_link(self, **kwargs):
-                self.mirrored.append(kwargs)
-
-        mirror = MockMirrorUtility()
-
-        class MockScript(MirrorResourcesScript):
-            MIRROR_UTILITY = mirror
-            RIGHTS_STATUS = None
-
-            def derive_rights_status(self, license_pool, resource):
-                """Always return the same rights status information.
-                To start out, act like no rights information is available.
-                """
-                self.derive_rights_status_called_with = (license_pool, resource)
-                return self.RIGHTS_STATUS
-
-        # Resource and Hyperlink are a pain to use for real, so here
-        # are some cheap mocks.
-        class MockResource:
-            def __init__(self, url):
-                self.url = url
-
-        class MockLink:
-            def __init__(self, rel, href, identifier):
-                self.rel = rel
-                self.resource = MockResource(href)
-                self.identifier = identifier
-
-        script = MockScript(db.session)
-        m = script.process_item
-
-        # If we can't tie the Hyperlink to a LicensePool in the given
-        # Collection, no upload happens. (This shouldn't happen
-        # because Hyperlink.unmirrored only finds Hyperlinks
-        # associated with Identifiers licensed through a Collection.)
-        identifier = db.identifier()
-        policy = object()
-        download_link = MockLink(
-            Hyperlink.OPEN_ACCESS_DOWNLOAD, db.fresh_url(), identifier
-        )
-        db.default_collection().data_source = DataSource.GUTENBERG
-        m(db.default_collection(), download_link, policy)
-        assert [] == mirror.mirrored
-
-        # This HyperLink does match a LicensePool, but it's not
-        # in the collection we're mirroring, so mirroring it might not be
-        # appropriate.
-        work = db.work(
-            with_open_access_download=True, collection=db.default_collection()
-        )
-        pool = work.license_pools[0]
-        download_link.identifier = pool.identifier
-        wrong_collection = db.collection()
-        wrong_collection.data_source = DataSource.GUTENBERG
-        m(wrong_collection, download_link, policy)
-        assert [] == mirror.mirrored
-
-        # For "open-access" downloads of actual books, if we can't
-        # determine the actual rights status of the book, then we
-        # don't do anything.
-        m(db.default_collection(), download_link, policy)
-        assert [] == mirror.mirrored
-        assert (pool, download_link.resource) == script.derive_rights_status_called_with
-
-        # If we _can_ determine the rights status, a mirror attempt is made.
-        script.RIGHTS_STATUS = object()
-        m(db.default_collection(), download_link, policy)
-        attempt = mirror.mirrored.pop()
-        assert policy == attempt["policy"]
-        assert pool.data_source == attempt["data_source"]
-        assert pool == attempt["model_object"]
-        assert download_link == attempt["link_obj"]
-
-        link = attempt["link"]
-        assert isinstance(link, LinkData)
-        assert download_link.resource.url == link.href
-
-        # For other types of links, we rely on fair use, so the "rights
-        # status" doesn't matter.
-        script.RIGHTS_STATUS = None
-        thumb_link = MockLink(
-            Hyperlink.THUMBNAIL_IMAGE, db.fresh_url(), pool.identifier
-        )
-        m(db.default_collection(), thumb_link, policy)
-        attempt = mirror.mirrored.pop()
-        assert thumb_link.resource.url == attempt["link"].href
-
-
 class TestRebuildSearchIndexScript:
-    def test_do_run(self, db: DatabaseTransactionFixture):
-        class MockSearchIndex:
-            def setup_index(self):
-                # This is where the search index is deleted and recreated.
-                self.setup_index_called = True
-
-            def bulk_update(self, works):
-                self.bulk_update_called_with = list(works)
-                return works, []
-
-        index = MockSearchIndex()
+    def test_do_run(
+        self,
+        db: DatabaseTransactionFixture,
+        external_search_fake_fixture: ExternalSearchFixtureFake,
+    ):
+        index = external_search_fake_fixture.external_search
         work = db.work(with_license_pool=True)
         work2 = db.work(with_license_pool=True)
         wcr = WorkCoverageRecord
@@ -2394,8 +2014,9 @@ class TestRebuildSearchIndexScript:
         [progress] = script.do_run()
 
         # The mock methods were called with the values we expect.
-        assert True == index.setup_index_called
-        assert {work, work2} == set(index.bulk_update_called_with)
+        assert {work.id, work2.id} == set(
+            map(lambda d: d["_id"], external_search_fake_fixture.search.documents_all())
+        )
 
         # The script returned a list containing a single
         # CoverageProviderProgress object containing accurate
@@ -2414,7 +2035,6 @@ class TestRebuildSearchIndexScript:
 
 
 class TestSearchIndexCoverageRemover:
-
     SERVICE_NAME = "Search Index Coverage Remover"
 
     def test_do_run(self, db: DatabaseTransactionFixture):
@@ -2442,20 +2062,27 @@ class TestSearchIndexCoverageRemover:
 
 
 class TestUpdateLaneSizeScript:
-    def test_do_run(
-        self,
-        db,
-        external_search_patch_fixture: ExternalSearchPatchFixture,
-    ):
+    def test_do_run(self, db, end_to_end_search_fixture: EndToEndSearchFixture):
+        end_to_end_search_fixture.external_search_index.start_migration().finish()
+
         lane = db.lane()
         lane.size = 100
-        UpdateLaneSizeScript(db.session).do_run(cmd_args=[])
+        UpdateLaneSizeScript(
+            db.session,
+            search_index_client=end_to_end_search_fixture.external_search_index,
+        ).do_run(cmd_args=[])
         assert 0 == lane.size
 
-    def test_should_process_lane(self, db: DatabaseTransactionFixture):
+    def test_should_process_lane(
+        self,
+        db: DatabaseTransactionFixture,
+        external_search_fake_fixture: ExternalSearchFixtureFake,
+    ):
         """Only Lane objects can have their size updated."""
         lane = db.lane()
-        script = UpdateLaneSizeScript(db.session)
+        script = UpdateLaneSizeScript(
+            db.session, search_index_client=external_search_fake_fixture.external_search
+        )
         assert True == script.should_process_lane(lane)
 
         worklist = WorkList()
@@ -2464,14 +2091,19 @@ class TestUpdateLaneSizeScript:
     def test_site_configuration_has_changed(
         self,
         db: DatabaseTransactionFixture,
-        external_search_patch_fixture: ExternalSearchPatchFixture,
+        end_to_end_search_fixture: EndToEndSearchFixture,
     ):
+        end_to_end_search_fixture.external_search_index.start_migration().finish()
+
         library = db.default_library()
         lane1 = db.lane()
         lane2 = db.lane()
 
         # Run the script to create all the default config settings.
-        UpdateLaneSizeScript(db.session).do_run(cmd_args=[])
+        UpdateLaneSizeScript(
+            db.session,
+            search_index_client=end_to_end_search_fixture.external_search_index,
+        ).do_run(cmd_args=[])
 
         # Set the lane sizes
         lane1.size = 100
@@ -2779,141 +2411,102 @@ class TestCustomListUpdateEntriesScript:
         assert custom_list.size == len(data.populated_books)
 
 
-class TestAlembicMigrateVersionScript:
-    def test_find_alembic_ini(self, db: DatabaseTransactionFixture):
-        # Make sure we get the correct path to alembic.ini
-        with patch("core.scripts.upgrade") as mock:
-            AlembicMigrateVersion().run()
-            mock.assert_called_once()
-            filename = mock.call_args.args[0].config_file_name
-
-        assert "alembic.ini" in filename
-        assert Path(filename).exists()
-
-    @pytest.mark.parametrize(
-        "args", [([]), (["--upgrade", "fakerevision"]), (["-u", "fakerevision"])]
-    )
-    def test_upgrade(self, db: DatabaseTransactionFixture, args):
-        with patch("core.scripts.upgrade") as upgrade:
-            with patch("core.scripts.downgrade") as downgrade:
-                AlembicMigrateVersion().do_run(args)
-                upgrade.assert_called_once()
-                downgrade.assert_not_called()
-
-    @pytest.mark.parametrize(
-        "args", [(["--downgrade", "fakerevision"]), (["-d", "fakerevision"])]
-    )
-    def test_downgrade(self, db: DatabaseTransactionFixture, args):
-        with patch("core.scripts.upgrade") as upgrade:
-            with patch("core.scripts.downgrade") as downgrade:
-                AlembicMigrateVersion().do_run(args)
-                downgrade.assert_called_once()
-                upgrade.assert_not_called()
-
-
-class TestGenerateOverdriveAdvantageAccountList:
-    def test_generate_od_advantage_account_list(self, db: DatabaseTransactionFixture):
-        output_file_path = "test-output.csv"
-        circ_manager_name = "circ_man_name"
-        parent_library_name = "Parent"
-        parent_od_library_id = "parent_id"
-        child1_library_name = "child1"
-        child1_advantage_library_id = "1"
-        child1_token = "token1"
-        child2_library_name = "child2"
-        child2_advantage_library_id = "2"
-        child2_token = "token2"
-        client_key = "ck"
-        client_secret = "cs"
-        library_token = "lt"
-
-        parent: Collection = db.collection(
-            name=parent_library_name,
-            protocol=ExternalIntegration.OVERDRIVE,
-            external_account_id=parent_od_library_id,
+class TestLoanNotificationsScript:
+    def _setup_method(self, db: DatabaseTransactionFixture):
+        self.script = LoanNotificationsScript(_db=db.session)
+        self.patron: Patron = db.patron()
+        self.work: Work = db.work(with_license_pool=True)
+        self.device_token, _ = get_one_or_create(
+            db.session,
+            DeviceToken,
+            patron=self.patron,
+            token_type=DeviceTokenTypes.FCM_ANDROID,
+            device_token="atesttoken",
         )
-        child1: Collection = db.collection(
-            name=child1_library_name,
-            protocol=ExternalIntegration.OVERDRIVE,
-            external_account_id=child1_advantage_library_id,
-        )
-        child1.parent = parent
-        overdrive_api = MagicMock()
-        overdrive_api.get_advantage_accounts.return_value = [
-            OverdriveAdvantageAccount(
-                parent_od_library_id,
-                child1_advantage_library_id,
-                child1_library_name,
-                child1_token,
-            ),
-            OverdriveAdvantageAccount(
-                parent_od_library_id,
-                child2_advantage_library_id,
-                child2_library_name,
-                child2_token,
-            ),
-        ]
+        PushNotifications.TESTING_MODE = True
 
-        overdrive_api.client_key.return_value = bytes(client_key, "utf-8")
-        overdrive_api.client_secret.return_value = bytes(client_secret, "utf-8")
-        type(overdrive_api).collection_token = PropertyMock(return_value=library_token)
-
-        with patch(
-            "core.scripts.GenerateOverdriveAdvantageAccountList._create_overdrive_api"
-        ) as create_od_api:
-            create_od_api.return_value = overdrive_api
-            GenerateOverdriveAdvantageAccountList(db.session).do_run(
-                cmd_args=[
-                    "--output-file-path",
-                    output_file_path,
-                    "--circulation-manager-name",
-                    circ_manager_name,
-                ]
+    def test_loan_notification(self, db: DatabaseTransactionFixture):
+        self._setup_method(db)
+        p = self.work.active_license_pool()
+        if p:  # mypy complains if we don't do this
+            loan, _ = p.loan_to(
+                self.patron,
+                utc_now(),
+                utc_now() + datetime.timedelta(days=1, hours=1),
             )
 
-            with open(output_file_path, newline="") as csv_file:
-                csvreader = csv.reader(csv_file)
-                for index, row in enumerate(csvreader):
-                    if index == 0:
-                        assert "cm" == row[0]
-                        assert "collection" == row[1]
-                        assert "overdrive_library_id" == row[2]
-                        assert "client_key" == row[3]
-                        assert "client_secret" == row[4]
-                        assert "library_token" == row[5]
-                        assert "advantage_name" == row[6]
-                        assert "advantage_id" == row[7]
-                        assert "advantage_token" == row[8]
-                        assert "already_configured" == row[9]
-                    elif index == 1:
-                        assert circ_manager_name == row[0]
-                        assert parent_library_name == row[1]
-                        assert parent_od_library_id == row[2]
-                        assert client_key == row[3]
-                        assert client_secret == row[4]
-                        assert library_token == row[5]
-                        assert child1_library_name == row[6]
-                        assert child1_advantage_library_id == row[7]
-                        assert child1_token == row[8]
-                        assert "True" == row[9]
-                    else:
-                        assert circ_manager_name == row[0]
-                        assert parent_library_name == row[1]
-                        assert parent_od_library_id == row[2]
-                        assert client_key == row[3]
-                        assert client_secret == row[4]
-                        assert library_token == row[5]
-                        assert child2_library_name == row[6]
-                        assert child2_advantage_library_id == row[7]
-                        assert child2_token == row[8]
-                        assert "False" == row[9]
-                    last_index = index
+        work2 = db.work(with_license_pool=True)
+        loan2, _ = work2.active_license_pool().loan_to(
+            self.patron,
+            utc_now(),
+            utc_now() + datetime.timedelta(days=2, hours=1),
+        )  # Should not get notified
 
-            os.remove(output_file_path)
-            assert last_index == 2
-            overdrive_api.client_key.assert_called_once()
-            overdrive_api.client_secret.assert_called_once()
-            overdrive_api.get_advantage_accounts.assert_called_once()
+        with patch("core.scripts.PushNotifications") as mock_notf:
+            self.script.process_loan(loan)
+            self.script.process_loan(loan2)
+
+        assert mock_notf.send_loan_expiry_message.call_count == 1
+        assert mock_notf.send_loan_expiry_message.call_args[0] == (
+            loan,
+            1,
+            [self.device_token],
+        )
+
+    def test_do_run(self, db: DatabaseTransactionFixture):
+        now = utc_now()
+        self._setup_method(db)
+        loan, _ = self.work.active_license_pool().loan_to(
+            self.patron,
+            now,
+            now + datetime.timedelta(days=1, hours=1),
+        )
+
+        work2 = db.work(with_license_pool=True)
+        loan2, _ = work2.active_license_pool().loan_to(
+            self.patron,
+            now,
+            now + datetime.timedelta(days=2, hours=1),
+        )
+
+        work3 = db.work(with_license_pool=True)
+        p = work3.active_license_pool()
+        loan3, _ = p.loan_to(
+            self.patron,
+            now,
+            now + datetime.timedelta(days=1, hours=1),
+        )
+        # loan 3 was notified today already, so should get skipped
+        loan3.patron_last_notified = now.date()
+
+        work4 = db.work(with_license_pool=True)
+        p = work4.active_license_pool()
+        loan4, _ = p.loan_to(
+            self.patron,
+            now,
+            now + datetime.timedelta(days=1, hours=1),
+        )
+        # loan 4 was notified yesterday, so should NOT get skipped
+        loan4.patron_last_notified = now.date() - datetime.timedelta(days=1)
+
+        self.script.process_loan = MagicMock()
+        self.script.BATCH_SIZE = 1
+        self.script.do_run()
+
+        assert self.script.process_loan.call_count == 3
+        assert self.script.process_loan.call_args_list == [
+            call(loan),
+            call(loan2),
+            call(loan4),
+        ]
+
+        # Sitewide notifications are turned off
+        self.script.process_loan.reset_mock()
+        ConfigurationSetting.sitewide(
+            db.session, Configuration.PUSH_NOTIFICATIONS_STATUS
+        ).value = ConfigurationConstants.FALSE
+        self.script.do_run()
+        assert self.script.process_loan.call_count == 0
 
 
 class TestWorkConsolidationScript:

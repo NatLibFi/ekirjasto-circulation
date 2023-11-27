@@ -1,17 +1,17 @@
+from __future__ import annotations
+
 import datetime
 import logging
 import traceback
-from typing import List, Optional, Type, Union
+from typing import TYPE_CHECKING
 
 from sqlalchemy.orm import defer
 from sqlalchemy.sql.expression import and_, or_
 
-from . import log  # This sets the appropriate log format and level.
-from .config import Configuration
-from .metadata_layer import TimestampData
-from .model import (
+from core.config import Configuration
+from core.metadata_layer import TimestampData
+from core.model import (
     Base,
-    CachedFeed,
     CirculationEvent,
     Collection,
     CollectionMissing,
@@ -30,8 +30,12 @@ from .model import (
     get_one,
     get_one_or_create,
 )
-from .model.configuration import ConfigurationSetting
-from .util.datetime_helpers import utc_now
+from core.model.configuration import ConfigurationSetting
+from core.service.container import container_instance
+from core.util.datetime_helpers import utc_now
+
+if TYPE_CHECKING:
+    from sqlalchemy.orm import Query
 
 
 class CollectionMonitorLogger(logging.LoggerAdapter):
@@ -74,7 +78,7 @@ class Monitor:
     # e.g. "Overdrive Circulation Monitor". All instances of your
     # subclass will give this as their service name and track their
     # Timestamps under this name.
-    SERVICE_NAME: Optional[str] = None
+    SERVICE_NAME: str | None = None
 
     # Some useful relative constants for DEFAULT_START_TIME (below).
     ONE_MINUTE_AGO = datetime.timedelta(seconds=60)
@@ -83,13 +87,13 @@ class Monitor:
 
     # If there is no Timestamp for this Monitor, this time will be
     # passed into `run_once()` as the `start_time` parameter.
-    DEFAULT_START_TIME: Union[object, datetime.timedelta] = ONE_MINUTE_AGO
+    DEFAULT_START_TIME: object | datetime.timedelta = ONE_MINUTE_AGO
 
     # When the Timestamp for this Monitor is created, this value will
     # be set for `Timestamp.counter`.
     #
     # This is only used by the SweepMonitor subclass.
-    DEFAULT_COUNTER: Optional[int] = None
+    DEFAULT_COUNTER: int | None = None
 
     def __init__(self, _db, collection=None):
         self._db = _db
@@ -109,6 +113,10 @@ class Monitor:
         self.collection_id = None
         if collection:
             self.collection_id = collection.id
+
+        # Make sure that logging is configured.
+        self.services = container_instance()
+        self.services.init_resources()
 
     @property
     def log(self):
@@ -219,7 +227,15 @@ class Monitor:
             # this failure.
             timestamp_obj.exception = exception
 
-        self._db.commit()
+        try:
+            self._db.commit()
+        except Exception:
+            self._db.rollback()
+            # save the exception to the time after commit in case the db commit fails.
+            timestamp_obj = self.timestamp()
+            timestamp_obj.finish = this_run_finish
+            timestamp_obj.exception = exception
+            self._db.commit()
 
         duration = this_run_finish - this_run_start
         self.log.info(
@@ -338,7 +354,7 @@ class CollectionMonitor(Monitor):
     # instantiated with Collections that get their licenses from this
     # provider. If this is unset, the CollectionMonitor can be
     # instantiated with any Collection, or with no Collection at all.
-    PROTOCOL: Optional[str] = None
+    PROTOCOL: str | None = None
 
     def __init__(self, _db, collection):
         cls = self.__class__
@@ -434,7 +450,7 @@ class SweepMonitor(CollectionMonitor):
     # The model class corresponding to the database table that this
     # Monitor sweeps over. This class must keep its primary key in the
     # `id` field.
-    MODEL_CLASS: Optional[Type[Base]] = None
+    MODEL_CLASS: type[Base] | None = None
 
     def __init__(self, _db, collection=None, batch_size=None):
         cls = self.__class__
@@ -664,22 +680,17 @@ class NotPresentationReadyWorkSweepMonitor(WorkSweepMonitor):
         return super().item_query().filter(not_presentation_ready)
 
 
+class PatronSweepMonitor(SweepMonitor):
+    """Sweep through all Patrons"""
+
+    MODEL_CLASS: type[Base] | None = Patron
+
+    def scope_to_collection(self, qu: Query, collection: Collection) -> Query:
+        """Patrons aren't scoped to a collection"""
+        return qu
+
+
 # SweepMonitors that do something specific.
-
-
-class OPDSEntryCacheMonitor(PresentationReadyWorkSweepMonitor):
-    """A Monitor that recalculates the OPDS entries for every
-    presentation-ready Work.
-
-    This is different from the OPDSEntryWorkCoverageProvider,
-    which only processes works that are missing a WorkCoverageRecord
-    with the 'generate-opds' operation.
-    """
-
-    SERVICE_NAME = "ODPS Entry Cache Monitor"
-
-    def process_item(self, work):
-        work.calculate_opds_entries()
 
 
 class PermanentWorkIDRefreshMonitor(EditionSweepMonitor):
@@ -812,12 +823,12 @@ class ReaperMonitor(Monitor):
     that information, improving performance.
     """
 
-    MODEL_CLASS: Type[Base]
-    TIMESTAMP_FIELD: Optional[str] = None
-    MAX_AGE: Union[datetime.timedelta, int]
+    MODEL_CLASS: type[Base]
+    TIMESTAMP_FIELD: str | None = None
+    MAX_AGE: datetime.timedelta | int | float
     BATCH_SIZE: int = 1000
 
-    REGISTRY: List[Type["ReaperMonitor"]] = []
+    REGISTRY: list[type[ReaperMonitor]] = []
 
     def __init__(self, *args, **kwargs):
         self.SERVICE_NAME = "Reaper for %s" % self.MODEL_CLASS.__name__
@@ -877,17 +888,6 @@ class ReaperMonitor(Monitor):
 # ReaperMonitors that do something specific.
 
 
-class CachedFeedReaper(ReaperMonitor):
-    """Removed cached feeds older than thirty days."""
-
-    MODEL_CLASS = CachedFeed
-    TIMESTAMP_FIELD = "timestamp"
-    MAX_AGE = 30
-
-
-ReaperMonitor.REGISTRY.append(CachedFeedReaper)
-
-
 class CredentialReaper(ReaperMonitor):
     """Remove Credentials that expired more than a day ago."""
 
@@ -920,7 +920,7 @@ class WorkReaper(ReaperMonitor):
     MODEL_CLASS = Work
 
     def __init__(self, *args, **kwargs):
-        from .external_search import ExternalSearchIndex
+        from core.external_search import ExternalSearchIndex
 
         search_index_client = kwargs.pop("search_index_client", None)
         super().__init__(*args, **kwargs)

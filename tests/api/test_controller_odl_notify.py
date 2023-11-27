@@ -29,12 +29,15 @@ class ODLFixture:
         integration = self.collection.create_external_integration(
             protocol=self.integration_protocol()
         )
-        integration.username = "a"
-        integration.password = "b"
-        integration.url = "http://metadata"
-        self.collection.external_integration.set_setting(
-            Collection.DATA_SOURCE_NAME_SETTING, "Feedbooks"
+        config = self.collection.create_integration_configuration(
+            self.integration_protocol()
         )
+        config.settings_dict = {
+            "username": "a",
+            "password": "b",
+            "url": "http://metadata",
+            Collection.DATA_SOURCE_NAME_SETTING: "Feedbooks",
+        }
         self.library.collections.append(self.collection)
         self.work = self.db.work(with_license_pool=True, collection=self.collection)
 
@@ -52,13 +55,13 @@ class ODLFixture:
             checkouts_available=1,
             terms_concurrency=1,
         )
-        self.license.setup = types.MethodType(setup, self.license)
+        types.MethodType(setup, self.license)
         self.pool.update_availability_from_licenses()
         self.patron = self.db.patron()
 
     @staticmethod
     def integration_protocol():
-        return ODLAPI.NAME
+        return ODLAPI.label()
 
 
 @pytest.fixture(scope="function")
@@ -73,8 +76,8 @@ class TestODLNotificationController:
     @pytest.mark.parametrize(
         "protocol",
         [
-            pytest.param(ODLAPI.NAME, id="ODL 1.x collection"),
-            pytest.param(ODL2API.NAME, id="ODL 2.x collection"),
+            pytest.param(ODLAPI.label(), id="ODL 1.x collection"),
+            pytest.param(ODL2API.label(), id="ODL 2.x collection"),
         ],
     )
     def test_notify_success(
@@ -85,7 +88,7 @@ class TestODLNotificationController:
     ):
         db = controller_fixture.db
 
-        odl_fixture.collection.external_integration.protocol = protocol
+        odl_fixture.collection.integration_configuration.protocol = protocol
         odl_fixture.pool.licenses_owned = 10
         odl_fixture.pool.licenses_available = 5
         loan, ignore = odl_fixture.pool.loan_to(odl_fixture.patron)
@@ -99,7 +102,7 @@ class TestODLNotificationController:
                 }
             )
             data = bytes(text, "utf-8")
-            flask.request.data = data  # type: ignore
+            flask.request.data = data
             response = controller_fixture.manager.odl_notification_controller.notify(
                 loan.id
             )

@@ -7,3 +7,5 @@ class Goals(Enum):
     """The goal of an external integration"""
 
     PATRON_AUTH_GOAL = "patron_auth"
+    LICENSE_GOAL = "licenses"
+    DISCOVERY_GOAL = "discovery"

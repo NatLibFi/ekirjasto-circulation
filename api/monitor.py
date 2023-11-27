@@ -1,5 +1,8 @@
+from typing import Type
+
 from sqlalchemy import and_, or_
 
+from api.odl import ODLAPI
 from core.model import (
     Annotation,
     Collection,
@@ -11,14 +14,10 @@ from core.model import (
 from core.monitor import ReaperMonitor
 from core.util.datetime_helpers import utc_now
 
-from .odl import ODLAPI, SharedODLAPI
-
 
 class LoanlikeReaperMonitor(ReaperMonitor):
-
     SOURCE_OF_TRUTH_PROTOCOLS = [
-        ODLAPI.NAME,
-        SharedODLAPI.NAME,
+        ODLAPI.label(),
         ExternalIntegration.OPDS_FOR_DISTRIBUTORS,
     ]
 
@@ -56,7 +55,7 @@ class LoanlikeReaperMonitor(ReaperMonitor):
 class LoanReaper(LoanlikeReaperMonitor):
     """Remove expired and abandoned loans from the database."""
 
-    MODEL_CLASS = Loan
+    MODEL_CLASS: Type[Loan] = Loan
     MAX_AGE = 90
 
     @property
@@ -72,7 +71,16 @@ class LoanReaper(LoanlikeReaperMonitor):
         very_old_with_no_clear_end_date = and_(
             start_field < self.cutoff, end_field == None
         )
-        return and_(superclause, or_(expired, very_old_with_no_clear_end_date))
+        not_unlimited_access = LicensePool.unlimited_access == False
+        return and_(
+            superclause,
+            not_unlimited_access,
+            or_(expired, very_old_with_no_clear_end_date),
+        )
+
+    def query(self):
+        query = super().query()
+        return query.join(self.MODEL_CLASS.license_pool)
 
 
 ReaperMonitor.REGISTRY.append(LoanReaper)

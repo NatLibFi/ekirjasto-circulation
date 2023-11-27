@@ -10,7 +10,7 @@ import time
 import traceback
 from hashlib import md5
 from io import BytesIO
-from typing import TYPE_CHECKING, Any, Dict, List, Tuple
+from typing import TYPE_CHECKING, Dict, List, Tuple
 from urllib.parse import quote, urlparse, urlsplit
 
 import requests
@@ -29,22 +29,21 @@ from sqlalchemy.dialects.postgresql import JSON
 from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy.orm import Mapped, backref, relationship
 from sqlalchemy.orm.session import Session
-from sqlalchemy.sql.expression import or_
 
-from ..util.datetime_helpers import utc_now
-from ..util.http import HTTP
-from . import Base, get_one, get_one_or_create
-from .constants import (
+from core.model import Base, get_one, get_one_or_create
+from core.model.constants import (
     DataSourceConstants,
     IdentifierConstants,
     LinkRelations,
     MediaTypes,
 )
-from .edition import Edition
-from .licensing import LicensePool, LicensePoolDeliveryMechanism
+from core.model.edition import Edition
+from core.model.licensing import LicensePoolDeliveryMechanism
+from core.util.datetime_helpers import utc_now
+from core.util.http import HTTP
 
 if TYPE_CHECKING:
-    from core.model import CachedMARCFile, Work  # noqa: autoflake
+    from core.model import CachedMARCFile
 
 
 class Resource(Base):
@@ -76,7 +75,7 @@ class Resource(Base):
 
     # Many Works may use this resource (as opposed to other resources
     # linked to them with rel="description") as their summary.
-    from .work import Work
+    from core.model.work import Work
 
     summary_works: Mapped[List[Work]] = relationship(
         "Work", backref="summary", foreign_keys=[Work.summary_id]
@@ -88,7 +87,7 @@ class Resource(Base):
         List[LicensePoolDeliveryMechanism]
     ] = relationship(
         "LicensePoolDeliveryMechanism",
-        backref="resource",
+        back_populates="resource",
         foreign_keys=[LicensePoolDeliveryMechanism.resource_id],
     )
 
@@ -282,7 +281,6 @@ class Resource(Base):
 
     @classmethod
     def best_covers_among(cls, resources):
-
         """Choose the best covers from a list of Resources."""
         champions = []
         champion_key = None
@@ -409,41 +407,6 @@ class Hyperlink(Base, LinkRelations):
         Integer, ForeignKey("resources.id"), index=True, nullable=False
     )
     resource: Resource
-
-    @classmethod
-    def unmirrored(cls, collection):
-        """Find all Hyperlinks associated with an item in the
-        given Collection that could be mirrored but aren't.
-        TODO: We don't cover the case where an image was mirrored but no
-        thumbnail was created of it. (We do cover the case where the thumbnail
-        was created but not mirrored.)
-        """
-        from .identifier import Identifier
-
-        _db = Session.object_session(collection)
-        qu = (
-            _db.query(Hyperlink)
-            .join(Hyperlink.identifier)
-            .join(Identifier.licensed_through)
-            .outerjoin(Hyperlink.resource)
-            .outerjoin(Resource.representation)
-        )
-        qu = qu.filter(LicensePool.collection_id == collection.id)
-        qu = qu.filter(Hyperlink.rel.in_(Hyperlink.MIRRORED))
-        qu = qu.filter(Hyperlink.data_source == collection.data_source)
-        qu = qu.filter(
-            or_(
-                Representation.id == None,
-                Representation.mirror_url == None,
-            )
-        )
-        # Without this ordering, the query does a table scan looking for
-        # items that match. With the ordering, they're all at the front.
-        qu = qu.order_by(
-            Representation.mirror_url.asc().nullsfirst(),
-            Representation.id.asc().nullsfirst(),
-        )
-        return qu
 
     @classmethod
     def generic_uri(cls, data_source, identifier, rel, content=None):
@@ -582,7 +545,7 @@ class Representation(Base, MediaTypes):
     # A Representation may be a CachedMARCFile.
     marc_file: Mapped[CachedMARCFile] = relationship(
         "CachedMARCFile",
-        backref="representation",
+        back_populates="representation",
         cascade="all, delete-orphan",
     )
 
@@ -1055,12 +1018,14 @@ class Representation(Base, MediaTypes):
         return json.dumps(dict(d))
 
     @classmethod
-    def simple_http_get(cls, url, headers, **kwargs) -> Tuple[int, Any, Any]:
+    def simple_http_get(
+        cls, url, headers, **kwargs
+    ) -> Tuple[int, Dict[str, str], bytes]:
         """The most simple HTTP-based GET."""
         if not "allow_redirects" in kwargs:
             kwargs["allow_redirects"] = True
         response = HTTP.get_with_timeout(url, headers=headers, **kwargs)
-        return response.status_code, response.headers, response.content
+        return response.status_code, response.headers, response.content  # type: ignore[return-value]
 
     @classmethod
     def simple_http_post(cls, url, headers, **kwargs):

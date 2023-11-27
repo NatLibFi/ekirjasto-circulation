@@ -1,5 +1,12 @@
 from typing import List, Optional, Type, Union
 
+from api.authentication.base import PatronData
+from api.authentication.basic import (
+    BasicAuthenticationProvider,
+    BasicAuthProviderLibrarySettings,
+    BasicAuthProviderSettings,
+)
+from api.config import CannotLoadConfiguration
 from core.analytics import Analytics
 from core.integration.settings import (
     ConfigurationFormItem,
@@ -7,14 +14,6 @@ from core.integration.settings import (
     FormField,
 )
 from core.model import Patron
-
-from .authentication.base import PatronData
-from .authentication.basic import (
-    BasicAuthenticationProvider,
-    BasicAuthProviderLibrarySettings,
-    BasicAuthProviderSettings,
-)
-from .config import CannotLoadConfiguration
 
 
 class SimpleAuthSettings(BasicAuthProviderSettings):
@@ -51,7 +50,9 @@ class SimpleAuthSettings(BasicAuthProviderSettings):
     )
 
 
-class SimpleAuthenticationProvider(BasicAuthenticationProvider):
+class SimpleAuthenticationProvider(
+    BasicAuthenticationProvider[SimpleAuthSettings, BasicAuthProviderLibrarySettings]
+):
     """An authentication provider that authenticates a single patron.
 
     This serves only one purpose: to set up a working circulation
@@ -73,6 +74,10 @@ class SimpleAuthenticationProvider(BasicAuthenticationProvider):
     @classmethod
     def settings_class(cls) -> Type[SimpleAuthSettings]:
         return SimpleAuthSettings
+
+    @classmethod
+    def library_settings_class(cls) -> Type[BasicAuthProviderLibrarySettings]:
+        return BasicAuthProviderLibrarySettings
 
     def __init__(
         self,

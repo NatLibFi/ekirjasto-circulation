@@ -34,7 +34,6 @@ class Statistics:
         LicensePool.open_access == False,
     )
     OPEN_ACCESS_FILTER = LicensePool.open_access == True
-    SELF_HOSTED_FILTER = LicensePool.self_hosted == True
     AT_LEAST_ONE_LENDABLE_FILTER = or_(
         UNLIMITED_LICENSE_FILTER,
         OPEN_ACCESS_FILTER,
@@ -67,7 +66,10 @@ class Statistics:
         metered_license_title_count = _count(self.METERED_LICENSE_FILTER)
         unlimited_license_title_count = _count(self.UNLIMITED_LICENSE_FILTER)
         open_access_title_count = _count(self.OPEN_ACCESS_FILTER)
-        self_hosted_title_count = _count(self.SELF_HOSTED_FILTER)
+        # TODO: We no longer support self-hosted books, so this should always be 0.
+        #  this value is still included in the response for backwards compatibility,
+        #  but should be removed in a future release.
+        self_hosted_title_count = 0
         at_least_one_loanable_count = _count(self.AT_LEAST_ONE_LENDABLE_FILTER)
 
         licenses_owned_count, licenses_available_count = map(
@@ -82,8 +84,8 @@ class Statistics:
         )
 
         return CollectionInventory(
-            id=collection.id,  # type: ignore[arg-type]
-            name=collection.name,  # type: ignore[arg-type]
+            id=collection.id,
+            name=collection.name,
             inventory=InventoryStatistics(
                 titles=metered_license_title_count
                 + unlimited_license_title_count
@@ -193,12 +195,16 @@ class Statistics:
         }
         library_statistics = [
             LibraryStatistics(
-                key=lib.short_name,  # type: ignore[arg-type]
+                key=lib.short_name,
                 name=lib.name or "(missing library name)",
                 patron_statistics=patron_stats_by_library[lib.short_name],
                 inventory_summary=inventory_by_library[lib.short_name],
                 collection_ids=sorted(
-                    [c.id for c in authorized_collections_by_library[lib.short_name]]
+                    [
+                        c.id
+                        for c in authorized_collections_by_library[lib.short_name]
+                        if c.id is not None
+                    ]
                 ),
             )
             for lib in authorized_libraries

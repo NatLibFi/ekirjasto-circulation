@@ -5,65 +5,52 @@ import sys
 import time
 from datetime import timedelta
 from pathlib import Path
+from typing import Optional
+
+from sqlalchemy import inspect
+from sqlalchemy.engine import Connection
+from sqlalchemy.orm import Session
 
 from alembic import command, config
+from alembic.util import CommandError
 from api.adobe_vendor_id import AuthdataUtility
 from api.authenticator import LibraryAuthenticator
 from api.axis import Axis360BibliographicCoverageProvider
 from api.bibliotheca import BibliothecaCirculationSweep
 from api.config import CannotLoadConfiguration, Configuration
-from api.controller import CirculationManager
 from api.lanes import create_default_lanes
 from api.local_analytics_exporter import LocalAnalyticsExporter
 from api.marc import LibraryAnnotator as MARCLibraryAnnotator
 from api.novelist import NoveListAPI
 from api.nyt import NYTBestSellerAPI
-from api.odl import SharedODLImporter, SharedODLImportMonitor
-from api.onix import ONIXExtractor
 from api.opds_for_distributors import (
     OPDSForDistributorsImporter,
     OPDSForDistributorsImportMonitor,
     OPDSForDistributorsReaperMonitor,
 )
 from api.overdrive import OverdriveAPI
-from core.entrypoint import EntryPoint
 from core.external_search import ExternalSearchIndex
-from core.lane import Facets, FeaturedFacets, Lane, Pagination
+from core.lane import Lane
 from core.marc import MARCExporter
-from core.metadata_layer import (
-    CirculationData,
-    FormatData,
-    LinkData,
-    MARCExtractor,
-    ReplacementPolicy,
-)
-from core.mirror import MirrorUploader
 from core.model import (
+    LOCK_ID_DB_INIT,
     CachedMARCFile,
     CirculationEvent,
-    Collection,
     ConfigurationSetting,
     Contribution,
     DataSource,
-    DeliveryMechanism,
     Edition,
-    EditionConstants,
     ExternalIntegration,
     Hold,
-    Hyperlink,
     Identifier,
     LicensePool,
     Loan,
     Patron,
-    Representation,
-    RightsStatus,
     SessionManager,
     get_one,
+    pg_advisory_lock,
 )
-from core.model.configuration import ExternalIntegrationLink
-from core.opds import AcquisitionFeed
 from core.scripts import (
-    CollectionType,
     IdentifierInputScript,
     LaneSweeperScript,
     LibraryInputScript,
@@ -72,9 +59,9 @@ from core.scripts import (
 )
 from core.scripts import Script as CoreScript
 from core.scripts import TimestampScript
+from core.service.container import container_instance
 from core.util import LanguageCodes
 from core.util.datetime_helpers import utc_now
-from core.util.opds_writer import OPDSFeed
 
 
 class Script(CoreScript):
@@ -155,411 +142,6 @@ class FillInAuthorScript(MetadataCalculationScript):
             .join(Contribution.contributor)
             .filter(Edition.sort_author == None)
         )
-
-
-class CacheRepresentationPerLane(TimestampScript, LaneSweeperScript):
-
-    name = "Cache one representation per lane"
-
-    @classmethod
-    def arg_parser(cls, _db):
-        parser = LaneSweeperScript.arg_parser(_db)
-        parser.add_argument(
-            "--language",
-            help="Process only lanes that include books in this language.",
-            action="append",
-        )
-        parser.add_argument(
-            "--max-depth",
-            help="Stop processing lanes once you reach this depth.",
-            type=int,
-            default=None,
-        )
-        parser.add_argument(
-            "--min-depth",
-            help="Start processing lanes once you reach this depth.",
-            type=int,
-            default=1,
-        )
-        return parser
-
-    def __init__(self, _db=None, cmd_args=None, manager=None, *args, **kwargs):
-        """Constructor.
-        :param _db: A database connection.
-        :param cmd_args: A mock set of command-line arguments, to use instead
-           of looking at the actual command line.
-        :param testing: If this method creates a CirculationManager object,
-           this value will be passed in to its constructor as its value for
-           `testing`.
-        :param manager: A mock CirculationManager object, to use instead
-           of creating a new one (creating a CirculationManager object is
-           very time-consuming).
-        :param *args: Positional arguments to pass to the superconstructor.
-        :param **kwargs: Keyword arguments to pass to the superconstructor.
-        """
-
-        super().__init__(_db, *args, **kwargs)
-        self.parse_args(cmd_args)
-        if not manager:
-            manager = CirculationManager(self._db)
-        from api.app import app
-
-        app.manager = manager
-        self.app = app
-        self.base_url = ConfigurationSetting.sitewide(
-            self._db, Configuration.BASE_URL_KEY
-        ).value
-
-    def parse_args(self, cmd_args=None):
-        parser = self.arg_parser(self._db)
-        parsed = parser.parse_args(cmd_args)
-        self.languages = []
-        if parsed.language:
-            for language in parsed.language:
-                alpha = LanguageCodes.string_to_alpha_3(language)
-                if alpha:
-                    self.languages.append(alpha)
-                else:
-                    self.log.warning("Ignored unrecognized language code %s", alpha)
-        self.max_depth = parsed.max_depth
-        self.min_depth = parsed.min_depth
-
-        # Return the parsed arguments in case a subclass needs to
-        # process more args.
-        return parsed
-
-    def should_process_lane(self, lane):
-        if not isinstance(lane, Lane):
-            return False
-
-        language_ok = False
-        if not self.languages:
-            # We are considering lanes for every single language.
-            language_ok = True
-
-        if not lane.languages:
-            # The lane has no language restrictions.
-            language_ok = True
-
-        for language in self.languages:
-            if language in lane.languages:
-                language_ok = True
-                break
-        if not language_ok:
-            return False
-
-        if self.max_depth is not None and lane.depth > self.max_depth:
-            return False
-        if self.min_depth is not None and lane.depth < self.min_depth:
-            return False
-
-        return True
-
-    def cache_url(self, annotator, lane, languages):
-        raise NotImplementedError()
-
-    def generate_representation(self, *args, **kwargs):
-        raise NotImplementedError()
-
-    # The generated document will probably be an OPDS acquisition
-    # feed.
-    ACCEPT_HEADER = OPDSFeed.ACQUISITION_FEED_TYPE
-
-    cache_url_method = None
-
-    def process_library(self, library):
-        begin = time.time()
-        client = self.app.test_client()
-        ctx = self.app.test_request_context(base_url=self.base_url)
-        ctx.push()
-        super().process_library(library)
-        ctx.pop()
-        end = time.time()
-        self.log.info(
-            "Processed library %s in %.2fsec", library.short_name, end - begin
-        )
-
-    def process_lane(self, lane):
-        """Generate a number of feeds for this lane.
-        One feed will be generated for each combination of Facets and
-        Pagination objects returned by facets() and pagination().
-        """
-        cached_feeds = []
-        for facets in self.facets(lane):
-            for pagination in self.pagination(lane):
-                extra_description = ""
-                if facets:
-                    extra_description += " Facets: %s." % facets.query_string
-                if pagination:
-                    extra_description += " Pagination: %s." % pagination.query_string
-                self.log.info(
-                    "Generating feed for %s.%s", lane.full_identifier, extra_description
-                )
-                a = time.time()
-                feed = self.do_generate(lane, facets, pagination)
-                b = time.time()
-                if feed:
-                    cached_feeds.append(feed)
-                    self.log.info(
-                        "Took %.2f sec to make %d bytes.", (b - a), len(feed.data)
-                    )
-        total_size = sum(len(x.data) for x in cached_feeds)
-        return cached_feeds
-
-    def facets(self, lane):
-        """Yield a Facets object for each set of facets this
-        script is expected to handle.
-        :param lane: The lane under consideration. (Different lanes may have
-        different available facets.)
-        :yield: A sequence of Facets objects.
-        """
-        yield None
-
-    def pagination(self, lane):
-        """Yield a Pagination object for each page of a feed this
-        script is expected to handle.
-        :param lane: The lane under consideration. (Different lanes may have
-        different pagination rules.)
-        :yield: A sequence of Pagination objects.
-        """
-        yield None
-
-
-class CacheFacetListsPerLane(CacheRepresentationPerLane):
-    """Cache the first two pages of every relevant facet list for this lane."""
-
-    name = "Cache paginated OPDS feed for each lane"
-
-    @classmethod
-    def arg_parser(cls, _db):
-        parser = CacheRepresentationPerLane.arg_parser(_db)
-        available = Facets.DEFAULT_ENABLED_FACETS[Facets.ORDER_FACET_GROUP_NAME]
-        order_help = "Generate feeds for this ordering. Possible values: %s." % (
-            ", ".join(available)
-        )
-        parser.add_argument(
-            "--order",
-            help=order_help,
-            action="append",
-            default=[],
-        )
-
-        available = Facets.DEFAULT_ENABLED_FACETS[Facets.AVAILABILITY_FACET_GROUP_NAME]
-        availability_help = (
-            "Generate feeds for this availability setting. Possible values: %s."
-            % (", ".join(available))
-        )
-        parser.add_argument(
-            "--availability",
-            help=availability_help,
-            action="append",
-            default=[],
-        )
-
-        available = Facets.DEFAULT_ENABLED_FACETS[Facets.COLLECTION_FACET_GROUP_NAME]
-        collection_help = (
-            "Generate feeds for this collection within each lane. Possible values: %s."
-            % (", ".join(available))
-        )
-        parser.add_argument(
-            "--collection",
-            help=collection_help,
-            action="append",
-            default=[],
-        )
-
-        available = [x.INTERNAL_NAME for x in EntryPoint.ENTRY_POINTS]
-        entrypoint_help = (
-            "Generate feeds for this entry point within each lane. Possible values: %s."
-            % (", ".join(available))
-        )
-        parser.add_argument(
-            "--entrypoint",
-            help=entrypoint_help,
-            action="append",
-            default=[],
-        )
-
-        default_pages = 2
-        parser.add_argument(
-            "--pages",
-            help="Number of pages to cache for each facet. Default: %d" % default_pages,
-            type=int,
-            default=default_pages,
-        )
-        return parser
-
-    def parse_args(self, cmd_args=None):
-        parsed = super().parse_args(cmd_args)
-        self.orders = parsed.order
-        self.availabilities = parsed.availability
-        self.collections = parsed.collection
-        self.entrypoints = parsed.entrypoint
-        self.pages = parsed.pages
-        return parsed
-
-    def facets(self, lane):
-        """This script covers a user-specified combination of facets, but it
-        defaults to using every combination of available facets for
-        the given lane with a certain sort order.
-        This means every combination of availability, collection, and
-        entry point.
-        That's a whole lot of feeds, which is why this script isn't
-        actually used -- by the time we generate all of then, they've
-        expired.
-        """
-        library = lane.get_library(self._db)
-        default_order = library.default_facet(Facets.ORDER_FACET_GROUP_NAME)
-        allowed_orders = library.enabled_facets(Facets.ORDER_FACET_GROUP_NAME)
-        chosen_orders = self.orders or [default_order]
-
-        allowed_entrypoint_names = [x.INTERNAL_NAME for x in library.entrypoints]
-        default_entrypoint_name = None
-        if allowed_entrypoint_names:
-            default_entrypoint_name = allowed_entrypoint_names[0]
-
-        chosen_entrypoints = self.entrypoints or allowed_entrypoint_names
-
-        default_availability = library.default_facet(
-            Facets.AVAILABILITY_FACET_GROUP_NAME
-        )
-        allowed_availabilities = library.enabled_facets(
-            Facets.AVAILABILITY_FACET_GROUP_NAME
-        )
-        chosen_availabilities = self.availabilities or [default_availability]
-
-        default_collection = library.default_facet(Facets.COLLECTION_FACET_GROUP_NAME)
-        allowed_collections = library.enabled_facets(Facets.COLLECTION_FACET_GROUP_NAME)
-        chosen_collections = self.collections or [default_collection]
-
-        top_level = lane.parent is None
-        for entrypoint_name in chosen_entrypoints:
-            entrypoint = EntryPoint.BY_INTERNAL_NAME.get(entrypoint_name)
-            if not entrypoint:
-                logging.warning("Ignoring unknown entry point %s" % entrypoint_name)
-                continue
-            if not entrypoint_name in allowed_entrypoint_names:
-                logging.warning("Ignoring disabled entry point %s" % entrypoint_name)
-                continue
-            for order in chosen_orders:
-                if order not in allowed_orders:
-                    logging.warning("Ignoring unsupported ordering %s" % order)
-                    continue
-                for availability in chosen_availabilities:
-                    if availability not in allowed_availabilities:
-                        logging.warning(
-                            "Ignoring unsupported availability %s" % availability
-                        )
-                        continue
-                    for collection in chosen_collections:
-                        if collection not in allowed_collections:
-                            logging.warning(
-                                "Ignoring unsupported collection %s" % collection
-                            )
-                            continue
-                        facets = Facets(
-                            library=library,
-                            collection=collection,
-                            availability=availability,
-                            entrypoint=entrypoint,
-                            entrypoint_is_default=(
-                                top_level
-                                and entrypoint.INTERNAL_NAME == default_entrypoint_name
-                            ),
-                            order=order,
-                            order_ascending=True,
-                        )
-                        yield facets
-
-    def pagination(self, lane):
-        """This script covers a user-specified number of pages."""
-        page = Pagination.default()
-        for pagenum in range(0, self.pages):
-            yield page
-            page = page.next_page
-            if not page:
-                # There aren't enough books to fill `self.pages`
-                # pages. Stop working.
-                break
-
-    def do_generate(self, lane, facets, pagination, feed_class=None):
-        feeds = []
-        title = lane.display_name
-        library = lane.get_library(self._db)
-        annotator = self.app.manager.annotator(lane, facets=facets)
-        url = annotator.feed_url(lane, facets=facets, pagination=pagination)
-        feed_class = feed_class or AcquisitionFeed
-        return feed_class.page(
-            _db=self._db,
-            title=title,
-            url=url,
-            worklist=lane,
-            annotator=annotator,
-            facets=facets,
-            pagination=pagination,
-            max_age=0,
-        )
-
-
-class CacheOPDSGroupFeedPerLane(CacheRepresentationPerLane):
-
-    name = "Cache OPDS grouped feed for each lane"
-
-    def should_process_lane(self, lane):
-        # OPDS grouped feeds are only generated for lanes that have sublanes.
-        if not lane.children:
-            return False
-        if self.max_depth is not None and lane.depth > self.max_depth:
-            return False
-        return True
-
-    def do_generate(self, lane, facets, pagination, feed_class=None):
-        title = lane.display_name
-        annotator = self.app.manager.annotator(lane, facets=facets)
-        url = annotator.groups_url(lane, facets)
-        feed_class = feed_class or AcquisitionFeed
-
-        # Since grouped feeds are only cached for lanes that have sublanes,
-        # there's no need to consider the case of a lane with no sublanes,
-        # unlike the corresponding code in OPDSFeedController.groups()
-        return feed_class.groups(
-            _db=self._db,
-            title=title,
-            url=url,
-            worklist=lane,
-            annotator=annotator,
-            max_age=0,
-            facets=facets,
-        )
-
-    def facets(self, lane):
-        """Generate a Facets object for each of the library's enabled
-        entrypoints.
-        This is the only way grouped feeds are ever generated, so there is
-        no way to override this.
-        """
-        top_level = lane.parent is None
-        library = lane.get_library(self._db)
-
-        # If the WorkList has explicitly defined EntryPoints, we want to
-        # create a grouped feed for each EntryPoint. Otherwise, we want
-        # to create a single grouped feed with no particular EntryPoint.
-        #
-        # We use library.entrypoints instead of lane.entrypoints
-        # because WorkList.entrypoints controls which entry points you
-        # can *switch to* from a given WorkList. We're handling the
-        # case where you switched further up the hierarchy and now
-        # you're navigating downwards.
-        entrypoints = list(library.entrypoints) or [None]
-        default_entrypoint = entrypoints[0]
-        for entrypoint in entrypoints:
-            facets = FeaturedFacets(
-                minimum_featured_quality=library.minimum_featured_quality,
-                uses_customlists=lane.uses_customlists,
-                entrypoint=entrypoint,
-                entrypoint_is_default=(top_level and entrypoint is default_entrypoint),
-            )
-            yield facets
 
 
 class CacheMARCFiles(LaneSweeperScript):
@@ -656,26 +238,14 @@ class CacheMARCFiles(LaneSweeperScript):
             )
             return
 
-        # To find the storage integration for the exporter, first find the
-        # external integration link associated with the exporter's external
-        # integration.
-        integration_link = get_one(
-            self._db,
-            ExternalIntegrationLink,
-            external_integration_id=exporter.integration.id,
-            purpose=ExternalIntegrationLink.MARC,
-        )
-        # Then use the "other" integration value to find the storage integration.
-        storage_integration = get_one(
-            self._db, ExternalIntegration, id=integration_link.other_integration_id
-        )
-
-        if not storage_integration:
-            self.log.info("No storage External Integration was found.")
+        # Find the storage service
+        storage_service = self.services.storage.public()
+        if not storage_service:
+            self.log.info("No storage service was found.")
             return
 
         # First update the file with ALL the records.
-        records = exporter.records(lane, annotator, storage_integration)
+        records = exporter.records(lane, annotator, storage_service)
 
         # Then create a new file with changes since the last update.
         start_time = None
@@ -684,7 +254,7 @@ class CacheMARCFiles(LaneSweeperScript):
             start_time = last_update - timedelta(days=1)
 
             records = exporter.records(
-                lane, annotator, storage_integration, start_time=start_time
+                lane, annotator, storage_service, start_time=start_time
             )
 
 
@@ -821,7 +391,7 @@ class CompileTranslationsScript(Script):
         os.system("pybabel compile -f -d translations")
 
 
-class InstanceInitializationScript(TimestampScript):
+class InstanceInitializationScript:
     """An idempotent script to initialize an instance of the Circulation Manager.
 
     This script is intended for use in servers, Docker containers, etc,
@@ -832,63 +402,108 @@ class InstanceInitializationScript(TimestampScript):
     remain idempotent.
     """
 
-    name = "Instance initialization"
+    def __init__(self) -> None:
+        self._log: Optional[logging.Logger] = None
+        self._container = container_instance()
 
-    TEST_SQL = "SELECT * FROM pg_catalog.pg_tables where tablename='libraries';"
+        # Call init_resources() to initialize the logging configuration.
+        self._container.init_resources()
 
-    def run(self, *args, **kwargs):
-        # Create a special database session that doesn't initialize
-        # the ORM -- this could be fatal if there are migration
-        # scripts that haven't run yet.
-        #
-        # In fact, we don't even initialize the database schema,
-        # because that's the thing we're trying to check for.
-        url = Configuration.database_url()
-        _db = SessionManager.session(
-            url, initialize_data=False, initialize_schema=False
-        )
-
-        result = None
-        try:
-            # We need to check for the existence of a known table --
-            # this will demonstrate that this script has been run before --
-            # but we don't need to actually look at what we get from the
-            # database.
-            #
-            # Basically, if this succeeds, we can bail out and not run
-            # the rest of the script.
-            result = _db.execute(self.TEST_SQL).first()
-        except Exception as e:
-            # This did _not_ succeed, so the schema is probably not
-            # initialized and we do need to run this script.. This
-            # database session is useless now, but we'll create a new
-            # one during the super() call, and use that one to do the
-            # work.
-            _db.close()
-
-        if result is None:
-            super().run(*args, **kwargs)
-        else:
-            self.log.error(
-                "I think this site has already been initialized; doing nothing."
+    @property
+    def log(self) -> logging.Logger:
+        if self._log is None:
+            self._log = logging.getLogger(
+                f"{self.__module__}.{self.__class__.__name__}"
             )
+        return self._log
 
-    def do_run(self, ignore_search=False):
-        # Creates a "-current" alias on the Opensearch client.
-        if not ignore_search:
+    @staticmethod
+    def _get_alembic_config(connection: Connection) -> config.Config:
+        """Get the Alembic config object for the current app."""
+        conf = config.Config(str(Path(__file__).parent.absolute() / "alembic.ini"))
+        conf.attributes["configure_logger"] = False
+        conf.attributes["connection"] = connection.engine
+        conf.attributes["need_lock"] = False
+        return conf
+
+    def migrate_database(self, connection: Connection) -> None:
+        """Run our database migrations to make sure the database is up-to-date."""
+        alembic_conf = self._get_alembic_config(connection)
+        command.upgrade(alembic_conf, "head")
+
+    def initialize_database(self, connection: Connection) -> None:
+        """
+        Initialize the database, creating tables, loading default data and then
+        stamping the most recent migration as the current state of the DB.
+        """
+        SessionManager.initialize_schema(connection)
+
+        with Session(connection) as session:
+            # Initialize the database with default data
+            SessionManager.initialize_data(session)
+
+            # Create a secret key if one doesn't already exist.
+            ConfigurationSetting.sitewide_secret(session, Configuration.SECRET_KEY)
+
+            # Initialize the search client to create the "-current" alias.
             try:
-                search_client = ExternalSearchIndex(self._db)
-            except CannotLoadConfiguration as e:
+                ExternalSearchIndex(session)
+            except CannotLoadConfiguration:
                 # Opensearch isn't configured, so do nothing.
                 pass
 
         # Stamp the most recent migration as the current state of the DB
-        conf = config.Config(str(Path(__file__).parent.absolute() / "alembic.ini"))
-        conf.set_main_option("sqlalchemy.url", Configuration.database_url())
-        command.stamp(conf, "head")
+        alembic_conf = self._get_alembic_config(connection)
+        command.stamp(alembic_conf, "head")
 
-        # Create a secret key if one doesn't already exist.
-        ConfigurationSetting.sitewide_secret(self._db, Configuration.SECRET_KEY)
+    def initialize_search_indexes(self, _db: Session) -> bool:
+        try:
+            search = ExternalSearchIndex(_db)
+        except CannotLoadConfiguration as ex:
+            self.log.error(
+                "No search integration found yet, cannot initialize search indices."
+            )
+            self.log.error(f"Error: {ex}")
+            return False
+        return search.initialize_indices()
+
+    def initialize(self, connection: Connection):
+        """Initialize the database if necessary."""
+        inspector = inspect(connection)
+        if inspector.has_table("alembic_version"):
+            self.log.info("Database schema already exists. Running migrations.")
+            try:
+                self.migrate_database(connection)
+                self.log.info("Migrations complete.")
+            except CommandError as e:
+                self.log.error(
+                    f"Error running database migrations: {str(e)}. This "
+                    f"is possibly because you are running a old version "
+                    f"of the application against a new database."
+                )
+        else:
+            self.log.info("Database schema does not exist. Initializing.")
+            self.initialize_database(connection)
+            self.log.info("Initialization complete.")
+
+        with Session(connection) as session:
+            self.initialize_search_indexes(session)
+
+    def run(self) -> None:
+        """
+        Initialize the database if necessary. This script is idempotent, so it
+        can be run every time the app starts.
+
+        The script uses a PostgreSQL advisory lock to ensure that only one
+        instance of the script is running at a time. This prevents multiple
+        instances from trying to initialize the database at the same time.
+        """
+        engine = SessionManager.engine()
+        with engine.begin() as connection:
+            with pg_advisory_lock(connection, LOCK_ID_DB_INIT):
+                self.initialize(connection)
+
+        engine.dispose()
 
 
 class LoanReaperScript(TimestampScript):
@@ -1091,7 +706,6 @@ class DisappearingBookReportScript(Script):
 
 
 class NYTBestSellerListsScript(TimestampScript):
-
     name = "Update New York Times best-seller lists"
 
     def __init__(self, include_history=False):
@@ -1104,7 +718,6 @@ class NYTBestSellerListsScript(TimestampScript):
         # For every best-seller list...
         names = self.api.list_of_lists()
         for l in sorted(names["results"], key=lambda x: x["list_name_encoded"]):
-
             name = l["list_name_encoded"]
             self.log.info("Handling list %s" % name)
             best = self.api.best_seller_list(l)
@@ -1136,559 +749,6 @@ class OPDSForDistributorsReaperScript(OPDSImportScript):
     IMPORTER_CLASS = OPDSForDistributorsImporter
     MONITOR_CLASS = OPDSForDistributorsReaperMonitor
     PROTOCOL = OPDSForDistributorsImporter.NAME
-
-
-class DirectoryImportScript(TimestampScript):
-    """Import some books into a collection, based on a file containing
-    metadata and directories containing ebook and cover files.
-    """
-
-    name = "Import new titles from a directory on disk"
-
-    @classmethod
-    def arg_parser(cls, _db):
-        parser = argparse.ArgumentParser()
-        parser.add_argument(
-            "--collection-name",
-            help="Titles will be imported into a collection with this name. The collection will be created if it does not already exist.",
-            required=True,
-        )
-        parser.add_argument(
-            "--collection-type",
-            help="Collection type. Valid values are: OPEN_ACCESS (default), PROTECTED_ACCESS, LCP.",
-            type=CollectionType,
-            choices=list(CollectionType),
-            default=CollectionType.OPEN_ACCESS,
-        )
-        parser.add_argument(
-            "--data-source-name",
-            help="All data associated with this import activity will be recorded as originating with this data source. The data source will be created if it does not already exist.",
-            required=True,
-        )
-        parser.add_argument(
-            "--metadata-file",
-            help="Path to a file containing MARC or ONIX 3.0 metadata for every title in the collection",
-            required=True,
-        )
-        parser.add_argument(
-            "--metadata-format",
-            help='Format of the metadata file ("marc" or "onix")',
-            default="marc",
-        )
-        parser.add_argument(
-            "--cover-directory",
-            help="Directory containing a full-size cover image for every title in the collection.",
-        )
-        parser.add_argument(
-            "--ebook-directory",
-            help="Directory containing an EPUB or PDF file for every title in the collection.",
-            required=True,
-        )
-        RS = RightsStatus
-        rights_uris = ", ".join(RS.OPEN_ACCESS)
-        parser.add_argument(
-            "--rights-uri",
-            help="A URI explaining the rights status of the works being uploaded. Acceptable values: %s"
-            % rights_uris,
-            required=True,
-        )
-        parser.add_argument(
-            "--dry-run",
-            help="Show what would be imported, but don't actually do the import.",
-            action="store_true",
-        )
-        parser.add_argument(
-            "--default-medium-type",
-            help="Default medium type used in the case when it's not explicitly specified in a metadata file. "
-            "Valid values are: {}.".format(
-                ", ".join(EditionConstants.FULFILLABLE_MEDIA)
-            ),
-            type=str,
-            choices=EditionConstants.FULFILLABLE_MEDIA,
-        )
-
-        return parser
-
-    def do_run(self, cmd_args=None):
-        parser = self.arg_parser(self._db)
-        parsed = parser.parse_args(cmd_args)
-        collection_name = parsed.collection_name
-        collection_type = parsed.collection_type
-        data_source_name = parsed.data_source_name
-        metadata_file = parsed.metadata_file
-        metadata_format = parsed.metadata_format
-        cover_directory = parsed.cover_directory
-        ebook_directory = parsed.ebook_directory
-        rights_uri = parsed.rights_uri
-        dry_run = parsed.dry_run
-        default_medium_type = parsed.default_medium_type
-
-        return self.run_with_arguments(
-            collection_name=collection_name,
-            collection_type=collection_type,
-            data_source_name=data_source_name,
-            metadata_file=metadata_file,
-            metadata_format=metadata_format,
-            cover_directory=cover_directory,
-            ebook_directory=ebook_directory,
-            rights_uri=rights_uri,
-            dry_run=dry_run,
-            default_medium_type=default_medium_type,
-        )
-
-    def run_with_arguments(
-        self,
-        collection_name,
-        collection_type,
-        data_source_name,
-        metadata_file,
-        metadata_format,
-        cover_directory,
-        ebook_directory,
-        rights_uri,
-        dry_run,
-        default_medium_type=None,
-    ):
-        if dry_run:
-            self.log.warning(
-                "This is a dry run. No files will be uploaded and nothing will change in the database."
-            )
-
-        collection, mirrors = self.load_collection(
-            collection_name, collection_type, data_source_name
-        )
-
-        if not collection or not mirrors:
-            return
-
-        self.timestamp_collection = collection
-
-        if dry_run:
-            mirrors = None
-
-        self_hosted_collection = collection_type in (
-            CollectionType.OPEN_ACCESS,
-            CollectionType.PROTECTED_ACCESS,
-        )
-        replacement_policy = ReplacementPolicy.from_license_source(self._db)
-        replacement_policy.mirrors = mirrors
-        metadata_records = self.load_metadata(
-            metadata_file, metadata_format, data_source_name, default_medium_type
-        )
-        for metadata in metadata_records:
-            _, licensepool = self.work_from_metadata(
-                collection,
-                collection_type,
-                metadata,
-                replacement_policy,
-                cover_directory,
-                ebook_directory,
-                rights_uri,
-            )
-
-            licensepool.self_hosted = True if self_hosted_collection else False
-
-            if not dry_run:
-                self._db.commit()
-
-    def load_collection(self, collection_name, collection_type, data_source_name):
-        """Locate a Collection with the given name.
-
-        If the collection is found, it will be associated
-        with the given data source and configured with existing
-        covers and books mirror configurations.
-
-        :param collection_name: Name of the Collection.
-        :type collection_name: string
-
-        :param collection_type: Type of the collection: open access/proteceted access.
-        :type collection_name: CollectionType
-
-        :param data_source_name: Associate this data source with
-            the Collection if it does not already have a data source.
-            A DataSource object will be created if necessary.
-        :type data_source_name: string
-
-        :return: A 2-tuple (Collection, list of MirrorUploader instances)
-        :rtype: Tuple[Collection, List[MirrorUploader]]
-        """
-        collection, is_new = Collection.by_name_and_protocol(
-            self._db,
-            collection_name,
-            ExternalIntegration.LCP
-            if collection_type == CollectionType.LCP
-            else ExternalIntegration.MANUAL,
-        )
-
-        if is_new:
-            self.log.error(
-                "An existing collection must be used and should be set up before running this script."
-            )
-            return None, None
-
-        mirrors = dict(covers_mirror=None, books_mirror=None)
-
-        types = [
-            ExternalIntegrationLink.COVERS,
-            ExternalIntegrationLink.OPEN_ACCESS_BOOKS
-            if collection_type == CollectionType.OPEN_ACCESS
-            else ExternalIntegrationLink.PROTECTED_ACCESS_BOOKS,
-        ]
-        for type in types:
-            mirror_for_type = MirrorUploader.for_collection(collection, type)
-            if not mirror_for_type:
-                self.log.error(
-                    "An existing %s mirror integration should be assigned to the collection before running the script."
-                    % type
-                )
-                return None, None
-            mirrors[type] = mirror_for_type
-
-        data_source = DataSource.lookup(
-            self._db, data_source_name, autocreate=True, offers_licenses=True
-        )
-        collection.external_integration.set_setting(
-            Collection.DATA_SOURCE_NAME_SETTING, data_source.name
-        )
-
-        return collection, mirrors
-
-    def load_metadata(
-        self, metadata_file, metadata_format, data_source_name, default_medium_type
-    ):
-        """Read a metadata file and convert the data into Metadata records."""
-        metadata_records = []
-
-        if metadata_format == "marc":
-            extractor = MARCExtractor()
-        elif metadata_format == "onix":
-            extractor = ONIXExtractor()
-
-        with open(metadata_file) as f:
-            metadata_records.extend(
-                extractor.parse(f, data_source_name, default_medium_type)
-            )
-        return metadata_records
-
-    def work_from_metadata(
-        self, collection, collection_type, metadata, policy, *args, **kwargs
-    ):
-        """Creates a Work instance from metadata
-
-        :param collection: Target collection
-        :type collection: Collection
-
-        :param collection_type: Collection's type: open access/protected access
-        :type collection_type: CollectionType
-
-        :param metadata: Book's metadata
-        :type metadata: Metadata
-
-        :param policy: Replacement policy
-        :type policy: ReplacementPolicy
-
-        :return: A 2-tuple of (Work object, LicensePool object)
-        :rtype: Tuple[core.model.work.Work, LicensePool]
-        """
-        self.annotate_metadata(collection_type, metadata, policy, *args, **kwargs)
-
-        if not metadata.circulation:
-            # We cannot actually provide access to the book so there
-            # is no point in proceeding with the import.
-            return
-
-        edition, new = metadata.edition(self._db)
-        metadata.apply(edition, collection, replace=policy)
-        [pool] = [x for x in edition.license_pools if x.collection == collection]
-        if new:
-            self.log.info("Created new edition for %s", edition.title)
-        else:
-            self.log.info("Updating existing edition for %s", edition.title)
-
-        work, ignore = pool.calculate_work()
-        if work:
-            work.set_presentation_ready()
-            self.log.info(f"FINALIZED {work.title}/{work.author}/{work.sort_author}")
-        return work, pool
-
-    def annotate_metadata(
-        self,
-        collection_type,
-        metadata,
-        policy,
-        cover_directory,
-        ebook_directory,
-        rights_uri,
-    ):
-        """Add a CirculationData and possibly an extra LinkData to `metadata`
-
-        :param collection_type: Collection's type: open access/protected access
-        :type collection_type: CollectionType
-
-        :param metadata: Book's metadata
-        :type metadata: Metadata
-
-        :param policy: Replacement policy
-        :type policy: ReplacementPolicy
-
-        :param cover_directory: Directory containing book covers
-        :type cover_directory: string
-
-        :param ebook_directory: Directory containing books
-        :type ebook_directory: string
-
-        :param rights_uri: URI explaining the rights status of the works being uploaded
-        :type rights_uri: string
-        """
-        identifier, ignore = metadata.primary_identifier.load(self._db)
-        data_source = metadata.data_source(self._db)
-        mirrors = policy.mirrors
-
-        circulation_data = self.load_circulation_data(
-            collection_type,
-            identifier,
-            data_source,
-            ebook_directory,
-            mirrors,
-            metadata.title,
-            rights_uri,
-        )
-        if not circulation_data:
-            # There is no point in contining.
-            return
-
-        if metadata.circulation:
-            circulation_data.licenses_owned = metadata.circulation.licenses_owned
-            circulation_data.licenses_available = (
-                metadata.circulation.licenses_available
-            )
-            circulation_data.licenses_reserved = metadata.circulation.licenses_reserved
-            circulation_data.patrons_in_hold_queue = (
-                metadata.circulation.patrons_in_hold_queue
-            )
-            circulation_data.licenses = metadata.circulation.licenses
-
-        metadata.circulation = circulation_data
-
-        # If a cover image is available, add it to the Metadata
-        # as a link.
-        cover_link = None
-        if cover_directory:
-            cover_link = self.load_cover_link(
-                identifier, data_source, cover_directory, mirrors
-            )
-        if cover_link:
-            metadata.links.append(cover_link)
-        else:
-            logging.info(
-                "Proceeding with import even though %r has no cover.", identifier
-            )
-
-    def load_circulation_data(
-        self,
-        collection_type,
-        identifier,
-        data_source,
-        ebook_directory,
-        mirrors,
-        title,
-        rights_uri,
-    ):
-        """Loads an actual copy of a book from disk
-
-        :param collection_type: Collection's type: open access/protected access
-        :type collection_type: CollectionType
-
-        :param identifier: Book's identifier
-        :type identifier: core.model.identifier.Identifier,
-
-        :param data_source: DataSource object
-        :type data_source: DataSource
-
-        :param ebook_directory: Directory containing books
-        :type ebook_directory: string
-
-        :param mirrors: Dictionary containing mirrors for books and their covers
-        :type mirrors: Dict[string, MirrorUploader]
-
-        :param title: Book's title
-        :type title: string
-
-        :param rights_uri: URI explaining the rights status of the works being uploaded
-        :type rights_uri: string
-
-        :return: A CirculationData that contains the book as an open-access
-            download, or None if no such book can be found
-        :rtype: CirculationData
-        """
-        ignore, book_media_type, book_content = self._locate_file(
-            identifier.identifier,
-            ebook_directory,
-            Representation.COMMON_EBOOK_EXTENSIONS,
-            "ebook file",
-        )
-        if not book_content:
-            # We couldn't find an actual copy of the book, so there is
-            # no point in proceeding.
-            return
-
-        book_mirror = (
-            mirrors[
-                ExternalIntegrationLink.OPEN_ACCESS_BOOKS
-                if collection_type == CollectionType.OPEN_ACCESS
-                else ExternalIntegrationLink.PROTECTED_ACCESS_BOOKS
-            ]
-            if mirrors
-            else None
-        )
-
-        # Use the S3 storage for books.
-        if book_mirror:
-            book_url = book_mirror.book_url(
-                identifier,
-                "." + Representation.FILE_EXTENSIONS[book_media_type],
-                open_access=collection_type == CollectionType.OPEN_ACCESS,
-                data_source=data_source,
-                title=title,
-            )
-        else:
-            # This is a dry run and we won't be mirroring anything.
-            book_url = (
-                identifier.identifier
-                + "."
-                + Representation.FILE_EXTENSIONS[book_media_type]
-            )
-
-        book_link_rel = (
-            Hyperlink.OPEN_ACCESS_DOWNLOAD
-            if collection_type == CollectionType.OPEN_ACCESS
-            else Hyperlink.GENERIC_OPDS_ACQUISITION
-        )
-        book_link = LinkData(
-            rel=book_link_rel,
-            href=book_url,
-            media_type=book_media_type,
-            content=book_content,
-        )
-        formats = [
-            FormatData(
-                content_type=book_media_type,
-                drm_scheme=DeliveryMechanism.LCP_DRM
-                if collection_type == CollectionType.LCP
-                else DeliveryMechanism.NO_DRM,
-                link=book_link,
-            )
-        ]
-        circulation_data = CirculationData(
-            data_source=data_source.name,
-            primary_identifier=identifier,
-            links=[book_link],
-            formats=formats,
-            default_rights_uri=rights_uri,
-        )
-        return circulation_data
-
-    def load_cover_link(self, identifier, data_source, cover_directory, mirrors):
-        """Load an actual book cover from disk.
-
-        :return: A LinkData containing a cover of the book, or None
-            if no book cover can be found.
-        """
-        cover_filename, cover_media_type, cover_content = self._locate_file(
-            identifier.identifier,
-            cover_directory,
-            Representation.COMMON_IMAGE_EXTENSIONS,
-            "cover image",
-        )
-
-        if not cover_content:
-            return None
-        cover_filename = (
-            identifier.identifier
-            + "."
-            + Representation.FILE_EXTENSIONS[cover_media_type]
-        )
-
-        # Use an S3 storage mirror for specifically for covers.
-        if mirrors and mirrors[ExternalIntegrationLink.COVERS]:
-            cover_url = mirrors[ExternalIntegrationLink.COVERS].cover_image_url(
-                data_source, identifier, cover_filename
-            )
-        else:
-            # This is a dry run and we won't be mirroring anything.
-            cover_url = cover_filename
-
-        cover_link = LinkData(
-            rel=Hyperlink.IMAGE,
-            href=cover_url,
-            media_type=cover_media_type,
-            content=cover_content,
-        )
-        return cover_link
-
-    @classmethod
-    def _locate_file(
-        cls,
-        base_filename,
-        directory,
-        extensions,
-        file_type="file",
-        mock_filesystem_operations=None,
-    ):
-        """Find an acceptable file in the given directory.
-
-        :param base_filename: A string to be used as the base of the filename.
-
-        :param directory: Look for a file in this directory.
-
-        :param extensions: Any of these extensions for the file is
-        acceptable.
-
-        :param file_type: Human-readable description of the type of
-            file we're looking for. This is used only in a log warning if
-            no file can be found.
-
-        :param mock_filesystem_operations: A test may pass in a
-            2-tuple of functions to replace os.path.exists and the 'open'
-            function.
-
-        :return: A 3-tuple. (None, None, None) if no file can be
-            found; otherwise (filename, media_type, contents).
-        """
-        if mock_filesystem_operations:
-            exists_f, open_f = mock_filesystem_operations
-        else:
-            exists_f = os.path.exists
-            open_f = open
-
-        success_path = None
-        media_type = None
-        attempts = []
-        for extension in extensions:
-            for ext in (extension, extension.upper()):
-                if not ext.startswith("."):
-                    ext = "." + ext
-                filename = base_filename + ext
-                path = os.path.join(directory, filename)
-                attempts.append(path)
-                if exists_f(path):
-                    media_type = Representation.MEDIA_TYPE_FOR_EXTENSION.get(
-                        ext.lower()
-                    )
-                    content = None
-                    with open_f(path, "rb") as fh:
-                        content = fh.read()
-                    return filename, media_type, content
-
-        # If we went through that whole loop without returning,
-        # we have failed.
-        logging.warning(
-            "Could not find %s for %s. Looked in: %s",
-            file_type,
-            base_filename,
-            ", ".join(attempts),
-        )
-        return None, None, None
 
 
 class LaneResetScript(LibraryInputScript):
@@ -1779,12 +839,6 @@ class NovelistSnapshotScript(TimestampScript, LibraryInputScript):
                     result += str(response)
 
                     output.write(result)
-
-
-class SharedODLImportScript(OPDSImportScript):
-    IMPORTER_CLASS = SharedODLImporter
-    MONITOR_CLASS = SharedODLImportMonitor
-    PROTOCOL = SharedODLImporter.NAME
 
 
 class LocalAnalyticsExportScript(Script):

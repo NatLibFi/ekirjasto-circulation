@@ -1,15 +1,15 @@
 import json
 import types
-from typing import Any, Callable, Optional, Tuple
+from typing import Any, Callable, Optional, Tuple, Type
 
 import pytest
 from _pytest.monkeypatch import MonkeyPatch
 
-from api.odl import ODLAPI
+from api.circulation import LoanInfo
+from api.odl import ODLAPI, BaseODLAPI
 from api.odl2 import ODL2API
 from core.model import (
     Collection,
-    IntegrationClient,
     Library,
     License,
     LicensePool,
@@ -22,10 +22,8 @@ from core.model import (
 from core.model.configuration import ExternalIntegration
 from core.util.http import HTTP
 from tests.core.mock import MockRequestsResponse
-from tests.fixtures.api_odl2_files import ODL2APIFilesFixture
-from tests.fixtures.api_odl_files import ODLAPIFilesFixture
+from tests.fixtures.api_odl import ODL2APIFilesFixture, ODLAPIFilesFixture
 from tests.fixtures.database import DatabaseTransactionFixture
-from tests.fixtures.db import make_default_library
 from tests.fixtures.files import APIFilesFixture
 
 
@@ -35,29 +33,41 @@ class MonkeyPatchedODLFixture:
     def __init__(self, monkeypatch: MonkeyPatch):
         self.monkeypatch = monkeypatch
 
+    @staticmethod
+    def _queue_response(patched_self, status_code, headers={}, content=None):
+        patched_self.responses.insert(
+            0, MockRequestsResponse(status_code, headers, content)
+        )
 
-@pytest.fixture(scope="function")
-def monkey_patch_odl(monkeypatch) -> MonkeyPatchedODLFixture:
-    """A fixture that patches the ODLAPI to make it possible to intercept HTTP requests for testing."""
-
-    def queue_response(self, status_code, headers={}, content=None):
-        self.responses.insert(0, MockRequestsResponse(status_code, headers, content))
-
-    def _get(self, url, headers=None):
-        self.requests.append([url, headers])
-        response = self.responses.pop()
+    @staticmethod
+    def _get(patched_self, url, headers=None):
+        patched_self.requests.append([url, headers])
+        response = patched_self.responses.pop()
         return HTTP._process_response(url, response)
 
-    def _url_for(self, *args, **kwargs):
+    @staticmethod
+    def _url_for(patched_self, *args, **kwargs):
         del kwargs["_external"]
         return "http://{}?{}".format(
             "/".join(args),
             "&".join([f"{key}={val}" for key, val in list(kwargs.items())]),
         )
 
-    monkeypatch.setattr(ODLAPI, "_get", _get)
-    monkeypatch.setattr(ODLAPI, "_url_for", _url_for)
-    monkeypatch.setattr(ODLAPI, "queue_response", queue_response, raising=False)
+    def __call__(self, api: Type[BaseODLAPI]):
+        # We monkeypatch the ODLAPI class to intercept HTTP requests and responses
+        # these monkeypatched methods are staticmethods on this class. They take
+        # a patched_self argument, which is the instance of the ODLAPI class that
+        # they have been monkeypatched onto.
+        self.monkeypatch.setattr(api, "_get", self._get)
+        self.monkeypatch.setattr(api, "_url_for", self._url_for)
+        self.monkeypatch.setattr(
+            api, "queue_response", self._queue_response, raising=False
+        )
+
+
+@pytest.fixture(scope="function")
+def monkey_patch_odl(monkeypatch) -> MonkeyPatchedODLFixture:
+    """A fixture that patches the ODLAPI to make it possible to intercept HTTP requests for testing."""
     return MonkeyPatchedODLFixture(monkeypatch)
 
 
@@ -73,17 +83,18 @@ class ODLTestFixture:
         self.db = db
         self.files = files
         self.patched = patched
+        patched(ODLAPI)
 
     def library(self):
-        return make_default_library(self.db.session)
+        return self.db.default_library()
 
-    def collection(self, library):
+    def collection(self, library, api_class=ODLAPI):
         """Create a mock ODL collection to use in tests."""
-        integration_protocol = ODLAPI.NAME
+        integration_protocol = api_class.label()
         collection, ignore = get_one_or_create(
             self.db.session,
             Collection,
-            name="Test ODL Collection",
+            name=f"Test {api_class.__name__} Collection",
             create_method_kwargs=dict(
                 external_account_id="http://odl",
             ),
@@ -91,12 +102,14 @@ class ODLTestFixture:
         integration = collection.create_external_integration(
             protocol=integration_protocol
         )
-        integration.username = "a"
-        integration.password = "b"
-        integration.url = "http://metadata"
-        collection.external_integration.set_setting(
-            Collection.DATA_SOURCE_NAME_SETTING, "Feedbooks"
-        )
+        config = collection.create_integration_configuration(integration_protocol)
+        config.settings_dict = {
+            "username": "a",
+            "password": "b",
+            "url": "http://metadata",
+            Collection.DATA_SOURCE_NAME_SETTING: "Feedbooks",
+        }
+        config.for_library(library.id, create=True)
         library.collections.append(collection)
         return collection
 
@@ -130,9 +143,6 @@ class ODLTestFixture:
         api.requests = []
         api.responses = []
         return api
-
-    def client(self):
-        return self.db.integration_client()
 
     def checkin(self, api, patron: Patron, pool: LicensePool) -> Callable[[], None]:
         """Create a function that, when evaluated, performs a checkin."""
@@ -169,7 +179,7 @@ class ODLTestFixture:
         pool: LicensePool,
         db: DatabaseTransactionFixture,
         loan_url: str,
-    ) -> Callable[[], Tuple[Loan, Any]]:
+    ) -> Callable[[], Tuple[LoanInfo, Any]]:
         """Create a function that, when evaluated, performs a checkout."""
 
         def c():
@@ -218,7 +228,6 @@ class ODLAPITestFixture:
         license: License,
         api,
         patron: Patron,
-        client: IntegrationClient,
     ):
         self.fixture = odl_fixture
         self.db = odl_fixture.db
@@ -227,10 +236,9 @@ class ODLAPITestFixture:
         self.collection = collection
         self.work = work
         self.license = license
-        self.api: ODLAPI = api
+        self.api = api
         self.patron = patron
-        self.pool = license.license_pool  # type: ignore
-        self.client = client
+        self.pool = license.license_pool
 
     def checkin(
         self, patron: Optional[Patron] = None, pool: Optional[LicensePool] = None
@@ -244,7 +252,7 @@ class ODLAPITestFixture:
         loan_url: Optional[str] = None,
         patron: Optional[Patron] = None,
         pool: Optional[LicensePool] = None,
-    ) -> Tuple[Loan, Any]:
+    ) -> Tuple[LoanInfo, Any]:
         patron = patron or self.patron
         pool = pool or self.pool
         loan_url = loan_url or self.db.fresh_url()
@@ -261,19 +269,29 @@ def odl_api_test_fixture(odl_test_fixture: ODLTestFixture) -> ODLAPITestFixture:
     license = odl_test_fixture.license(work)
     api = odl_test_fixture.api(collection)
     patron = odl_test_fixture.db.patron()
-    client = odl_test_fixture.client()
     return ODLAPITestFixture(
-        odl_test_fixture, library, collection, work, license, api, patron, client
+        odl_test_fixture, library, collection, work, license, api, patron
     )
 
 
 class ODL2TestFixture(ODLTestFixture):
     """An ODL2 test fixture that mirrors the ODL test fixture except for the API class being used"""
 
-    def collection(self, library) -> Collection:
-        collection = super().collection(library)
+    def __init__(
+        self,
+        db: DatabaseTransactionFixture,
+        files: APIFilesFixture,
+        patched: MonkeyPatchedODLFixture,
+    ):
+        super().__init__(db, files, patched)
+        patched(ODL2API)
+
+    def collection(
+        self, library: Library, api_class: Type[ODL2API] = ODL2API
+    ) -> Collection:
+        collection = super().collection(library, api_class)
         collection.name = "Test ODL2 Collection"
-        collection.external_integration.protocol = ExternalIntegration.ODL2
+        collection.integration_configuration.protocol = ExternalIntegration.ODL2
         return collection
 
     def api(self, collection) -> ODL2API:
@@ -305,7 +323,6 @@ def odl2_api_test_fixture(odl2_test_fixture: ODL2TestFixture) -> ODL2APITestFixt
     license = odl2_test_fixture.license(work)
     api = odl2_test_fixture.api(collection)
     patron = odl2_test_fixture.db.patron()
-    client = odl2_test_fixture.client()
     return ODL2APITestFixture(
-        odl2_test_fixture, library, collection, work, license, api, patron, client
+        odl2_test_fixture, library, collection, work, license, api, patron
     )

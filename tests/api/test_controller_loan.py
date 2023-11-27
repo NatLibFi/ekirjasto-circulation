@@ -8,18 +8,23 @@ import feedparser
 import pytest
 from flask import Response as FlaskResponse
 from flask import url_for
+from werkzeug import Response as wkResponse
 
-from api.axis import Axis360FulfillmentInfo
-from api.circulation import CirculationAPI, FulfillmentInfo, HoldInfo, LoanInfo
+from api.axis import Axis360API, Axis360FulfillmentInfo
+from api.circulation import (
+    BaseCirculationAPI,
+    CirculationAPI,
+    FulfillmentInfo,
+    HoldInfo,
+    LoanInfo,
+)
 from api.circulation_exceptions import (
     AlreadyOnHold,
-    CannotFulfill,
     NoAvailableCopies,
     NoLicenses,
     NotFoundOnRemote,
     PatronHoldLimitReached,
 )
-from api.config import Configuration
 from api.problem_details import (
     BAD_DELIVERY_MECHANISM,
     CANNOT_RELEASE_HOLD,
@@ -29,9 +34,10 @@ from api.problem_details import (
     OUTSTANDING_FINES,
 )
 from core.model import (
-    ConfigurationSetting,
+    Collection,
     DataSource,
     DeliveryMechanism,
+    ExternalIntegration,
     Hold,
     Identifier,
     LicensePool,
@@ -53,7 +59,7 @@ from core.util.problem_detail import ProblemDetail
 from tests.core.mock import DummyHTTPClient
 from tests.fixtures.api_controller import CirculationControllerFixture
 from tests.fixtures.database import DatabaseTransactionFixture
-from tests.fixtures.vendor_id import VendorIDFixture
+from tests.fixtures.library import LibraryFixture
 
 
 class LoanFixture(CirculationControllerFixture):
@@ -63,10 +69,8 @@ class LoanFixture(CirculationControllerFixture):
     mech1: LicensePoolDeliveryMechanism
     pool: LicensePool
 
-    def __init__(
-        self, db: DatabaseTransactionFixture, vendor_id_fixture: VendorIDFixture
-    ):
-        super().__init__(db, vendor_id_fixture)
+    def __init__(self, db: DatabaseTransactionFixture):
+        super().__init__(db)
         self.pool = self.english_1.license_pools[0]
         [self.mech1] = self.pool.delivery_mechanisms
         self.mech2 = self.pool.set_delivery_mechanism(
@@ -81,8 +85,8 @@ class LoanFixture(CirculationControllerFixture):
 
 
 @pytest.fixture(scope="function")
-def loan_fixture(db: DatabaseTransactionFixture, vendor_id_fixture: VendorIDFixture):
-    return LoanFixture(db, vendor_id_fixture)
+def loan_fixture(db: DatabaseTransactionFixture):
+    return LoanFixture(db)
 
 
 class TestLoanController:
@@ -107,8 +111,10 @@ class TestLoanController:
         class MockLibraryAuthenticator:
             identifies_individuals = False
 
+        short_name = loan_fixture.db.default_library().short_name
+        assert short_name is not None
         loan_fixture.manager.auth.library_authenticators[
-            loan_fixture.db.default_library().short_name
+            short_name
         ] = MockLibraryAuthenticator()
 
         def mock_can_fulfill_without_loan(patron, pool, lpdm):
@@ -175,6 +181,22 @@ class TestLoanController:
             assert (hold, other_pool) == result
 
     def test_borrow_success(self, loan_fixture: LoanFixture):
+        # Create a loanable LicensePool.
+        work = loan_fixture.db.work(
+            with_license_pool=True, with_open_access_download=False
+        )
+        pool = work.license_pools[0]
+        loan_fixture.manager.d_circulation.queue_checkout(
+            pool,
+            LoanInfo(
+                pool.collection,
+                pool.data_source.name,
+                pool.identifier.type,
+                pool.identifier.identifier,
+                utc_now(),
+                utc_now() + datetime.timedelta(seconds=3600),
+            ),
+        )
         with loan_fixture.request_context_with_library(
             "/", headers=dict(Authorization=loan_fixture.valid_auth)
         ):
@@ -187,7 +209,7 @@ class TestLoanController:
             loan = get_one(
                 loan_fixture.db.session, Loan, license_pool=loan_fixture.pool
             )
-            assert loan != None
+            assert loan is not None
             # The loan has yet to be fulfilled.
             assert None == loan.fulfillment
 
@@ -202,7 +224,7 @@ class TestLoanController:
                 if x["rel"] == OPDSFeed.ACQUISITION_REL
             ]
 
-            assert loan_fixture.mech1.resource is not None  # type: ignore
+            assert loan_fixture.mech1.resource is not None
 
             # Make sure the two delivery mechanisms are incompatible.
             loan_fixture.mech1.delivery_mechanism.drm_scheme = "DRM Scheme 1"
@@ -224,11 +246,26 @@ class TestLoanController:
 
             # Make sure the first delivery mechanism has the data necessary
             # to carry out an open source fulfillment.
-            assert loan_fixture.mech1.resource is not None  # type: ignore
-            assert loan_fixture.mech1.resource.representation is not None  # type: ignore
-            assert loan_fixture.mech1.resource.representation.url is not None  # type: ignore
+            assert loan_fixture.mech1.resource is not None
+            assert loan_fixture.mech1.resource.representation is not None
+            assert loan_fixture.mech1.resource.representation.url is not None
 
             # Now let's try to fulfill the loan using the first delivery mechanism.
+            fulfillment = FulfillmentInfo(
+                loan_fixture.pool.collection,
+                loan_fixture.pool.data_source,
+                loan_fixture.pool.identifier.type,
+                loan_fixture.pool.identifier.identifier,
+                content_link=fulfillable_mechanism.resource.representation.public_url,
+                content_type=fulfillable_mechanism.resource.representation.media_type,
+                content=None,
+                content_expires=None,
+            )
+            loan_fixture.manager.d_circulation.queue_fulfill(
+                loan_fixture.pool, fulfillment
+            )
+
+            assert isinstance(loan_fixture.pool.id, int)
             response = loan_fixture.manager.loans.fulfill(
                 loan_fixture.pool.id,
                 fulfillable_mechanism.delivery_mechanism.id,
@@ -238,7 +275,7 @@ class TestLoanController:
                 raise Exception(repr(j))
             assert 302 == response.status_code
             assert (
-                fulfillable_mechanism.resource.representation.public_url  # type: ignore
+                fulfillable_mechanism.resource.representation.public_url
                 == response.headers.get("Location")
             )
 
@@ -253,11 +290,11 @@ class TestLoanController:
 
             fulfillment = FulfillmentInfo(
                 loan_fixture.pool.collection,
-                loan_fixture.pool.data_source,  # type: ignore
-                loan_fixture.pool.identifier.type,  # type: ignore
-                loan_fixture.pool.identifier.identifier,  # type: ignore
-                content_link=fulfillable_mechanism.resource.url,  # type: ignore
-                content_type=fulfillable_mechanism.resource.representation.media_type,  # type: ignore
+                loan_fixture.pool.data_source,
+                loan_fixture.pool.identifier.type,
+                loan_fixture.pool.identifier.identifier,
+                content_link=fulfillable_mechanism.resource.url,
+                content_type=fulfillable_mechanism.resource.representation.media_type,
                 content=None,
                 content_expires=None,
             )
@@ -274,7 +311,7 @@ class TestLoanController:
             )
             assert 200 == response.status_code
             assert "I am an ACSM file" == response.get_data(as_text=True)
-            assert http.requests == [fulfillable_mechanism.resource.url]  # type: ignore
+            assert http.requests == [fulfillable_mechanism.resource.url]
 
             # But we can't use some other mechanism -- we're stuck with
             # the first one we chose.
@@ -341,7 +378,7 @@ class TestLoanController:
 
             # A loan has been created for this license pool.
             loan = get_one(loan_fixture.db.session, Loan, license_pool=pool)
-            assert loan != None
+            assert loan is not None
             # The loan has yet to be fulfilled.
             assert None == loan.fulfillment
 
@@ -672,29 +709,9 @@ class TestLoanController:
     def test_fulfill(self, loan_fixture: LoanFixture):
         # Verify that arguments to the fulfill() method are propagated
         # correctly to the CirculationAPI.
-        class MockCirculationAPI:
-            def fulfill(
-                self,
-                patron,
-                credential,
-                requested_license_pool,
-                mechanism,
-                part,
-                fulfill_part_url,
-            ):
-                self.called_with = (
-                    patron,
-                    credential,
-                    requested_license_pool,
-                    mechanism,
-                    part,
-                    fulfill_part_url,
-                )
-                raise CannotFulfill()
 
         controller = loan_fixture.manager.loans
-        mock = MockCirculationAPI()
-        library_short_name = loan_fixture.db.default_library().short_name
+        mock = MagicMock(spec=CirculationAPI)
         controller.manager.circulation_apis[loan_fixture.db.default_library().id] = mock
 
         with loan_fixture.request_context_with_library(
@@ -703,49 +720,20 @@ class TestLoanController:
             authenticated = controller.authenticated_patron_from_request()
             loan, ignore = loan_fixture.pool.loan_to(authenticated)
 
-            # Try to fulfill a certain part of the loan.
-            part = "part 1 million"
+            # Try to fulfill the loan.
+            assert isinstance(loan_fixture.pool.id, int)
             controller.fulfill(
-                loan_fixture.pool.id, loan_fixture.mech2.delivery_mechanism.id, part
+                loan_fixture.pool.id, loan_fixture.mech2.delivery_mechanism.id
             )
 
             # Verify that the right arguments were passed into
             # CirculationAPI.
-            (
-                patron,
-                credential,
-                pool,
-                mechanism,
-                part,
-                fulfill_part_url,
-            ) = mock.called_with
-            assert authenticated == patron
-            assert loan_fixture.valid_credentials["password"] == credential
-            assert loan_fixture.pool == pool
-            assert loan_fixture.mech2 == mechanism
-            assert "part 1 million" == part
-
-            # The last argument is complicated -- it's a function for
-            # generating partial fulfillment URLs. Let's try it out
-            # and make sure it gives the result we expect.
-            expect = url_for(
-                "fulfill",
-                license_pool_id=loan_fixture.pool.id,
-                mechanism_id=mechanism.delivery_mechanism.id,
-                library_short_name=library_short_name,
-                part=part,
-                _external=True,
+            mock.fulfill.assert_called_once_with(
+                authenticated,
+                loan_fixture.valid_credentials["password"],
+                loan_fixture.pool,
+                loan_fixture.mech2,
             )
-            part_url = fulfill_part_url(part)
-            assert expect == part_url
-
-            # Ensure that the library short name is the first segment
-            # of the path of the fulfillment url. We cannot perform
-            # patron authentication without it.
-            expected_path = urllib.parse.urlparse(expect).path
-            part_url_path = urllib.parse.urlparse(part_url).path
-            assert expected_path.startswith(f"/{library_short_name}/")
-            assert part_url_path.startswith(f"/{library_short_name}/")
 
     @pytest.mark.parametrize(
         "as_response_value",
@@ -791,6 +779,7 @@ class TestLoanController:
             loan, ignore = loan_fixture.pool.loan_to(authenticated)
 
             # Fulfill the loan.
+            assert isinstance(loan_fixture.pool.id, int)
             result = controller.fulfill(
                 loan_fixture.pool.id, loan_fixture.mech2.delivery_mechanism.id
             )
@@ -800,7 +789,6 @@ class TestLoanController:
             assert as_response_value == result
 
     def test_fulfill_without_active_loan(self, loan_fixture: LoanFixture):
-
         controller = loan_fixture.manager.loans
 
         # Most of the time, it is not possible to fulfill a title if the
@@ -810,10 +798,11 @@ class TestLoanController:
             "/", headers=dict(Authorization=loan_fixture.valid_auth)
         ):
             controller.authenticated_patron_from_request()
+            assert isinstance(loan_fixture.pool.id, int)
             response = controller.fulfill(
                 loan_fixture.pool.id, loan_fixture.mech2.delivery_mechanism.id
             )
-
+            assert isinstance(response, ProblemDetail)
             assert NO_ACTIVE_LOAN.uri == response.uri
 
         # ...or it might be because there is no authenticated patron.
@@ -869,6 +858,7 @@ class TestLoanController:
                 loan_fixture.pool.id, loan_fixture.mech2.delivery_mechanism.id
             )
 
+            assert isinstance(response, wkResponse)
             assert "here's your book" == response.get_data(as_text=True)
             assert [] == loan_fixture.db.session.query(Loan).all()
 
@@ -882,7 +872,7 @@ class TestLoanController:
             authenticated = controller.authenticated_patron_from_request()
             loan_fixture.pool.loan_to(authenticated)
             with patch(
-                "api.controller.LibraryLoanAndHoldAnnotator.single_item_feed"
+                "api.controller.OPDSAcquisitionFeed.single_entry_loans_feed"
             ) as feed, patch.object(circulation, "fulfill") as fulfill:
                 # Complex setup
                 # The fulfillmentInfo should not be have response type
@@ -894,6 +884,7 @@ class TestLoanController:
                     DeliveryMechanism.STREAMING_TEXT_CONTENT_TYPE
                 )
 
+                assert isinstance(loan_fixture.pool.id, int)
                 response = controller.fulfill(
                     loan_fixture.pool.id, loan_fixture.mech1.delivery_mechanism.id
                 )
@@ -924,12 +915,12 @@ class TestLoanController:
         lpdm.delivery_mechanism.default_client_can_fulfill = True
 
         # Mock out the flow
-        api = MagicMock()
+        api = MagicMock(spec=BaseCirculationAPI)
         api.fulfill.return_value = FulfillmentInfo(
             loan_fixture.db.default_collection(),
             DataSource.OVERDRIVE,
             "overdrive",
-            pool.identifier.identifier,  # type: ignore
+            pool.identifier.identifier,
             "https://example.org/redirect_to_epub",
             MediaTypes.EPUB_MEDIA_TYPE,
             "",
@@ -952,12 +943,15 @@ class TestLoanController:
             controller.circulation.api_for_collection[
                 loan_fixture.db.default_collection().id
             ] = api
+            assert isinstance(pool.id, int)
             response = controller.fulfill(pool.id, lpdm.delivery_mechanism.id)
 
+        assert isinstance(response, wkResponse)
         assert response.status_code == 302
         assert response.location == "https://example.org/redirect_to_epub"
 
         # Axis360 variant
+        api = MagicMock(spec=Axis360API)
         api.collection = loan_fixture.db.default_collection()
         api._db = loan_fixture.db.session
         axis360_ff = Axis360FulfillmentInfo(
@@ -972,13 +966,18 @@ class TestLoanController:
             }
         )
         api.fulfill.return_value = axis360_ff
+        assert isinstance(pool.id, int)
         with loan_fixture.request_context_with_library(
             "/",
             library=loan_fixture.db.default_library(),
             headers=dict(Authorization=loan_fixture.valid_auth),
         ):
+            controller.circulation.api_for_collection[
+                loan_fixture.db.default_collection().id
+            ] = api
             response = controller.fulfill(pool.id, lpdm.delivery_mechanism.id)
 
+        assert isinstance(response, wkResponse)
         assert response.status_code == 200
         assert response.json == {"book_vault_uuid": "Vault ID", "isbn": "ISBN ID"}
 
@@ -1036,7 +1035,9 @@ class TestLoanController:
             assert isinstance(response, ProblemDetail)
             assert HOLD_LIMIT_REACHED.uri == response.uri
 
-    def test_borrow_fails_with_outstanding_fines(self, loan_fixture: LoanFixture):
+    def test_borrow_fails_with_outstanding_fines(
+        self, loan_fixture: LoanFixture, library_fixture: LibraryFixture
+    ):
         threem_edition, pool = loan_fixture.db.edition(
             with_open_access_download=False,
             data_source_name=DataSource.THREEM,
@@ -1048,13 +1049,13 @@ class TestLoanController:
         )
         pool.open_access = False
 
-        ConfigurationSetting.for_library(
-            Configuration.MAX_OUTSTANDING_FINES, loan_fixture.db.default_library()
-        ).value = "$0.50"
+        library = loan_fixture.db.default_library()
+        settings = library_fixture.settings(library)
+
+        settings.max_outstanding_fines = 0.50
         with loan_fixture.request_context_with_library(
             "/", headers=dict(Authorization=loan_fixture.valid_auth)
         ):
-
             # The patron's credentials are valid, but they have a lot
             # of fines.
             patron = loan_fixture.manager.loans.authenticated_patron_from_request()
@@ -1116,7 +1117,6 @@ class TestLoanController:
             )
 
     def test_active_loans(self, loan_fixture: LoanFixture):
-
         # First, verify that this controller supports conditional HTTP
         # GET by calling handle_conditional_request and propagating
         # any Response it returns.
@@ -1306,3 +1306,225 @@ class TestLoanController:
             # Since we went out the the vendor APIs,
             # patron.last_loan_activity_sync was updated.
             assert patron.last_loan_activity_sync > new_sync_time
+
+    @pytest.mark.parametrize(
+        "target_loan_duration, "
+        "db_loan_duration, "
+        "opds_response_loan_duration, "
+        "collection_protocol, "
+        "collection_data_source_name, "
+        "collection_default_loan_period",
+        [
+            [
+                # Loan without duration, collection without configured loan period
+                None,
+                None,
+                Collection.STANDARD_DEFAULT_LOAN_PERIOD,
+                ExternalIntegration.OPDS_IMPORT,
+                None,
+                None,
+            ],  # DB and OPDS response loan duration mismatch
+            [
+                # Loan duration < CM STANDARD_DEFAULT_LOAN_PERIOD, collection without configured loan period
+                Collection.STANDARD_DEFAULT_LOAN_PERIOD - 1,
+                Collection.STANDARD_DEFAULT_LOAN_PERIOD - 1,
+                Collection.STANDARD_DEFAULT_LOAN_PERIOD - 1,
+                ExternalIntegration.OPDS_IMPORT,
+                None,
+                None,
+            ],
+            [
+                # Loan duration > CM STANDARD_DEFAULT_LOAN_PERIOD, collection without configured loan period
+                Collection.STANDARD_DEFAULT_LOAN_PERIOD + 1,
+                Collection.STANDARD_DEFAULT_LOAN_PERIOD + 1,
+                Collection.STANDARD_DEFAULT_LOAN_PERIOD + 1,
+                ExternalIntegration.OPDS_IMPORT,
+                None,
+                None,
+            ],
+            [
+                # Loan without duration, collection loan period < CM STANDARD_DEFAULT_LOAN_PERIOD
+                None,
+                None,
+                Collection.STANDARD_DEFAULT_LOAN_PERIOD - 2,
+                ExternalIntegration.BIBLIOTHECA,
+                DataSource.BIBLIOTHECA,
+                Collection.STANDARD_DEFAULT_LOAN_PERIOD - 2,
+            ],  # DB and OPDS response loan duration mismatch
+            [
+                # Loan duration < collection loan period < CM STANDARD_DEFAULT_LOAN_PERIOD
+                Collection.STANDARD_DEFAULT_LOAN_PERIOD - 3,
+                Collection.STANDARD_DEFAULT_LOAN_PERIOD - 3,
+                Collection.STANDARD_DEFAULT_LOAN_PERIOD - 3,
+                ExternalIntegration.BIBLIOTHECA,
+                DataSource.BIBLIOTHECA,
+                Collection.STANDARD_DEFAULT_LOAN_PERIOD - 2,
+            ],
+            [
+                # Collection loan period < loan duration < CM STANDARD_DEFAULT_LOAN_PERIOD
+                Collection.STANDARD_DEFAULT_LOAN_PERIOD - 1,
+                Collection.STANDARD_DEFAULT_LOAN_PERIOD - 1,
+                Collection.STANDARD_DEFAULT_LOAN_PERIOD - 1,
+                ExternalIntegration.BIBLIOTHECA,
+                DataSource.BIBLIOTHECA,
+                Collection.STANDARD_DEFAULT_LOAN_PERIOD - 2,
+            ],
+            [
+                # Collection loan period < CM STANDARD_DEFAULT_LOAN_PERIOD < loan duration
+                Collection.STANDARD_DEFAULT_LOAN_PERIOD + 1,
+                Collection.STANDARD_DEFAULT_LOAN_PERIOD + 1,
+                Collection.STANDARD_DEFAULT_LOAN_PERIOD + 1,
+                ExternalIntegration.BIBLIOTHECA,
+                DataSource.BIBLIOTHECA,
+                Collection.STANDARD_DEFAULT_LOAN_PERIOD - 2,
+            ],
+            [
+                # Loan without duration, CM STANDARD_DEFAULT_LOAN_PERIOD < collection loan period
+                None,
+                None,
+                Collection.STANDARD_DEFAULT_LOAN_PERIOD + 2,
+                ExternalIntegration.BIBLIOTHECA,
+                DataSource.BIBLIOTHECA,
+                Collection.STANDARD_DEFAULT_LOAN_PERIOD + 2,
+            ],  # DB and OPDS response loan duration mismatch
+            [
+                # Loan duration < CM STANDARD_DEFAULT_LOAN_PERIOD < collection loan period
+                Collection.STANDARD_DEFAULT_LOAN_PERIOD - 1,
+                Collection.STANDARD_DEFAULT_LOAN_PERIOD - 1,
+                Collection.STANDARD_DEFAULT_LOAN_PERIOD - 1,
+                ExternalIntegration.BIBLIOTHECA,
+                DataSource.BIBLIOTHECA,
+                Collection.STANDARD_DEFAULT_LOAN_PERIOD + 2,
+            ],
+            [
+                # CM STANDARD_DEFAULT_LOAN_PERIOD < loan duration < collection loan period
+                Collection.STANDARD_DEFAULT_LOAN_PERIOD + 1,
+                Collection.STANDARD_DEFAULT_LOAN_PERIOD + 1,
+                Collection.STANDARD_DEFAULT_LOAN_PERIOD + 1,
+                ExternalIntegration.BIBLIOTHECA,
+                DataSource.BIBLIOTHECA,
+                Collection.STANDARD_DEFAULT_LOAN_PERIOD + 2,
+            ],
+            [
+                # CM STANDARD_DEFAULT_LOAN_PERIOD < collection loan period < loan duration
+                Collection.STANDARD_DEFAULT_LOAN_PERIOD + 3,
+                Collection.STANDARD_DEFAULT_LOAN_PERIOD + 3,
+                Collection.STANDARD_DEFAULT_LOAN_PERIOD + 3,
+                ExternalIntegration.BIBLIOTHECA,
+                DataSource.BIBLIOTHECA,
+                Collection.STANDARD_DEFAULT_LOAN_PERIOD + 2,
+            ],
+        ],
+    )
+    def test_loan_duration_settings_impact_on_loans_and_borrow_response(
+        self,
+        loan_fixture: LoanFixture,
+        target_loan_duration: int,
+        db_loan_duration: int,
+        opds_response_loan_duration: int,
+        collection_protocol: str,
+        collection_data_source_name: str,
+        collection_default_loan_period: int,
+    ):
+        with loan_fixture.request_context_with_library(
+            "/", headers=dict(Authorization=loan_fixture.valid_auth)
+        ):
+            loan_fixture.manager.loans.authenticated_patron_from_request()
+
+            loan_start = utc_now()
+
+            loan_end = None
+            if target_loan_duration:
+                loan_end = loan_start + datetime.timedelta(days=target_loan_duration)
+
+            collection = loan_fixture.db.collection(
+                protocol=collection_protocol,
+                data_source_name=collection_data_source_name,
+            )
+
+            if collection_default_loan_period:
+                library_id = loan_fixture.db.default_library().id
+                assert isinstance(library_id, int)
+                DatabaseTransactionFixture.set_settings(
+                    collection.integration_configuration.for_library(
+                        library_id, create=True
+                    ),
+                    collection.loan_period_key(),
+                    collection_default_loan_period,
+                )
+
+            loan_fixture.db.default_library().collections.append(collection)
+
+            def create_work_and_return_license_pool_and_loan_info(**kwargs):
+                loan_start = kwargs.pop("loan_start", utc_now())
+                loan_end = kwargs.pop("loan_end", None)
+
+                work = loan_fixture.db.work(
+                    with_license_pool=True, with_open_access_download=False, **kwargs
+                )
+                license_pool = work.license_pools[0]
+
+                loan_info = LoanInfo(
+                    license_pool.collection,
+                    license_pool.data_source.name,
+                    license_pool.identifier.type,
+                    license_pool.identifier.identifier,
+                    loan_start,
+                    loan_end,
+                )
+
+                return license_pool, loan_info
+
+            license_pool, loan_info = create_work_and_return_license_pool_and_loan_info(
+                loan_start=loan_start,
+                loan_end=loan_end,
+                data_source_name=collection_data_source_name,
+                collection=collection,
+            )
+
+            loan_fixture.manager.d_circulation.queue_checkout(license_pool, loan_info)
+
+            response = loan_fixture.manager.loans.borrow(
+                license_pool.identifier.type, license_pool.identifier.identifier
+            )
+
+            loan = get_one(loan_fixture.db.session, Loan, license_pool=license_pool)
+            assert loan is not None
+
+            def parse_loan_until_field_from_opds_response(opds_response):
+                feed = feedparser.parse(opds_response.data)
+                [entry] = feed.get("entries")
+                availability = entry.get("opds_availability")
+                until = availability.get("until")
+
+                return until
+
+            loan_response_until = parse_loan_until_field_from_opds_response(response)
+
+            expected_db_loan_end = None
+            if db_loan_duration:
+                expected_db_loan_end = loan_start + datetime.timedelta(
+                    days=db_loan_duration
+                )
+
+            expected_opds_response_loan_end = None
+            if opds_response_loan_duration:
+                expected_opds_response_loan_end = loan_start + datetime.timedelta(
+                    days=opds_response_loan_duration
+                )
+
+            def format_datetime(none_or_datetime):
+                if none_or_datetime is None:
+                    return None
+
+                if isinstance(none_or_datetime, str):
+                    return none_or_datetime
+
+                return datetime.datetime.strftime(
+                    none_or_datetime, "%Y-%m-%dT%H:%M:%S+00:00"
+                )
+
+            assert format_datetime(loan.end) == format_datetime(expected_db_loan_end)
+            assert format_datetime(loan_response_until) == format_datetime(
+                expected_opds_response_loan_end
+            )

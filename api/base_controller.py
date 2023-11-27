@@ -3,11 +3,10 @@ from flask import Response
 from flask_babel import lazy_gettext as _
 from werkzeug.datastructures import Authorization
 
-from core.model import Library, Loan, Patron, get_one
+from api.circulation_exceptions import *
+from api.problem_details import *
+from core.model import Library, Patron
 from core.util.problem_detail import ProblemDetail
-
-from .circulation_exceptions import *
-from .problem_details import *
 
 
 class BaseCirculationManagerController:
@@ -79,7 +78,6 @@ class BaseCirculationManagerController:
         return patron
 
     def authenticated_patron(self, authorization_header: Authorization):
-
         """Look up the patron authenticated by the given authorization header.
 
         The header could contain a barcode and pin or a token for an
@@ -103,29 +101,6 @@ class BaseCirculationManagerController:
         headers = self.manager.auth.create_authentication_headers()
         data = self.manager.authentication_for_opds_document
         return Response(data, 401, headers)
-
-    def library_through_external_loan_identifier(self, loan_external_identifier):
-        """Look up the library the user is trying to access using a loan's external identifier.
-        We assume that the external identifier is globally unique which is true, for example,
-        in the case of using Readium LCP.
-
-        :param loan_external_identifier: External identifier of the patron's loan
-        :type loan_external_identifier: basestring
-
-        :return: Library the patron is trying to access
-        :rtype: Library
-        """
-        self.manager.reload_settings_if_changed()
-
-        loan = get_one(self._db, Loan, external_identifier=loan_external_identifier)
-
-        if loan is None:
-            return LOAN_NOT_FOUND
-
-        library = loan.patron.library
-        flask.request.library = library
-
-        return library
 
     def library_for_request(self, library_short_name):
         """Look up the library the user is trying to access.

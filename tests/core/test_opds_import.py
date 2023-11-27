@@ -1,13 +1,16 @@
 import random
+from functools import partial
 from io import StringIO
-from unittest.mock import MagicMock, create_autospec, patch
+from typing import Optional
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 import requests_mock
 from lxml import etree
 from psycopg2.extras import NumericRange
 
-from api.circulation import CirculationAPI
+from api.circulation import CirculationAPI, FulfillmentInfo, LoanInfo
+from api.circulation_exceptions import CurrentlyAvailable, FormatNotAvailable, NotOnHold
 from api.saml.credential import SAMLCredentialManager
 from api.saml.metadata.model import (
     SAMLAttributeStatement,
@@ -15,7 +18,6 @@ from api.saml.metadata.model import (
     SAMLNameIDFormat,
     SAMLSubject,
 )
-from api.saml.wayfless import SAMLWAYFlessFulfillmentError
 from core.config import IntegrationException
 from core.coverage import CoverageFailure
 from core.metadata_layer import CirculationData, LinkData, Metadata
@@ -28,27 +30,19 @@ from core.model import (
     ExternalIntegration,
     Hyperlink,
     Identifier,
+    LicensePool,
+    LicensePoolDeliveryMechanism,
     Measurement,
     MediaTypes,
     Representation,
+    Resource,
     RightsStatus,
     Subject,
     Work,
     WorkCoverageRecord,
 )
-from core.model.configuration import (
-    ConfigurationFactory,
-    ConfigurationStorage,
-    ExternalIntegrationLink,
-    HasExternalIntegration,
-)
-from core.opds_import import (
-    OPDSImporter,
-    OPDSImporterConfiguration,
-    OPDSImportMonitor,
-    OPDSXMLParser,
-)
-from core.s3 import MockS3Uploader, S3Uploader, S3UploaderConfiguration
+from core.opds_import import OPDSAPI, OPDSImporter, OPDSImportMonitor, OPDSXMLParser
+from core.saml.wayfless import SAMLWAYFlessFulfillmentError
 from core.util import first_or_default
 from core.util.datetime_helpers import datetime_utc
 from core.util.http import BadResponseException
@@ -56,7 +50,6 @@ from core.util.opds_writer import AtomFeed, OPDSFeed, OPDSMessage
 from tests.core.mock import DummyHTTPClient
 from tests.fixtures.database import DatabaseTransactionFixture
 from tests.fixtures.opds_files import OPDSFilesFixture
-from tests.fixtures.sample_covers import SampleCoversFixture
 
 
 class DoomedOPDSImporter(OPDSImporter):
@@ -82,13 +75,27 @@ class DoomedWorkOPDSImporter(OPDSImporter):
 
 
 class OPDSImporterFixture:
-    transaction: DatabaseTransactionFixture
-    content_server_feed: bytes
-    content_server_mini_feed: str
-    audiobooks_opds: bytes
-    wayfless_feed: bytes
-    feed_with_id_and_dcterms_identifier: bytes
-    service: ExternalIntegration
+    def __init__(
+        self, db: DatabaseTransactionFixture, opds_files_fixture: OPDSFilesFixture
+    ):
+        self.db = db
+        self.content_server_feed = opds_files_fixture.sample_data("content_server.opds")
+        self.content_server_mini_feed = opds_files_fixture.sample_text(
+            "content_server_mini.opds"
+        )
+        self.audiobooks_opds = opds_files_fixture.sample_data("audiobooks.opds")
+        self.wayfless_feed = opds_files_fixture.sample_data("wayfless.opds")
+        self.feed_with_id_and_dcterms_identifier = opds_files_fixture.sample_data(
+            "feed_with_id_and_dcterms_identifier.opds"
+        )
+        self.importer = partial(
+            OPDSImporter, _db=self.db.session, collection=self.db.default_collection()
+        )
+        db.set_settings(
+            db.default_collection().integration_configuration,
+            "data_source",
+            DataSource.OA_CONTENT_SERVER,
+        )
 
 
 @pytest.fixture()
@@ -96,64 +103,50 @@ def opds_importer_fixture(
     db: DatabaseTransactionFixture,
     opds_files_fixture: OPDSFilesFixture,
 ) -> OPDSImporterFixture:
-    data = OPDSImporterFixture()
-    data.transaction = db
-    data.content_server_feed = opds_files_fixture.sample_data("content_server.opds")
-    data.content_server_mini_feed = opds_files_fixture.sample_text(
-        "content_server_mini.opds"
-    )
-    data.audiobooks_opds = opds_files_fixture.sample_data("audiobooks.opds")
-    data.wayfless_feed = opds_files_fixture.sample_data("wayfless.opds")
-    data.feed_with_id_and_dcterms_identifier = opds_files_fixture.sample_data(
-        "feed_with_id_and_dcterms_identifier.opds"
-    )
-    db.default_collection().external_integration.setting(
-        "data_source"
-    ).value = DataSource.OA_CONTENT_SERVER
-
+    data = OPDSImporterFixture(db, opds_files_fixture)
     return data
 
 
 class TestOPDSImporter:
     def test_constructor(self, opds_importer_fixture: OPDSImporterFixture):
-        data, transaction, session = (
+        data, db, session = (
             opds_importer_fixture,
-            opds_importer_fixture.transaction,
-            opds_importer_fixture.transaction.session,
+            opds_importer_fixture.db,
+            opds_importer_fixture.db.session,
         )
 
         # The default way of making HTTP requests is with
         # Representation.cautious_http_get.
-        importer = OPDSImporter(session, collection=None)
+        importer = opds_importer_fixture.importer()
         assert Representation.cautious_http_get == importer.http_get
 
         # But you can pass in anything you want.
-        do_get = object()
-        importer = OPDSImporter(session, collection=None, http_get=do_get)
+        do_get = MagicMock()
+        importer = OPDSImporter(
+            session, collection=db.default_collection(), http_get=do_get
+        )
         assert do_get == importer.http_get
 
     def test_data_source_autocreated(self, opds_importer_fixture: OPDSImporterFixture):
-        data, transaction, session = (
+        data, db, session = (
             opds_importer_fixture,
-            opds_importer_fixture.transaction,
-            opds_importer_fixture.transaction.session,
+            opds_importer_fixture.db,
+            opds_importer_fixture.db.session,
         )
 
-        name = "New data source " + transaction.fresh_str()
-        importer = OPDSImporter(session, collection=None, data_source_name=name)
+        name = "New data source " + db.fresh_str()
+        importer = opds_importer_fixture.importer(data_source_name=name)
         source1 = importer.data_source
         assert name == source1.name
 
     def test_extract_next_links(self, opds_importer_fixture: OPDSImporterFixture):
-        data, transaction, session = (
+        data, db, session = (
             opds_importer_fixture,
-            opds_importer_fixture.transaction,
-            opds_importer_fixture.transaction.session,
+            opds_importer_fixture.db,
+            opds_importer_fixture.db.session,
         )
 
-        importer = OPDSImporter(
-            session, collection=None, data_source_name=DataSource.NYT
-        )
+        importer = opds_importer_fixture.importer()
         next_links = importer.extract_next_links(data.content_server_mini_feed)
 
         assert 1 == len(next_links)
@@ -162,15 +155,13 @@ class TestOPDSImporter:
     def test_extract_last_update_dates(
         self, opds_importer_fixture: OPDSImporterFixture
     ):
-        data, transaction, session = (
+        data, db, session = (
             opds_importer_fixture,
-            opds_importer_fixture.transaction,
-            opds_importer_fixture.transaction.session,
+            opds_importer_fixture.db,
+            opds_importer_fixture.db.session,
         )
 
-        importer = OPDSImporter(
-            session, collection=None, data_source_name=DataSource.NYT
-        )
+        importer = opds_importer_fixture.importer()
 
         # This file has two <entry> tags and one <simplified:message> tag.
         # The <entry> tags have their last update dates extracted,
@@ -193,15 +184,13 @@ class TestOPDSImporter:
     def test_extract_last_update_dates_ignores_entries_with_no_update(
         self, opds_importer_fixture: OPDSImporterFixture
     ):
-        data, transaction, session = (
+        data, db, session = (
             opds_importer_fixture,
-            opds_importer_fixture.transaction,
-            opds_importer_fixture.transaction.session,
+            opds_importer_fixture.db,
+            opds_importer_fixture.db.session,
         )
 
-        importer = OPDSImporter(
-            session, collection=None, data_source_name=DataSource.NYT
-        )
+        importer = opds_importer_fixture.importer()
 
         # Rename the <updated> and <published> tags in the content
         # server so they don't show up.
@@ -213,16 +202,14 @@ class TestOPDSImporter:
         assert [] == last_update_dates
 
     def test_extract_metadata(self, opds_importer_fixture: OPDSImporterFixture):
-        data, transaction, session = (
+        data, db, session = (
             opds_importer_fixture,
-            opds_importer_fixture.transaction,
-            opds_importer_fixture.transaction.session,
+            opds_importer_fixture.db,
+            opds_importer_fixture.db.session,
         )
 
-        data_source_name = "Data source name " + transaction.fresh_str()
-        importer = OPDSImporter(
-            session, collection=None, data_source_name=data_source_name
-        )
+        data_source_name = "Data source name " + db.fresh_str()
+        importer = opds_importer_fixture.importer(data_source_name=data_source_name)
         metadata, failures = importer.extract_feed_data(data.content_server_mini_feed)
 
         m1 = metadata["http://www.gutenberg.org/ebooks/10441"]
@@ -238,7 +225,8 @@ class TestOPDSImporter:
         assert data_source_name == c1._data_source
         assert data_source_name == c2._data_source
 
-        [failure] = list(failures.values())
+        [[failure]] = list(failures.values())
+        assert isinstance(failure, CoverageFailure)
         assert (
             "202: I'm working to locate a source for this identifier."
             == failure.exception
@@ -247,22 +235,17 @@ class TestOPDSImporter:
     def test_use_dcterm_identifier_as_id_with_id_and_dcterms_identifier(
         self, opds_importer_fixture: OPDSImporterFixture
     ):
-        data, transaction, session = (
+        data, db, session = (
             opds_importer_fixture,
-            opds_importer_fixture.transaction,
-            opds_importer_fixture.transaction.session,
+            opds_importer_fixture.db,
+            opds_importer_fixture.db.session,
         )
 
-        data_source_name = "Data source name " + transaction.fresh_str()
-        collection_to_test = transaction.default_collection()
+        collection_to_test = db.default_collection()
         collection_to_test.primary_identifier_source = (
             ExternalIntegration.DCTERMS_IDENTIFIER
         )
-        importer = OPDSImporter(
-            session,
-            collection=collection_to_test,
-            data_source_name=data_source_name,
-        )
+        importer = opds_importer_fixture.importer(collection=collection_to_test)
 
         metadata, failures = importer.extract_feed_data(
             data.feed_with_id_and_dcterms_identifier
@@ -270,10 +253,10 @@ class TestOPDSImporter:
 
         # First book doesn't have <dcterms:identifier>, so <id> must be used as identifier
         book_1 = metadata.get("https://root.uri/1")
-        assert book_1 != None
+        assert book_1 is not None
         # Second book have <id> and <dcterms:identifier>, so <dcters:identifier> must be used as id
         book_2 = metadata.get("urn:isbn:9781468316438")
-        assert book_2 != None
+        assert book_2 is not None
         # Verify if id was add in the end of identifier
         book_2_identifiers = book_2.identifiers
         found = False
@@ -281,10 +264,10 @@ class TestOPDSImporter:
             if entry.identifier == "https://root.uri/2":
                 found = True
                 break
-        assert found == True
+        assert found is True
         # Third book has more than one dcterms:identifers, all of then must be present as metadata identifier
         book_3 = metadata.get("urn:isbn:9781683351993")
-        assert book_2 != None
+        assert book_3 is not None
         # Verify if id was add in the end of identifier
         book_3_identifiers = book_3.identifiers
         expected_identifier = [
@@ -299,20 +282,15 @@ class TestOPDSImporter:
     def test_use_id_with_existing_dcterms_identifier(
         self, opds_importer_fixture: OPDSImporterFixture
     ):
-        data, transaction, session = (
+        data, db, session = (
             opds_importer_fixture,
-            opds_importer_fixture.transaction,
-            opds_importer_fixture.transaction.session,
+            opds_importer_fixture.db,
+            opds_importer_fixture.db.session,
         )
 
-        data_source_name = "Data source name " + transaction.fresh_str()
-        collection_to_test = transaction.default_collection()
+        collection_to_test = db.default_collection()
         collection_to_test.primary_identifier_source = None
-        importer = OPDSImporter(
-            session,
-            collection=collection_to_test,
-            data_source_name=data_source_name,
-        )
+        importer = opds_importer_fixture.importer(collection=collection_to_test)
 
         metadata, failures = importer.extract_feed_data(
             data.feed_with_id_and_dcterms_identifier
@@ -381,14 +359,14 @@ class TestOPDSImporter:
     def test_extract_data_from_feedparser(
         self, opds_importer_fixture: OPDSImporterFixture
     ):
-        data, transaction, session = (
+        data, db, session = (
             opds_importer_fixture,
-            opds_importer_fixture.transaction,
-            opds_importer_fixture.transaction.session,
+            opds_importer_fixture.db,
+            opds_importer_fixture.db.session,
         )
 
         data_source = DataSource.lookup(session, DataSource.OA_CONTENT_SERVER)
-        importer = OPDSImporter(session, None, data_source_name=data_source.name)
+        importer = opds_importer_fixture.importer(data_source_name=data_source.name)
         values, failures = importer.extract_data_from_feedparser(
             data.content_server_mini_feed, data_source
         )
@@ -411,10 +389,10 @@ class TestOPDSImporter:
     def test_extract_data_from_feedparser_handles_exception(
         self, opds_importer_fixture: OPDSImporterFixture
     ):
-        data, transaction, session = (
+        data, db, session = (
             opds_importer_fixture,
-            opds_importer_fixture.transaction,
-            opds_importer_fixture.transaction.session,
+            opds_importer_fixture.db,
+            opds_importer_fixture.db.session,
         )
 
         class DoomedFeedparserOPDSImporter(OPDSImporter):
@@ -426,7 +404,7 @@ class TestOPDSImporter:
 
         data_source = DataSource.lookup(session, DataSource.OA_CONTENT_SERVER)
         importer = DoomedFeedparserOPDSImporter(
-            session, None, data_source_name=data_source.name
+            session, db.default_collection(), data_source_name=data_source.name
         )
         values, failures = importer.extract_data_from_feedparser(
             data.content_server_mini_feed, data_source
@@ -455,16 +433,16 @@ class TestOPDSImporter:
     def test_extract_metadata_from_elementtree(
         self, opds_importer_fixture: OPDSImporterFixture
     ):
-        data, transaction, session = (
+        fixture, db, session = (
             opds_importer_fixture,
-            opds_importer_fixture.transaction,
-            opds_importer_fixture.transaction.session,
+            opds_importer_fixture.db,
+            opds_importer_fixture.db.session,
         )
 
         data_source = DataSource.lookup(session, DataSource.OA_CONTENT_SERVER)
 
         data, failures = OPDSImporter.extract_metadata_from_elementtree(
-            data.content_server_feed, data_source
+            fixture.content_server_feed, data_source
         )
 
         # There are 76 entries in the feed, and we got metadata for
@@ -550,10 +528,10 @@ class TestOPDSImporter:
         opds_importer_fixture: OPDSImporterFixture,
         opds_files_fixture: OPDSFilesFixture,
     ):
-        data, transaction, session = (
+        data, db, session = (
             opds_importer_fixture,
-            opds_importer_fixture.transaction,
-            opds_importer_fixture.transaction.session,
+            opds_importer_fixture.db,
+            opds_importer_fixture.db.session,
         )
 
         data_source = DataSource.lookup(session, DataSource.OA_CONTENT_SERVER)
@@ -625,20 +603,16 @@ class TestOPDSImporter:
         assert "Default" == medium("something-else", "image/jpeg")
 
     def test_handle_failure(self, opds_importer_fixture: OPDSImporterFixture):
-        data, transaction, session = (
+        data, db, session = (
             opds_importer_fixture,
-            opds_importer_fixture.transaction,
-            opds_importer_fixture.transaction.session,
+            opds_importer_fixture.db,
+            opds_importer_fixture.db.session,
         )
 
-        axis_id = transaction.identifier(identifier_type=Identifier.AXIS_360_ID)
-        axis_isbn = transaction.identifier(Identifier.ISBN, "9781453219539")
-        identifier_mapping = {axis_isbn: axis_id}
-        importer = OPDSImporter(
-            session,
-            collection=None,
+        axis_id = db.identifier(identifier_type=Identifier.AXIS_360_ID)
+        axis_isbn = db.identifier(Identifier.ISBN, "9781453219539")
+        importer = opds_importer_fixture.importer(
             data_source_name=DataSource.OA_CONTENT_SERVER,
-            identifier_mapping=identifier_mapping,
         )
 
         # The simplest case -- an identifier associated with a
@@ -656,7 +630,7 @@ class TestOPDSImporter:
         # because the 'failure' is an Identifier, not a
         # CoverageFailure, we're going to treat it as a success.
         identifier, not_a_failure = importer.handle_failure(
-            "urn:isbn:9781449358068", transaction.identifier()
+            "urn:isbn:9781449358068", db.identifier()
         )
         assert expect_identifier == identifier
         assert identifier == not_a_failure
@@ -664,30 +638,13 @@ class TestOPDSImporter:
         # was passed in, not the Identifier that substituted as the 'failure'.
         # (In real usage, though, they should be the same.)
 
-        # An identifier that maps to some other identifier,
-        # associated with a CoverageFailure.
-        identifier, output_failure = importer.handle_failure(
-            axis_isbn.urn, input_failure
-        )
-        assert axis_id == identifier
-        assert input_failure == output_failure
-
-        # An identifier that maps to some other identifier,
-        # in a scenario where what OPDSImporter considers failure
-        # is considered success.
-        identifier, not_a_failure = importer.handle_failure(
-            axis_isbn.urn, transaction.identifier()
-        )
-        assert axis_id == identifier
-        assert axis_id == not_a_failure
-
     def test_coveragefailure_from_message(
         self, opds_importer_fixture: OPDSImporterFixture
     ):
-        data, transaction, session = (
+        data, db, session = (
             opds_importer_fixture,
-            opds_importer_fixture.transaction,
-            opds_importer_fixture.transaction.session,
+            opds_importer_fixture.db,
+            opds_importer_fixture.db.session,
         )
 
         """Test all the different ways a <simplified:message> tag might
@@ -703,7 +660,7 @@ class TestOPDSImporter:
         invalid_urn = f("urnblah", "500", "description")
         assert invalid_urn == None
 
-        identifier = transaction.identifier()
+        identifier = db.identifier()
 
         # If the 'message' is that everything is fine, no CoverageFailure
         # is created.
@@ -725,56 +682,15 @@ class TestOPDSImporter:
         no_information = f(identifier.urn, None, None)
         assert "No detail provided." == no_information.exception
 
-    def test_coveragefailure_from_message_with_success_status_codes(
-        self, opds_importer_fixture: OPDSImporterFixture
-    ):
-        data, transaction, session = (
-            opds_importer_fixture,
-            opds_importer_fixture.transaction,
-            opds_importer_fixture.transaction.session,
-        )
-
-        """When an OPDSImporter defines SUCCESS_STATUS_CODES, messages with
-        those status codes are always treated as successes.
-        """
-
-        class Mock(OPDSImporter):
-            SUCCESS_STATUS_CODES = [200, 999]
-
-        data_source = DataSource.lookup(session, DataSource.OVERDRIVE)
-
-        def f(*args):
-            message = OPDSMessage(*args)
-            return Mock.coveragefailure_from_message(data_source, message)
-
-        identifier = transaction.identifier()
-
-        # If the status code is 999, then the identifier is returned
-        # instead of a CoverageFailure -- we know that 999 means
-        # coverage was in fact provided.
-        failure = f(identifier.urn, "999", "hooray!")
-        assert identifier == failure
-
-        # If the status code is 200, then the identifier is returned
-        # instead of None.
-        failure = f(identifier.urn, "200", "ok!")
-        assert identifier == failure
-
-        # If the status code is anything else, a CoverageFailure
-        # is returned.
-        failure = f(identifier.urn, 500, "hooray???")
-        assert isinstance(failure, CoverageFailure)
-        assert "500: hooray???" == failure.exception
-
     def test_extract_metadata_from_elementtree_handles_messages_that_become_identifiers(
         self, opds_importer_fixture: OPDSImporterFixture
     ):
-        data, transaction, session = (
+        data, db, session = (
             opds_importer_fixture,
-            opds_importer_fixture.transaction,
-            opds_importer_fixture.transaction.session,
+            opds_importer_fixture.db,
+            opds_importer_fixture.db.session,
         )
-        not_a_failure = transaction.identifier()
+        not_a_failure = db.identifier()
 
         class MockOPDSImporter(OPDSImporter):
             @classmethod
@@ -797,10 +713,10 @@ class TestOPDSImporter:
     def test_extract_metadata_from_elementtree_handles_exception(
         self, opds_importer_fixture: OPDSImporterFixture
     ):
-        data, transaction, session = (
+        data, db, session = (
             opds_importer_fixture,
-            opds_importer_fixture.transaction,
-            opds_importer_fixture.transaction.session,
+            opds_importer_fixture.db,
+            opds_importer_fixture.db.session,
         )
 
         class DoomedElementtreeOPDSImporter(OPDSImporter):
@@ -848,42 +764,42 @@ class TestOPDSImporter:
         assert "Utter failure!" in failure.exception
 
     def test_import_exception_if_unable_to_parse_feed(
-        self, db: DatabaseTransactionFixture
+        self, opds_importer_fixture: OPDSImporterFixture
     ):
         feed = "I am not a feed."
-        importer = OPDSImporter(db.session, collection=None)
+        importer = opds_importer_fixture.importer()
 
         pytest.raises(etree.XMLSyntaxError, importer.import_from_feed, feed)
 
     def test_import(self, opds_importer_fixture: OPDSImporterFixture):
-        data, transaction, session = (
+        data, db, session = (
             opds_importer_fixture,
-            opds_importer_fixture.transaction,
-            opds_importer_fixture.transaction.session,
+            opds_importer_fixture.db,
+            opds_importer_fixture.db.session,
         )
         feed = data.content_server_mini_feed
 
-        imported_editions, pools, works, failures = OPDSImporter(
-            session, collection=None
-        ).import_from_feed(feed)
+        collection = db.default_collection()
+        importer = opds_importer_fixture.importer(
+            collection=collection, data_source_name=DataSource.METADATA_WRANGLER
+        )
+        imported_editions, pools, works, failures = importer.import_from_feed(feed)
 
-        [crow, mouse] = sorted(imported_editions, key=lambda x: x.title)
+        [crow, mouse] = sorted(imported_editions, key=lambda x: str(x.title))
 
-        # By default, this feed is treated as though it came from the
-        # metadata wrangler. No Work has been created.
-        assert DataSource.METADATA_WRANGLER == crow.data_source.name
-        assert None == crow.work
-        assert [] == crow.license_pools
-        assert Edition.BOOK_MEDIUM == crow.medium
+        # Work was created for both books.
+        assert crow.data_source.name == DataSource.METADATA_WRANGLER
+        assert crow.work is not None
+        assert crow.medium == Edition.BOOK_MEDIUM
+        assert crow.license_pools[0].collection == db.default_collection()
 
-        # not even the 'mouse'
-        assert None == mouse.work
-        assert Edition.PERIODICAL_MEDIUM == mouse.medium
+        assert mouse.work is not None
+        assert mouse.medium == Edition.PERIODICAL_MEDIUM
 
-        # Three links have been added to the identifier of the 'mouse'
+        # Four links have been added to the identifier of the 'mouse'
         # edition.
-        image, thumbnail, description = sorted(
-            mouse.primary_identifier.links, key=lambda x: x.rel
+        acquisition, image, thumbnail, description = sorted(
+            mouse.primary_identifier.links, key=lambda x: str(x.rel)
         )
 
         # A Representation was imported for the summary with known
@@ -904,24 +820,26 @@ class TestOPDSImporter:
         assert Representation.PNG_MEDIA_TYPE == thumbnail_rep.media_type
         assert image_rep == thumbnail_rep.thumbnail_of
 
-        # Two links were added to the identifier of the 'crow' edition.
-        [broken_image, working_image] = sorted(
-            crow.primary_identifier.links, key=lambda x: x.resource.url
+        # Three links were added to the identifier of the 'crow' edition.
+        broken_image, working_image, acquisition = sorted(
+            crow.primary_identifier.links, key=lambda x: str(x.resource.url)
         )
 
         # Because these images did not have a specified media type or a
         # distinctive extension, and we have not actually retrieved
         # the URLs yet, we were not able to determine their media type,
         # so they have no associated Representation.
+        assert broken_image.resource.url is not None
         assert broken_image.resource.url.endswith("/broken-cover-image")
+        assert working_image.resource.url is not None
         assert working_image.resource.url.endswith("/working-cover-image")
-        assert None == broken_image.resource.representation
-        assert None == working_image.resource.representation
+        assert broken_image.resource.representation is None
+        assert working_image.resource.representation is None
 
         # Three measurements have been added to the 'mouse' edition.
         popularity, quality, rating = sorted(
             (x for x in mouse.primary_identifier.measurements if x.is_most_recent),
-            key=lambda x: x.quantity_measured,
+            key=lambda x: str(x.quantity_measured),
         )
 
         assert DataSource.METADATA_WRANGLER == popularity.data_source.name
@@ -937,7 +855,7 @@ class TestOPDSImporter:
         assert 0.6 == rating.value
 
         seven, children, courtship, fantasy, pz, magic, new_york = sorted(
-            mouse.primary_identifier.classifications, key=lambda x: x.subject.name
+            mouse.primary_identifier.classifications, key=lambda x: str(x.subject.name)
         )
 
         pz_s = pz.subject
@@ -956,32 +874,14 @@ class TestOPDSImporter:
         classifier = Classifier.classifiers.get(seven.subject.type, None)
         classifier.classify(seven.subject)
 
-        # If we import the same file again, we get the same list of Editions.
-        imported_editions_2, pools_2, works_2, failures_2 = OPDSImporter(
-            session, collection=None
-        ).import_from_feed(feed)
-        assert imported_editions_2 == imported_editions
-
-        # importing with a collection and a lendable data source makes
-        # license pools and works.
-        imported_editions, pools, works, failures = OPDSImporter(
-            session,
-            collection=transaction.default_collection(),
-            data_source_name=DataSource.OA_CONTENT_SERVER,
-        ).import_from_feed(feed)
-
         [crow_pool, mouse_pool] = sorted(
             pools, key=lambda x: x.presentation_edition.title
         )
-        assert transaction.default_collection() == crow_pool.collection
-        assert transaction.default_collection() == mouse_pool.collection
 
-        # Work was created for both books.
+        assert db.default_collection() == crow_pool.collection
+        assert db.default_collection() == mouse_pool.collection
         assert crow_pool.work is not None
-        assert Edition.BOOK_MEDIUM == crow_pool.presentation_edition.medium
-
         assert mouse_pool.work is not None
-        assert Edition.PERIODICAL_MEDIUM == mouse_pool.presentation_edition.medium
 
         work = mouse_pool.work
         work.calculate_presentation()
@@ -995,61 +895,42 @@ class TestOPDSImporter:
         assert DeliveryMechanism.NO_DRM == mech.delivery_mechanism.drm_scheme
         assert "http://www.gutenberg.org/ebooks/10441.epub.images" == mech.resource.url
 
+        # If we import the same file again, we get the same list of Editions.
+        imported_editions_2, pools_2, works_2, failures_2 = importer.import_from_feed(
+            feed
+        )
+        assert imported_editions_2 == imported_editions
+
     def test_import_with_lendability(self, opds_importer_fixture: OPDSImporterFixture):
-        data, transaction, session = (
+        data, db, session = (
             opds_importer_fixture,
-            opds_importer_fixture.transaction,
-            opds_importer_fixture.transaction.session,
+            opds_importer_fixture.db,
+            opds_importer_fixture.db.session,
         )
         """Test that OPDS import creates Edition, LicensePool, and Work
         objects, as appropriate.
-
-        When there is no Collection, it is appropriate to create
-        Editions, but not LicensePools or Works.  When there is a
-        Collection, it is appropriate to create all three.
         """
         feed = data.content_server_mini_feed
 
         # This import will create Editions, but not LicensePools or
         # Works, because there is no Collection.
-        importer_mw = OPDSImporter(
-            session, collection=None, data_source_name=DataSource.METADATA_WRANGLER
-        )
-        (
-            imported_editions_mw,
-            pools_mw,
-            works_mw,
-            failures_mw,
-        ) = importer_mw.import_from_feed(feed)
+        importer = opds_importer_fixture.importer()
+        imported_editions, pools, works, failures = importer.import_from_feed(feed)
 
         # Both editions were imported, because they were new.
-        assert 2 == len(imported_editions_mw)
+        assert 2 == len(imported_editions)
 
-        # But pools and works weren't created, because there is no Collection.
-        assert 0 == len(pools_mw)
-        assert 0 == len(works_mw)
+        # And pools and works were created
+        assert 2 == len(pools)
+        assert 2 == len(works)
 
         # 1 error message, corresponding to the <simplified:message> tag
         # at the end of content_server_mini.opds.
-        assert 1 == len(failures_mw)
-
-        # Try again, with a Collection to contain the LicensePools.
-        importer_g = OPDSImporter(
-            session,
-            collection=transaction.default_collection(),
-        )
-        imported_editions_g, pools_g, works_g, failures_g = importer_g.import_from_feed(
-            feed
-        )
-
-        # now pools and works are in, too
-        assert 1 == len(failures_g)
-        assert 2 == len(pools_g)
-        assert 2 == len(works_g)
+        assert 1 == len(failures)
 
         # The pools have presentation editions.
         assert {"The Green Mouse", "Johnny Crow's Party"} == {
-            x.presentation_edition.title for x in pools_g
+            x.presentation_edition.title for x in pools
         }
 
         # The information used to create the first LicensePool said
@@ -1059,7 +940,7 @@ class TestOPDSImporter:
         # so the source of the OPDS feed (the open-access content server)
         # was used.
         assert {DataSource.GUTENBERG, DataSource.OA_CONTENT_SERVER} == {
-            pool.data_source.name for pool in pools_g
+            pool.data_source.name for pool in pools
         }
 
     def test_import_with_unrecognized_distributor_creates_distributor(
@@ -1067,23 +948,22 @@ class TestOPDSImporter:
         opds_importer_fixture: OPDSImporterFixture,
         opds_files_fixture: OPDSFilesFixture,
     ):
-        data, transaction, session = (
+        data, db, session = (
             opds_importer_fixture,
-            opds_importer_fixture.transaction,
-            opds_importer_fixture.transaction.session,
+            opds_importer_fixture.db,
+            opds_importer_fixture.db.session,
         )
         """We get a book from a previously unknown data source, with a license
         that comes from a second previously unknown data source. The
         book is imported and both DataSources are created.
         """
         feed = opds_files_fixture.sample_data("unrecognized_distributor.opds")
-        transaction.default_collection().external_integration.setting(
-            "data_source"
-        ).value = "some new source"
-        importer = OPDSImporter(
-            session,
-            collection=transaction.default_collection(),
+        DatabaseTransactionFixture.set_settings(
+            db.default_collection().integration_configuration,
+            "data_source",
+            "some new source",
         )
+        importer = opds_importer_fixture.importer()
         imported_editions, pools, works, failures = importer.import_from_feed(feed)
         assert {} == failures
 
@@ -1106,15 +986,15 @@ class TestOPDSImporter:
         opds_importer_fixture: OPDSImporterFixture,
         opds_files_fixture: OPDSFilesFixture,
     ):
-        data, transaction, session = (
+        data, db, session = (
             opds_importer_fixture,
-            opds_importer_fixture.transaction,
-            opds_importer_fixture.transaction.session,
+            opds_importer_fixture.db,
+            opds_importer_fixture.db.session,
         )
 
         feed = opds_files_fixture.sample_text("metadata_wrangler_overdrive.opds")
 
-        edition, is_new = transaction.edition(
+        edition, is_new = db.edition(
             DataSource.OVERDRIVE, Identifier.OVERDRIVE_ID, with_license_pool=True
         )
         [old_license_pool] = edition.license_pools
@@ -1123,13 +1003,17 @@ class TestOPDSImporter:
 
         feed = feed.replace("{OVERDRIVE ID}", edition.primary_identifier.identifier)
 
-        transaction.default_collection().external_integration.setting(
-            "data_source"
-        ).value = DataSource.OVERDRIVE
-        imported_editions, imported_pools, imported_works, failures = OPDSImporter(
-            session,
-            collection=transaction.default_collection(),
-        ).import_from_feed(feed)
+        DatabaseTransactionFixture.set_settings(
+            db.default_collection().integration_configuration,
+            "data_source",
+            DataSource.OVERDRIVE,
+        )
+        (
+            imported_editions,
+            imported_pools,
+            imported_works,
+            failures,
+        ) = opds_importer_fixture.importer().import_from_feed(feed)
 
         # The edition we created has had its metadata updated.
         [new_edition] = imported_editions
@@ -1144,19 +1028,16 @@ class TestOPDSImporter:
     def test_import_from_license_source(
         self, opds_importer_fixture: OPDSImporterFixture
     ):
-        data, transaction, session = (
+        data, db, session = (
             opds_importer_fixture,
-            opds_importer_fixture.transaction,
-            opds_importer_fixture.transaction.session,
+            opds_importer_fixture.db,
+            opds_importer_fixture.db.session,
         )
         # Instead of importing this data as though it came from the
         # metadata wrangler, let's import it as though it came from the
         # open-access content server.
         feed = data.content_server_mini_feed
-        importer = OPDSImporter(
-            session,
-            collection=transaction.default_collection(),
-        )
+        importer = opds_importer_fixture.importer()
 
         (
             imported_editions,
@@ -1209,17 +1090,20 @@ class TestOPDSImporter:
         opds_importer_fixture: OPDSImporterFixture,
         opds_files_fixture: OPDSFilesFixture,
     ):
-        data, transaction, session = (
+        data, db, session = (
             opds_importer_fixture,
-            opds_importer_fixture.transaction,
-            opds_importer_fixture.transaction.session,
+            opds_importer_fixture.db,
+            opds_importer_fixture.db.session,
         )
         feed = opds_files_fixture.sample_data("unrecognized_identifier.opds")
-        imported_editions, imported_pools, imported_works, failures = OPDSImporter(
-            session, collection=transaction.default_collection()
-        ).import_from_feed(feed)
+        (
+            imported_editions,
+            imported_pools,
+            imported_works,
+            failures,
+        ) = opds_importer_fixture.importer().import_from_feed(feed)
 
-        [failure] = list(failures.values())
+        [[failure]] = list(failures.values())
         assert isinstance(failure, CoverageFailure)
         assert True == failure.transient
         assert "404: I've never heard of this work." == failure.exception
@@ -1227,10 +1111,10 @@ class TestOPDSImporter:
     def test_import_edition_failure_becomes_coverage_failure(
         self, opds_importer_fixture: OPDSImporterFixture
     ):
-        data, transaction, session = (
+        data, db, session = (
             opds_importer_fixture,
-            opds_importer_fixture.transaction,
-            opds_importer_fixture.transaction.session,
+            opds_importer_fixture.db,
+            opds_importer_fixture.db.session,
         )
         # Make sure that an exception during import generates a
         # meaningful error message.
@@ -1238,14 +1122,14 @@ class TestOPDSImporter:
         feed = data.content_server_mini_feed
         imported_editions, pools, works, failures = DoomedOPDSImporter(
             session,
-            collection=transaction.default_collection(),
+            collection=db.default_collection(),
         ).import_from_feed(feed)
 
         # Only one book was imported, the other failed.
         assert 1 == len(imported_editions)
 
         # The other failed to import, and became a CoverageFailure
-        failure = failures["http://www.gutenberg.org/ebooks/10441"]
+        [failure] = failures["http://www.gutenberg.org/ebooks/10441"]
         assert isinstance(failure, CoverageFailure)
         assert False == failure.transient
         assert "Utter failure!" in failure.exception
@@ -1253,21 +1137,21 @@ class TestOPDSImporter:
     def test_import_work_failure_becomes_coverage_failure(
         self, opds_importer_fixture: OPDSImporterFixture
     ):
-        data, transaction, session = (
+        data, db, session = (
             opds_importer_fixture,
-            opds_importer_fixture.transaction,
-            opds_importer_fixture.transaction.session,
+            opds_importer_fixture.db,
+            opds_importer_fixture.db.session,
         )
         # Make sure that an exception while updating a work for an
         # imported edition generates a meaningful error message.
 
         feed = data.content_server_mini_feed
-        transaction.default_collection().external_integration.setting(
-            "data_source"
-        ).value = DataSource.OA_CONTENT_SERVER
-        importer = DoomedWorkOPDSImporter(
-            session, collection=transaction.default_collection()
+        DatabaseTransactionFixture.set_settings(
+            db.default_collection().integration_configuration,
+            "data_source",
+            DataSource.OA_CONTENT_SERVER,
         )
+        importer = DoomedWorkOPDSImporter(session, collection=db.default_collection())
 
         imported_editions, pools, works, failures = importer.import_from_feed(feed)
 
@@ -1275,24 +1159,24 @@ class TestOPDSImporter:
         assert 1 == len(works)
 
         # There's an error message for the work that failed.
-        failure = failures["http://www.gutenberg.org/ebooks/10441"]
+        [failure] = failures["http://www.gutenberg.org/ebooks/10441"]
         assert isinstance(failure, CoverageFailure)
         assert False == failure.transient
         assert "Utter work failure!" in failure.exception
 
     def test_consolidate_links(self, opds_importer_fixture: OPDSImporterFixture):
-        data, transaction, session = (
+        data, db, session = (
             opds_importer_fixture,
-            opds_importer_fixture.transaction,
-            opds_importer_fixture.transaction.session,
+            opds_importer_fixture.db,
+            opds_importer_fixture.db.session,
         )
         # If a link turns out to be a dud, consolidate_links()
         # gets rid of it.
-        links = [None, None]
-        assert [] == OPDSImporter.consolidate_links(links)
+        none_links = [None, None]
+        assert [] == OPDSImporter.consolidate_links(none_links)
 
         links = [
-            LinkData(href=transaction.fresh_url(), rel=rel, media_type="image/jpeg")
+            LinkData(href=db.fresh_url(), rel=rel, media_type="image/jpeg")
             for rel in [
                 Hyperlink.OPEN_ACCESS_DOWNLOAD,
                 Hyperlink.IMAGE,
@@ -1311,7 +1195,7 @@ class TestOPDSImporter:
         assert old_link == link.thumbnail
 
         links = [
-            LinkData(href=transaction.fresh_url(), rel=rel, media_type="image/jpeg")
+            LinkData(href=db.fresh_url(), rel=rel, media_type="image/jpeg")
             for rel in [
                 Hyperlink.THUMBNAIL_IMAGE,
                 Hyperlink.IMAGE,
@@ -1326,7 +1210,7 @@ class TestOPDSImporter:
         assert t2 == i2.thumbnail
 
         links = [
-            LinkData(href=transaction.fresh_url(), rel=rel, media_type="image/jpeg")
+            LinkData(href=db.fresh_url(), rel=rel, media_type="image/jpeg")
             for rel in [Hyperlink.THUMBNAIL_IMAGE, Hyperlink.IMAGE, Hyperlink.IMAGE]
         ]
         t1, i1, i2 = links
@@ -1340,14 +1224,14 @@ class TestOPDSImporter:
         opds_importer_fixture: OPDSImporterFixture,
         opds_files_fixture: OPDSFilesFixture,
     ):
-        data, transaction, session = (
+        data, db, session = (
             opds_importer_fixture,
-            opds_importer_fixture.transaction,
-            opds_importer_fixture.transaction.session,
+            opds_importer_fixture.db,
+            opds_importer_fixture.db.session,
         )
 
         feed = opds_files_fixture.sample_data("book_without_license.opds")
-        importer = OPDSImporter(session, transaction.default_collection())
+        importer = OPDSImporter(session, db.default_collection())
         (
             imported_editions,
             imported_pools,
@@ -1365,59 +1249,14 @@ class TestOPDSImporter:
         # based on its <dcterms:format> tag.
         assert Edition.AUDIO_MEDIUM == edition.medium
 
-    def test_build_identifier_mapping(self, opds_importer_fixture: OPDSImporterFixture):
-        data, transaction, session = (
-            opds_importer_fixture,
-            opds_importer_fixture.transaction,
-            opds_importer_fixture.transaction.session,
-        )
-        """Reverse engineers an identifier_mapping based on a list of URNs"""
-
-        collection = transaction.collection(protocol=ExternalIntegration.AXIS_360)
-        lp = transaction.licensepool(
-            None, collection=collection, data_source_name=DataSource.AXIS_360
-        )
-
-        # Create a couple of ISBN equivalencies.
-        isbn1 = transaction.identifier(
-            identifier_type=Identifier.ISBN, foreign_id=transaction.isbn_take()
-        )
-        isbn2 = transaction.identifier(
-            identifier_type=Identifier.ISBN, foreign_id=transaction.isbn_take()
-        )
-        source = DataSource.lookup(session, DataSource.AXIS_360)
-        [lp.identifier.equivalent_to(source, isbn, 1) for isbn in [isbn1, isbn2]]
-
-        # The importer is initialized without an identifier mapping.
-        importer = OPDSImporter(session, collection)
-        assert None == importer.identifier_mapping
-
-        # We can build one.
-        importer.build_identifier_mapping([isbn1.urn])
-        expected = {isbn1: lp.identifier}
-        assert expected == importer.identifier_mapping
-
-        # If we already have one, it's overwritten.
-        importer.build_identifier_mapping([isbn2.urn])
-        overwrite = {isbn2: lp.identifier}
-        assert importer.identifier_mapping == overwrite
-
-        # If the importer doesn't have a collection, we can't build
-        # its mapping.
-        importer = OPDSImporter(session, None)
-        importer.build_identifier_mapping([isbn1])
-        assert None == importer.identifier_mapping
-
     def test_update_work_for_edition_having_no_work(
-        self, db: DatabaseTransactionFixture
+        self, db: DatabaseTransactionFixture, opds_importer_fixture: OPDSImporterFixture
     ):
-        session = db.session
-
         # We have an Edition and a LicensePool but no Work.
         edition, lp = db.edition(with_license_pool=True)
         assert None == lp.work
 
-        importer = OPDSImporter(session, None)
+        importer = opds_importer_fixture.importer()
         returned_pool, returned_work = importer.update_work_for_edition(edition)
 
         # We now have a presentation-ready work.
@@ -1441,7 +1280,7 @@ class TestOPDSImporter:
         importer.update_work_for_edition(edition)
 
     def test_update_work_for_edition_having_incomplete_work(
-        self, db: DatabaseTransactionFixture
+        self, db: DatabaseTransactionFixture, opds_importer_fixture: OPDSImporterFixture
     ):
         session = db.session
 
@@ -1462,7 +1301,7 @@ class TestOPDSImporter:
             title="A working title",
         )
 
-        importer = OPDSImporter(session, None)
+        importer = opds_importer_fixture.importer()
         returned_pool, returned_work = importer.update_work_for_edition(edition)
         assert returned_pool == pool
         assert returned_work == work
@@ -1472,7 +1311,7 @@ class TestOPDSImporter:
         assert True == work.presentation_ready
 
     def test_update_work_for_edition_having_presentation_ready_work(
-        self, db: DatabaseTransactionFixture
+        self, db: DatabaseTransactionFixture, opds_importer_fixture: OPDSImporterFixture
     ):
         session = db.session
 
@@ -1494,7 +1333,7 @@ class TestOPDSImporter:
             title="A new title",
         )
 
-        importer = OPDSImporter(session, None)
+        importer = opds_importer_fixture.importer()
         returned_pool, returned_work = importer.update_work_for_edition(new_edition)
 
         # The existing LicensePool and Work were returned.
@@ -1505,7 +1344,7 @@ class TestOPDSImporter:
         assert True == work.presentation_ready
 
     def test_update_work_for_edition_having_multiple_license_pools(
-        self, db: DatabaseTransactionFixture
+        self, db: DatabaseTransactionFixture, opds_importer_fixture: OPDSImporterFixture
     ):
         session = db.session
 
@@ -1514,7 +1353,7 @@ class TestOPDSImporter:
         edition, lp = db.edition(with_license_pool=True)
         collection2 = db.collection()
         lp2 = db.licensepool(edition=edition, collection=collection2)
-        importer = OPDSImporter(session, None)
+        importer = opds_importer_fixture.importer()
 
         # Calling update_work_for_edition creates a Work and associates
         # it with the edition.
@@ -1529,6 +1368,9 @@ class TestOPDSImporter:
 
     def test_assert_importable_content(self, db: DatabaseTransactionFixture):
         session = db.session
+        collection = db.collection(
+            protocol=ExternalIntegration.OPDS_IMPORT, data_source_name="OPDS"
+        )
 
         class Mock(OPDSImporter):
             """An importer that may or may not be able to find
@@ -1537,7 +1379,7 @@ class TestOPDSImporter:
 
             # Set this variable to control whether any open-access links
             # are "found" in the OPDS feed.
-            open_access_links = None
+            open_access_links: Optional[list] = None
 
             extract_feed_data_called_with = None
             _is_open_access_link_called_with = []
@@ -1560,11 +1402,11 @@ class TestOPDSImporter:
             "Simulate an OPDS feed that contains no open-access links."
             open_access_links = []
 
-        # We don't be making any HTTP requests, even simulated ones.
-        do_get = object()
+        # We won't be making any HTTP requests, even simulated ones.
+        do_get = MagicMock()
 
         # Here, there are no links at all.
-        importer = NoLinks(session, None, do_get)
+        importer = NoLinks(session, collection, do_get)
         with pytest.raises(IntegrationException) as excinfo:
             importer.assert_importable_content("feed", "url")
         assert "No open-access links were found in the OPDS feed." in str(excinfo.value)
@@ -1591,9 +1433,11 @@ class TestOPDSImporter:
                 ),
             ]
 
-        importer = BadLinks(session, None, do_get)
+        bad_links_importer = BadLinks(session, collection, do_get)
         with pytest.raises(IntegrationException) as excinfo:
-            importer.assert_importable_content("feed", "url", max_get_attempts=2)
+            bad_links_importer.assert_importable_content(
+                "feed", "url", max_get_attempts=2
+            )
         assert (
             "Was unable to GET supposedly open-access content such as url2 (tried 2 times)"
             in str(excinfo.value)
@@ -1604,7 +1448,7 @@ class TestOPDSImporter:
         #
         # We didn't bother with the third link because max_get_attempts was
         # set to 2.
-        try1, try2 = importer._is_open_access_link_called_with
+        try1, try2 = bad_links_importer._is_open_access_link_called_with
         assert ("url1", "text/html") == try1
         assert ("url2", "application/json") == try2
 
@@ -1626,13 +1470,15 @@ class TestOPDSImporter:
                     return False
                 return "this is a book"
 
-        importer = GoodLink(session, None, do_get)
-        result = importer.assert_importable_content("feed", "url", max_get_attempts=5)
-        assert "this is a book" == result
+        good_link_importer = GoodLink(session, collection, do_get)
+        result = good_link_importer.assert_importable_content(
+            "feed", "url", max_get_attempts=5
+        )
+        assert True == result
 
         # The first link didn't work, but the second one did,
         # so we didn't try the third one.
-        try1, try2 = importer._is_open_access_link_called_with
+        try1, try2 = good_link_importer._is_open_access_link_called_with
         assert ("bad", "text/html") == try1
         assert ("good", "application/json") == try2
 
@@ -1667,7 +1513,9 @@ class TestOPDSImporter:
             m([no_circulation, two_open_access_links, no_open_access_links])
         )
 
-    def test__is_open_access_link(self, db: DatabaseTransactionFixture):
+    def test__is_open_access_link(
+        self, db: DatabaseTransactionFixture, opds_importer_fixture: OPDSImporterFixture
+    ):
         session = db.session
         http = DummyHTTPClient()
 
@@ -1678,7 +1526,7 @@ class TestOPDSImporter:
         # Set up an HTTP response that looks enough like a book
         # to convince _is_open_access_link.
         http.queue_response(200, content=enough_content)
-        monitor = OPDSImporter(session, None, http_get=http.do_get)
+        monitor = opds_importer_fixture.importer(http_get=http.do_get)
 
         url = db.fresh_url()
         type = "text/html"
@@ -1692,21 +1540,21 @@ class TestOPDSImporter:
         # This HTTP response looks OK but it's not big enough to be
         # any kind of book.
         http.queue_response(200, content="not enough content")
-        monitor = OPDSImporter(session, None, http_get=http.do_get)
+        monitor = opds_importer_fixture.importer(http_get=http.do_get)
         assert False == monitor._is_open_access_link(url, None)
 
         # This HTTP response is clearly an error page.
         http.queue_response(404, content=enough_content)
-        monitor = OPDSImporter(session, None, http_get=http.do_get)
+        monitor = opds_importer_fixture.importer(http_get=http.do_get)
         assert False == monitor._is_open_access_link(url, None)
 
     def test_import_open_access_audiobook(
         self, opds_importer_fixture: OPDSImporterFixture
     ):
-        data, transaction, session = (
+        data, db, session = (
             opds_importer_fixture,
-            opds_importer_fixture.transaction,
-            opds_importer_fixture.transaction.session,
+            opds_importer_fixture.db,
+            opds_importer_fixture.db.session,
         )
 
         feed = data.audiobooks_opds
@@ -1714,7 +1562,7 @@ class TestOPDSImporter:
 
         importer = OPDSImporter(
             session,
-            collection=transaction.default_collection(),
+            collection=db.default_collection(),
         )
 
         (
@@ -1742,9 +1590,9 @@ class TestOPDSImporter:
 
     @pytest.fixture()
     def wayfless_circulation_api(self, opds_importer_fixture: OPDSImporterFixture):
-        transaction, session = (
-            opds_importer_fixture.transaction,
-            opds_importer_fixture.transaction.session,
+        db, session = (
+            opds_importer_fixture.db,
+            opds_importer_fixture.db.session,
         )
 
         def _wayfless_circulation_api(
@@ -1758,10 +1606,8 @@ class TestOPDSImporter:
             )
 
             feed = opds_importer_fixture.wayfless_feed
-            library = transaction.library(
-                "Test library with SAML authentication", "SAML"
-            )
-            patron = transaction.patron(library=library)
+            library = db.library("Test library with SAML authentication", "SAML")
+            patron = db.patron(library=library)
             saml_subject = SAMLSubject(
                 idp_entityID,
                 SAMLNameID(
@@ -1773,28 +1619,18 @@ class TestOPDSImporter:
             if has_saml_credential:
                 saml_credential_manager.create_saml_token(session, patron, saml_subject)
 
-            collection = transaction.collection(
+            collection = db.collection(
                 "OPDS collection with a WAYFless acquisition link",
                 ExternalIntegration.OPDS_IMPORT,
                 data_source_name="test",
             )
             library.collections.append(collection)
 
-            external_integration_association = create_autospec(
-                spec=HasExternalIntegration
+            DatabaseTransactionFixture.set_settings(
+                collection.integration_configuration,
+                "saml_wayfless_url_template",
+                "https://fsso.springer.com/saml/login?idp={idp}&targetUrl={targetUrl}",
             )
-            external_integration_association.external_integration = MagicMock(
-                return_value=collection.external_integration
-            )
-            configuration_storage = ConfigurationStorage(
-                external_integration_association
-            )
-            configuration_factory = ConfigurationFactory()
-
-            with configuration_factory.create(
-                configuration_storage, session, OPDSImporterConfiguration
-            ) as configuration:
-                configuration.wayfless_url_template = "https://fsso.springer.com/saml/login?idp={idp}&targetUrl={targetUrl}"
 
             imported_editions, pools, works, failures = OPDSImporter(
                 session, collection=collection
@@ -1940,440 +1776,18 @@ class TestCombine:
         )
 
 
-class TestMirroring:
-    @pytest.fixture()
-    def http(self):
-        class DummyHashedHttpClient:
-            def __init__(self):
-                self.responses = {}
-                self.requests = []
-
-            def queue_response(
-                self,
-                url,
-                response_code,
-                media_type="text_html",
-                other_headers=None,
-                content="",
-            ):
-                headers = {}
-                if media_type:
-                    headers["content-type"] = media_type
-                if other_headers:
-                    for k, v in other_headers.items():
-                        headers[k.lower()] = v
-                self.responses[url] = (response_code, headers, content)
-
-            def do_get(self, url, *args, **kwargs):
-                self.requests.append(url)
-                return self.responses.pop(url)
-
-        return DummyHashedHttpClient()
-
-    @pytest.fixture()
-    def svg(self):
-        svg = """<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
-          "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-
-        <svg xmlns="http://www.w3.org/2000/svg" width="1000" height="500">
-            <ellipse cx="50" cy="25" rx="50" ry="25" style="fill:blue;"/>
-        </svg>"""
-        return svg
-
-    @pytest.fixture()
-    def png(self, sample_covers_fixture: SampleCoversFixture):
-        with open(
-            sample_covers_fixture.sample_cover_path("test-book-cover.png"), "rb"
-        ) as png_file:
-            png = png_file.read()
-        return png
-
-    @pytest.fixture()
-    def epub10441(self):
-        return {
-            "url": "http://www.gutenberg.org/ebooks/10441.epub.images",
-            "response_code": 200,
-            "content": b"I am 10441.epub.images",
-            "media_type": Representation.EPUB_MEDIA_TYPE,
-        }
-
-    @pytest.fixture()
-    def epub10441_cover(self, svg):
-        return {
-            "url": "https://s3.amazonaws.com/book-covers.nypl.org/Gutenberg-Illustrated/10441/cover_10441_9.png",
-            "response_code": 200,
-            "content": svg,
-            "media_type": Representation.SVG_MEDIA_TYPE,
-        }
-
-    @pytest.fixture()
-    def epub10557(self):
-        return {
-            "url": "http://www.gutenberg.org/ebooks/10557.epub.images",
-            "response_code": 200,
-            "content": b"I am 10557.epub.images",
-            "media_type": Representation.EPUB_MEDIA_TYPE,
-        }
-
-    @pytest.fixture()
-    def epub10557_cover_broken(self):
-        return {
-            "url": "http://root/broken-cover-image",
-            "response_code": 404,
-            "media_type": "text/plain",
-        }
-
-    @pytest.fixture()
-    def epub10557_cover_working(self, png):
-        return {
-            "url": "http://root/working-cover-image",
-            "response_code": 200,
-            "content": png,
-            "media_type": Representation.PNG_MEDIA_TYPE,
-        }
-
-    def test_importer_gets_appropriate_mirror_for_collection(
-        self, opds_importer_fixture: OPDSImporterFixture
-    ):
-        data, transaction, session = (
-            opds_importer_fixture,
-            opds_importer_fixture.transaction,
-            opds_importer_fixture.transaction.session,
-        )
-
-        # The default collection is not configured to mirror the
-        # resources it finds for either its books or covers.
-        collection = transaction.default_collection()
-        importer = OPDSImporter(session, collection=collection)
-        assert None == importer.mirrors[ExternalIntegrationLink.OPEN_ACCESS_BOOKS]
-        assert None == importer.mirrors[ExternalIntegrationLink.COVERS]
-
-        # Let's configure mirrors integration for it.
-
-        # First set up a storage integration.
-        integration = transaction.external_integration(
-            ExternalIntegration.S3,
-            ExternalIntegration.STORAGE_GOAL,
-            username="username",
-            password="password",
-            settings={S3UploaderConfiguration.BOOK_COVERS_BUCKET_KEY: "some-covers"},
-        )
-        # Associate the collection's integration with the storage integration
-        # for the purpose of 'covers'.
-        integration_link = transaction.external_integration_link(
-            integration=collection._external_integration,
-            other_integration=integration,
-            purpose=ExternalIntegrationLink.COVERS,
-        )
-
-        # Now an OPDSImporter created for this collection has an
-        # appropriately configured MirrorUploader associated with it for the
-        # 'covers' purpose.
-        importer = OPDSImporter(session, collection=collection)
-        mirrors = importer.mirrors
-
-        assert isinstance(mirrors[ExternalIntegrationLink.COVERS], S3Uploader)
-        assert "some-covers" == mirrors[ExternalIntegrationLink.COVERS].get_bucket(
-            S3UploaderConfiguration.BOOK_COVERS_BUCKET_KEY
-        )
-        assert mirrors[ExternalIntegrationLink.OPEN_ACCESS_BOOKS] == None
-
-        # An OPDSImporter can have two types of mirrors.
-        integration = transaction.external_integration(
-            ExternalIntegration.S3,
-            ExternalIntegration.STORAGE_GOAL,
-            username="username",
-            password="password",
-            settings={S3UploaderConfiguration.OA_CONTENT_BUCKET_KEY: "some-books"},
-        )
-        # Associate the collection's integration with the storage integration
-        # for the purpose of 'covers'.
-        integration_link = transaction.external_integration_link(
-            integration=collection._external_integration,
-            other_integration=integration,
-            purpose=ExternalIntegrationLink.OPEN_ACCESS_BOOKS,
-        )
-
-        importer = OPDSImporter(session, collection=collection)
-        mirrors = importer.mirrors
-
-        assert isinstance(
-            mirrors[ExternalIntegrationLink.OPEN_ACCESS_BOOKS], S3Uploader
-        )
-        assert "some-books" == mirrors[
-            ExternalIntegrationLink.OPEN_ACCESS_BOOKS
-        ].get_bucket(S3UploaderConfiguration.OA_CONTENT_BUCKET_KEY)
-        assert "some-covers" == mirrors[ExternalIntegrationLink.COVERS].get_bucket(
-            S3UploaderConfiguration.BOOK_COVERS_BUCKET_KEY
-        )
-
-    def test_resources_are_mirrored_on_import(
-        self,
-        opds_importer_fixture: OPDSImporterFixture,
-        http,
-        png,
-        svg,
-        epub10441,
-        epub10557,
-        epub10441_cover,
-        epub10557_cover_broken,
-        epub10557_cover_working,
-    ):
-        data, transaction, session = (
-            opds_importer_fixture,
-            opds_importer_fixture.transaction,
-            opds_importer_fixture.transaction.session,
-        )
-
-        http.queue_response(**epub10441)
-        http.queue_response(**epub10441_cover)
-        http.queue_response(**epub10557)
-        # The request to http://root/broken-cover-image
-        # will result in a 404 error, and the image will not be mirrored.
-        http.queue_response(**epub10557_cover_broken)
-        http.queue_response(**epub10557_cover_working)
-
-        s3_for_books = MockS3Uploader()
-        s3_for_covers = MockS3Uploader()
-        mirrors = dict(books_mirror=s3_for_books, covers_mirror=s3_for_covers)
-
-        importer = OPDSImporter(
-            session,
-            collection=transaction.default_collection(),
-            mirrors=mirrors,
-            http_get=http.do_get,
-        )
-
-        imported_editions, pools, works, failures = importer.import_from_feed(
-            data.content_server_mini_feed, feed_url="http://root"
-        )
-
-        assert 2 == len(pools)
-
-        # Both items were requested
-        assert epub10441["url"] in http.requests
-        assert epub10557["url"] in http.requests
-
-        # The import process requested each remote resource in the feed. The thumbnail
-        # image was not requested, since we never trust foreign thumbnails. The order they
-        # are requested in is not deterministic, but after requesting the epub the images
-        # should be requested.
-        index = http.requests.index(epub10441["url"])
-        assert http.requests[index + 1] == epub10441_cover["url"]
-
-        index = http.requests.index(epub10557["url"])
-        assert http.requests[index : index + 3] == [
-            epub10557["url"],
-            epub10557_cover_broken["url"],
-            epub10557_cover_working["url"],
-        ]
-
-        e_10441 = next(
-            e for e in imported_editions if e.primary_identifier.identifier == "10441"
-        )
-        e_10557 = next(
-            e for e in imported_editions if e.primary_identifier.identifier == "10557"
-        )
-
-        [
-            e_10441_oa_link,
-            e_10441_image_link,
-            e_10441_thumbnail_link,
-            e_10441_description_link,
-        ] = sorted(e_10441.primary_identifier.links, key=lambda x: x.rel)
-        [
-            e_10557_broken_image_link,
-            e_10557_working_image_link,
-            e_10557_oa_link,
-        ] = sorted(e_10557.primary_identifier.links, key=lambda x: x.resource.url)
-
-        # The thumbnail image is associated with the Identifier, but
-        # it's not used because it's associated with a representation
-        # (cover_10441_9.png with media type "image/png") that no
-        # longer has a resource associated with it.
-        assert Hyperlink.THUMBNAIL_IMAGE == e_10441_thumbnail_link.rel
-        hypothetical_full_representation = (
-            e_10441_thumbnail_link.resource.representation.thumbnail_of
-        )
-        assert None == hypothetical_full_representation.resource
-        assert (
-            Representation.PNG_MEDIA_TYPE == hypothetical_full_representation.media_type
-        )
-
-        # That's because when we actually got cover_10441_9.png,
-        # it turned out to be an SVG file, not a PNG, so we created a new
-        # Representation. TODO: Obviously we could do better here.
-        assert (
-            Representation.SVG_MEDIA_TYPE
-            == e_10441_image_link.resource.representation.media_type
-        )
-
-        # The two open-access links were mirrored to S3, as were the
-        # original SVG image, the working PNG image, and its thumbnail, which we generated. The
-        # The broken PNG image was not mirrored because our attempt to download
-        # it resulted in a 404 error.
-        imported_book_representations = {
-            e_10441_oa_link.resource.representation,
-            e_10557_oa_link.resource.representation,
-        }
-        imported_cover_representations = {
-            e_10441_image_link.resource.representation,
-            e_10557_working_image_link.resource.representation,
-            e_10557_working_image_link.resource.representation.thumbnails[0],
-        }
-
-        assert imported_book_representations == set(s3_for_books.uploaded)
-        assert imported_cover_representations == set(s3_for_covers.uploaded)
-
-        assert 2 == len(s3_for_books.uploaded)
-        assert 3 == len(s3_for_covers.uploaded)
-
-        assert epub10441["content"] in s3_for_books.content
-        assert epub10557["content"] in s3_for_books.content
-
-        svg_bytes = svg.encode("utf8")
-        covers_content = s3_for_covers.content[:]
-        assert svg_bytes in covers_content
-        covers_content.remove(svg_bytes)
-        assert png in covers_content
-        covers_content.remove(png)
-
-        # We don't know what the thumbnail is, but we know it's smaller than the original cover image.
-        assert len(png) > len(covers_content[0])
-
-        # Each resource was 'mirrored' to an Amazon S3 bucket.
-        #
-        # The "mouse" book was mirrored to a book bucket corresponding to
-        # Project Gutenberg, its data source.
-        #
-        # The images were mirrored to a covers bucket corresponding to the
-        # open-access content server, _their_ data source. Each image
-        # has an extension befitting its media type.
-        #
-        # The "crow" book was mirrored to a bucket corresponding to
-        # the open-access content source, the default data source used
-        # when no distributor was specified for a book.
-        book1_url = "https://test-content-bucket.s3.amazonaws.com/Gutenberg/Gutenberg%20ID/10441/The%20Green%20Mouse.epub.images"
-        book1_svg_cover = "https://test-cover-bucket.s3.amazonaws.com/Library%20Simplified%20Open%20Access%20Content%20Server/Gutenberg%20ID/10441/cover_10441_9.svg"
-        book2_url = "https://test-content-bucket.s3.amazonaws.com/Library%20Simplified%20Open%20Access%20Content%20Server/Gutenberg%20ID/10557/Johnny%20Crow%27s%20Party.epub.images"
-        book2_png_cover = "https://test-cover-bucket.s3.amazonaws.com/Library%20Simplified%20Open%20Access%20Content%20Server/Gutenberg%20ID/10557/working-cover-image.png"
-        book2_png_thumbnail = "https://test-cover-bucket.s3.amazonaws.com/scaled/300/Library%20Simplified%20Open%20Access%20Content%20Server/Gutenberg%20ID/10557/working-cover-image.png"
-        uploaded_urls = {x.mirror_url for x in s3_for_covers.uploaded}
-        uploaded_book_urls = {x.mirror_url for x in s3_for_books.uploaded}
-        assert {book1_svg_cover, book2_png_cover, book2_png_thumbnail} == uploaded_urls
-        assert {book1_url, book2_url} == uploaded_book_urls
-
-        # If we fetch the feed again, and the entries have been updated since the
-        # cutoff, but the content of the open access links hasn't changed, we won't mirror
-        # them again.
-        cutoff = datetime_utc(2013, 1, 2, 16, 56, 40)
-
-        http.queue_response(
-            epub10441["url"], 304, media_type=Representation.EPUB_MEDIA_TYPE
-        )
-
-        http.queue_response(
-            epub10441_cover["url"], 304, media_type=Representation.SVG_MEDIA_TYPE
-        )
-
-        http.queue_response(
-            epub10557["url"], 304, media_type=Representation.EPUB_MEDIA_TYPE
-        )
-
-        imported_editions, pools, works, failures = importer.import_from_feed(
-            data.content_server_mini_feed
-        )
-
-        assert {e_10441, e_10557} == set(imported_editions)
-
-        # Nothing new has been uploaded
-        assert 2 == len(s3_for_books.uploaded)
-
-        # If the content has changed, it will be mirrored again.
-        epub10441_updated = epub10441.copy()
-        epub10441_updated["content"] = b"I am a new version of 10441.epub.images"
-        http.queue_response(**epub10441_updated)
-        http.queue_response(**epub10441_cover)
-        epub10557_updated = epub10557.copy()
-        epub10557_updated["content"] = b"I am a new version of 10557.epub.images"
-        http.queue_response(**epub10557_updated)
-
-        imported_editions, pools, works, failures = importer.import_from_feed(
-            data.content_server_mini_feed
-        )
-
-        assert {e_10441, e_10557} == set(imported_editions)
-        assert 4 == len(s3_for_books.uploaded)
-        assert epub10441_updated["content"] in s3_for_books.content[-2:]
-        assert svg_bytes == s3_for_covers.content.pop()
-        assert epub10557_updated["content"] in s3_for_books.content[-2:]
-
-    def test_content_resources_not_mirrored_on_import_if_no_collection(
-        self,
-        opds_importer_fixture: OPDSImporterFixture,
-        http,
-        svg,
-        epub10557_cover_broken,
-        epub10557_cover_working,
-        epub10441_cover,
-    ):
-        data, transaction, session = (
-            opds_importer_fixture,
-            opds_importer_fixture.transaction,
-            opds_importer_fixture.transaction.session,
-        )
-
-        # If you don't provide a Collection to the OPDSImporter, no
-        # LicensePools are created for the book and content resources
-        # (like EPUB editions of the book) are not mirrored. Only
-        # metadata resources (like the book cover) are mirrored.
-
-        # The request to http://root/broken-cover-image
-        # will result in a 404 error, and the image will not be mirrored.
-        http.queue_response(**epub10557_cover_broken)
-        http.queue_response(**epub10557_cover_working)
-        http.queue_response(**epub10441_cover)
-
-        s3 = MockS3Uploader()
-        mirrors = dict(covers_mirror=s3)
-
-        importer = OPDSImporter(
-            session, collection=None, mirrors=mirrors, http_get=http.do_get
-        )
-
-        imported_editions, pools, works, failures = importer.import_from_feed(
-            data.content_server_mini_feed, feed_url="http://root"
-        )
-
-        # No LicensePools were created, since no Collection was
-        # provided.
-        assert [] == pools
-
-        # The import process requested each remote resource in the
-        # order they appeared in the OPDS feed. The EPUB resources
-        # were not requested because no Collection was provided to the
-        # importer. The thumbnail image was not requested, since we
-        # were going to make our own thumbnail anyway.
-        assert len(http.requests) == 3
-        assert set(http.requests) == {
-            epub10441_cover["url"],
-            epub10557_cover_broken["url"],
-            epub10557_cover_working["url"],
-        }
-
-
 class TestOPDSImportMonitor:
     def test_constructor(self, db: DatabaseTransactionFixture):
         session = db.session
 
         with pytest.raises(ValueError) as excinfo:
-            OPDSImportMonitor(session, None, OPDSImporter)
+            OPDSImportMonitor(session, None, OPDSImporter)  # type: ignore[arg-type]
         assert (
             "OPDSImportMonitor can only be run in the context of a Collection."
             in str(excinfo.value)
         )
 
-        db.default_collection().external_integration.protocol = (
+        db.default_collection().integration_configuration.protocol = (
             ExternalIntegration.OVERDRIVE
         )
         with pytest.raises(ValueError) as excinfo:
@@ -2383,38 +1797,73 @@ class TestOPDSImportMonitor:
             in str(excinfo.value)
         )
 
-        db.default_collection().external_integration.protocol = (
+        db.default_collection().integration_configuration.protocol = (
             ExternalIntegration.OPDS_IMPORT
         )
-        db.default_collection().external_integration.setting("data_source").value = None
+        DatabaseTransactionFixture.set_settings(
+            db.default_collection().integration_configuration, "data_source", None
+        )
         with pytest.raises(ValueError) as excinfo:
             OPDSImportMonitor(session, db.default_collection(), OPDSImporter)
         assert "Collection Default Collection has no associated data source." in str(
             excinfo.value
         )
 
+        DatabaseTransactionFixture.set_settings(
+            db.default_collection().integration_configuration, "data_source", "OPDS"
+        )
+        db.default_collection().external_account_id = (
+            "https://opds.import.com/feed?size=100"
+        )
+        monitor = OPDSImportMonitor(session, db.default_collection(), OPDSImporter)
+        assert monitor._feed_base_url == "https://opds.import.com/"
+
+    def test_get(self, db: DatabaseTransactionFixture):
+        session = db.session
+
+        ## Test whether relative urls work
+        DatabaseTransactionFixture.set_settings(
+            db.default_collection().integration_configuration, "data_source", "OPDS"
+        )
+        db.default_collection().external_account_id = (
+            "https://opds.import.com:9999/feed"
+        )
+        monitor = OPDSImportMonitor(session, db.default_collection(), OPDSImporter)
+
+        with patch("core.opds_import.HTTP.get_with_timeout") as mock_get:
+            monitor._get("/absolute/path", {})
+            assert mock_get.call_args[0] == (
+                "https://opds.import.com:9999/absolute/path",
+            )
+
+            mock_get.reset_mock()
+            monitor._get("relative/path", {})
+            assert mock_get.call_args[0] == (
+                "https://opds.import.com:9999/relative/path",
+            )
+
     def test_external_integration(self, opds_importer_fixture: OPDSImporterFixture):
-        data, transaction, session = (
+        data, db, session = (
             opds_importer_fixture,
-            opds_importer_fixture.transaction,
-            opds_importer_fixture.transaction.session,
+            opds_importer_fixture.db,
+            opds_importer_fixture.db.session,
         )
 
         monitor = OPDSImportMonitor(
             session,
-            transaction.default_collection(),
+            db.default_collection(),
             import_class=OPDSImporter,
         )
         assert (
-            transaction.default_collection().external_integration
+            db.default_collection().external_integration
             == monitor.external_integration(session)
         )
 
     def test__run_self_tests(self, opds_importer_fixture: OPDSImporterFixture):
-        data, transaction, session = (
+        data, db, session = (
             opds_importer_fixture,
-            opds_importer_fixture.transaction,
-            opds_importer_fixture.transaction.session,
+            opds_importer_fixture.db,
+            opds_importer_fixture.db.session,
         )
         """Verify the self-tests of an OPDS collection."""
 
@@ -2431,11 +1880,9 @@ class TestOPDSImportMonitor:
                 self.follow_one_link_called_with.append(url)
                 return ([], "some content")
 
-        feed_url = transaction.fresh_url()
-        transaction.default_collection().external_account_id = feed_url
-        monitor = Mock(
-            session, transaction.default_collection(), import_class=MockImporter
-        )
+        feed_url = db.fresh_url()
+        db.default_collection().external_account_id = feed_url
+        monitor = Mock(session, db.default_collection(), import_class=MockImporter)
         [first_page, found_content] = monitor._run_self_tests(session)
         expect = "Retrieve the first page of the OPDS feed (%s)" % feed_url
         assert expect == first_page.name
@@ -2452,36 +1899,36 @@ class TestOPDSImportMonitor:
         assert (
             "some content",
             feed_url,
-        ) == monitor.importer.assert_importable_content_called_with
+        ) == monitor.importer.assert_importable_content_called_with  # type: ignore[attr-defined]
         assert "looks good" == found_content.result
 
     def test_hook_methods(self, opds_importer_fixture: OPDSImporterFixture):
-        data, transaction, session = (
+        data, db, session = (
             opds_importer_fixture,
-            opds_importer_fixture.transaction,
-            opds_importer_fixture.transaction.session,
+            opds_importer_fixture.db,
+            opds_importer_fixture.db.session,
         )
         """By default, the OPDS URL and data source used by the importer
         come from the collection configuration.
         """
         monitor = OPDSImportMonitor(
             session,
-            transaction.default_collection(),
+            db.default_collection(),
             import_class=OPDSImporter,
         )
-        assert transaction.default_collection().external_account_id == monitor.opds_url(
-            transaction.default_collection()
+        assert db.default_collection().external_account_id == monitor.opds_url(
+            db.default_collection()
         )
 
-        assert transaction.default_collection().data_source == monitor.data_source(
-            transaction.default_collection()
+        assert db.default_collection().data_source == monitor.data_source(
+            db.default_collection()
         )
 
     def test_feed_contains_new_data(self, opds_importer_fixture: OPDSImporterFixture):
-        data, transaction, session = (
+        data, db, session = (
             opds_importer_fixture,
-            opds_importer_fixture.transaction,
-            opds_importer_fixture.transaction.session,
+            opds_importer_fixture.db,
+            opds_importer_fixture.db.session,
         )
 
         feed = data.content_server_mini_feed
@@ -2492,7 +1939,7 @@ class TestOPDSImportMonitor:
 
         monitor = OPDSImportMonitor(
             session,
-            transaction.default_collection(),
+            db.default_collection(),
             import_class=OPDSImporter,
         )
         timestamp = monitor.timestamp()
@@ -2504,7 +1951,7 @@ class TestOPDSImportMonitor:
         # Now import the editions.
         monitor = MockOPDSImportMonitor(
             session,
-            collection=transaction.default_collection(),
+            collection=db.default_collection(),
             import_class=OPDSImporter,
         )
         monitor.run()
@@ -2525,7 +1972,7 @@ class TestOPDSImportMonitor:
             editions[0],
             data_source,
             CoverageRecord.IMPORT_OPERATION,
-            collection=transaction.default_collection(),
+            collection=db.default_collection(),
         )
         record.timestamp = datetime_utc(2016, 1, 1, 1, 1, 1)
 
@@ -2533,7 +1980,7 @@ class TestOPDSImportMonitor:
             editions[1],
             data_source,
             CoverageRecord.IMPORT_OPERATION,
-            collection=transaction.default_collection(),
+            collection=db.default_collection(),
         )
         record2.timestamp = datetime_utc(2016, 1, 1, 1, 1, 1)
 
@@ -2568,20 +2015,21 @@ class TestOPDSImportMonitor:
         assert True == monitor.feed_contains_new_data(feed)
 
     def test_follow_one_link(self, opds_importer_fixture: OPDSImporterFixture):
-        data, transaction, session = (
+        data, db, session = (
             opds_importer_fixture,
-            opds_importer_fixture.transaction,
-            opds_importer_fixture.transaction.session,
+            opds_importer_fixture.db,
+            opds_importer_fixture.db.session,
         )
 
         monitor = OPDSImportMonitor(
             session,
-            collection=transaction.default_collection(),
+            collection=db.default_collection(),
             import_class=OPDSImporter,
         )
         feed = data.content_server_mini_feed
 
         http = DummyHTTPClient()
+
         # If there's new data, follow_one_link extracts the next links.
         def follow():
             return monitor.follow_one_link("http://url", do_get=http.do_get)
@@ -2605,7 +2053,7 @@ class TestOPDSImportMonitor:
                 edition,
                 data_source,
                 CoverageRecord.IMPORT_OPERATION,
-                collection=transaction.default_collection(),
+                collection=db.default_collection(),
             )
             record.timestamp = datetime_utc(2016, 1, 1, 1, 1, 1)
 
@@ -2638,21 +2086,19 @@ class TestOPDSImportMonitor:
         assert "Expected Atom feed, got not/atom" in str(excinfo.value)
 
     def test_import_one_feed(self, opds_importer_fixture: OPDSImporterFixture):
-        data, transaction, session = (
+        data, db, session = (
             opds_importer_fixture,
-            opds_importer_fixture.transaction,
-            opds_importer_fixture.transaction.session,
+            opds_importer_fixture.db,
+            opds_importer_fixture.db.session,
         )
         # Check coverage records are created.
 
         monitor = OPDSImportMonitor(
             session,
-            collection=transaction.default_collection(),
+            collection=db.default_collection(),
             import_class=DoomedOPDSImporter,
         )
-        transaction.default_collection().external_account_id = (
-            "http://root-url/index.xml"
-        )
+        db.default_collection().external_account_id = "http://root-url/index.xml"
         data_source = DataSource.lookup(session, DataSource.OA_CONTENT_SERVER)
 
         feed = data.content_server_mini_feed
@@ -2674,7 +2120,7 @@ class TestOPDSImportMonitor:
             editions[0].primary_identifier,
             data_source,
             operation=CoverageRecord.IMPORT_OPERATION,
-            collection=transaction.default_collection(),
+            collection=db.default_collection(),
         )
         assert CoverageRecord.SUCCESS == record.status
         assert None == record.exception
@@ -2710,7 +2156,7 @@ class TestOPDSImportMonitor:
             identifier,
             data_source,
             operation=CoverageRecord.IMPORT_OPERATION,
-            collection=transaction.default_collection(),
+            collection=db.default_collection(),
         )
         assert "Utter failure!" in failure.exception
 
@@ -2719,10 +2165,10 @@ class TestOPDSImportMonitor:
         assert 2 == len(failures)
 
     def test_run_once(self, opds_importer_fixture: OPDSImporterFixture):
-        data, transaction, session = (
+        data, db, session = (
             opds_importer_fixture,
-            opds_importer_fixture.transaction,
-            opds_importer_fixture.transaction.session,
+            opds_importer_fixture.db,
+            opds_importer_fixture.db.session,
         )
 
         class MockOPDSImportMonitor(OPDSImportMonitor):
@@ -2744,7 +2190,7 @@ class TestOPDSImportMonitor:
 
         monitor = MockOPDSImportMonitor(
             session,
-            collection=transaction.default_collection(),
+            collection=db.default_collection(),
             import_class=OPDSImporter,
         )
 
@@ -2752,7 +2198,7 @@ class TestOPDSImportMonitor:
         monitor.queue_response([["second next link"], "second page"])
         monitor.queue_response([["next link"], "first page"])
 
-        progress = monitor.run_once(object())
+        progress = monitor.run_once(MagicMock())
 
         # Feeds are imported in reverse order
         assert ["last page", "second page", "first page"] == monitor.imports
@@ -2766,16 +2212,16 @@ class TestOPDSImportMonitor:
         assert None == progress.finish
 
     def test_update_headers(self, opds_importer_fixture: OPDSImporterFixture):
-        data, transaction, session = (
+        data, db, session = (
             opds_importer_fixture,
-            opds_importer_fixture.transaction,
-            opds_importer_fixture.transaction.session,
+            opds_importer_fixture.db,
+            opds_importer_fixture.db.session,
         )
 
         # Test the _update_headers helper method.
         monitor = OPDSImportMonitor(
             session,
-            collection=transaction.default_collection(),
+            collection=db.default_collection(),
             import_class=OPDSImporter,
         )
 
@@ -2813,34 +2259,26 @@ class TestOPDSImportMonitor:
         assert headers == expect
 
     def test_retry(self, opds_importer_fixture: OPDSImporterFixture):
-        data, transaction, session = (
+        data, db, session = (
             opds_importer_fixture,
-            opds_importer_fixture.transaction,
-            opds_importer_fixture.transaction.session,
+            opds_importer_fixture.db,
+            opds_importer_fixture.db.session,
         )
 
         retry_count = 15
         feed = data.content_server_mini_feed
         feed_url = "https://example.com/feed.opds"
 
-        # First, we need to override the default value of "Max retry count" configuration setting.
-        external_integration_association = create_autospec(spec=HasExternalIntegration)
-        external_integration_association.external_integration = MagicMock(
-            return_value=transaction.default_collection().external_integration
-        )
-        configuration_storage = ConfigurationStorage(external_integration_association)
-        configuration_factory = ConfigurationFactory()
-
-        with configuration_factory.create(
-            configuration_storage, session, OPDSImporterConfiguration
-        ) as configuration:
-            configuration.max_retry_count = retry_count
-
         # After we overrode the value of configuration setting we can instantiate OPDSImportMonitor.
         # It'll load new "Max retry count"'s value from the database.
+        DatabaseTransactionFixture.set_settings(
+            db.default_collection().integration_configuration,
+            "connection_max_retry_count",
+            retry_count,
+        )
         monitor = OPDSImportMonitor(
             session,
-            collection=transaction.default_collection(),
+            collection=db.default_collection(),
             import_class=OPDSImporter,
         )
 
@@ -2862,3 +2300,180 @@ class TestOPDSImportMonitor:
                     status_forcelist=[429, 500, 502, 503, 504],
                     backoff_factor=1.0,
                 )
+
+
+class OPDSAPIFixture:
+    def __init__(self, db: DatabaseTransactionFixture):
+        self.db = db
+        self.session = db.session
+        self.collection = db.collection(
+            protocol=OPDSAPI.label(), data_source_name="OPDS"
+        )
+        self.api = OPDSAPI(self.session, self.collection)
+
+        self.mock_patron = MagicMock()
+        self.mock_pin = MagicMock(spec=str)
+        self.mock_licensepool = MagicMock(spec=LicensePool)
+        self.mock_licensepool.collection = self.collection
+
+
+@pytest.fixture
+def opds_api_fixture(db: DatabaseTransactionFixture) -> OPDSAPIFixture:
+    return OPDSAPIFixture(db)
+
+
+class TestOPDSAPI:
+    def test_checkin(self, opds_api_fixture: OPDSAPIFixture) -> None:
+        # Make sure we can call checkin() without getting an exception.
+        # The function is a no-op for this api, so we don't need to
+        # test anything else.
+        opds_api_fixture.api.checkin(
+            opds_api_fixture.mock_patron,
+            opds_api_fixture.mock_pin,
+            opds_api_fixture.mock_licensepool,
+        )
+
+    def test_release_hold(self, opds_api_fixture: OPDSAPIFixture) -> None:
+        # This api doesn't support holds. So we expect an exception.
+        with pytest.raises(NotOnHold):
+            opds_api_fixture.api.release_hold(
+                opds_api_fixture.mock_patron,
+                opds_api_fixture.mock_pin,
+                opds_api_fixture.mock_licensepool,
+            )
+
+    def test_place_hold(self, opds_api_fixture: OPDSAPIFixture) -> None:
+        # This api doesn't support holds. So we expect an exception.
+        with pytest.raises(CurrentlyAvailable):
+            opds_api_fixture.api.place_hold(
+                opds_api_fixture.mock_patron,
+                opds_api_fixture.mock_pin,
+                opds_api_fixture.mock_licensepool,
+                None,
+            )
+
+    def test_update_availability(self, opds_api_fixture: OPDSAPIFixture) -> None:
+        # This function is a no-op since we already know the availability
+        # of the license pool for any OPDS content. So we just make sure
+        # we can call it without getting an exception.
+        opds_api_fixture.api.update_availability(opds_api_fixture.mock_licensepool)
+
+    def test_checkout(self, opds_api_fixture: OPDSAPIFixture) -> None:
+        # Make sure checkout returns a LoanInfo object with the correct
+        # collection id.
+        mock_collection_property = PropertyMock(
+            return_value=opds_api_fixture.collection
+        )
+        type(opds_api_fixture.mock_licensepool).collection = mock_collection_property
+        delivery_mechanism = MagicMock(spec=LicensePoolDeliveryMechanism)
+        loan = opds_api_fixture.api.checkout(
+            opds_api_fixture.mock_patron,
+            opds_api_fixture.mock_pin,
+            opds_api_fixture.mock_licensepool,
+            delivery_mechanism,
+        )
+        assert isinstance(loan, LoanInfo)
+        assert mock_collection_property.call_count == 1
+        assert loan.collection_id == opds_api_fixture.collection.id
+
+    def test_can_fulfill_without_loan(self, opds_api_fixture: OPDSAPIFixture) -> None:
+        # This should always return True.
+        mock_lpdm = MagicMock(spec=LicensePoolDeliveryMechanism)
+        assert (
+            opds_api_fixture.api.can_fulfill_without_loan(
+                opds_api_fixture.mock_patron,
+                opds_api_fixture.mock_licensepool,
+                mock_lpdm,
+            )
+            is True
+        )
+
+    def test_fulfill(self, opds_api_fixture: OPDSAPIFixture) -> None:
+        # We only fulfill if the requested format matches an available format
+        # for the license pool.
+        mock_mechanism = MagicMock(spec=DeliveryMechanism)
+        mock_lpdm = MagicMock(spec=LicensePoolDeliveryMechanism)
+        mock_lpdm.delivery_mechanism = mock_mechanism
+
+        # This license pool has no available formats.
+        opds_api_fixture.mock_licensepool.delivery_mechanisms = []
+        with pytest.raises(FormatNotAvailable):
+            opds_api_fixture.api.fulfill(
+                opds_api_fixture.mock_patron,
+                opds_api_fixture.mock_pin,
+                opds_api_fixture.mock_licensepool,
+                mock_lpdm,
+            )
+
+        # This license pool has a delivery mechanism, but it's not the one
+        # we're looking for.
+        opds_api_fixture.mock_licensepool.delivery_mechanisms = [
+            MagicMock(),
+            MagicMock(),
+        ]
+        with pytest.raises(FormatNotAvailable):
+            opds_api_fixture.api.fulfill(
+                opds_api_fixture.mock_patron,
+                opds_api_fixture.mock_pin,
+                opds_api_fixture.mock_licensepool,
+                mock_lpdm,
+            )
+
+        # This license pool has the delivery mechanism we're looking for, but
+        # it does not have a resource.
+        mock_lpdm.resource = None
+        opds_api_fixture.mock_licensepool.delivery_mechanisms = [mock_lpdm]
+        with pytest.raises(FormatNotAvailable):
+            opds_api_fixture.api.fulfill(
+                opds_api_fixture.mock_patron,
+                opds_api_fixture.mock_pin,
+                opds_api_fixture.mock_licensepool,
+                mock_lpdm,
+            )
+
+        # This license pool has the delivery mechanism we're looking for, and
+        # it has a resource, but the resource doesn't have a representation.
+        mock_lpdm.resource = MagicMock(spec=Resource)
+        mock_lpdm.resource.representation = None
+        opds_api_fixture.mock_licensepool.delivery_mechanisms = [mock_lpdm]
+        with pytest.raises(FormatNotAvailable):
+            opds_api_fixture.api.fulfill(
+                opds_api_fixture.mock_patron,
+                opds_api_fixture.mock_pin,
+                opds_api_fixture.mock_licensepool,
+                mock_lpdm,
+            )
+
+        # This license pool has the delivery mechanism we're looking for, and
+        # it has a resource, the resource has a representation, but the
+        # representation doesn't have a URL.
+        mock_lpdm.resource.representation = MagicMock(spec=Representation)
+        mock_lpdm.resource.representation.public_url = None
+        opds_api_fixture.mock_licensepool.delivery_mechanisms = [mock_lpdm]
+        with pytest.raises(FormatNotAvailable):
+            opds_api_fixture.api.fulfill(
+                opds_api_fixture.mock_patron,
+                opds_api_fixture.mock_pin,
+                opds_api_fixture.mock_licensepool,
+                mock_lpdm,
+            )
+
+        # This license pool has everything we need, so we can fulfill.
+        mock_lpdm.resource.representation.public_url = "http://foo.com/bar.epub"
+        opds_api_fixture.mock_licensepool.delivery_mechanisms = [
+            MagicMock(),
+            MagicMock(),
+            mock_lpdm,
+        ]
+        fulfillment = opds_api_fixture.api.fulfill(
+            opds_api_fixture.mock_patron,
+            opds_api_fixture.mock_pin,
+            opds_api_fixture.mock_licensepool,
+            mock_lpdm,
+        )
+        assert isinstance(fulfillment, FulfillmentInfo)
+        assert fulfillment.content_link == mock_lpdm.resource.representation.public_url
+        assert fulfillment.content_type == mock_lpdm.resource.representation.media_type
+        assert fulfillment.content is None
+        assert fulfillment.content_expires is None
+        assert fulfillment.collection_id == opds_api_fixture.collection.id
