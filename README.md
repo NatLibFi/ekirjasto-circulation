@@ -22,10 +22,10 @@ Docker images are the preferred way to deploy this code in a production environm
 
 ## Git Branch Workflow
 
-| Branch   | Python Version |
-| -------- | -------------- |
-| main     | Python 3       |
-| python2  | Python 2       |
+| Branch  | Python Version |
+| ------- | -------------- |
+| main    | Python 3       |
+| python2 | Python 2       |
 
 The default branch is `main` and that's the working branch that should be used when branching off for bug fixes or new
 features.
@@ -77,7 +77,21 @@ Most distributions will offer Python packages. On Arch Linux, the following comm
 pacman -S python
 ```
 
-#### pyenv
+You need to install dependencies: https://devguide.python.org/getting-started/setup-building/#build-dependencies
+
+Enable Source Packages:
+Uncomment a deb-src in `/etc/apt/sources.list` e.g. `jammy main`
+
+Install build dependencies:
+
+```sh
+$ sudo apt-get update
+$ sudo apt-get build-dep python3
+$ sudo apt-get install pkg-config
+$ sudo apt install libxmlsec1 libxmlsec1-dev
+```
+
+#### pyenv (Optional)
 
 [pyenv](https://github.com/pyenv/pyenv) pyenv lets you easily switch between multiple versions of Python. It can be
 [installed](https://github.com/pyenv/pyenv-installer) using the command `curl https://pyenv.run | bash`. You can then
@@ -171,20 +185,20 @@ a storage service, you can set the following environment variables:
   public access to the files.
 - `PALACE_STORAGE_ANALYTICS_BUCKET`: Required if you want to use the storage service to store analytics data.
 - `PALACE_STORAGE_ACCESS_KEY`: The access key (optional).
-    - If this key is set it will be passed to boto3 when connecting to the storage service.
-    - If it is not set boto3 will attempt to find credentials as outlined in their
-      [documentation](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html#configuring-credentials).
+  - If this key is set it will be passed to boto3 when connecting to the storage service.
+  - If it is not set boto3 will attempt to find credentials as outlined in their
+    [documentation](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html#configuring-credentials).
 - `PALACE_STORAGE_SECRET_KEY`: The secret key (optional).
 - `PALACE_STORAGE_REGION`: The AWS region of the storage service (optional).
 - `PALACE_STORAGE_ENDPOINT_URL`: The endpoint of the storage service (optional). This is used if you are using a
   s3 compatible storage service like [minio](https://min.io/).
 - `PALACE_STORAGE_URL_TEMPLATE`: The url template to use when generating urls for files stored in the storage service
   (optional).
-    - The default value is `https://{bucket}.s3.{region}.amazonaws.com/{key}`.
-    - The following variables can be used in the template:
-        - `{bucket}`: The name of the bucket.
-        - `{key}`: The key of the file.
-        - `{region}`: The region of the storage service.
+  - The default value is `https://{bucket}.s3.{region}.amazonaws.com/{key}`.
+  - The following variables can be used in the template:
+    - `{bucket}`: The name of the bucket.
+    - `{key}`: The key of the file.
+    - `{region}`: The region of the storage service.
 
 #### Reporting
 
@@ -209,9 +223,9 @@ the logging:
 - `PALACE_LOG_CLOUDWATCH_INTERVAL`: The interval in seconds to send logs to CloudWatch. Default is `60`.
 - `PALACE_LOG_CLOUDWATCH_CREATE_GROUP`: Whether to create the log group if it does not exist. Default is `true`.
 - `PALACE_LOG_CLOUDWATCH_ACCESS_KEY`: The access key to use when sending logs to CloudWatch. This is optional.
-    - If this key is set it will be passed to boto3 when connecting to CloudWatch.
-    - If it is not set boto3 will attempt to find credentials as outlined in their
-      [documentation](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html#configuring-credentials).
+  - If this key is set it will be passed to boto3 when connecting to CloudWatch.
+  - If it is not set boto3 will attempt to find credentials as outlined in their
+    [documentation](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html#configuring-credentials).
 - `PALACE_LOG_CLOUDWATCH_SECRET_KEY`: The secret key to use when sending logs to CloudWatch. This is optional.
 
 #### Patron `Basic Token` authentication
@@ -219,6 +233,7 @@ the logging:
 Enables/disables patron "basic token" authentication through setting the designated environment variable to any
 (case-insensitive) value of "true"/"yes"/"on"/"1" or "false"/"no"/"off"/"0", respectively.
 If the value is the empty string or the variable is not present in the environment, it is disabled by default.
+
 - `SIMPLIFIED_ENABLE_BASIC_TOKEN_AUTH`
 
 ```sh
@@ -228,7 +243,8 @@ export SIMPLIFIED_ENABLE_BASIC_TOKEN_AUTH=true
 #### Firebase Cloud Messaging
 
 For Firebase Cloud Messaging (FCM) support (e.g., for notifications), `one` (and only one) of the following should be set:
-- `SIMPLIFIED_FCM_CREDENTIALS_JSON` - the JSON-format Google Cloud Platform (GCP) service account key  or
+
+- `SIMPLIFIED_FCM_CREDENTIALS_JSON` - the JSON-format Google Cloud Platform (GCP) service account key or
 - `SIMPLIFIED_FCM_CREDENTIALS_FILE` - the name of the file containing that key.
 
 ```sh
@@ -257,6 +273,14 @@ for the respective "dashboard name".
 Local analytics are enabled by default. S3 analytics can be enabled via the following environment variable:
 
 - PALACE_S3_ANALYTICS_ENABLED: A boolean value to disable or enable s3 analytics. The default is false.
+
+## OpenSearch Analytics (E-Kirjasto, Finland)
+
+OpenSearch analytics can be enabled via the following environment variables:
+
+- PALACE_OPENSEARCH_ANALYTICS_ENABLED: A boolean value to disable or enable OpenSearch analytics. The default is false.
+- PALACE_OPENSEARCH_ANALYTICS_URL: The url of your OpenSearch instance, eg. "http://localhost:9200"
+- PALACE_OPENSEARCH_ANALYTICS_INDEX_PREFIX: The prefix of the event index name, eg. "circulation-events"
 
 #### Email
 
@@ -534,13 +558,14 @@ the different lints that pre-commit runs.
 #### Built in
 
 Pre-commit ships with a [number of lints](https://pre-commit.com/hooks.html) out of the box, we are configured to use:
+
 - `trailing-whitespace` - trims trailing whitespace.
 - `end-of-file-fixer` - ensures that a file is either empty, or ends with one newline.
 - `check-yaml` - checks yaml files for parseable syntax.
 - `check-json` - checks json files for parseable syntax.
 - `check-ast` - simply checks whether the files parse as valid python.
 - `check-shebang-scripts-are-executable` - ensures that (non-binary) files with a shebang are executable.
-- `check-executables-have-shebangs` -  ensures that (non-binary) executables have a shebang.
+- `check-executables-have-shebangs` - ensures that (non-binary) executables have a shebang.
 - `check-merge-conflict` - checks for files that contain merge conflict strings.
 - `check-added-large-files` - prevents giant files from being committed.
 - `mixed-line-ending` - replaces or checks mixed line ending.
@@ -593,7 +618,7 @@ with service dependencies running in docker containers.
 #### Python version
 
 | Factor | Python Version |
-|--------|----------------|
+| ------ | -------------- |
 | py38   | Python 3.8     |
 | py39   | Python 3.9     |
 | py310  | Python 3.10    |
@@ -617,10 +642,10 @@ missing Python versions in your system for local testing.
 
 #### Module
 
-| Factor      | Module            |
-| ----------- | ----------------- |
-| core        | core tests        |
-| api         | api tests         |
+| Factor | Module     |
+| ------ | ---------- |
+| core   | core tests |
+| api    | api tests  |
 
 #### Docker
 
@@ -703,7 +728,7 @@ enabled by setting environment variables while starting the application.
 - `PALACE_XRAY_NAME`: The name of the service shown in x-ray for these traces.
 - `PALACE_XRAY_ANNOTATE_`: Any environment variable starting with this prefix will be added to to the trace as an
   annotation.
-    - For example setting `PALACE_XRAY_ANNOTATE_KEY=value` will set the annotation `key=value` on all xray traces sent
+  - For example setting `PALACE_XRAY_ANNOTATE_KEY=value` will set the annotation `key=value` on all xray traces sent
     from the application.
 - `PALACE_XRAY_INCLUDE_BARCODE`: If this environment variable is set to `true` then the tracing code will try to include
   the patrons barcode in the user parameter of the trace, if a barcode is available.
@@ -725,8 +750,9 @@ module under the hood to do the profiling.
   path specified in the environment variable.
 - The profile data will have the extension `.prof`.
 - The data can be accessed using the
-[`pstats.Stats` class](https://docs.python.org/3/library/profile.html#the-stats-class).
+  [`pstats.Stats` class](https://docs.python.org/3/library/profile.html#the-stats-class).
 - Example code to print details of the gathered statistics:
+
   ```python
   import os
   from pathlib import Path
@@ -747,23 +773,25 @@ This profiler uses [PyInstrument](https://pyinstrument.readthedocs.io/en/latest/
 
 - `PALACE_PYINSTRUMENT`: Profiling will the enabled if this variable is set. The saved profile data will be available at
   path specified in the environment variable.
-    - The profile data will have the extension `.pyisession`.
-    - The data can be accessed with the
+
+  - The profile data will have the extension `.pyisession`.
+  - The data can be accessed with the
     [`pyinstrument.session.Session` class](https://pyinstrument.readthedocs.io/en/latest/reference.html#pyinstrument.session.Session).
-    - Example code to print details of the gathered statistics:
-      ```python
-      import os
-      from pathlib import Path
+  - Example code to print details of the gathered statistics:
 
-      from pyinstrument.renderers import HTMLRenderer
-      from pyinstrument.session import Session
+    ```python
+    import os
+    from pathlib import Path
 
-      path = Path(os.environ.get("PALACE_PYINSTRUMENT"))
-      for file in path.glob("*.pyisession"):
-          session = Session.load(file)
-          renderer = HTMLRenderer()
-          renderer.open_in_browser(session)
-      ```
+    from pyinstrument.renderers import HTMLRenderer
+    from pyinstrument.session import Session
+
+    path = Path(os.environ.get("PALACE_PYINSTRUMENT"))
+    for file in path.glob("*.pyisession"):
+        session = Session.load(file)
+        renderer = HTMLRenderer()
+        renderer.open_in_browser(session)
+    ```
 
 ### Other Environment Variables
 

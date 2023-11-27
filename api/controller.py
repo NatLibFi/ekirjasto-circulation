@@ -30,6 +30,8 @@ from api.base_controller import BaseCirculationManagerController
 from api.circulation import CirculationAPI
 from api.circulation_exceptions import *
 from api.config import CannotLoadConfiguration, Configuration
+from .ekirjasto_controller import EkirjastoController  # Finland
+from api.opensearch_analytics_search import OpenSearchAnalyticsSearch
 from api.custom_index import CustomIndexView
 from api.lanes import (
     ContributorFacets,
@@ -82,6 +84,8 @@ from core.model import (
     DeliveryMechanism,
     Hold,
     Identifier,
+    IntegrationConfiguration,
+    IntegrationLibraryConfiguration,
     Library,
     LicensePool,
     LicensePoolDeliveryMechanism,
@@ -284,6 +288,9 @@ class CirculationManager:
 
         self.setup_external_search()
 
+        # Finland
+        self.setup_opensearch_analytics_search()
+
         # Track the Lane configuration for each library by mapping its
         # short name to the top-level lane.
         new_top_level_lanes = {}
@@ -352,6 +359,31 @@ class CirculationManager:
         self.authentication_for_opds_documents = ExpiringDict(
             max_len=1000, max_age_seconds=authentication_document_cache_time
         )
+
+    # Finland
+    @property
+    def opensearch_analytics_search(self):
+        """Retrieve or create a connection to the OpenSearch
+        analytics interface.
+
+        This is created lazily so that a failure to connect only
+        affects feeds that depend on the search engine, not the whole
+        circulation manager.
+        """
+        if not self._opensearch_analytics_search:
+            self.setup_opensearch_analytics_search()
+        return self._opensearch_analytics_search
+
+    # Finland
+    def setup_opensearch_analytics_search(self):
+        try:
+            self._opensearch_analytics_search = OpenSearchAnalyticsSearch()
+            self.opensearch_analytics_search_initialization_exception = None
+        except Exception as e:
+            self.log.error("Exception initializing search engine: %s", e)
+            self._opensearch_analytics_search = None
+            self.opensearch_analytics_search_initialization_exception = e
+        return self._opensearch_analytics_search
 
     @property
     def external_search(self):
@@ -425,6 +457,8 @@ class CirculationManager:
         configuration changes.
         """
         self.saml_controller = SAMLController(self, self.auth)
+        # Finland
+        self.ekirjasto_controller = EkirjastoController(self, self.auth)
 
     def annotator(self, lane, facets=None, *args, **kwargs):
         """Create an appropriate OPDS annotator for the given lane.
@@ -652,13 +686,27 @@ class CirculationManagerController(BaseCirculationManagerController):
         """
         _db = Session.object_session(library)
         pools = (
-            _db.query(LicensePool)
-            .join(LicensePool.collection)
-            .join(LicensePool.identifier)
-            .join(Collection.libraries)
-            .filter(Identifier.type == identifier_type)
-            .filter(Identifier.identifier == identifier)
-            .filter(Library.id == library.id)
+            _db.scalars(
+                select(LicensePool)
+                .join(Collection, LicensePool.collection_id == Collection.id)
+                .join(Identifier, LicensePool.identifier_id == Identifier.id)
+                .join(
+                    IntegrationConfiguration,
+                    Collection.integration_configuration_id
+                    == IntegrationConfiguration.id,
+                )
+                .join(
+                    IntegrationLibraryConfiguration,
+                    IntegrationConfiguration.id
+                    == IntegrationLibraryConfiguration.parent_id,
+                )
+                .where(
+                    Identifier.type == identifier_type,
+                    Identifier.identifier == identifier,
+                    IntegrationLibraryConfiguration.library_id == library.id,
+                )
+            )
+            .unique()
             .all()
         )
         if not pools:
@@ -973,7 +1021,7 @@ class OPDSFeedController(CirculationManagerController):
         """Build or retrieve a crawlable acquisition feed for the
         requested collection.
         """
-        collection = get_one(self._db, Collection, name=collection_name)
+        collection = Collection.by_name(self._db, collection_name)
         if not collection:
             return NO_SUCH_COLLECTION
         title = collection.name

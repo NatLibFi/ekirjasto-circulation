@@ -21,7 +21,16 @@ COPY --chown=simplified:simplified poetry.lock pyproject.toml /var/www/circulati
 RUN . env/bin/activate && \
     poetry install --only main,pg --sync
 
-COPY --chown=simplified:simplified . /var/www/circulation
+ENV TZ=Europe/Helsinki
+
+# Copy over all Palace build files for this image
+COPY ./docker /ls_build
+RUN /bin/bash -c "/ls_build/system_setup.sh"
+COPY --chown=1000:1000 poetry.lock pyproject.toml /var/www/circulation/
+RUN /bin/bash -c "/ls_build/app_setup.sh \
+      && /ls_build/logrotate.sh"
+
+COPY --chown=1000:1000 . /var/www/circulation
 
 ###############################################################################
 ## Circ-exec Image
@@ -29,6 +38,7 @@ COPY --chown=simplified:simplified . /var/www/circulation
 
 FROM common AS exec
 
+ENV TZ=Europe/Helsinki
 ENV SIMPLIFIED_SCRIPT_NAME ""
 
 VOLUME /var/log
@@ -44,7 +54,7 @@ CMD ["/sbin/my_init", "--skip-runit", "--quiet", "--", \
 FROM common AS scripts
 
 # Set the local timezone and setup cron
-ENV TZ=US/Eastern
+ENV TZ=Europe/Helsinki
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && \
     touch /var/log/cron.log
 
@@ -61,6 +71,7 @@ CMD ["/sbin/my_init"]
 ###############################################################################
 
 FROM common AS webapp
+ENV TZ=Europe/Helsinki
 
 # Setup nginx
 COPY docker/services/nginx /etc/nginx/
@@ -74,6 +85,18 @@ RUN mkdir -p /var/log/uwsgi && \
 
 # Setup runit
 COPY docker/runit /etc/service/
+COPY docker/admin_dist.tar.gz /mnt/admin_dist.tar.gz
+
+RUN /bin/bash -c "/ls_build/nginx.sh && \
+      /ls_build/uwsgi.sh && \
+      rm -rf /ls_build && /bd_build/cleanup.sh && \
+	  apt-get install -y --no-install-recommends tar && \
+	  cd /var/www/circulation/api/admin && \
+	  tar xf /mnt/admin_dist.tar.gz && \
+	  chown -R simplified:simplified dist && \
+	  rm /mnt/admin_dist.tar.gz "
+
+COPY --chown=simplified:simplified docker/config.py_admin /var/www/circulation/api/admin/config.py
 
 VOLUME /var/log
 WORKDIR /home/simplified/circulation

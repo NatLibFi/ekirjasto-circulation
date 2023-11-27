@@ -21,7 +21,7 @@ class PatronAuthRegistry(IntegrationRegistry["AuthenticationProviderType"]):
         from api.sirsidynix_authentication_provider import (
             SirsiDynixHorizonAuthenticationProvider,
         )
-
+        
         self.register(
             SimpleAuthenticationProvider, canonical="api.simple_authentication"
         )
@@ -34,3 +34,7 @@ class PatronAuthRegistry(IntegrationRegistry["AuthenticationProviderType"]):
             SirsiDynixHorizonAuthenticationProvider,
             canonical="api.sirsidynix_authentication_provider",
         )
+
+        # Finland
+        from api.ekirjasto_authentication import EkirjastoAuthenticationAPI
+        self.register(EkirjastoAuthenticationAPI, canonical="api.ekirjasto")

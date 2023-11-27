@@ -17,6 +17,12 @@ from core.model import (
     WorkGenre,
 )
 
+# Finland:
+from core.model.contributor import Contribution, Contributor
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Border, Side
+from tempfile import NamedTemporaryFile
+
 
 class LocalAnalyticsExporter:
     """Export large numbers of analytics events in CSV format."""
@@ -54,6 +60,109 @@ class LocalAnalyticsExporter:
         writer.writerow(header)
         writer.writerows(results)
         return output.getvalue().decode("utf-8")
+
+    # Finland
+    def export_excel(self, _db, start, end, locations=None, library=None):
+        # Get the results from the database.
+        query = self.analytics_query_loan_statistics(start, end, locations, library)
+        results = _db.execute(query)
+
+        # Prepare Excel workbook
+        workbook = Workbook()
+        sheet = workbook.active
+
+        rows = [dict(row) for row in results]
+
+        # Count how many contributor rows we need
+        max_contribs = max([0, *[len(row.get("contributors", [])) for row in rows]])
+
+        header = [
+            "Tekijä (aakkostus)",
+            "Nimeke",
+            "Tunniste",
+            "Tunnisteen tyyppi",
+            "Kirjasto",
+            "Sijainti",
+            "Formaatti",
+            "Kategoria(t)",
+            "Kieli",
+            "Kustantaja/Julkaisija",
+            "Kaikki lainat",
+        ]
+        for i in range(max_contribs):
+            header.append(f"Tekijä {i+1}")
+
+        sheet.append(header)
+
+        for row in rows:
+            genres = row.get("genres")
+            categories = ", ".join(genres) if genres else ""
+
+            contributors = row.get("contributors", [])
+
+            sheet.append(
+                [
+                    # Tekijä (aakkostus)
+                    row.get("sort_author", ""),
+                    # Nimeke
+                    row.get("sort_title", ""),
+                    # Tunniste
+                    row.get("identifier", ""),
+                    # Tunnisteen tyyppi
+                    row.get("identifier_type", ""),
+                    # Kirjasto
+                    row.get("library_name", ""),
+                    # Sijainti
+                    row.get("location", ""),
+                    # Formaatti
+                    row.get("medium", ""),
+                    # Kategoria(t)
+                    categories,
+                    # Kieli
+                    row.get("language", ""),
+                    # Kustantaja/Julkaisija
+                    row.get("publisher", ""),
+                    # Kaikki lainat
+                    row.get("count", ""),
+                    # Tekijät (1-n rows)
+                    *contributors,
+                ]
+            )
+
+        ### Adjust styles
+        column_width = 24
+
+        # Loop through all columns and set the width
+        for column in sheet.columns:
+            for cell in column:
+                sheet.column_dimensions[cell.column_letter].width = column_width
+
+        # Define styles for the header row
+        header_style = Font(name="Calibri", bold=True, color="FFFFFF")
+        header_fill = PatternFill(
+            start_color="336699", end_color="336699", fill_type="solid"
+        )
+        header_border = Border(
+            left=Side(border_style="thin", color="000000"),
+            right=Side(border_style="thin", color="000000"),
+            top=Side(border_style="thin", color="000000"),
+            bottom=Side(border_style="thin", color="000000"),
+        )
+
+        # Apply styles to the header row
+        for cell in sheet[1]:
+            cell.font = header_style
+            cell.fill = header_fill
+            cell.border = header_border
+
+        # Make header row sticky
+        sheet.freeze_panes = "A2"
+
+        with NamedTemporaryFile() as tmp:
+            workbook.save(tmp.name)
+            tmp.seek(0)
+            stream = tmp.read()
+        return stream
 
     def analytics_query(self, start, end, locations=None, library=None):
         """Build a database query that fetches rows of analytics data.
@@ -217,6 +326,186 @@ class LocalAnalyticsExporter:
                 events.medium,
                 events.distributor,
                 case({True: "true", False: "false"}, value=events.open_access),
+            ]
+        ).select_from(events_alias)
+        return query
+
+    # Finland
+    def analytics_query_loan_statistics(self, start, end, locations=None, library=None):
+        """Build a database query that fetches analytics data
+        for loan statistics Excel export.
+
+        Heavily modified from analytics_query method.
+
+        This method uses low-level SQLAlchemy code to do all
+        calculations and data conversations in the database.
+
+        :return: A SQLAlchemy query
+        """
+
+        clauses = []
+
+        # Filter by date range
+        if start:
+            clauses += [CirculationEvent.start >= start]
+        if end:
+            clauses += [CirculationEvent.start < end]
+
+        # Take only checkout events
+        clauses += [
+            CirculationEvent.type.in_(
+                [CirculationEvent.CM_CHECKOUT, CirculationEvent.DISTRIBUTOR_CHECKOUT]
+            )
+        ]
+
+        if locations:
+            locations = locations.strip().split(",")
+
+            clauses += [
+                CirculationEvent.location.in_(locations),
+            ]
+
+        if library:
+            clauses += [CirculationEvent.library == library]
+
+        # Build the primary query. This is a query against the
+        # CirculationEvent table and a few other tables joined against
+        # it. This makes up the bulk of the data.
+        events_alias = (
+            select(
+                [
+                    Identifier.identifier,
+                    Identifier.type.label("identifier_type"),
+                    Edition.sort_title,
+                    Edition.sort_author,
+                    Work.id.label("work_id"),
+                    Edition.publisher,
+                    Edition.language,
+                    CirculationEvent.location,
+                    Library.name.label("library_name"),
+                    Edition.medium,
+                    Edition.id.label("edition_id"),
+                    func.count().label("count"),
+                ],
+            )
+            .select_from(
+                join(
+                    CirculationEvent,
+                    LicensePool,
+                    CirculationEvent.license_pool_id == LicensePool.id,
+                )
+                .join(Identifier, LicensePool.identifier_id == Identifier.id)
+                .join(Work, Work.id == LicensePool.work_id)
+                .join(Edition, Work.presentation_edition_id == Edition.id)
+                .join(Collection, LicensePool.collection_id == Collection.id)
+                .outerjoin(Library, CirculationEvent.library_id == Library.id)
+            )
+            .where(and_(*clauses))
+            .group_by(
+                Work.id,
+                Identifier.identifier,
+                Identifier.type.label("identifier_type"),
+                Edition.sort_title,
+                Edition.sort_author,
+                Work.id.label("work_id"),
+                Edition.publisher,
+                Edition.language,
+                CirculationEvent.location,
+                Library.name.label("library_name"),
+                Edition.id.label("edition_id"),
+                Edition.medium,
+            )
+            .order_by(Edition.sort_author.asc())
+            .alias("events_alias")
+        )
+
+        edition_id_column = literal_column(
+            events_alias.name + "." + events_alias.c.edition_id.name
+        )
+
+        contributors_alias = (
+            select(
+                [
+                    Contributor.sort_name,
+                    Contributor.display_name,
+                    Contributor.family_name,
+                    Contributor.lc,
+                    Contributor.viaf,
+                    Contribution.role,
+                ]
+            )
+            .where(Contribution.edition_id == edition_id_column)
+            .select_from(
+                join(
+                    Contributor,
+                    Contribution,
+                    Contributor.id == Contribution.contributor_id,
+                )
+            )
+            .alias("contributors_alias")
+        )
+
+        # Combine contributor sort_name with role, eg. "sortname (role)" in a subquery
+        contributors_subquery = select(
+            [
+                func.concat(
+                    contributors_alias.c.sort_name, " (", contributors_alias.c.role, ")"
+                ).label("contributor_with_role")
+            ]
+        ).select_from(contributors_alias)
+
+        contributors = select(
+            [
+                func.array_agg(contributors_subquery.c.contributor_with_role).label(
+                    "contributors_with_roles"
+                )
+            ]
+        ).select_from(contributors_subquery)
+
+        # A subquery can hook into the main query by referencing its
+        # 'work_id' field in its WHERE clause.
+        work_id_column = literal_column(
+            events_alias.name + "." + events_alias.c.work_id.name
+        )
+
+        # This subquery gets the names of a Work's genres as a single
+        # comma-separated string.
+        #
+
+        # This Alias selects some number of rows, each containing one
+        # string column (Genre.name). Genres with higher affinities with
+        # this work go first.
+        genres_alias = (
+            select([Genre.name.label("genre_name")])
+            .select_from(join(WorkGenre, Genre, WorkGenre.genre_id == Genre.id))
+            .where(WorkGenre.work_id == work_id_column)
+            .order_by(WorkGenre.affinity.desc(), Genre.name)
+            .alias("genres_subquery")
+        )
+
+        # Use array_agg() to consolidate the rows into one row -- this
+        # gives us a single value, an array of strings, for each
+        # Work.
+        genres = select([func.array_agg(genres_alias.c.genre_name)]).select_from(
+            genres_alias
+        )
+
+        # Build the main query out of the subqueries.
+        events = events_alias.c
+        query = select(
+            [
+                events.identifier,
+                events.identifier_type,
+                events.sort_title,
+                events.sort_author,
+                events.publisher,
+                events.language,
+                genres.label("genres"),
+                contributors.label("contributors"),
+                events.location,
+                events.library_name,
+                events.medium,
+                events.count,
             ]
         ).select_from(events_alias)
         return query
