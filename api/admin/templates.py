@@ -4,6 +4,7 @@ admin = """
 <head>
 <title>{{ app_name }}</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="shortcut icon" href="/images/favicon.ico">
 <link href="{{ admin_css }}" rel="stylesheet" />
 </head>
 <body>
