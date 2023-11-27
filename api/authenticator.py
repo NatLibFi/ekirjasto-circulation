@@ -482,6 +482,7 @@ class LibraryAuthenticator:
             if auth.token is None:
                 return INVALID_EKIRJASTO_DELEGATE_TOKEN
             provider = self.ekirjasto_provider
+            # Get decoded payload from the delegate token.
             provider_token = provider.validate_ekirjasto_delegate_token(auth.token)
             if isinstance(provider_token, ProblemDetail):
                 return provider_token
