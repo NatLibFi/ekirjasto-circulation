@@ -21,16 +21,7 @@ COPY --chown=simplified:simplified poetry.lock pyproject.toml /var/www/circulati
 RUN . env/bin/activate && \
     poetry install --only main,pg --sync
 
-ENV TZ=Europe/Helsinki
-
-# Copy over all Palace build files for this image
-COPY ./docker /ls_build
-RUN /bin/bash -c "/ls_build/system_setup.sh"
-COPY --chown=1000:1000 poetry.lock pyproject.toml /var/www/circulation/
-RUN /bin/bash -c "/ls_build/app_setup.sh \
-      && /ls_build/logrotate.sh"
-
-COPY --chown=1000:1000 . /var/www/circulation
+COPY --chown=simplified:simplified . /var/www/circulation
 
 ###############################################################################
 ## Circ-exec Image
@@ -75,28 +66,23 @@ ENV TZ=Europe/Helsinki
 
 # Setup nginx
 COPY docker/services/nginx /etc/nginx/
+COPY docker/admin_dist.tar.gz /mnt/admin_dist.tar.gz
 
 # Setup uwsgi
 COPY docker/services/uwsgi /etc/
 RUN mkdir -p /var/log/uwsgi && \
     chown -RHh simplified:simplified /var/log/uwsgi && \
     mkdir /var/run/uwsgi && \
-    chown simplified:simplified /var/run/uwsgi
+    chown simplified:simplified /var/run/uwsgi && \
+    cd /var/www/circulation/api/admin && \
+    tar xf /mnt/admin_dist.tar.gz && \
+    chown -R simplified:simplified dist && \
+    rm /mnt/admin_dist.tar.gz
+
+COPY --chown=simplified:simplified docker/config.py_admin /var/www/circulation/api/admin/config.py
 
 # Setup runit
 COPY docker/runit /etc/service/
-COPY docker/admin_dist.tar.gz /mnt/admin_dist.tar.gz
-
-RUN /bin/bash -c "/ls_build/nginx.sh && \
-      /ls_build/uwsgi.sh && \
-      rm -rf /ls_build && /bd_build/cleanup.sh && \
-	  apt-get install -y --no-install-recommends tar && \
-	  cd /var/www/circulation/api/admin && \
-	  tar xf /mnt/admin_dist.tar.gz && \
-	  chown -R simplified:simplified dist && \
-	  rm /mnt/admin_dist.tar.gz "
-
-COPY --chown=simplified:simplified docker/config.py_admin /var/www/circulation/api/admin/config.py
 
 VOLUME /var/log
 WORKDIR /home/simplified/circulation
