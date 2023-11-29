@@ -37,10 +37,13 @@ class EkirjastoController():
         """ Get the expire time to use for delegate token, it is calculated based on 
         expire time of the ekirjasto token.
         
-        :param ekirjasto_token_expires: Ekirjasto token expiration timestamp in seconds.
+        :param ekirjasto_token_expires: Ekirjasto token expiration timestamp in milliseconds.
         
         :return: Timestamp for the delegate token expiration.
         """
+        
+        # Ekirjasto expire is in milliseconds but JWT uses seconds.
+        ekirjasto_token_expires = int(ekirjasto_token_expires/1000)
         
         delegate_token_expires = (
             utc_now() + datetime.timedelta(
@@ -72,8 +75,8 @@ class EkirjastoController():
         delegate_sub = None
         delegate_expired = True
         try:
-            # We won't to attempt to refresh ekirjasto token in any case, so we don't validate 
-            # delegate token expiration and we need the decrypted ekirjasto token.
+            # We may attempt to refresh ekirjasto token in any case, so we don't validate 
+            # delegate token expiration by default and we need the decrypted ekirjasto token.
             delegate_payload = self._authenticator.ekirjasto_provider.validate_ekirjasto_delegate_token(
                 token,
                 validate_expire=validate_expire,

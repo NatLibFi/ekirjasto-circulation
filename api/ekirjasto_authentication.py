@@ -9,7 +9,7 @@ import uuid
 
 from abc import ABC
 from base64 import b64decode, b64encode
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, InvalidToken
 from enum import Enum
 from flask import url_for
 from flask_babel import lazy_gettext as _
@@ -105,8 +105,6 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
         super().__init__(
             library_id, integration_id, settings, library_settings, analytics
         )
-
-        self.log = logging.getLogger(f"{self.__module__}.{self.__class__.__name__}")
 
         self.ekirjasto_environment = settings.ekirjasto_environment
         self.delegate_expire_timemestamp = settings.delegate_expire_time
@@ -358,9 +356,14 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
         """
         def refresher_method(credential):
             credential.credential = str(uuid.uuid4())
+        
+        data_source = DataSource.lookup(_db, self.label(), autocreate=True)
+        if data_source == None:
+            raise InternalServerError("Ekirjasto authenticator failed to create DataSource for itself.")
+        
         credential = Credential.lookup(
             _db,
-            self.label(),
+            data_source,
             self.patron_delegate_id_credential_key(),
             patron,
             refresher_method,
@@ -393,7 +396,7 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
             _db, Configuration.EKIRJASTO_TOKEN_SIGNING_SECRET
         )
         
-        # Encrypt requires more secure secret than the sitewide_secret can provide.
+        # Encrypting requires stronger secret than the sitewide_secret can provide.
         secret = ConfigurationSetting.sitewide(_db, Configuration.EKIRJASTO_TOKEN_ENCRYPTING_SECRET)
         if not secret.value:
             secret.value = Fernet.generate_key().decode()
@@ -476,6 +479,8 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
             decoded_payload = self.decode_ekirjasto_delegate_token(delegate_token, validate_expire, decrypt_ekirjasto_token)
         except jwt.exceptions.InvalidTokenError as e:
             return INVALID_EKIRJASTO_DELEGATE_TOKEN
+        except InvalidToken as e:
+            return INVALID_EKIRJASTO_DELEGATE_TOKEN
         return decoded_payload
 
     def remote_fetch_metadata(self):
@@ -484,7 +489,7 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
         url = self._ekirjasto_api_url + "/v1/auth/metadata"
         
         try:
-            response = requests.get(url)
+            response = self.requests_get(url)
         except requests.exceptions.ConnectionError as e:
             raise RemoteInitiatedServerError(str(e), self.__class__.__name__)
         
@@ -498,7 +503,7 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
             
         return content
 
-    def remote_refresh_token(self, token: str):
+    def remote_refresh_token(self, token: str) -> (str, int):
         """ Refresh ekirjasto token with ekirjasto API call.
         
         We assume that the token is valid, API call fails if not.
@@ -512,10 +517,9 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
             return token, expires.timestamp()
         
         url = self._ekirjasto_api_url + "/v1/auth/refresh"
-        headers = {'Authorization': f'Bearer {token}'}
         
         try:
-            response = requests.post(url, headers=headers)
+            response = self.requests_post(url, token)
         except requests.exceptions.ConnectionError as e:
             raise RemoteInitiatedServerError(str(e), self.__class__.__name__)
         
@@ -535,7 +539,7 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
                 raise RemoteInitiatedServerError(str(e), self.__class__.__name__)
             
             token = content["token"]
-            expires = content["exp"]/1000
+            expires = content["exp"]
             return token, expires
         
     def remote_patron_lookup(
@@ -563,12 +567,9 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
                 return None
         
         url = self._ekirjasto_api_url + "/v1/auth/userinfo"
-        headers = {'Authorization': f'Bearer {ekirjasto_token}'}
-        print("remote_patron_lookup headers", headers)
-        print("remote_patron_lookup url", url)
         
         try:
-            response = requests.get(url, headers=headers)
+            response = self.requests_get(url, ekirjasto_token)
         except requests.exceptions.ConnectionError as e:
             raise RemoteInitiatedServerError(str(e), self.__class__.__name__)
         
@@ -666,7 +667,7 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
 
     def ekirjasto_authenticate(
         self, _db: Session, ekirjasto_token: str
-    ):
+    ) -> (Patron, bool):
         """ Authenticate patron with remote ekirjasto API and if necessary, 
         create authenticated patron if not in database.
 
@@ -686,6 +687,7 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
             patron, is_new = patron.get_or_create_patron(
                 _db, self.library_id, analytics=self.analytics
             )
+            patron.last_external_sync = utc_now()
         
         return patron, is_new
 
@@ -700,6 +702,8 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
         :return: A Patron if one can be authenticated; a ProblemDetail
             if an error occurs; None if the credentials are missing or wrong.
         """
+        # authorization is the decoded payload of the delegate token, including 
+        # encrypted ekirjasto token.
         if type(authorization) != dict:
             return UNSUPPORTED_AUTHENTICATION_MECHANISM
         
@@ -744,7 +748,7 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
             return patron
         if delegate_patron and patron.id != delegate_patron.id:
             # This situation should never happen.
-            raise PatronNotFoundOnRemote(404, "Remote patron is confilcting with delegate patron.")
+            raise PatronNotFoundOnRemote(404, "Remote patron is conflicting with delegate patron.")
         if patron.cached_neighborhood and not patron.neighborhood:
             # Patron.neighborhood (which is not a model field) was not
             # set, probably because we avoided an expensive metadata
@@ -752,3 +756,15 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
             # model field) to use in situations like this.
             patron.neighborhood = patron.cached_neighborhood
         return patron
+
+    def requests_get(self, url, ekirjasto_token=None):
+        headers = None
+        if ekirjasto_token:
+            headers = {'Authorization': f'Bearer {ekirjasto_token}'}
+        return requests.get(url, headers=headers)
+
+    def requests_post(self, url, ekirjasto_token=None):
+        headers = None
+        if ekirjasto_token:
+            headers = {'Authorization': f'Bearer {ekirjasto_token}'}
+        return requests.post(url, headers=headers)
