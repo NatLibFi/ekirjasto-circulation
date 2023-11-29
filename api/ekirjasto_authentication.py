@@ -129,7 +129,7 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
         
     @classmethod
     def label(cls) -> str:
-        return "E-kirjasto"
+        return "E-kirjasto provider for circulation manager"
         
     @classmethod
     def patron_delegate_id_credential_key(cls) -> str:
