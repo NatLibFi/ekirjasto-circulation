@@ -89,3 +89,4 @@ WORKDIR /home/simplified/circulation
 EXPOSE 80
 
 CMD ["/sbin/my_init"]
+
