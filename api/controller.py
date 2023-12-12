@@ -94,6 +94,7 @@ from core.model import (
     Representation,
     Session,
     get_one,
+    json_serializer,
 )
 from core.model.devicetokens import (
     DeviceToken,
@@ -179,6 +180,7 @@ class CirculationManager:
     odl_notification_controller: ODLNotificationController
     static_files: StaticFileController
     playtime_entries: PlaytimeEntriesController
+    catalog_descriptions: CatalogDescriptionsController
 
     # Admin controllers
     admin_sign_in_controller: SignInController
@@ -448,6 +450,7 @@ class CirculationManager:
         self.static_files = StaticFileController(self)
         self.patron_auth_token = PatronAuthTokenController(self)
         self.playtime_entries = PlaytimeEntriesController(self)
+        self.catalog_descriptions = CatalogDescriptionsController(self)
 
     def setup_configuration_dependent_controllers(self):
         """Set up all the controllers that depend on the
@@ -2440,6 +2443,100 @@ class StaticFileController(CirculationManagerController):
         )
         return self.static_file(directory, filename)
 
+# Finland
+class CatalogDescriptionsController(CirculationManagerController):
+    def get_catalogs(self, library_uuid=None):
+        catalogs = []
+        libraries = []
+        
+        if library_uuid != None:
+            libraries = [
+                self._db.query(Library).filter(Library.uuid == library_uuid).one()
+            ]
+        else:
+            libraries = self._db.query(Library).order_by(Library.name).all()
+
+        for library in libraries:
+            settings = library.settings_dict
+            images = []
+            if library.logo:
+                images += [
+                    {
+                        "rel": "http://opds-spec.org/image/thumbnail",
+                        "href": library.logo.data_url,
+                        "type": "image/png"
+                    }
+                ]
+
+            authentication_document_url = url_for(
+                "authentication_document",
+                library_short_name=library.short_name, 
+                _external=True
+            )
+
+            catalog_url = url_for(
+                "acquisition_groups",
+                library_short_name=library.short_name, 
+                _external=True
+            )
+
+            catalogs += [
+                {
+                    "metadata": {
+                        "id": "urn:uuid:" + library.uuid,
+                        "title": library.name,
+                        "short_name": library.short_name,
+                        "modified": "2023-06-09T15:56:17Z",
+                        "updated": "2023-06-09T15:56:17Z",
+                        "description": settings["library_description"],
+                        "isAutomatic": True
+                    },
+                    "links": [
+                        {
+                            "href": catalog_url,
+                            "rel": "self"
+                        },
+                        {
+                            "rel": "http://opds-spec.org/catalog",
+                            "href": catalog_url,
+                            "type": "application/atom+xml;profile=opds-catalog;kind=acquisition"
+                        },
+                        {
+                            "href": catalog_url,
+                            "rel": "start"
+                        },
+                        {
+                            "href": authentication_document_url,
+                            "type": "application/vnd.opds.authentication.v1.0+json"
+                        },
+                        {
+                            "href": settings["help_web"] if "help_web" in settings else "mailto:"+settings["help_email"],
+                            "rel": "help"
+                        }
+                    ],
+                    "images": images
+                }
+            ]
+        
+        response_json = {
+            "metadata": {
+                "title": "Libraries"
+            },
+            "catalogs": catalogs,
+            "links": [
+                {
+                    "rel": "self",
+                    "href": url_for("libraries", _external=True),
+                    "type": "application/opds+json"
+                }
+            ]
+        }
+        
+        return Response(
+            json_serializer(response_json),
+            status=200,
+            mimetype="application/json",
+        )
 
 class PatronAuthTokenController(CirculationManagerController):
     def get_token(self):
