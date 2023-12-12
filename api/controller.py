@@ -2493,17 +2493,9 @@ class CatalogDescriptionsController(CirculationManagerController):
                     },
                     "links": [
                         {
-                            "href": catalog_url,
-                            "rel": "self"
-                        },
-                        {
                             "rel": "http://opds-spec.org/catalog",
                             "href": catalog_url,
                             "type": "application/atom+xml;profile=opds-catalog;kind=acquisition"
-                        },
-                        {
-                            "href": catalog_url,
-                            "rel": "start"
                         },
                         {
                             "href": authentication_document_url,
@@ -2526,7 +2518,7 @@ class CatalogDescriptionsController(CirculationManagerController):
             "links": [
                 {
                     "rel": "self",
-                    "href": url_for("libraries", _external=True),
+                    "href": url_for("client_libraries", _external=True),
                     "type": "application/opds+json"
                 }
             ]
