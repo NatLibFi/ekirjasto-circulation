@@ -125,7 +125,7 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
 
     @property
     def flow_type(self) -> str:
-        return "http://opds-spec.org/auth/ekirjasto"
+        return "http://e-kirjasto.fi/authtype/ekirjasto"
         
     @classmethod
     def label(cls) -> str:
@@ -163,7 +163,7 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
         
         Example:
         {
-            "type": "http://opds-spec.org/auth/ekirjasto",
+            "type": "http://e-kirjasto.fi/authtype/ekirjasto",
             "description": "E-kirjasto",
             "links": [
                 {
