@@ -171,11 +171,11 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
                     "href": "http://localhost:6500/ellibs-test/ekirjasto_authenticate?provider=E-kirjasto"
                 },
                 {
-                    "rel": "ekirjasto_api",
+                    "rel": "api",
                     "href": "https://e-kirjasto.loikka.dev"
                 },
                 {
-                    "rel": "ekirjasto_google_auth",
+                    "rel": "google_auth",
                     "href": "https://e-kirjasto.loikka.dev/v1/auth/google"
                 },
                 
@@ -213,47 +213,47 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
                     "href": self._create_authenticate_url(_db)
                 },
                 {
-                    "rel" : "ekirjasto_api",
+                    "rel" : "api",
                     "href": self._ekirjasto_api_url
                 },
                 {
-                    "rel" : "ekirjasto_google_auth",
+                    "rel" : "google_auth",
                     "href": f'{self._ekirjasto_api_url}/v1/auth/google'
                 },
                 {
-                    "rel" : "ekirjasto_apple_auth",
+                    "rel" : "apple_auth",
                     "href": f'{self._ekirjasto_api_url}/v1/auth/google'
                 },
                 {
-                    "rel" : "ekirjasto_tunnistus_start",
+                    "rel" : "tunnistus_start",
                     "href": f'{self._ekirjasto_api_url}/v1/tunnistus?locale=fi'
                 },
                 {
-                    "rel" : "ekirjasto_tunnistus_finish",
+                    "rel" : "tunnistus_finish",
                     "href": f'{self._ekirjasto_api_url}/v1/tunnistus/saml2acs'
                 },
                 {
-                    "rel" : "ekirjasto_passkey_login_start",
+                    "rel" : "passkey_login_start",
                     "href": f'{self._ekirjasto_api_url}/v1/auth/passkey/login/start'
                 },
                 {
-                    "rel" : "ekirjasto_passkey_login_finish",
+                    "rel" : "passkey_login_finish",
                     "href": f'{self._ekirjasto_api_url}/v1/auth/passkey/login/finish'
                 },
                 {
-                    "rel" : "ekirjasto_passkey_register_start",
+                    "rel" : "passkey_register_start",
                     "href": f'{self._ekirjasto_api_url}/v1/auth/passkey/register/start'
                 },
                 {
-                    "rel" : "ekirjasto_passkey_register_finish",
+                    "rel" : "passkey_register_finish",
                     "href": f'{self._ekirjasto_api_url}/v1/auth/passkey/register/finish'
                 },
                 {
-                    "rel" : "ekirjasto_otp_start",
+                    "rel" : "otp_start",
                     "href": f'{self._ekirjasto_api_url}/v1/auth/otp/start'
                 },
                 {
-                    "rel" : "ekirjasto_otp_finish",
+                    "rel" : "otp_finish",
                     "href": f'{self._ekirjasto_api_url}/v1/auth/otp/finish'
                 },
             ],
