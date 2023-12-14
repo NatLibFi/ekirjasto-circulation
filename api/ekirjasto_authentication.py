@@ -328,7 +328,7 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
         #       At least cached_neighborhood is required.
         patrondata = PatronData(
             permanent_id=_get_key_or_none(userinfo_json, "username"), # TODO: This must be some permanent like "sub"
-            authorization_identifier=_get_key_or_none(userinfo_json, "email"),
+            authorization_identifier=_get_key_or_none(userinfo_json, "username"), # TODO: We don't know exactly what this should be.
             external_type=_get_key_or_none(userinfo_json, "role"),
             personal_name=_get_key_or_none(userinfo_json, "name"),
             email_address=_get_key_or_none(userinfo_json, "email"),
