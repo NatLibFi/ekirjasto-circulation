@@ -138,7 +138,7 @@ def run(url=None):
         port = 80
 
     # Required for subdomain support.
-    #app.config["SERVER_NAME"] = netloc
+    app.config["SERVER_NAME"] = netloc
 
     debug = True
 
