@@ -30,7 +30,7 @@ from api.base_controller import BaseCirculationManagerController
 from api.circulation import CirculationAPI
 from api.circulation_exceptions import *
 from api.config import CannotLoadConfiguration, Configuration
-from .ekirjasto_controller import EkirjastoController  # Finland
+from api.ekirjasto_controller import EkirjastoController  # Finland
 from api.opensearch_analytics_search import OpenSearchAnalyticsSearch
 from api.custom_index import CustomIndexView
 from api.lanes import (
@@ -2479,6 +2479,8 @@ class CatalogDescriptionsController(CirculationManagerController):
                 library_short_name=library.short_name, 
                 _external=True
             )
+            
+            timenow = utc_now().strftime('%Y-%m-%dT%H:%M:%SZ')
 
             catalogs += [
                 {
@@ -2486,8 +2488,8 @@ class CatalogDescriptionsController(CirculationManagerController):
                         "id": "urn:uuid:" + library.uuid,
                         "title": library.name,
                         "short_name": library.short_name,
-                        "modified": "2023-06-09T15:56:17Z",
-                        "updated": "2023-06-09T15:56:17Z",
+                        "modified": timenow,
+                        "updated": timenow,
                         "description": settings["library_description"],
                         "isAutomatic": True
                     },
