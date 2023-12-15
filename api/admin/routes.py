@@ -308,8 +308,8 @@ def bulk_circulation_events():
 @allows_library
 @requires_admin
 def bulk_circulation_events_excel():
-    """Returns a JSON representation of all circulation events with optional
-    start and end times."""
+    """Returns an Excel file containing loan amounts and co-authors
+    for each work on a given timeframe."""
     (
         data,
         date,
