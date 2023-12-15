@@ -2449,10 +2449,14 @@ class CatalogDescriptionsController(CirculationManagerController):
         catalogs = []
         libraries = []
         
+        
         if library_uuid != None:
-            libraries = [
-                self._db.query(Library).filter(Library.uuid == library_uuid).one()
-            ]
+            try:
+                libraries = [
+                    self._db.query(Library).filter(Library.uuid == library_uuid).one()
+                ]
+            except NoResultFound:
+                return LIBRARY_NOT_FOUND
         else:
             libraries = self._db.query(Library).order_by(Library.name).all()
 
@@ -2482,32 +2486,45 @@ class CatalogDescriptionsController(CirculationManagerController):
             
             timenow = utc_now().strftime('%Y-%m-%dT%H:%M:%SZ')
 
+            metadata = {
+                "id": "urn:uuid:" + library.uuid,
+                "title": library.name,
+                "short_name": library.short_name,
+                "modified": timenow,
+                "updated": timenow,
+                "isAutomatic": True
+            }
+            
+            if "library_description" in settings:
+                metadata["description"] = settings["library_description"]
+
+            links = [
+                {
+                    "rel": "http://opds-spec.org/catalog",
+                    "href": catalog_url,
+                    "type": "application/atom+xml;profile=opds-catalog;kind=acquisition"
+                },
+                {
+                    "href": authentication_document_url,
+                    "type": "application/vnd.opds.authentication.v1.0+json"
+                }
+            ]
+            
+            if "help_web" in settings:
+                links += [{
+                    "href": settings["help_web"],
+                    "rel": "help"
+                }]
+            elif "help_email" in settings:
+                links += [{
+                    "href": "mailto:"+settings["help_email"],
+                    "rel": "help"
+                }]
+
             catalogs += [
                 {
-                    "metadata": {
-                        "id": "urn:uuid:" + library.uuid,
-                        "title": library.name,
-                        "short_name": library.short_name,
-                        "modified": timenow,
-                        "updated": timenow,
-                        "description": settings["library_description"],
-                        "isAutomatic": True
-                    },
-                    "links": [
-                        {
-                            "rel": "http://opds-spec.org/catalog",
-                            "href": catalog_url,
-                            "type": "application/atom+xml;profile=opds-catalog;kind=acquisition"
-                        },
-                        {
-                            "href": authentication_document_url,
-                            "type": "application/vnd.opds.authentication.v1.0+json"
-                        },
-                        {
-                            "href": settings["help_web"] if "help_web" in settings else "mailto:"+settings["help_email"],
-                            "rel": "help"
-                        }
-                    ],
+                    "metadata": metadata,
+                    "links": links,
                     "images": images
                 }
             ]
