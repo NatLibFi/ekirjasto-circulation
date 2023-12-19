@@ -226,11 +226,11 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
                 },
                 {
                     "rel" : "tunnistus_start",
-                    "href": f'{self._ekirjasto_api_url}/v1/tunnistus?locale=fi'
+                    "href": f'{self._ekirjasto_api_url}/v1/auth/tunnistus/start?locale=fi'
                 },
                 {
                     "rel" : "tunnistus_finish",
-                    "href": f'{self._ekirjasto_api_url}/v1/tunnistus/saml2acs'
+                    "href": f'{self._ekirjasto_api_url}/v1/auth/tunnistus/finish'
                 },
                 {
                     "rel" : "passkey_login_start",
