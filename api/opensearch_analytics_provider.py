@@ -201,15 +201,13 @@ class OpenSearchAnalyticsProvider(LocalAnalyticsProvider):
             "series_position": work.series_position if work else None,
             "language": work.language if work else None,
             "open_access": license_pool.open_access if license_pool else None,
-            "authors": list(
-                [
-                    contribution.contributor.sort_name
-                    for contribution in edition.contributions
-                    if contribution.role == Contributor.AUTHOR_ROLE
-                ]
-                if edition
-                else None
-            ),
+            "authors": [
+                contribution.contributor.sort_name
+                for contribution in edition.contributions
+                if contribution.role == Contributor.AUTHOR_ROLE
+            ]
+            if edition
+            else None,
             "contributions": [
                 ": ".join(
                     contribution.contributor.role,
