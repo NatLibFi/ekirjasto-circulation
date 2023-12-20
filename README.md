@@ -1,16 +1,9 @@
-# Palace Manager
+# E-kirjasto Circulation Manager
 
-[![Test & Build](https://github.com/ThePalaceProject/circulation/actions/workflows/test-build.yml/badge.svg)](https://github.com/ThePalaceProject/circulation/actions/workflows/test-build.yml)
-[![codecov](https://codecov.io/github/thepalaceproject/circulation/branch/main/graph/badge.svg?token=T09QW6DLH6)](https://codecov.io/github/thepalaceproject/circulation)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://pycqa.github.io/isort/)
-[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
-![Python: 3.8,3.9,3.10,3.11](https://img.shields.io/badge/Python-3.8%20|%203.9%20|%203.10%20|%203.11-blue)
+This is the E-kirjasto fork of the [The Palace Project](https://thepalaceproject.org) Palace Manager (which is a fork of
+[Library Simplified](http://www.librarysimplified.org/) Circulation Manager).
 
-This is a [The Palace Project](https://thepalaceproject.org) maintained fork of the NYPL
-[Library Simplified](http://www.librarysimplified.org/) Circulation Manager.
-
-## Installation
+<!-- ## Installation
 
 Docker images created from this code are available at:
 
@@ -18,21 +11,12 @@ Docker images created from this code are available at:
 - [circ-scripts](https://github.com/ThePalaceProject/circulation/pkgs/container/circ-scripts)
 - [circ-exec](https://github.com/ThePalaceProject/circulation/pkgs/container/circ-exec)
 
-Docker images are the preferred way to deploy this code in a production environment.
+Docker images are the preferred way to deploy this code in a production environment. -->
 
 ## Git Branch Workflow
 
-| Branch  | Python Version |
-| ------- | -------------- |
-| main    | Python 3       |
-| python2 | Python 2       |
-
 The default branch is `main` and that's the working branch that should be used when branching off for bug fixes or new
 features.
-
-Python 2 stopped being supported after January 1st, 2020 but there is still a `python2` branch which can be used. As of
-August 2021, development will be done in the `main` branch and the `python2` branch will not be updated unless
-absolutely necessary.
 
 ## Set Up
 
@@ -124,14 +108,14 @@ Poetry can be installed using the command `curl -sSL https://install.python-poet
 More information about installation options can be found in the
 [poetry documentation](https://python-poetry.org/docs/master/#installation).
 
-### Opensearch
+### OpenSearch
 
-Palace now supports Opensearch: please use it instead of Elasticsearch.
+Palace now supports OpenSearch: please use it instead of Elasticsearch.
 Elasticsearch is no longer supported.
 
 #### Docker
 
-We recommend that you run Opensearch with docker using the following docker commands:
+We recommend that you run OpenSearch with docker using the following docker commands:
 
 ```sh
 docker run --name opensearch -d --rm -p 9006:9200 -e "discovery.type=single-node" -e "plugins.security.disabled=true" "opensearchproject/opensearch:1"
@@ -428,9 +412,9 @@ service has been configured.
 #### Configuring Search
 
 Navigate to `System Configuration → Search` and add a new search configuration. The required URL is
-the URL of the [Opensearch instance configured earlier](#opensearch):
+the URL of the [OpenSearch instance configured earlier](#opensearch):
 
-![Opensearch](.github/readme/search.png)
+![OpenSearch](.github/readme/search.png)
 
 #### Generating Search Indices
 
