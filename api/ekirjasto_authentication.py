@@ -306,13 +306,15 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
         
         Example of userinfo_json
         {
-            "email": "example@example.com",
-            "exp": 1703943722208,
-            "family_name": "Sukunimi",
-            "given_name": "Etunimi",
-            "name": "Etunimi Sukunimi",
-            "role": "user",
-            "sub": "12345678901234567890"
+            'exp': 1703141144518, 
+            'family_name': 'Testi', 
+            'given_name': 'Testi', 
+            'name': 'Testi Testi', 
+            'role': 'customer', 
+            'sub': '1bf3c6ea-0502-45fc-a785-0113d8f78a51', 
+            'municipality': 'Helsinki', 
+            'verified': True, 
+            'passkeys': []
         }
         
         After OTP authentication seems to return:
@@ -324,15 +326,14 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
                 return userinfo_json[key]
             return None
         
-        # TODO: Check if more info is needed/available. E.g. blocked, fines, etc
-        #       At least cached_neighborhood is required.
         patrondata = PatronData(
-            permanent_id=_get_key_or_none(userinfo_json, "username"), # TODO: This must be some permanent like "sub"
-            authorization_identifier=_get_key_or_none(userinfo_json, "username"), # TODO: We don't know exactly what this should be.
+            permanent_id=_get_key_or_none(userinfo_json, "sub"),
+            authorization_identifier=_get_key_or_none(userinfo_json, "sub"), # TODO: We don't know exactly what this should be.
             external_type=_get_key_or_none(userinfo_json, "role"),
             personal_name=_get_key_or_none(userinfo_json, "name"),
             email_address=_get_key_or_none(userinfo_json, "email"),
             username=_get_key_or_none(userinfo_json, "username"),
+            cached_neighborhood=_get_key_or_none(userinfo_json, "municipality"),
             complete=True,
         )
         
