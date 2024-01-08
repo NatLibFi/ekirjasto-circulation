@@ -119,9 +119,6 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
         self._ekirjasto_api_url = self.ekirjasto_environment.value
         if self.ekirjasto_environment == EkirjastoEnvironment.FAKE:
             self._ekirjasto_api_url = EkirjastoEnvironment.DEVELOPMENT.value
-        
-        self._metadata_cache = None
-        self._metadata_cache_expires = utc_now()
 
     @property
     def flow_type(self) -> str:
@@ -174,33 +171,9 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
                     "rel": "api",
                     "href": "https://e-kirjasto.loikka.dev"
                 },
-                {
-                    "rel": "google_auth",
-                    "href": "https://e-kirjasto.loikka.dev/v1/auth/google"
-                },
                 
                 ...
-            ],
-            "metadata": {
-                "apple": {
-                    "client_id": "dev.loikka.e-kirjasto",
-                    "redirect_uris": [
-                        "https://e-kirjasto.loikka.dev/v1/auth/apple"
-                    ]
-                },
-                "google": {
-                    "client_id": "462705856349-4c6e3qq8pbf8d9431fiank56akm4li4s.apps.googleusercontent.com",
-                    "redirect_uris": [
-                        "https://e-kirjasto.loikka.dev/v1/auth/google"
-                    ],
-                    "android_client_ids": [
-                        "462705856349-1u8eeh5v656bq1dekrkub1gh56gth316.apps.googleusercontent.com"
-                    ],
-                    "ios_client_ids": [
-                        "462705856349-elejphck0ojv1m9jvful1edjp3uen8aj.apps.googleusercontent.com"
-                    ]
-                }
-            }
+            ]
         }
         """
         
@@ -215,14 +188,6 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
                 {
                     "rel" : "api",
                     "href": self._ekirjasto_api_url
-                },
-                {
-                    "rel" : "google_auth",
-                    "href": f'{self._ekirjasto_api_url}/v1/auth/google'
-                },
-                {
-                    "rel" : "apple_auth",
-                    "href": f'{self._ekirjasto_api_url}/v1/auth/google'
                 },
                 {
                     "rel" : "tunnistus_start",
@@ -248,16 +213,7 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
                     "rel" : "passkey_register_finish",
                     "href": f'{self._ekirjasto_api_url}/v1/auth/passkey/register/finish'
                 },
-                {
-                    "rel" : "otp_start",
-                    "href": f'{self._ekirjasto_api_url}/v1/auth/otp/start'
-                },
-                {
-                    "rel" : "otp_finish",
-                    "href": f'{self._ekirjasto_api_url}/v1/auth/otp/finish'
-                },
-            ],
-            "metadata": self._get_ekirjasto_metadata()
+            ]
         }
         
         return flow_doc
@@ -281,23 +237,6 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
             provider=self.label(),
         )
         
-    def _get_ekirjasto_metadata(self):
-        """ Get metadata for the ekirjasto authentication methods. Local cache 
-        is used if available and not too old, otherwise metadata fetched from remote.
-        """
-        
-        metadata = None
-        if not self._metadata_cache or self._metadata_cache_expires < utc_now():
-            # Update local metadata cache.
-            metadata = self.remote_fetch_metadata()
-            
-            # Update global cache every 5 minutes.
-            self._metadata_cache_expires = utc_now() + datetime.timedelta(minutes=5)
-        else:
-            metadata = self._metadata_cache
-            
-        return metadata
-        
     def _run_self_tests(self, _db):
         pass
         
@@ -316,9 +255,6 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
             'verified': True, 
             'passkeys': []
         }
-        
-        After OTP authentication seems to return:
-        {'username': 'johannes.ylonen+test1@indium.fi', 'exp': 1707333838913, 'verified': False}
         """
         
         def _get_key_or_none(userinfo_json, key):
@@ -483,26 +419,6 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
         except InvalidToken as e:
             return INVALID_EKIRJASTO_DELEGATE_TOKEN
         return decoded_payload
-
-    def remote_fetch_metadata(self):
-        """ Fetch metadata for the ekirjasto authentication methods from the ekirjasto API."""
-        
-        url = self._ekirjasto_api_url + "/v1/auth/metadata"
-        
-        try:
-            response = self.requests_get(url)
-        except requests.exceptions.ConnectionError as e:
-            raise RemoteInitiatedServerError(str(e), self.__class__.__name__)
-        
-        if response.status_code != 200:
-            return None
-        
-        try:
-            content = response.json()
-        except requests.exceptions.JSONDecodeError as e:
-            raise RemoteInitiatedServerError(str(e), self.__class__.__name__)
-            
-        return content
 
     def remote_refresh_token(self, token: str) -> (str, int):
         """ Refresh ekirjasto token with ekirjasto API call.

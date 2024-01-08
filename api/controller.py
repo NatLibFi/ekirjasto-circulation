@@ -1437,7 +1437,7 @@ class LoanController(CirculationManagerController):
         """
         patron = flask.request.patron
         library = flask.request.library
-
+        
         header = self.authorization_header()
         credential = self.manager.auth.get_credential_from_header(header)
 
@@ -2492,7 +2492,7 @@ class CatalogDescriptionsController(CirculationManagerController):
                 "short_name": library.short_name,
                 "modified": timenow,
                 "updated": timenow,
-                "isAutomatic": True
+                "isAutomatic": False
             }
             
             if "library_description" in settings:

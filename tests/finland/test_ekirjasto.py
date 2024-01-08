@@ -35,48 +35,37 @@ from tests.core.mock import MockRequestsResponse
 from tests.fixtures.api_controller import ControllerFixture
 from tests.fixtures.database import DatabaseTransactionFixture
 
-metadata_expected = {
-    "apple": {
-        "client_id": "dev.loikka.e-kirjasto",
-        "redirect_uris": [
-            "https://e-kirjasto.loikka.dev/v1/auth/apple"
-        ]
-    },
-    "google": {
-        "client_id": "462705856349-4c6e3qq8pbf8d9431fiank56akm4li4s.apps.googleusercontent.com",
-        "redirect_uris": [
-            "https://e-kirjasto.loikka.dev/v1/auth/google"
-        ],
-        "android_client_ids": [
-            "462705856349-1u8eeh5v656bq1dekrkub1gh56gth316.apps.googleusercontent.com"
-        ],
-        "ios_client_ids": [
-            "462705856349-elejphck0ojv1m9jvful1edjp3uen8aj.apps.googleusercontent.com"
-        ]
-    }
-}
-
 class MockEkirjastoRemoteAPI:
     
     def __init__(self):
         self.test_users = {
             # TODO: currently there is no difference with (in our perspective) verified and unverified, but this might change.
             'unverified': {
+                'sub': '0CA5A0D5-ABA2-4104-AEFB-E37A30B66E23', 
                 'name': 'Unverified User',
+                'family_name': 'User', 
+                'given_name': 'Unverified', 
                 'email': 'unverified.user@example.com',
                 'username': 'unverified.user',
-                'role': 'user',
+                'role': 'customer',
+                'municipality': 'Helsinki',
                 # When True, this will be replaced with real expire timestamp in init.
                 'exp': True,
-                'verified': False
+                'verified': False,
+                'passkeys': []
             },
             'verified': {
+                'sub': '6B0DDBEE-572A-4B94-8619-500CAD9747D6', 
                 'name': 'Verified User',
+                'family_name': 'User', 
+                'given_name': 'Verified', 
                 'email': 'verified.user@example.com',
                 'username': 'verified.user',
-                'role': 'user',
+                'role': 'customer',
+                'municipality': 'Helsinki',
                 'exp': True,
-                'verified': True
+                'verified': True,
+                'passkeys': []
             }
         }
         self.access_tokens = {}
@@ -128,9 +117,6 @@ class MockEkirjastoRemoteAPI:
             user_id = None
         
         return user_id
-    
-    def api_metadata(self):
-        return MockRequestsResponse(200, content=metadata_expected)
     
     def api_userinfo(self, access_token):
         user_id = self._check_authentication(access_token)
@@ -186,8 +172,6 @@ class MockEkirjastoAuthenticationAPI(EkirjastoAuthenticationAPI):
             )
         if "userinfo" in url:
             return self.mock_api.api_userinfo(ekirjasto_token)
-        if "metadata" in url:
-            return self.mock_api.api_metadata()
         
         assert None, f"Mockup for GET {url} not created"
 
@@ -254,11 +238,7 @@ class TestEkirjastoAuthentication:
             assert provider.label() == doc["description"]
             assert provider.flow_type == doc["type"]
             
-            assert doc["links"][0]["href"] == "http://localhost/test-library/ekirjasto_authenticate?provider=E-kirjasto"
-            
-            # Check that metadata is not empty
-            assert isinstance(doc["metadata"], dict)
-            assert doc["metadata"] == metadata_expected
+            assert doc["links"][0]["href"] == "http://localhost/test-library/ekirjasto_authenticate?provider=E-kirjasto+provider+for+circulation+manager"
 
     def test_from_config(
         self,
@@ -442,32 +422,6 @@ class TestEkirjastoAuthentication:
         decoded_payload = provider.decode_ekirjasto_delegate_token(delegate_token, validate_expire=False)
         assert decoded_payload != None
 
-    def test_fetch_metadata_remote_success(
-        self,
-        create_provider: Callable[..., MockEkirjastoAuthenticationAPI],
-    ):
-        provider = create_provider()
-        
-        metadata = provider.remote_fetch_metadata()
-        assert metadata == metadata_expected
-
-    def test_fetch_metadata_bad_remote_status_code(
-        self,
-        create_provider: Callable[..., MockEkirjastoAuthenticationAPI],
-    ):
-        provider = create_provider(failure_status_code=502)
-        
-        metadata = provider.remote_fetch_metadata()
-        assert metadata == None
-
-    def test_fetch_metadata_bad_remote_connection(
-        self,
-        create_provider: Callable[..., MockEkirjastoAuthenticationAPI],
-    ):
-        provider = create_provider(bad_connection=True)
-        
-        pytest.raises(RemoteInitiatedServerError, provider.remote_fetch_metadata)
-
     def test_refresh_token_remote_success(
         self,
         create_provider: Callable[..., MockEkirjastoAuthenticationAPI],
@@ -558,8 +512,7 @@ class TestEkirjastoAuthentication:
         
         assert isinstance(patrondata, PatronData)
         
-        # TODO: Note in future this might be "sub" or something else what ekirjasto API returns.
-        assert patrondata.permanent_id == user['username']
+        assert patrondata.permanent_id == user['sub']
         
     def test_patron_lookup_remote_invalidated(
         self,
