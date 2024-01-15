@@ -871,7 +871,7 @@ class TestAdminStatic:
         root_path = Path(__file__).parent.parent.parent.parent
         local_path = (
             root_path
-            / "api/admin/node_modules/@thepalaceproject/circulation-admin/dist"
+            / "api/admin/node_modules/@natlibfi/ekirjasto-circulation-admin/dist"
         )
 
         url = "/admin/static/circulation-admin.js"

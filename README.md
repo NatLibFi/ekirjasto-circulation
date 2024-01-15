@@ -5,11 +5,11 @@ This is the E-kirjasto fork of the [The Palace Project](https://thepalaceproject
 
 <!-- ## Installation
 
-Docker images created from this code are available at:
+Docker images created from this code will be available at:
 
-- [circ-webapp](https://github.com/ThePalaceProject/circulation/pkgs/container/circ-webapp)
-- [circ-scripts](https://github.com/ThePalaceProject/circulation/pkgs/container/circ-scripts)
-- [circ-exec](https://github.com/ThePalaceProject/circulation/pkgs/container/circ-exec)
+- [circ-webapp](https://github.com/NatLibFi/circulation/pkgs/container/ekirjasto-circ-webapp)
+- [circ-scripts](https://github.com/NatLibFi/circulation/pkgs/container/ekirjasto-circ-scripts)
+- [circ-exec](https://github.com/NatLibFi/circulation/pkgs/container/ekirjasto-circ-exec)
 
 Docker images are the preferred way to deploy this code in a production environment. -->
 
@@ -331,6 +331,7 @@ Run the application with:
 poetry run python app.py
 ```
 
+psear
 Check that there is now a web server listening on port `6500`:
 
 ```sh
@@ -341,7 +342,7 @@ curl http://localhost:6500/
 
 #### Access
 
-By default, the application is configured to provide a built-in version of the [admin web interface](https://github.com/ThePalaceProject/circulation-admin).
+By default, the application is configured to provide a built-in version of the [admin web interface](https://github.com/NatLibFi/ekirjasto-circulation-admin).
 The admin interface can be accessed by visiting the `/admin` endpoint:
 
 ```sh

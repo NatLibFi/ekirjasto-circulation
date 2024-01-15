@@ -6,7 +6,7 @@
 # The only difference are what services are enabled.
 ###############################################################################
 
-ARG BASE_IMAGE=ghcr.io/thepalaceproject/circ-baseimage:latest
+ARG BASE_IMAGE=ghcr.io/natlibfi/ekirjasto-circ-baseimage:latest
 
 FROM ${BASE_IMAGE} AS common
 

@@ -164,13 +164,13 @@ module = [
 ]
 
 [tool.poetry]
-authors = ["The Palace Project <info@thepalaceproject.org>"]
-description = "The Palace Project Manager Application"
-homepage = "https://thepalaceproject.org"
+authors = ["E-kirjasto"]
+description = "E-kirjasto Circulation Manager Application"
+homepage = "https://kansalliskirjasto.fi"
 license = "Apache-2.0"
-name = "Palace Manager"
+name = "E-kirjasto Circulation Manager"
 readme = "README.md"
-repository = "https://github.com/ThePalaceProject/circulation"
+repository = "https://github.com/NatLibFi/ekirjasto-circulation"
 version = "0"  # Version number is managed with tags in git
 
 [tool.poetry.dependencies]
