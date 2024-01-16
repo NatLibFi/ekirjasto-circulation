@@ -30,6 +30,8 @@ from api.base_controller import BaseCirculationManagerController
 from api.circulation import CirculationAPI
 from api.circulation_exceptions import *
 from api.config import CannotLoadConfiguration, Configuration
+from api.ekirjasto_controller import EkirjastoController  # Finland
+from api.opensearch_analytics_search import OpenSearchAnalyticsSearch
 from api.custom_index import CustomIndexView
 from api.lanes import (
     ContributorFacets,
@@ -82,6 +84,8 @@ from core.model import (
     DeliveryMechanism,
     Hold,
     Identifier,
+    IntegrationConfiguration,
+    IntegrationLibraryConfiguration,
     Library,
     LicensePool,
     LicensePoolDeliveryMechanism,
@@ -90,6 +94,7 @@ from core.model import (
     Representation,
     Session,
     get_one,
+    json_serializer,
 )
 from core.model.devicetokens import (
     DeviceToken,
@@ -175,6 +180,7 @@ class CirculationManager:
     odl_notification_controller: ODLNotificationController
     static_files: StaticFileController
     playtime_entries: PlaytimeEntriesController
+    catalog_descriptions: CatalogDescriptionsController
 
     # Admin controllers
     admin_sign_in_controller: SignInController
@@ -284,6 +290,9 @@ class CirculationManager:
 
         self.setup_external_search()
 
+        # Finland
+        self.setup_opensearch_analytics_search()
+
         # Track the Lane configuration for each library by mapping its
         # short name to the top-level lane.
         new_top_level_lanes = {}
@@ -353,6 +362,31 @@ class CirculationManager:
             max_len=1000, max_age_seconds=authentication_document_cache_time
         )
 
+    # Finland
+    @property
+    def opensearch_analytics_search(self):
+        """Retrieve or create a connection to the OpenSearch
+        analytics interface.
+
+        This is created lazily so that a failure to connect only
+        affects feeds that depend on the search engine, not the whole
+        circulation manager.
+        """
+        if not self._opensearch_analytics_search:
+            self.setup_opensearch_analytics_search()
+        return self._opensearch_analytics_search
+
+    # Finland
+    def setup_opensearch_analytics_search(self):
+        try:
+            self._opensearch_analytics_search = OpenSearchAnalyticsSearch()
+            self.opensearch_analytics_search_initialization_exception = None
+        except Exception as e:
+            self.log.error("Exception initializing search engine: %s", e)
+            self._opensearch_analytics_search = None
+            self.opensearch_analytics_search_initialization_exception = e
+        return self._opensearch_analytics_search
+
     @property
     def external_search(self):
         """Retrieve or create a connection to the search interface.
@@ -416,6 +450,7 @@ class CirculationManager:
         self.static_files = StaticFileController(self)
         self.patron_auth_token = PatronAuthTokenController(self)
         self.playtime_entries = PlaytimeEntriesController(self)
+        self.catalog_descriptions = CatalogDescriptionsController(self)
 
     def setup_configuration_dependent_controllers(self):
         """Set up all the controllers that depend on the
@@ -425,6 +460,8 @@ class CirculationManager:
         configuration changes.
         """
         self.saml_controller = SAMLController(self, self.auth)
+        # Finland
+        self.ekirjasto_controller = EkirjastoController(self, self.auth)
 
     def annotator(self, lane, facets=None, *args, **kwargs):
         """Create an appropriate OPDS annotator for the given lane.
@@ -652,13 +689,27 @@ class CirculationManagerController(BaseCirculationManagerController):
         """
         _db = Session.object_session(library)
         pools = (
-            _db.query(LicensePool)
-            .join(LicensePool.collection)
-            .join(LicensePool.identifier)
-            .join(Collection.libraries)
-            .filter(Identifier.type == identifier_type)
-            .filter(Identifier.identifier == identifier)
-            .filter(Library.id == library.id)
+            _db.scalars(
+                select(LicensePool)
+                .join(Collection, LicensePool.collection_id == Collection.id)
+                .join(Identifier, LicensePool.identifier_id == Identifier.id)
+                .join(
+                    IntegrationConfiguration,
+                    Collection.integration_configuration_id
+                    == IntegrationConfiguration.id,
+                )
+                .join(
+                    IntegrationLibraryConfiguration,
+                    IntegrationConfiguration.id
+                    == IntegrationLibraryConfiguration.parent_id,
+                )
+                .where(
+                    Identifier.type == identifier_type,
+                    Identifier.identifier == identifier,
+                    IntegrationLibraryConfiguration.library_id == library.id,
+                )
+            )
+            .unique()
             .all()
         )
         if not pools:
@@ -973,7 +1024,7 @@ class OPDSFeedController(CirculationManagerController):
         """Build or retrieve a crawlable acquisition feed for the
         requested collection.
         """
-        collection = get_one(self._db, Collection, name=collection_name)
+        collection = Collection.by_name(self._db, collection_name)
         if not collection:
             return NO_SUCH_COLLECTION
         title = collection.name
@@ -1386,7 +1437,7 @@ class LoanController(CirculationManagerController):
         """
         patron = flask.request.patron
         library = flask.request.library
-
+        
         header = self.authorization_header()
         credential = self.manager.auth.get_credential_from_header(header)
 
@@ -2392,6 +2443,111 @@ class StaticFileController(CirculationManagerController):
         )
         return self.static_file(directory, filename)
 
+# Finland
+class CatalogDescriptionsController(CirculationManagerController):
+    def get_catalogs(self, library_uuid=None):
+        catalogs = []
+        libraries = []
+        
+        
+        if library_uuid != None:
+            try:
+                libraries = [
+                    self._db.query(Library).filter(Library.uuid == library_uuid).one()
+                ]
+            except NoResultFound:
+                return LIBRARY_NOT_FOUND
+        else:
+            libraries = self._db.query(Library).order_by(Library.name).all()
+
+        for library in libraries:
+            settings = library.settings_dict
+            images = []
+            if library.logo:
+                images += [
+                    {
+                        "rel": "http://opds-spec.org/image/thumbnail",
+                        "href": library.logo.data_url,
+                        "type": "image/png"
+                    }
+                ]
+
+            authentication_document_url = url_for(
+                "authentication_document",
+                library_short_name=library.short_name, 
+                _external=True
+            )
+
+            catalog_url = url_for(
+                "acquisition_groups",
+                library_short_name=library.short_name, 
+                _external=True
+            )
+            
+            timenow = utc_now().strftime('%Y-%m-%dT%H:%M:%SZ')
+
+            metadata = {
+                "id": "urn:uuid:" + library.uuid,
+                "title": library.name,
+                "short_name": library.short_name,
+                "modified": timenow,
+                "updated": timenow,
+                "isAutomatic": False
+            }
+            
+            if "library_description" in settings:
+                metadata["description"] = settings["library_description"]
+
+            links = [
+                {
+                    "rel": "http://opds-spec.org/catalog",
+                    "href": catalog_url,
+                    "type": "application/atom+xml;profile=opds-catalog;kind=acquisition"
+                },
+                {
+                    "href": authentication_document_url,
+                    "type": "application/vnd.opds.authentication.v1.0+json"
+                }
+            ]
+            
+            if "help_web" in settings:
+                links += [{
+                    "href": settings["help_web"],
+                    "rel": "help"
+                }]
+            elif "help_email" in settings:
+                links += [{
+                    "href": "mailto:"+settings["help_email"],
+                    "rel": "help"
+                }]
+
+            catalogs += [
+                {
+                    "metadata": metadata,
+                    "links": links,
+                    "images": images
+                }
+            ]
+        
+        response_json = {
+            "metadata": {
+                "title": "Libraries"
+            },
+            "catalogs": catalogs,
+            "links": [
+                {
+                    "rel": "self",
+                    "href": url_for("client_libraries", _external=True),
+                    "type": "application/opds+json"
+                }
+            ]
+        }
+        
+        return Response(
+            json_serializer(response_json),
+            status=200,
+            mimetype="application/json",
+        )
 
 class PatronAuthTokenController(CirculationManagerController):
     def get_token(self):

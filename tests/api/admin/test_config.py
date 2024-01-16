@@ -90,7 +90,7 @@ class TestAdminUI:
                 None,
                 None,
                 OperationalMode.production,
-                "https://cdn.jsdelivr.net/npm/@thepalaceproject/circulation-admin@",
+                "https://cdn.jsdelivr.net/npm/@natlibfi/ekirjasto-circulation-admin@",
             ],
             [
                 "@some-scope/some-package",
@@ -132,12 +132,12 @@ class TestAdminUI:
             [
                 None,
                 None,
-                "/my-base-dir/node_modules/@thepalaceproject/circulation-admin",
+                "/my-base-dir/node_modules/@natlibfi/circulation-admin",
             ],
             [
                 None,
                 "1.0.0",
-                "/my-base-dir/node_modules/@thepalaceproject/circulation-admin",
+                "/my-base-dir/node_modules/@natlibfi/circulation-admin",
             ],
             ["some-package", "1.0.0", "/my-base-dir/node_modules/some-package"],
         ],

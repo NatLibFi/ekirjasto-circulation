@@ -1,4 +1,7 @@
 FROM opensearchproject/opensearch:1 as opensearch
 
 # Install ICU Analysis Plugin
+USER root
+RUN ln -sf /usr/share/zoneinfo/Europe/Helsinki /etc/localtime
+USER opensearch
 RUN /usr/share/opensearch/bin/opensearch-plugin install --batch analysis-icu

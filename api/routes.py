@@ -555,7 +555,6 @@ def saml_authenticate():
         flask.request.args, app.manager._db
     )
 
-
 # Redirect URI for SAML providers
 # NOTE: we cannot use @has_library decorator and append a library's name to saml_calback route
 # (e.g. https://cm.org/LIBRARY_NAME/saml_callback).
@@ -572,6 +571,24 @@ def saml_callback():
         request, app.manager._db
     )
 
+# Finland
+# Authenticate with the ekirjasto token.
+@library_route("/ekirjasto_authenticate", methods=["POST"])
+@has_library
+@returns_problem_detail
+def ekirjasto_authenticate():
+    return app.manager.ekirjasto_controller.authenticate(
+        request, app.manager._db
+    )
+
+# Finland
+# Get descriptions for the library catalogs in the system.
+# This is public route.
+@app.route('/libraries', defaults={'library_uuid': None}, methods=["GET"])
+@app.route("/libraries/<library_uuid>", methods=["GET"])
+@returns_problem_detail
+def client_libraries(library_uuid):
+    return app.manager.catalog_descriptions.get_catalogs(library_uuid)
 
 # Loan notifications for ODL distributors, eg. Feedbooks
 @library_route("/odl_notify/<loan_id>", methods=["GET", "POST"])

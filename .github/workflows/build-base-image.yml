@@ -2,7 +2,7 @@ name: Build Base Image
 on:
   schedule:
     # Every Monday at 6:22am Eastern Time
-    - cron: '22 10 * * 1'
+    - cron: "22 10 * * 1"
   workflow_dispatch:
     # Allow us to manually trigger build
 
@@ -46,11 +46,11 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/circ-baseimage
+          images: ghcr.io/${{ github.repository_owner }}/ekirjasto-circ-baseimage
           # Generate tags for the image
           # We use the following tags:
-            # - The date in YYYYww format, which is the year and week number. 202052 is the last week of 2020.
-            # - The latest tag
+          # - The date in YYYYww format, which is the year and week number. 202052 is the last week of 2020.
+          # - The latest tag
           tags: |
             type=schedule,pattern={{date 'YYYYww'}}
             type=raw,value=latest

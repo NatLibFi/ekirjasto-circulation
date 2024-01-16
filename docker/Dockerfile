@@ -6,7 +6,7 @@
 # The only difference are what services are enabled.
 ###############################################################################
 
-ARG BASE_IMAGE=ghcr.io/thepalaceproject/circ-baseimage:latest
+ARG BASE_IMAGE=ghcr.io/natlibfi/ekirjasto-circ-baseimage:latest
 
 FROM ${BASE_IMAGE} AS common
 
@@ -29,6 +29,7 @@ COPY --chown=simplified:simplified . /var/www/circulation
 
 FROM common AS exec
 
+ENV TZ=Europe/Helsinki
 ENV SIMPLIFIED_SCRIPT_NAME ""
 
 VOLUME /var/log
@@ -44,7 +45,7 @@ CMD ["/sbin/my_init", "--skip-runit", "--quiet", "--", \
 FROM common AS scripts
 
 # Set the local timezone and setup cron
-ENV TZ=US/Eastern
+ENV TZ=Europe/Helsinki
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && \
     touch /var/log/cron.log
 
@@ -61,16 +62,24 @@ CMD ["/sbin/my_init"]
 ###############################################################################
 
 FROM common AS webapp
+ENV TZ=Europe/Helsinki
 
 # Setup nginx
 COPY docker/services/nginx /etc/nginx/
+COPY docker/admin_dist.tar.gz /mnt/admin_dist.tar.gz
 
 # Setup uwsgi
 COPY docker/services/uwsgi /etc/
 RUN mkdir -p /var/log/uwsgi && \
     chown -RHh simplified:simplified /var/log/uwsgi && \
     mkdir /var/run/uwsgi && \
-    chown simplified:simplified /var/run/uwsgi
+    chown simplified:simplified /var/run/uwsgi && \
+    cd /var/www/circulation/api/admin && \
+    tar xf /mnt/admin_dist.tar.gz && \
+    chown -R simplified:simplified dist && \
+    rm /mnt/admin_dist.tar.gz
+
+COPY --chown=simplified:simplified docker/config.py_admin /var/www/circulation/api/admin/config.py
 
 # Setup runit
 COPY docker/runit /etc/service/
@@ -80,3 +89,4 @@ WORKDIR /home/simplified/circulation
 EXPOSE 80
 
 CMD ["/sbin/my_init"]
+

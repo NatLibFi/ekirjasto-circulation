@@ -1,0 +1,83 @@
+FROM ubuntu:22.04 as admin
+
+LABEL maintainer="Joe Random <first.last@ellibs.com>"
+
+ARG BUILDENV=devz
+
+#RUN if [ "${BUILDENV}" != "lfapi" -a "${BUILDENV}" != "lsstest" -a "${BUILDENV}" != "lfapi2" -a "${BUILDENV}" != "ltstest" -a "${BUILDENV}" != "prod"  ]; \
+#    then exit 1 ; \
+#    fi
+
+RUN sed -i 's/http:\/\/archive\.ubuntu\.com\/ubuntu/http:\/\/mirrors.nic.funet.fi\/ubuntu\//' \
+      /etc/apt/sources.list
+
+ENV DEBIAN_FRONTEND noninteractive
+ENV TERM linux
+
+#ENV TINI_VERSION v0.19.0
+#ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
+
+RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
+    apt-utils \
+    apt-transport-https \
+    ca-certificates \
+    curl \
+    debconf-utils \
+    gnupg \
+    gzip \
+    net-tools \
+    software-properties-common \
+    tar \
+    telnet \
+    tzdata \
+    wget  && \
+    mkdir -p /etc/apt/keyrings && \
+    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg && \
+    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_18.x nodistro main" | \
+      tee /etc/apt/sources.list.d/nodesource.list && \
+    echo Europe/Helsinki >/etc/timezone && \
+    ln -sf /usr/share/zoneinfo/Europe/Helsinki /etc/localtime && \
+    dpkg-reconfigure -f noninteractive tzdata && \
+    apt-get update && apt-get install -y --allow-unauthenticated --no-install-recommends \
+      less \
+      nodejs && \
+	npm update -g npm && \
+    rm -f /etc/cron.daily/* && \
+    rm -rf /var/lib/apt/lists/* && \
+    groupadd -g 1000 node && \
+    useradd -u 1000 -r -g node -d /home/node -s /bin/bash -c "Node image user" node && \
+    apt-get remove -y \
+      apt-transport-https \
+      apt-utils \
+      debconf-utils \
+      gnupg \
+      software-properties-common \
+      wget && \
+    apt-get autoremove -y 
+
+COPY palace_circulation_admin_ui /opt/circulation/admin
+
+RUN cd /opt/circulation/admin && \
+	npm install && \
+	npm run test-finland && \
+	retval=$? && \
+	if [ $retval -ne 0 ]; then \
+	  echo "Admin UI test failed" && \
+	  exit $retval ; \
+	fi && \
+	mkdir -p /mnt/tarball && \
+	tar czvf /mnt/tarball/admin_dist.tar.gz dist
+
+# Specify the port number the container should expose
+#EXPOSE 8080
+
+# Set up working dir
+#WORKDIR /opt/circulation/admin
+
+# Entrypoint is run prior to CMD
+#ENTRYPOINT ["/tini", "--"]
+
+# Actual command to start, can be overridden to start e.g. ASR API
+#CMD ["npm", "run", "dev-server", "--", "--env=backend=webapp:6500"]
+
+
