@@ -215,7 +215,6 @@ class LibraryAuthenticator(LoggerMixin):
         # Finland
         if authenticator.ekirjasto_provider:
             authenticator.ekirjasto_provider.set_secrets(_db)
-
         authenticator.assert_ready_for_token_signing()
 
         return authenticator
@@ -499,7 +498,7 @@ class LibraryAuthenticator(LoggerMixin):
             provider_token = provider.validate_ekirjasto_delegate_token(auth.token)
             if isinstance(provider_token, ProblemDetail):
                 return provider_token
-        elif self.saml_providers_by_name and auth.type.lower() == "bearer":
+        elif auth.type.lower() == "bearer":
             # The patron wants to use an
             # SAMLAuthenticationProvider. Figure out which one.
             if auth.token is None:

@@ -31,7 +31,7 @@ from api.circulation import CirculationAPI
 from api.circulation_exceptions import *
 from api.config import CannotLoadConfiguration, Configuration
 from api.ekirjasto_controller import EkirjastoController  # Finland
-from api.opensearch_analytics_search import OpenSearchAnalyticsSearch
+from api.opensearch_analytics_search import OpenSearchAnalyticsSearch  # Finland
 from api.custom_index import CustomIndexView
 from api.lanes import (
     ContributorFacets,
@@ -84,8 +84,6 @@ from core.model import (
     DeliveryMechanism,
     Hold,
     Identifier,
-    IntegrationConfiguration,
-    IntegrationLibraryConfiguration,
     Library,
     LicensePool,
     LicensePoolDeliveryMechanism,
@@ -180,7 +178,6 @@ class CirculationManager:
     odl_notification_controller: ODLNotificationController
     static_files: StaticFileController
     playtime_entries: PlaytimeEntriesController
-    catalog_descriptions: CatalogDescriptionsController
 
     # Admin controllers
     admin_sign_in_controller: SignInController
@@ -450,7 +447,6 @@ class CirculationManager:
         self.static_files = StaticFileController(self)
         self.patron_auth_token = PatronAuthTokenController(self)
         self.playtime_entries = PlaytimeEntriesController(self)
-        self.catalog_descriptions = CatalogDescriptionsController(self)
 
     def setup_configuration_dependent_controllers(self):
         """Set up all the controllers that depend on the
@@ -689,27 +685,13 @@ class CirculationManagerController(BaseCirculationManagerController):
         """
         _db = Session.object_session(library)
         pools = (
-            _db.scalars(
-                select(LicensePool)
-                .join(Collection, LicensePool.collection_id == Collection.id)
-                .join(Identifier, LicensePool.identifier_id == Identifier.id)
-                .join(
-                    IntegrationConfiguration,
-                    Collection.integration_configuration_id
-                    == IntegrationConfiguration.id,
-                )
-                .join(
-                    IntegrationLibraryConfiguration,
-                    IntegrationConfiguration.id
-                    == IntegrationLibraryConfiguration.parent_id,
-                )
-                .where(
-                    Identifier.type == identifier_type,
-                    Identifier.identifier == identifier,
-                    IntegrationLibraryConfiguration.library_id == library.id,
-                )
-            )
-            .unique()
+            _db.query(LicensePool)
+            .join(LicensePool.collection)
+            .join(LicensePool.identifier)
+            .join(Collection.libraries)
+            .filter(Identifier.type == identifier_type)
+            .filter(Identifier.identifier == identifier)
+            .filter(Library.id == library.id)
             .all()
         )
         if not pools:
@@ -1024,7 +1006,7 @@ class OPDSFeedController(CirculationManagerController):
         """Build or retrieve a crawlable acquisition feed for the
         requested collection.
         """
-        collection = Collection.by_name(self._db, collection_name)
+        collection = get_one(self._db, Collection, name=collection_name)
         if not collection:
             return NO_SUCH_COLLECTION
         title = collection.name
@@ -1437,7 +1419,7 @@ class LoanController(CirculationManagerController):
         """
         patron = flask.request.patron
         library = flask.request.library
-        
+
         header = self.authorization_header()
         credential = self.manager.auth.get_credential_from_header(header)
 
@@ -2443,13 +2425,13 @@ class StaticFileController(CirculationManagerController):
         )
         return self.static_file(directory, filename)
 
+
 # Finland
 class CatalogDescriptionsController(CirculationManagerController):
     def get_catalogs(self, library_uuid=None):
         catalogs = []
         libraries = []
-        
-        
+
         if library_uuid != None:
             try:
                 libraries = [
@@ -2468,23 +2450,23 @@ class CatalogDescriptionsController(CirculationManagerController):
                     {
                         "rel": "http://opds-spec.org/image/thumbnail",
                         "href": library.logo.data_url,
-                        "type": "image/png"
+                        "type": "image/png",
                     }
                 ]
 
             authentication_document_url = url_for(
                 "authentication_document",
-                library_short_name=library.short_name, 
-                _external=True
+                library_short_name=library.short_name,
+                _external=True,
             )
 
             catalog_url = url_for(
                 "acquisition_groups",
-                library_short_name=library.short_name, 
-                _external=True
+                library_short_name=library.short_name,
+                _external=True,
             )
-            
-            timenow = utc_now().strftime('%Y-%m-%dT%H:%M:%SZ')
+
+            timenow = utc_now().strftime("%Y-%m-%dT%H:%M:%SZ")
 
             metadata = {
                 "id": "urn:uuid:" + library.uuid,
@@ -2492,9 +2474,9 @@ class CatalogDescriptionsController(CirculationManagerController):
                 "short_name": library.short_name,
                 "modified": timenow,
                 "updated": timenow,
-                "isAutomatic": False
+                "isAutomatic": False,
             }
-            
+
             if "library_description" in settings:
                 metadata["description"] = settings["library_description"]
 
@@ -2502,52 +2484,39 @@ class CatalogDescriptionsController(CirculationManagerController):
                 {
                     "rel": "http://opds-spec.org/catalog",
                     "href": catalog_url,
-                    "type": "application/atom+xml;profile=opds-catalog;kind=acquisition"
+                    "type": "application/atom+xml;profile=opds-catalog;kind=acquisition",
                 },
                 {
                     "href": authentication_document_url,
-                    "type": "application/vnd.opds.authentication.v1.0+json"
-                }
+                    "type": "application/vnd.opds.authentication.v1.0+json",
+                },
             ]
-            
-            if "help_web" in settings:
-                links += [{
-                    "href": settings["help_web"],
-                    "rel": "help"
-                }]
-            elif "help_email" in settings:
-                links += [{
-                    "href": "mailto:"+settings["help_email"],
-                    "rel": "help"
-                }]
 
-            catalogs += [
-                {
-                    "metadata": metadata,
-                    "links": links,
-                    "images": images
-                }
-            ]
-        
+            if "help_web" in settings:
+                links += [{"href": settings["help_web"], "rel": "help"}]
+            elif "help_email" in settings:
+                links += [{"href": "mailto:" + settings["help_email"], "rel": "help"}]
+
+            catalogs += [{"metadata": metadata, "links": links, "images": images}]
+
         response_json = {
-            "metadata": {
-                "title": "Libraries"
-            },
+            "metadata": {"title": "Libraries"},
             "catalogs": catalogs,
             "links": [
                 {
                     "rel": "self",
                     "href": url_for("client_libraries", _external=True),
-                    "type": "application/opds+json"
+                    "type": "application/opds+json",
                 }
-            ]
+            ],
         }
-        
+
         return Response(
             json_serializer(response_json),
             status=200,
             mimetype="application/json",
         )
+
 
 class PatronAuthTokenController(CirculationManagerController):
     def get_token(self):
