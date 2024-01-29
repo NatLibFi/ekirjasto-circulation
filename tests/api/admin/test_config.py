@@ -132,12 +132,12 @@ class TestAdminUI:
             [
                 None,
                 None,
-                "/my-base-dir/node_modules/@natlibfi/circulation-admin",
+                "/my-base-dir/node_modules/@natlibfi/ekirjasto-circulation-admin",
             ],
             [
                 None,
                 "1.0.0",
-                "/my-base-dir/node_modules/@natlibfi/circulation-admin",
+                "/my-base-dir/node_modules/@natlibfi/ekirjasto-circulation-admin",
             ],
             ["some-package", "1.0.0", "/my-base-dir/node_modules/some-package"],
         ],

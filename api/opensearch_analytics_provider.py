@@ -204,17 +204,23 @@ class OpenSearchAnalyticsProvider(LocalAnalyticsProvider):
             "authors": [
                 contribution.contributor.sort_name
                 for contribution in edition.contributions
-                if contribution.role == Contributor.AUTHOR_ROLE
+                if getattr(contribution.contributor, "role", None)
+                == Contributor.AUTHOR_ROLE
             ]
             if edition
             else None,
             "contributions": [
                 ": ".join(
-                    contribution.contributor.role,
-                    contribution.contributor.sort_name,
+                    [
+                        getattr(contribution.contributor, "role", ""),
+                        contribution.contributor.sort_name,
+                    ]
                 )
                 for contribution in edition.contributions
-                if contribution.role != Contributor.AUTHOR_ROLE
+                if (
+                    not getattr(contribution.contributor, "role", None)
+                    or contribution.contributor.role != Contributor.AUTHOR_ROLE
+                )
             ]
             if edition
             else None,
