@@ -1,6 +1,6 @@
+from api.opensearch_analytics_provider import OpenSearchAnalyticsProvider
 from core.analytics import Analytics
 from core.local_analytics_provider import LocalAnalyticsProvider
-from api.opensearch_analytics_provider import OpenSearchAnalyticsProvider
 
 # The test set is based on core/test_analytics.py
 

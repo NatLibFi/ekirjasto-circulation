@@ -1,12 +1,11 @@
 import datetime
 from typing import Dict, Optional
 
-from opensearchpy import OpenSearch
 from opensearch_dsl import Search
-from flask_babel import lazy_gettext as _
+from opensearchpy import OpenSearch
 
-from core.model.contributor import Contributor
 from core.local_analytics_provider import LocalAnalyticsProvider
+from core.model.contributor import Contributor
 from core.model.library import Library
 from core.model.licensing import LicensePool
 from core.util.http import HTTP

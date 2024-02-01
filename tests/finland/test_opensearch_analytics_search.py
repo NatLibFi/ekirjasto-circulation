@@ -1,8 +1,8 @@
-import flask
-from flask import Flask
-
 import unittest
 from unittest.mock import patch
+
+import flask
+from flask import Flask
 
 from api.opensearch_analytics_search import OpenSearchAnalyticsSearch
 

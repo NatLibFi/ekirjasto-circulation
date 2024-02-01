@@ -25,9 +25,9 @@ from api.authentication.basic import BasicAuthenticationProvider
 from api.authentication.basic_token import BasicTokenAuthenticationProvider
 from api.config import CannotLoadConfiguration, Configuration
 from api.custom_patron_catalog import CustomPatronCatalog
+from api.ekirjasto_authentication import EkirjastoAuthenticationAPI  # Finland
 from api.integration.registry.patron_auth import PatronAuthRegistry
 from api.problem_details import *
-from api.ekirjasto_authentication import EkirjastoAuthenticationAPI  # Finland
 from core.analytics import Analytics
 from core.integration.goals import Goals
 from core.integration.registry import IntegrationRegistry
