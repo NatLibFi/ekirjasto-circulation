@@ -173,6 +173,51 @@ class TestCirculationAPI:
         loan, hold, is_new = self.borrow(circulation_api)
         assert 3 == circulation_api.analytics.count
 
+    # Finland
+    def test_borrow_is_added_to_checkout_history(
+        self, circulation_api: CirculationAPIFixture
+    ):
+        now = utc_now()
+        loaninfo = LoanInfo(
+            circulation_api.pool.collection,
+            circulation_api.pool.data_source,
+            circulation_api.pool.identifier.type,
+            circulation_api.pool.identifier.identifier,
+            now,
+            now + timedelta(seconds=3600),
+            external_identifier=circulation_api.db.fresh_str(),
+        )
+        circulation_api.remote.queue_checkout(loaninfo)
+        now = utc_now()
+
+        loan, hold, is_new = self.borrow(circulation_api)
+
+        # A checkout history row was created
+        assert 1 == len(circulation_api.patron.loan_checkouts)
+
+        # Try to 'borrow' the same book again.
+        circulation_api.remote.queue_checkout(AlreadyCheckedOut())
+        loan, hold, is_new = self.borrow(circulation_api)
+
+        assert loaninfo.external_identifier == loan.external_identifier
+
+        # Since the loan already existed, no new history item was created.
+        assert 1 == len(circulation_api.patron.loan_checkouts)
+
+        # Now try to renew the book.
+        circulation_api.remote.queue_checkout(loaninfo)
+        loan, hold, is_new = self.borrow(circulation_api)
+
+        # Renewals are counted as checkouts
+        assert 2 == len(circulation_api.patron.loan_checkouts)
+
+        # Loans of open-access books go through a different code
+        # path, but they count as loans nonetheless.
+        circulation_api.pool.open_access = True
+        circulation_api.remote.queue_checkout(loaninfo)
+        loan, hold, is_new = self.borrow(circulation_api)
+        assert 3 == len(circulation_api.patron.loan_checkouts)
+
     def test_attempt_borrow_with_existing_remote_loan(
         self, circulation_api: CirculationAPIFixture
     ):
