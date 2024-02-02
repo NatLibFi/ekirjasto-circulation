@@ -10,7 +10,7 @@ updates:
     versioning-strategy: increase-if-necessary
     # Ignore everything for now (and stay in pace with the upstream)
     ignore:
-       - dependency-name: "*" 
+       - dependency-name: "*"
 
   - package-ecosystem: "github-actions"
     directory: "/"

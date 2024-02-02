@@ -30,9 +30,8 @@ from api.base_controller import BaseCirculationManagerController
 from api.circulation import CirculationAPI
 from api.circulation_exceptions import *
 from api.config import CannotLoadConfiguration, Configuration
-from api.ekirjasto_controller import EkirjastoController  # Finland
-from api.opensearch_analytics_search import OpenSearchAnalyticsSearch  # Finland
 from api.custom_index import CustomIndexView
+from api.ekirjasto_controller import EkirjastoController  # Finland
 from api.lanes import (
     ContributorFacets,
     ContributorLane,
@@ -52,6 +51,7 @@ from api.model.patron_auth import PatronAuthAccessToken
 from api.model.time_tracking import PlaytimeEntriesPost, PlaytimeEntriesPostResponse
 from api.odl import ODLAPI
 from api.odl2 import ODL2API
+from api.opensearch_analytics_search import OpenSearchAnalyticsSearch  # Finland
 from api.problem_details import *
 from api.saml.controller import SAMLController
 from core.analytics import Analytics

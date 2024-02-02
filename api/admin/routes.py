@@ -2,7 +2,7 @@ from datetime import timedelta
 from functools import wraps
 
 import flask
-from flask import Response, make_response, redirect, url_for, request
+from flask import Response, make_response, redirect, request, url_for
 from flask_pydantic_spec import FileResponse as SpecFileResponse
 from flask_pydantic_spec import Request as SpecRequest
 from flask_pydantic_spec import Response as SpecResponse

@@ -270,7 +270,9 @@ INVALID_EKIRJASTO_DELEGATE_TOKEN = pd(
     "http://librarysimplified.org/terms/problem/credentials-invalid",
     status_code=401,
     title=_("Invalid delegate token for ekirjasto authentication provider."),
-    detail=_("The provided delegate token couldn't be verified for ekirjasto authentication provider or it is expired."),
+    detail=_(
+        "The provided delegate token couldn't be verified for ekirjasto authentication provider or it is expired."
+    ),
 )
 
 # Finland

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Optional
-from api.opensearch_analytics_provider import OpenSearchAnalyticsProvider  # Finland
 
+from api.opensearch_analytics_provider import OpenSearchAnalyticsProvider  # Finland
 from api.s3_analytics_provider import S3AnalyticsProvider
 from core.local_analytics_provider import LocalAnalyticsProvider
 from core.util.datetime_helpers import utc_now

@@ -1,6 +1,9 @@
 from io import BytesIO
+from tempfile import NamedTemporaryFile
 
 import unicodecsv as csv
+from openpyxl import Workbook
+from openpyxl.styles import Border, Font, PatternFill, Side
 from sqlalchemy.sql import func, select
 from sqlalchemy.sql.expression import and_, case, join, literal_column, or_
 
@@ -19,9 +22,6 @@ from core.model import (
 
 # Finland:
 from core.model.contributor import Contribution, Contributor
-from openpyxl import Workbook
-from openpyxl.styles import Font, PatternFill, Border, Side
-from tempfile import NamedTemporaryFile
 
 
 class LocalAnalyticsExporter:

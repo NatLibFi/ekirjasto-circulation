@@ -1,7 +1,9 @@
 import io
 import unittest
 from unittest.mock import MagicMock, patch
+
 from openpyxl import load_workbook
+
 from api.local_analytics_exporter import LocalAnalyticsExporter
 
 LOAN_DB_FIXTURE = [
