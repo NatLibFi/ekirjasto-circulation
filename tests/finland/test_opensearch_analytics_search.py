@@ -8,7 +8,7 @@ from api.opensearch_analytics_search import OpenSearchAnalyticsSearch
 
 
 class MockLibrary:
-    def short_name():
+    def short_name(self):
         return "testlib"
 
 

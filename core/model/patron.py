@@ -158,7 +158,7 @@ class Patron(Base):
     )
 
     loan_checkouts: Mapped[List[LoanCheckout]] = relationship(
-        "LoanCheckout", backref="patron", cascade="delete", uselist=True
+        "LoanCheckout", back_populates="patron", cascade="delete", uselist=True
     )
 
     holds: Mapped[List[Hold]] = relationship(
@@ -586,7 +586,7 @@ class LoanCheckout(Base, LoanAndHoldMixin):
     patron_id = Column(
         Integer, ForeignKey("patrons.id", ondelete="CASCADE"), index=True
     )
-    patron: Patron
+    patron: Mapped[Patron] = relationship("Patron", back_populates="loan_checkouts")
 
     license_pool_id = Column(Integer, ForeignKey("licensepools.id"), index=True)
     license_pool: Mapped[LicensePool] = relationship("LicensePool")
