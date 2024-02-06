@@ -560,6 +560,7 @@ from core.model.patron import (
     Hold,
     Loan,
     LoanAndHoldMixin,
+    LoanCheckout,
     Patron,
     PatronProfileStorage,
 )
