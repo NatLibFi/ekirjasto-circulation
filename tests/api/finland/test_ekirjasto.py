@@ -1,8 +1,8 @@
 import datetime
 import uuid
 from base64 import b64encode
+from collections.abc import Callable
 from functools import partial
-from typing import Callable
 
 import jwt
 import pytest

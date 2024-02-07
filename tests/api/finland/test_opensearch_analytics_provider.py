@@ -4,7 +4,7 @@ from core.local_analytics_provider import LocalAnalyticsProvider
 
 # The test set is based on core/test_analytics.py
 
-MOCK_PROTOCOL = "..mock_analytics_provider"
+MOCK_PROTOCOL = "../../core/mock_analytics_provider"
 
 
 class TestOpenSearchAnalytics:
