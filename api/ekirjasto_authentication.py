@@ -110,8 +110,8 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
         self.ekirjasto_environment = settings.ekirjasto_environment
         self.delegate_expire_timemestamp = settings.delegate_expire_time
 
-        self.delegate_token_signing_secret = None
-        self.delegate_token_encrypting_secret = None
+        self.delegate_token_signing_secret: str | None = None
+        self.delegate_token_encrypting_secret: bytes | None = None
 
         self.analytics = analytics
 
@@ -284,7 +284,7 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
         # circulation API needs additional authentication.
         return None
 
-    def get_patron_delegate_id(self, _db: Session, patron: Patron) -> str:
+    def get_patron_delegate_id(self, _db: Session, patron: Patron) -> str | None:
         """Find or randomly create an identifier to use when identifying
         this patron from delegate token.
         """
@@ -343,17 +343,6 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
             _db.commit()
         self.delegate_token_encrypting_secret = secret.value.encode()
 
-    def _check_secrets_or_throw(self):
-        if (
-            self.delegate_token_signing_secret == None
-            or len(self.delegate_token_signing_secret) == 0
-            or self.delegate_token_encrypting_secret == None
-            or len(self.delegate_token_encrypting_secret) == 0
-        ):
-            raise InternalServerError(
-                "Ekirjasto authenticator not fully setup, secrets are missing."
-            )
-
     def create_ekirjasto_delegate_token(
         self, provider_token: str, patron_delegate_id: str, expires: int
     ) -> str:
@@ -362,7 +351,15 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
 
         The patron will use this as the authentication toekn to authentiacte againsy circulation backend.
         """
-        self._check_secrets_or_throw()
+        if not self.delegate_token_encrypting_secret:
+            raise InternalServerError(
+                "Error creating delegate token, encryption secret missing"
+            )
+
+        if not self.delegate_token_signing_secret:
+            raise InternalServerError(
+                "Error creating delegate token, signing secret missing"
+            )
 
         # Encrypt the ekirjasto token with a128cbc-hs256 algorithm.
         fernet = Fernet(self.delegate_token_encrypting_secret)
@@ -377,6 +374,7 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
             iat=int(utc_now().timestamp()),
             exp=expires,
         )
+
         return jwt.encode(
             payload, self.delegate_token_signing_secret, algorithm="HS256"
         )
@@ -392,7 +390,10 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
 
         return decoded payload
         """
-        self._check_secrets_or_throw()
+        if not self.delegate_token_signing_secret:
+            raise InternalServerError(
+                "Error decoding delegate token, signing secret missing"
+            )
 
         options = dict(
             verify_signature=True,
@@ -418,6 +419,10 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
         return decoded_payload
 
     def _decrypt_ekirjasto_token(self, token: str):
+        if not self.delegate_token_encrypting_secret:
+            raise InternalServerError(
+                "Error decrypting ekirjasto token, signing secret missing"
+            )
         fernet = Fernet(self.delegate_token_encrypting_secret)
         encrypted_token = b64decode(token.encode("ascii"))
         return fernet.decrypt(encrypted_token).decode()
@@ -445,7 +450,9 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
             return INVALID_EKIRJASTO_DELEGATE_TOKEN
         return decoded_payload
 
-    def remote_refresh_token(self, token: str) -> (str, int):
+    def remote_refresh_token(
+        self, token: str
+    ) -> tuple[ProblemDetail, None] | tuple[str, int]:
         """Refresh ekirjasto token with ekirjasto API call.
 
         We assume that the token is valid, API call fails if not.
@@ -454,9 +461,9 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
         """
 
         if self.ekirjasto_environment == EkirjastoEnvironment.FAKE:
-            token = self.fake_ekirjasto_token
-            expires = utc_now() + datetime.timedelta(days=1)
-            return token, expires.timestamp()
+            fake_token = self.fake_ekirjasto_token
+            expire_date = utc_now() + datetime.timedelta(days=1)
+            return fake_token, int(expire_date.timestamp())
 
         url = self._ekirjasto_api_url + "/v1/auth/refresh"
 
@@ -469,10 +476,6 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
             # Do nothing if authentication fails, e.g. token expired.
             return INVALID_EKIRJASTO_TOKEN, None
         elif response.status_code != 200:
-            msg = "Got unexpected response code %d. Content: %s" % (
-                response.status_code,
-                response.content,
-            )
             return EKIRJASTO_REMOTE_AUTHENTICATION_FAILED, None
         else:
             try:
@@ -482,6 +485,7 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
 
             token = content["token"]
             expires = content["exp"]
+
             return token, expires
 
     def remote_patron_lookup(
@@ -531,8 +535,6 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
                 raise RemoteInitiatedServerError(str(e), self.__class__.__name__)
 
             return self._userinfo_to_patrondata(content)
-
-        return EKIRJASTO_REMOTE_AUTHENTICATION_FAILED
 
     def remote_authenticate(
         self, ekirjasto_token: str | None
@@ -608,7 +610,7 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
 
     def ekirjasto_authenticate(
         self, _db: Session, ekirjasto_token: str
-    ) -> (Patron, bool):
+    ) -> tuple[PatronData | Patron | ProblemDetail | None, bool]:
         """Authenticate patron with remote ekirjasto API and if necessary,
         create authenticated patron if not in database.
 
@@ -620,17 +622,17 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
             log_method=self.logger().info,
             message_prefix="authenticated_patron - ekirjasto_authenticate",
         ):
-            patron = self.authenticate_and_update_patron(_db, ekirjasto_token)
+            auth_result = self.authenticate_and_update_patron(_db, ekirjasto_token)
 
-        if isinstance(patron, PatronData):
+        if isinstance(auth_result, PatronData):
             # We didn't find the patron, but authentication to external truth was
-            # succesfull, so we create a new patron with the information we have.
-            patron, is_new = patron.get_or_create_patron(
+            # successful, so we create a new patron with the information we have.
+            patron, is_new = auth_result.get_or_create_patron(
                 _db, self.library_id, analytics=self.analytics
             )
             patron.last_external_sync = utc_now()
 
-        return patron, is_new
+        return auth_result, is_new
 
     def authenticated_patron(
         self, _db: Session, authorization: dict | str

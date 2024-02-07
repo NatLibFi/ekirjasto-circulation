@@ -156,6 +156,11 @@ class Patron(Base):
     loans: Mapped[list[Loan]] = relationship(
         "Loan", backref="patron", cascade="delete", uselist=True
     )
+
+    loan_checkouts: Mapped[list[LoanCheckout]] = relationship(
+        "LoanCheckout", back_populates="patron", cascade="delete", uselist=True
+    )
+
     holds: Mapped[list[Hold]] = relationship(
         "Hold",
         back_populates="patron",
@@ -569,6 +574,27 @@ class Loan(Base, LoanAndHoldMixin):
             return None
         start = self.start or utc_now()
         return start + default_loan_period
+
+
+# Finland
+class LoanCheckout(Base, LoanAndHoldMixin):
+    """A model to keep track of loan history, i.e. past checkouts. Similar to `Loan` model with some fields omitted and timestamp added"""
+
+    __tablename__ = "loancheckouts"
+    id = Column(Integer, primary_key=True)
+
+    patron_id = Column(
+        Integer, ForeignKey("patrons.id", ondelete="CASCADE"), index=True
+    )
+    patron: Mapped[Patron] = relationship("Patron", back_populates="loan_checkouts")
+
+    license_pool_id = Column(Integer, ForeignKey("licensepools.id"), index=True)
+    license_pool: Mapped[LicensePool] = relationship("LicensePool")
+
+    timestamp = Column(DateTime(timezone=True), index=True)
+
+    def __lt__(self, other):
+        return self.timestamp < other.timestamp
 
 
 class Hold(Base, LoanAndHoldMixin):

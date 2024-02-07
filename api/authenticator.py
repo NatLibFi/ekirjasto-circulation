@@ -431,7 +431,7 @@ class LibraryAuthenticator(LoggerMixin):
         self.ekirjasto_provider = provider
 
     # Finland
-    def get_ekirjasto_provider(self) -> EkirjastoAuthenticationAPI:
+    def get_ekirjasto_provider(self) -> EkirjastoAuthenticationAPI | None:
         return self.ekirjasto_provider
 
     @property
@@ -495,9 +495,10 @@ class LibraryAuthenticator(LoggerMixin):
                 return INVALID_EKIRJASTO_DELEGATE_TOKEN
             provider = self.ekirjasto_provider
             # Get decoded payload from the delegate token.
-            provider_token = provider.validate_ekirjasto_delegate_token(auth.token)
-            if isinstance(provider_token, ProblemDetail):
-                return provider_token
+            validate_result = provider.validate_ekirjasto_delegate_token(auth.token)
+            if isinstance(validate_result, ProblemDetail):
+                return validate_result
+            provider_token = validate_result
         elif auth.type.lower() == "bearer":
             # The patron wants to use an
             # SAMLAuthenticationProvider. Figure out which one.

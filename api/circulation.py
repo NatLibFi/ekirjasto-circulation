@@ -46,6 +46,7 @@ from core.model import (
     get_one,
 )
 from core.model.integration import IntegrationConfiguration
+from core.model.patron import LoanCheckout
 from core.util.datetime_helpers import utc_now
 from core.util.log import LoggerMixin
 
@@ -891,6 +892,18 @@ class CirculationAPI:
             library, licensepool, name, neighborhood=neighborhood
         )
 
+    # Finland
+    def _collect_checkout_history(
+        self, patron: Patron, license_pool: LicensePool
+    ) -> None:
+        """Save history for checkout, for later use in loan history or analytics"""
+        __transaction = self._db.begin_nested()
+        checkout = LoanCheckout(
+            patron=patron, license_pool=license_pool, timestamp=utc_now()
+        )
+        self._db.add(checkout)
+        __transaction.commit()
+
     def _collect_checkout_event(self, patron: Patron, licensepool: LicensePool) -> None:
         """A simple wrapper around _collect_event for handling checkouts.
 
@@ -1104,6 +1117,7 @@ class CirculationAPI:
                 # Send out an analytics event to record the fact that
                 # a loan was initiated through the circulation
                 # manager.
+                self._collect_checkout_history(patron, licensepool)
                 self._collect_checkout_event(patron, licensepool)
             return loan, None, new_loan_record
 

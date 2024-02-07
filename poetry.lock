@@ -4153,6 +4153,17 @@ files = [
 referencing = "*"
 
 [[package]]
+name = "types-openpyxl"
+version = "3.1.0.20240205"
+description = "Typing stubs for openpyxl"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "types-openpyxl-3.1.0.20240205.tar.gz", hash = "sha256:0b1c933f3a33e5f701a748426582aae360bc5c033ce7caea192687a1f99c7bd3"},
+    {file = "types_openpyxl-3.1.0.20240205-py3-none-any.whl", hash = "sha256:734dfff2bfeeee0f46e78aed34f903130afe2364e9655c77b68436f187ec8a2d"},
+]
+
+[[package]]
 name = "types-pillow"
 version = "10.2.0.20240111"
 description = "Typing stubs for Pillow"
@@ -4494,4 +4505,4 @@ lxml = ">=3.8"
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<4"
-content-hash = "09aa4cd1fa7881a2ace8a844ec797fcbc17f200353015d6f4ea5ed5ad44b32c8"
+content-hash = "bcd28f5925d0af63b549c2ccda1a61527913a206f8ddb9854b5818349d4ad8de"

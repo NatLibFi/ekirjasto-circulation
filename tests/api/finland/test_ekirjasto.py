@@ -238,7 +238,7 @@ class TestEkirjastoAuthentication:
         controller_fixture.app.config["SERVER_NAME"] = "localhost"
 
         with controller_fixture.app.test_request_context("/"):
-            doc = provider._authentication_flow_document(None)
+            doc = provider._authentication_flow_document(controller_fixture.db.session)
             assert provider.label() == doc["description"]
             assert provider.flow_type == doc["type"]
 
@@ -311,19 +311,12 @@ class TestEkirjastoAuthentication:
     ):
         provider = create_provider()
 
-        # Secrets are not set, so this will fail.
-        pytest.raises(InternalServerError, provider._check_secrets_or_throw)
-        assert provider.delegate_token_signing_secret == None
-        assert provider.delegate_token_encrypting_secret == None
-
         provider.set_secrets(controller_fixture.db.session)
 
-        provider._check_secrets_or_throw()
+        assert provider.delegate_token_signing_secret is not None
+        assert provider.delegate_token_encrypting_secret is not None
 
-        assert provider.delegate_token_signing_secret != None
-        assert provider.delegate_token_encrypting_secret != None
-
-        # Screts should be strong enough.
+        # Secrets should be strong enough.
         assert len(provider.delegate_token_signing_secret) > 30
         assert len(provider.delegate_token_encrypting_secret) > 30
 
@@ -685,6 +678,9 @@ class TestEkirjastoAuthentication:
         decoded_payload = provider.validate_ekirjasto_delegate_token(
             delegate_token, validate_expire=False
         )
+
+        assert type(decoded_payload) is dict
+
         patron = provider.authenticated_patron(
             controller_fixture.db.session, decoded_payload
         )
@@ -717,6 +713,8 @@ class TestEkirjastoAuthentication:
         patron_delegate_id = provider.get_patron_delegate_id(
             controller_fixture.db.session, patron
         )
+
+        assert patron_delegate_id is not None
 
         # Delegate token with the ekirjasto token.
         delegate_token = provider.create_ekirjasto_delegate_token(
