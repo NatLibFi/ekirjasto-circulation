@@ -1,3 +1,5 @@
+from unittest.mock import MagicMock, patch
+
 from api.opensearch_analytics_provider import OpenSearchAnalyticsProvider
 from core.analytics import Analytics
 from core.local_analytics_provider import LocalAnalyticsProvider
@@ -8,7 +10,8 @@ MOCK_PROTOCOL = "../../core/mock_analytics_provider"
 
 
 class TestOpenSearchAnalytics:
-    def test_init_opensource_analytics(self):
+    @patch("api.opensearch_analytics_provider.OpenSearch")
+    def test_init_opensource_analytics(self, mock_opensearch=MagicMock()):
         analytics = Analytics(
             opensearch_analytics_enabled=True,
             opensearch_analytics_index_prefix="circulation-events",
