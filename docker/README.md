@@ -20,7 +20,7 @@ Once the webapp Docker image is built, we can run it in a container with the fol
 $ docker run --name webapp -d \
     --p 80:80 \
     -e SIMPLIFIED_PRODUCTION_DATABASE='postgresql://[username]:[password]@[host]:[port]/[database_name]' \
-    ghcr.io/thepalaceproject/circ-webapp:main
+    ghcr.io/natlibfi/ekirjasto-circ-webapp:main
 ```
 
 If the database and OpenSearch(OS) are running in containers, use the --link option to let the webapp docker container
@@ -32,7 +32,7 @@ docker run \
 --name circ \
 -e SIMPLIFIED_PRODUCTION_DATABASE='postgresql://[username]:[password]@[host]:[port]/[database_name]' \
 -d -p 6500:80 \
-ghcr.io/thepalaceproject/circ-webapp:main
+ghcr.io/natlibfi/ekirjasto-circ-webapp:main
 ```
 
 Navigate to `http://localhost/admin` in your browser to visit the web admin for the Circulation Manager. In the admin,
@@ -49,7 +49,7 @@ Once the scripts Docker image is built, we can run it in a container with the fo
 $ docker run --name scripts -d \
     -e TZ='YOUR_TIMEZONE_STRING' \
     -e SIMPLIFIED_PRODUCTION_DATABASE='postgresql://[username]:[password]@[host]:[port]/[database_name]' \
-    ghcr.io/thepalaceproject/circ-scripts:main
+    ghcr.io/natlibfi/ekirjasto-circ-scripts:main
 ```
 
 Using `docker exec -it scripts /bin/bash` in your console, navigate to `/var/log/simplified` in the container. After
@@ -58,7 +58,7 @@ Using `docker exec -it scripts /bin/bash` in your console, navigate to `/var/log
 ### circ-exec
 
 This image builds containers that will run a single script and stop. It's useful in conjunction with a tool like Amazon
- ECS Scheduled Tasks, where you can run script containers on a cron-style schedule.
+ECS Scheduled Tasks, where you can run script containers on a cron-style schedule.
 
 Unlike the `circ-scripts` image, which runs constantly and executes every possible maintenance script--whether or not
 your configuration requires it--`circ-exec` offers more nuanced control of your Library Simplified Circulation Manager
@@ -74,7 +74,7 @@ external log aggregator if you wish to capture logs from the job.
 $ docker run --name search_index_refresh -it \
     -e SIMPLIFIED_SCRIPT_NAME='refresh_materialized_views' \
     -e SIMPLIFIED_PRODUCTION_DATABASE='postgresql://[username]:[password]@[host]:[port]/[database_name]' \
-    ghcr.io/thepalaceproject/circ-exec:main
+    ghcr.io/natlibfi/ekirjasto-circ-exec:main
 ```
 
 ## Environment Variables
@@ -84,35 +84,35 @@ Environment variables can be set with the `-e VARIABLE_KEY='variable_value'` opt
 
 ### `SIMPLIFIED_PRODUCTION_DATABASE`
 
-*Required.* The URL of the production PostgreSQL database for the application.
+_Required._ The URL of the production PostgreSQL database for the application.
 
 ### `SIMPLIFIED_TEST_DATABASE`
 
-*Optional.* The URL of a PostgreSQL database for tests. This optional variable allows unit tests to be run in the
+_Optional._ The URL of a PostgreSQL database for tests. This optional variable allows unit tests to be run in the
 container.
 
 ### `TZ`
 
-*Optional. Applies to `circ-scripts` only.* The time zone that cron should use to run scheduled scripts--usually the
+_Optional. Applies to `circ-scripts` only._ The time zone that cron should use to run scheduled scripts--usually the
 time zone of the library or libraries on the circulation manager instance. This value should be selected according to
- [Debian-system time zone options](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones).
- This value allows scripts to be run at ideal times.
+[Debian-system time zone options](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones).
+This value allows scripts to be run at ideal times.
 
 ### `UWSGI_PROCESSES`
 
-*Optional.* The number of processes to use when running uWSGI. This value can be updated in `docker-compose.yml` or
+_Optional._ The number of processes to use when running uWSGI. This value can be updated in `docker-compose.yml` or
 added directly in `Dockerfile` under webapp stage. Defaults to 6.
 
 ### `UWSGI_THREADS`
 
-*Optional.* The number of threads to use when running uWSGI. This value can be updated in `docker-compose.yml` or added
+_Optional._ The number of threads to use when running uWSGI. This value can be updated in `docker-compose.yml` or added
 directly in `Dockerfile` under webapp stage. Defaults to 2.
 
 ## Building new images
 
 If you plan to work with stable versions of the Circulation Manager, we strongly recommend using the latest stable
 versions of circ-webapp and circ-scripts
-[published to the GitHub Container Registry](https://github.com/orgs/ThePalaceProject/packages?repo_name=circulation).
+[published to the GitHub Container Registry](https://github.com/orgs/NatLibFi/packages?repo_name=circulation).
 However, there may come a time in development when you want to build Docker containers for a particular version of the
 Circulation Manager. If so, please use the instructions below.
 

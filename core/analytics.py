@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from api.opensearch_analytics_provider import OpenSearchAnalyticsProvider  # Finland
 from api.s3_analytics_provider import S3AnalyticsProvider
 from core.local_analytics_provider import LocalAnalyticsProvider
 from core.util.datetime_helpers import utc_now
@@ -18,6 +19,9 @@ class Analytics(LoggerMixin):
         self,
         s3_analytics_enabled: bool = False,
         s3_service: S3Service | None = None,
+        opensearch_analytics_enabled: bool = False,
+        opensearch_analytics_url: str | None = None,
+        opensearch_analytics_index_prefix: str | None = None,
     ) -> None:
         self.providers = [LocalAnalyticsProvider()]
 
@@ -27,6 +31,19 @@ class Analytics(LoggerMixin):
             else:
                 self.log.info(
                     "S3 analytics is not configured: No analytics bucket was specified."
+                )
+
+        if opensearch_analytics_enabled:
+            if opensearch_analytics_url and opensearch_analytics_index_prefix:
+                self.providers.append(
+                    OpenSearchAnalyticsProvider(
+                        opensearch_analytics_url=opensearch_analytics_url,
+                        opensearch_analytics_index_prefix=opensearch_analytics_index_prefix,
+                    )
+                )
+            else:
+                self.log.info(
+                    "OpenSearch analytics is not configured: Either analytics url or index prefix (or both) was not specified."
                 )
 
     def collect_event(self, library, license_pool, event_type, time=None, **kwargs):
