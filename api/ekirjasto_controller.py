@@ -34,35 +34,30 @@ class EkirjastoController:
 
         self._logger = logging.getLogger(__name__)
 
-    def _get_delegate_expire_timestamp(self, ekirjasto_token_expires: int) -> int:
+    def _get_delegate_expire_timestamp(self, ekirjasto_expire_millis: int) -> int:
         """Get the expire time to use for delegate token, it is calculated based on
         expire time of the ekirjasto token.
 
-        :param ekirjasto_token_expires: Ekirjasto token expiration timestamp in milliseconds.
+        :param ekirjasto_expire_millis: Ekirjasto token expiration timestamp in milliseconds.
 
-        :return: Timestamp for the delegate token expiration.
+        :return: Timestamp for the delegate token expiration in seconds.
         """
 
-        # Ekirjasto expire is in milliseconds but JWT uses seconds.
-        ekirjasto_token_expires = int(ekirjasto_token_expires / 1000)
-
-        delegate_token_expires = (
+        delegate_expire_seconds = (
             utc_now()
             + datetime.timedelta(
                 seconds=self._authenticator.ekirjasto_provider.delegate_expire_timemestamp
             )
         ).timestamp()
 
-        # Use ekirjasto expire time at 70 % of the remaining duration, so we have some time to refresh it.
         now_seconds = utc_now().timestamp()
-        ekirjasto_token_expires = (
-            ekirjasto_token_expires - now_seconds
+
+        # Use ekirjasto expire time at 70 % of the remaining duration, so we have some time to refresh it.
+        ekirjasto_expire_seconds = (
+            (ekirjasto_expire_millis / 1000) - now_seconds
         ) * 0.7 + now_seconds
 
-        if ekirjasto_token_expires < delegate_token_expires:
-            return int(ekirjasto_token_expires)
-
-        return int(delegate_token_expires)
+        return int(min(ekirjasto_expire_seconds, delegate_expire_seconds))
 
     def get_tokens(self, authorization, validate_expire=False):
         """Extract possible delegate and ekirjasto tokens from the authorization header."""

@@ -4,7 +4,7 @@ import json
 import logging
 import sys
 from abc import ABC
-from typing import Dict, Iterable, List, Optional, Tuple, Type
+from typing import Dict, Iterable, List, Optional, Tuple, Type, cast
 
 import flask
 import jwt
@@ -431,7 +431,7 @@ class LibraryAuthenticator(LoggerMixin):
         self.ekirjasto_provider = provider
 
     # Finland
-    def get_ekirjasto_provider(self) -> EkirjastoAuthenticationAPI:
+    def get_ekirjasto_provider(self) -> EkirjastoAuthenticationAPI | None:
         return self.ekirjasto_provider
 
     @property
@@ -495,9 +495,10 @@ class LibraryAuthenticator(LoggerMixin):
                 return INVALID_EKIRJASTO_DELEGATE_TOKEN
             provider = self.ekirjasto_provider
             # Get decoded payload from the delegate token.
-            provider_token = provider.validate_ekirjasto_delegate_token(auth.token)
-            if isinstance(provider_token, ProblemDetail):
-                return provider_token
+            validate_result = provider.validate_ekirjasto_delegate_token(auth.token)
+            if isinstance(validate_result, ProblemDetail):
+                return validate_result
+            provider_token = validate_result
         elif auth.type.lower() == "bearer":
             # The patron wants to use an
             # SAMLAuthenticationProvider. Figure out which one.
@@ -593,12 +594,14 @@ class LibraryAuthenticator(LoggerMixin):
             # Maybe we should use something custom instead.
             iss=provider_name,
         )
-        return jwt.encode(payload, self.bearer_token_signing_secret, algorithm="HS256")
+        return jwt.encode(
+            payload, cast(str, self.bearer_token_signing_secret), algorithm="HS256"
+        )
 
     def decode_bearer_token(self, token: str) -> Tuple[str, str]:
         """Extract auth provider name and access token from JSON web token."""
         decoded = jwt.decode(
-            token, self.bearer_token_signing_secret, algorithms=["HS256"]
+            token, cast(str, self.bearer_token_signing_secret), algorithms=["HS256"]
         )
         provider_name = decoded["iss"]
         token = decoded["token"]
