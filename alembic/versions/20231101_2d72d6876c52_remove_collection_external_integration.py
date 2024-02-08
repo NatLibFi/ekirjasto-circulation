@@ -19,7 +19,7 @@ from core.model import json_serializer
 
 # revision identifiers, used by Alembic.
 revision = "2d72d6876c52"
-down_revision = "cc084e35e037"
+down_revision = "d7ef6948af4e"
 branch_labels = None
 depends_on = None
 
