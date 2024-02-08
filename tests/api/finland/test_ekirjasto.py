@@ -687,7 +687,7 @@ class TestEkirjastoAuthentication:
 
         assert patron is None
 
-    def test_authenticated_patron_ekirjasto_token_invald(
+    def test_authenticated_patron_ekirjasto_token_invalid(
         self,
         create_provider: Callable[..., MockEkirjastoAuthenticationAPI],
         controller_fixture: ControllerFixture,

@@ -610,7 +610,7 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
 
     def ekirjasto_authenticate(
         self, _db: Session, ekirjasto_token: str
-    ) -> tuple[PatronData | Patron | ProblemDetail | None, bool]:
+    ) -> tuple[Patron | ProblemDetail | None, bool]:
         """Authenticate patron with remote ekirjasto API and if necessary,
         create authenticated patron if not in database.
 
@@ -627,10 +627,11 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
         if isinstance(auth_result, PatronData):
             # We didn't find the patron, but authentication to external truth was
             # successful, so we create a new patron with the information we have.
-            patron, is_new = auth_result.get_or_create_patron(
+            new_patron, is_new = auth_result.get_or_create_patron(
                 _db, self.library_id, analytics=self.analytics
             )
-            patron.last_external_sync = utc_now()
+            new_patron.last_external_sync = utc_now()
+            return new_patron, is_new
 
         return auth_result, is_new
 
