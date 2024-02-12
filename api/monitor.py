@@ -1,5 +1,3 @@
-from typing import Type
-
 from sqlalchemy import and_, or_
 
 from api.odl import ODLAPI
@@ -8,6 +6,7 @@ from core.model import (
     Collection,
     ExternalIntegration,
     Hold,
+    IntegrationConfiguration,
     LicensePool,
     Loan,
 )
@@ -36,7 +35,7 @@ class LoanlikeReaperMonitor(ReaperMonitor):
         """
         source_of_truth = or_(
             LicensePool.open_access == True,
-            ExternalIntegration.protocol.in_(self.SOURCE_OF_TRUTH_PROTOCOLS),
+            IntegrationConfiguration.protocol.in_(self.SOURCE_OF_TRUTH_PROTOCOLS),
         )
 
         source_of_truth_subquery = (
@@ -44,8 +43,8 @@ class LoanlikeReaperMonitor(ReaperMonitor):
             .join(self.MODEL_CLASS.license_pool)
             .join(LicensePool.collection)
             .join(
-                ExternalIntegration,
-                Collection.external_integration_id == ExternalIntegration.id,
+                IntegrationConfiguration,
+                Collection.integration_configuration_id == IntegrationConfiguration.id,
             )
             .filter(source_of_truth)
         )
@@ -55,7 +54,7 @@ class LoanlikeReaperMonitor(ReaperMonitor):
 class LoanReaper(LoanlikeReaperMonitor):
     """Remove expired and abandoned loans from the database."""
 
-    MODEL_CLASS: Type[Loan] = Loan
+    MODEL_CLASS: type[Loan] = Loan
     MAX_AGE = 90
 
     @property

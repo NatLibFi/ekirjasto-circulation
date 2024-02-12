@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from api.opensearch_analytics_provider import OpenSearchAnalyticsProvider  # Finland
 from api.s3_analytics_provider import S3AnalyticsProvider
@@ -18,10 +18,10 @@ class Analytics(LoggerMixin):
     def __init__(
         self,
         s3_analytics_enabled: bool = False,
-        s3_service: Optional[S3Service] = None,
+        s3_service: S3Service | None = None,
         opensearch_analytics_enabled: bool = False,
-        opensearch_analytics_url=Optional[str],
-        opensearch_analytics_index_prefix=Optional[str],
+        opensearch_analytics_url: str | None = None,
+        opensearch_analytics_index_prefix: str | None = None,
     ) -> None:
         self.providers = [LocalAnalyticsProvider()]
 

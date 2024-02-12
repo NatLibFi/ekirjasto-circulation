@@ -1,20 +1,10 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable, Iterable
 from datetime import datetime
 from io import BytesIO, StringIO
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Dict,
-    Iterable,
-    List,
-    Literal,
-    Optional,
-    Tuple,
-    Type,
-)
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urljoin, urlparse
 
 import webpub_manifest_parser.opds2.ast as opds2_ast
@@ -23,8 +13,20 @@ from sqlalchemy.orm import Session
 from uritemplate import URITemplate
 from webpub_manifest_parser.core import ManifestParserFactory, ManifestParserResult
 from webpub_manifest_parser.core.analyzer import NodeFinder
-from webpub_manifest_parser.core.ast import Link, Manifestlike
+from webpub_manifest_parser.core.ast import (
+    ArrayOfCollectionsProperty,
+    Link,
+    Manifestlike,
+)
+from webpub_manifest_parser.core.properties import BooleanProperty
 from webpub_manifest_parser.errors import BaseError
+from webpub_manifest_parser.opds2 import (
+    ManifestParser,
+    OPDS2CollectionRolesRegistry,
+    OPDS2FeedParserFactory,
+    OPDS2SemanticAnalyzer,
+    OPDS2SyntaxAnalyzer,
+)
 from webpub_manifest_parser.opds2.registry import (
     OPDS2LinkRelationsRegistry,
     OPDS2MediaTypesRegistry,
@@ -66,7 +68,6 @@ from core.model import (
     RightsStatus,
     Subject,
 )
-from core.model.configuration import ConfigurationSetting
 from core.model.constants import IdentifierType
 from core.opds_import import (
     BaseOPDSAPI,
@@ -137,6 +138,53 @@ class RWPMManifestParser:
         return result
 
 
+class PalaceOPDS2PresentationMetadata(opds2_ast.PresentationMetadata):  # type: ignore[misc]
+    time_tracking = BooleanProperty(
+        "http://palaceproject.io/terms/timeTracking", False, default_value=False
+    )
+
+
+class PalaceOPDS2Publication(opds2_ast.OPDS2Publication):  # type: ignore[misc]
+    metadata = opds2_ast.TypeProperty(
+        key="metadata", required=True, nested_type=PalaceOPDS2PresentationMetadata
+    )
+
+
+class PalaceOPDS2Feed(opds2_ast.OPDS2Feed):  # type: ignore[misc]
+    publications = ArrayOfCollectionsProperty(
+        "publications",
+        required=False,
+        role=OPDS2CollectionRolesRegistry.PUBLICATIONS,
+        collection_type=PalaceOPDS2Publication,
+    )
+
+
+class PalaceOPDS2SyntaxAnalyzer(OPDS2SyntaxAnalyzer):  # type: ignore[misc]
+    def _create_manifest(self) -> opds2_ast.OPDS2Feed:
+        return PalaceOPDS2Feed()
+
+
+class PalaceOPDS2FeedParserFactory(OPDS2FeedParserFactory):  # type: ignore[misc]
+    def create(self) -> ManifestParser:
+        """Create a new OPDS 2.0 parser.
+
+        :return: OPDS 2.0 parser
+        :rtype: Parser
+        """
+        media_types_registry = OPDS2MediaTypesRegistry()
+        link_relations_registry = OPDS2LinkRelationsRegistry()
+        collection_roles_registry = OPDS2CollectionRolesRegistry()
+        syntax_analyzer = (
+            PalaceOPDS2SyntaxAnalyzer()
+        )  # This is the only change from the base class
+        semantic_analyzer = OPDS2SemanticAnalyzer(
+            media_types_registry, link_relations_registry, collection_roles_registry
+        )
+        parser = ManifestParser(syntax_analyzer, semantic_analyzer)
+
+        return parser
+
+
 class OPDS2ImporterSettings(OPDSImporterSettings):
     custom_accept_header: str = FormField(
         default="{}, {};q=0.9, */*;q=0.1".format(
@@ -152,7 +200,7 @@ class OPDS2ImporterSettings(OPDSImporterSettings):
         ),
     )
 
-    ignored_identifier_types: List[str] = FormField(
+    ignored_identifier_types: list[str] = FormField(
         alias="IGNORED_IDENTIFIER_TYPE",
         default=[],
         form=ConfigurationFormItem(
@@ -177,11 +225,11 @@ class OPDS2ImporterLibrarySettings(OPDSImporterLibrarySettings):
 
 class OPDS2API(BaseOPDSAPI):
     @classmethod
-    def settings_class(cls) -> Type[OPDS2ImporterSettings]:
+    def settings_class(cls) -> type[OPDS2ImporterSettings]:
         return OPDS2ImporterSettings
 
     @classmethod
-    def library_settings_class(cls) -> Type[OPDS2ImporterLibrarySettings]:
+    def library_settings_class(cls) -> type[OPDS2ImporterLibrarySettings]:
         return OPDS2ImporterLibrarySettings
 
     @classmethod
@@ -194,16 +242,10 @@ class OPDS2API(BaseOPDSAPI):
 
     def __init__(self, _db: Session, collection: Collection):
         super().__init__(_db, collection)
-        # TODO: This needs to be refactored to use IntegrationConfiguration,
-        #  but it has been temporarily rolled back, since the IntegrationConfiguration
-        #  code caused problems fulfilling TOKEN_AUTH books in production.
-        #  This should be fixed as part of the work PP-313 to fully remove
-        #  ExternalIntegrations from our collections code.
-        token_auth_configuration = ConfigurationSetting.for_externalintegration(
-            ExternalIntegration.TOKEN_AUTH, collection.external_integration
-        )
-        self.token_auth_configuration = (
-            token_auth_configuration.value if token_auth_configuration else None
+        self.token_auth_configuration: str | None = (
+            collection.integration_configuration.context.get(
+                ExternalIntegration.TOKEN_AUTH
+            )
         )
 
     @classmethod
@@ -249,6 +291,12 @@ class OPDS2API(BaseOPDSAPI):
             )
             return fulfillment
 
+        if not self.token_auth_configuration:
+            self.log.warning(
+                "No token auth configuration found, unable to fulfill via OPDS2 token auth."
+            )
+            return fulfillment
+
         token = self.get_authentication_token(
             patron, licensepool.data_source, self.token_auth_configuration
         )
@@ -279,7 +327,7 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
     NEXT_LINK_RELATION: str = "next"
 
     @classmethod
-    def settings_class(cls) -> Type[OPDS2ImporterSettings]:
+    def settings_class(cls) -> type[OPDS2ImporterSettings]:
         return OPDS2ImporterSettings
 
     def __init__(
@@ -288,7 +336,7 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
         collection: Collection,
         parser: RWPMManifestParser,
         data_source_name: str | None = None,
-        http_get: Optional[Callable[..., Tuple[int, Any, bytes]]] = None,
+        http_get: Callable[..., tuple[int, Any, bytes]] | None = None,
     ):
         """Initialize a new instance of OPDS2Importer class.
 
@@ -307,11 +355,6 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
         super().__init__(db, collection, data_source_name, http_get)
         self._parser = parser
         self.ignored_identifier_types = self.settings.ignored_identifier_types
-
-    def assert_importable_content(
-        self, feed: str, feed_url: str, max_get_attempts: int = 5
-    ) -> Literal[True]:
-        raise NotImplementedError("OPDS2Importer does not support this method")
 
     def _is_identifier_allowed(self, identifier: Identifier) -> bool:
         """Check the identifier and return a boolean value indicating whether CM can import it.
@@ -411,7 +454,7 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
         return contributor_metadata_list
 
     def _extract_link(
-        self, link: Link, feed_self_url: str, default_link_rel: Optional[str] = None
+        self, link: Link, feed_self_url: str, default_link_rel: str | None = None
     ) -> LinkData:
         """Extract a LinkData object from webpub-manifest-parser's link.
 
@@ -698,7 +741,7 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
         self,
         feed: opds2_ast.OPDS2Feed,
         publication: opds2_ast.OPDS2Publication,
-        data_source_name: Optional[str],
+        data_source_name: str | None,
     ) -> Metadata:
         """Extract a Metadata object from webpub-manifest-parser's publication.
 
@@ -771,6 +814,13 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
         )
         # Audiobook duration
         duration = publication.metadata.duration
+        # Not all parsers support time_tracking
+        time_tracking = getattr(publication.metadata, "time_tracking", False)
+        if medium != Edition.AUDIO_MEDIUM and time_tracking is True:
+            time_tracking = False
+            self.log.warning(
+                f"Ignoring the time tracking flag for entry {publication.metadata.identifier}"
+            )
 
         feed_self_url = first_or_default(
             feed.links.get_by_rel(OPDS2LinkRelationsRegistry.SELF.key)
@@ -804,6 +854,7 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
             licenses_reserved=0,
             patrons_in_hold_queue=0,
             formats=[],
+            should_track_playtime=time_tracking,
         )
 
         formats = self._find_formats_in_non_open_access_acquisition_links(
@@ -877,15 +928,6 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
                 )
 
         return formats
-
-    def external_integration(self, db: Session) -> ExternalIntegration:
-        """Return an external integration associated with this object.
-        :param db: Database session
-        :return: External integration associated with this object
-        """
-        if self.collection is None:
-            raise ValueError("Collection is not set")
-        return self.collection.external_integration
 
     @staticmethod
     def _get_publications(
@@ -1009,7 +1051,7 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
 
     def extract_last_update_dates(
         self, feed: str | opds2_ast.OPDS2Feed
-    ) -> list[tuple[Optional[str], Optional[datetime]]]:
+    ) -> list[tuple[str | None, datetime | None]]:
         """Extract last update date of the feed.
 
         :param feed: OPDS 2.0 feed
@@ -1034,10 +1076,9 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
         for link in links:
             if first_or_default(link.rels) == Hyperlink.TOKEN_AUTH:
                 # Save the collection-wide token authentication endpoint
-                auth_setting = ConfigurationSetting.for_externalintegration(
-                    ExternalIntegration.TOKEN_AUTH, self.external_integration(self._db)
+                self.collection.integration_configuration.context_update(
+                    {ExternalIntegration.TOKEN_AUTH: link.href}
                 )
-                auth_setting.value = link.href
 
     def extract_feed_data(
         self, feed: str | opds2_ast.OPDS2Feed, feed_url: str | None = None
@@ -1100,7 +1141,7 @@ class OPDS2ImportMonitor(OPDSImportMonitor):
     MEDIA_TYPE = OPDS2MediaTypesRegistry.OPDS_FEED.key, "application/json"
 
     def _verify_media_type(
-        self, url: str, status_code: int, headers: Dict[str, str], feed: bytes
+        self, url: str, status_code: int, headers: dict[str, str], feed: bytes
     ) -> None:
         # Make sure we got an OPDS feed, and not an error page that was
         # sent with a 200 status code.

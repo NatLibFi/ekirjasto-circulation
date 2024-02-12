@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Any, Callable, List, Tuple
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock
 
 import flask
@@ -17,8 +18,8 @@ from api.admin.problem_details import (
     INTEGRATION_NAME_ALREADY_IN_USE,
     INVALID_CONFIGURATION_OPTION,
     INVALID_LIBRARY_IDENTIFIER_RESTRICTION_REGULAR_EXPRESSION,
-    MISSING_PATRON_AUTH_NAME,
     MISSING_SERVICE,
+    MISSING_SERVICE_NAME,
     MULTIPLE_BASIC_AUTH_SERVICES,
     NO_PROTOCOL_FOR_NEW_SERVICE,
     NO_SUCH_LIBRARY,
@@ -36,6 +37,7 @@ from api.sip import SIP2AuthenticationProvider
 from core.integration.goals import Goals
 from core.model import AdminRole, Library, get_one
 from core.model.integration import IntegrationConfiguration
+from core.problem_details import INVALID_INPUT
 from core.util.problem_detail import ProblemDetail
 
 if TYPE_CHECKING:
@@ -84,7 +86,7 @@ def post_response(
 
 
 @pytest.fixture
-def common_args() -> List[Tuple[str, str]]:
+def common_args() -> list[tuple[str, str]]:
     return [
         ("test_identifier", "user"),
         ("test_password", "pass"),
@@ -106,7 +108,6 @@ class TestPatronAuth:
         protocols = response.get("protocols")
         assert isinstance(protocols, list)
         assert 8 == len(protocols)
-        assert SimpleAuthenticationProvider.__module__ == protocols[0].get("name")
         assert "settings" in protocols[0]
         assert "library_settings" in protocols[0]
 
@@ -366,9 +367,9 @@ class TestPatronAuth:
         )
         response = post_response(form)
         assert isinstance(response, ProblemDetail)
-        assert response.uri == MISSING_PATRON_AUTH_NAME.uri
+        assert response == MISSING_SERVICE_NAME
 
-    def test_patron_auth_services_post_missing_patron_auth_no_such_library(
+    def test_patron_auth_services_post_no_such_library(
         self,
         post_response: Callable[..., Response | ProblemDetail],
         common_args: list[tuple[str, str]],
@@ -384,6 +385,24 @@ class TestPatronAuth:
         response = post_response(form)
         assert isinstance(response, ProblemDetail)
         assert response.uri == NO_SUCH_LIBRARY.uri
+
+    def test_patron_auth_services_post_missing_short_name(
+        self,
+        post_response: Callable[..., Response | ProblemDetail],
+        common_args: list[tuple[str, str]],
+    ):
+        form = ImmutableMultiDict(
+            [
+                ("name", "testing auth name"),
+                ("protocol", SimpleAuthenticationProvider.__module__),
+                ("libraries", json.dumps([{}])),
+            ]
+            + common_args
+        )
+        response = post_response(form)
+        assert isinstance(response, ProblemDetail)
+        assert response.uri == INVALID_INPUT.uri
+        assert response.detail == "Invalid library settings, missing short_name."
 
     def test_patron_auth_services_post_missing_patron_auth_multiple_basic(
         self,
@@ -448,7 +467,7 @@ class TestPatronAuth:
 
     def test_patron_auth_services_post_not_authorized(
         self,
-        common_args: List[Tuple[str, str]],
+        common_args: list[tuple[str, str]],
         settings_ctrl_fixture: SettingsControllerFixture,
         post_response: Callable[..., Response | ProblemDetail],
     ):
@@ -463,7 +482,7 @@ class TestPatronAuth:
 
     def test_patron_auth_services_post_create(
         self,
-        common_args: List[Tuple[str, str]],
+        common_args: list[tuple[str, str]],
         default_library: Library,
         post_response: Callable[..., Response | ProblemDetail],
         db: DatabaseTransactionFixture,
@@ -504,6 +523,7 @@ class TestPatronAuth:
         assert settings.test_password == "pass"
         [library_config] = auth_service.library_configurations
         assert library_config.library == default_library
+        assert "short_name" not in library_config.settings_dict
         assert (
             library_config.settings_dict["library_identifier_restriction_criteria"]
             == "^1234"
@@ -543,7 +563,7 @@ class TestPatronAuth:
     def test_patron_auth_services_post_edit(
         self,
         post_response: Callable[..., Response | ProblemDetail],
-        common_args: List[Tuple[str, str]],
+        common_args: list[tuple[str, str]],
         settings_ctrl_fixture: SettingsControllerFixture,
         create_simple_auth_integration: SimpleAuthIntegrationFixture,
         db: DatabaseTransactionFixture,
@@ -607,7 +627,7 @@ class TestPatronAuth:
 
     def test_patron_auth_service_delete(
         self,
-        common_args: List[Tuple[str, str]],
+        common_args: list[tuple[str, str]],
         settings_ctrl_fixture: SettingsControllerFixture,
         create_simple_auth_integration: SimpleAuthIntegrationFixture,
     ):

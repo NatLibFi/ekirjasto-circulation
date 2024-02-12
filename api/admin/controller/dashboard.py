@@ -1,14 +1,14 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import date, datetime, timedelta
-from typing import Callable
 
 import flask
 from sqlalchemy import desc, nullslast
 from sqlalchemy.orm import Session
 
 from api.admin.model.dashboard_statistics import StatisticsResponse
-from api.controller import CirculationManagerController
+from api.controller.circulation_manager import CirculationManagerController
 from api.local_analytics_exporter import LocalAnalyticsExporter
 from core.feed.annotator.admin import AdminAnnotator
 from core.model import (

@@ -3,13 +3,13 @@ from __future__ import annotations
 import json
 import random
 import string
+from collections.abc import Generator
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, Generator, Optional, Protocol, Union
+from typing import TYPE_CHECKING, Any, Protocol, cast
 
 import pytest
 import pytest_alembic
 from pytest_alembic.config import Config
-from sqlalchemy import inspect
 
 from core.model import json_serializer
 from tests.fixtures.database import ApplicationFixture, DatabaseFixture
@@ -62,7 +62,7 @@ def alembic_engine(database: DatabaseFixture) -> Engine:
 
 @pytest.fixture
 def alembic_runner(
-    alembic_config: Union[Dict[str, Any], alembic.config.Config, Config],
+    alembic_config: dict[str, Any] | alembic.config.Config | Config,
     alembic_engine: Engine,
 ) -> Generator[MigrationContext, None, None]:
     """
@@ -76,13 +76,13 @@ def alembic_runner(
 
 
 class RandomName(Protocol):
-    def __call__(self, length: Optional[int] = None) -> str:
+    def __call__(self, length: int | None = None) -> str:
         ...
 
 
 @pytest.fixture
 def random_name() -> RandomName:
-    def fixture(length: Optional[int] = None) -> str:
+    def fixture(length: int | None = None) -> str:
         if length is None:
             length = 10
         return "".join(random.choices(string.ascii_lowercase, k=length))
@@ -94,8 +94,8 @@ class CreateLibrary(Protocol):
     def __call__(
         self,
         connection: Connection,
-        name: Optional[str] = None,
-        short_name: Optional[str] = None,
+        name: str | None = None,
+        short_name: str | None = None,
     ) -> int:
         ...
 
@@ -104,34 +104,27 @@ class CreateLibrary(Protocol):
 def create_library(random_name: RandomName) -> CreateLibrary:
     def fixture(
         connection: Connection,
-        name: Optional[str] = None,
-        short_name: Optional[str] = None,
+        name: str | None = None,
+        short_name: str | None = None,
     ) -> int:
         if name is None:
             name = random_name()
         if short_name is None:
             short_name = random_name()
 
-        inspector = inspect(connection)
-        columns = [column["name"] for column in inspector.get_columns("libraries")]
-
         args = {
             "name": name,
             "short_name": short_name,
         }
 
-        # See if we need to include public and private keys
-        if "public_key" in columns:
-            args["public_key"] = random_name()
-            args["private_key"] = random_name()
+        args["public_key"] = random_name()
+        args["private_key"] = random_name()
 
-        # See if we need to include a settings dict
-        if "settings_dict" in columns:
-            settings_dict = {
-                "website": "http://library.com",
-                "help_web": "http://library.com/support",
-            }
-            args["settings_dict"] = json_serializer(settings_dict)
+        settings_dict = {
+            "website": "http://library.com",
+            "help_web": "http://library.com/support",
+        }
+        args["settings_dict"] = json_serializer(settings_dict)
 
         keys = ",".join(args.keys())
         values = ",".join([f"'{value}'" for value in args.values()])
@@ -150,9 +143,7 @@ class CreateCollection(Protocol):
     def __call__(
         self,
         connection: Connection,
-        name: Optional[str] = None,
-        external_integration_id: Optional[int] = None,
-        external_account_id: Optional[str] = None,
+        integration_configuration_id: int | None = None,
     ) -> int:
         ...
 
@@ -161,16 +152,11 @@ class CreateCollection(Protocol):
 def create_collection(random_name: RandomName) -> CreateCollection:
     def fixture(
         connection: Connection,
-        name: Optional[str] = None,
-        external_integration_id: Optional[int] = None,
-        external_account_id: Optional[str] = None,
+        integration_configuration_id: int | None = None,
     ) -> int:
-        if name is None:
-            name = random_name()
         collection = connection.execute(
-            "INSERT INTO collections (name, external_account_id, external_integration_id) VALUES"
-            + "(%s, %s, %s) returning id",
-            (name, external_account_id, external_integration_id),
+            "INSERT INTO collections (integration_configuration_id) VALUES (%s) returning id",
+            integration_configuration_id,
         ).fetchone()
         assert collection is not None
         assert isinstance(collection.id, int)
@@ -183,9 +169,9 @@ class CreateExternalIntegration(Protocol):
     def __call__(
         self,
         connection: Connection,
-        protocol: Optional[str] = None,
-        goal: Optional[str] = None,
-        name: Optional[str] = None,
+        protocol: str | None = None,
+        goal: str | None = None,
+        name: str | None = None,
     ) -> int:
         ...
 
@@ -194,9 +180,9 @@ class CreateExternalIntegration(Protocol):
 def create_external_integration(random_name: RandomName) -> CreateExternalIntegration:
     def fixture(
         connection: Connection,
-        protocol: Optional[str] = None,
-        goal: Optional[str] = None,
-        name: Optional[str] = None,
+        protocol: str | None = None,
+        goal: str | None = None,
+        name: str | None = None,
     ) -> int:
         protocol = protocol or random_name()
         goal = goal or random_name()
@@ -215,10 +201,10 @@ class CreateConfigSetting(Protocol):
     def __call__(
         self,
         connection: Connection,
-        key: Optional[str] = None,
-        value: Optional[str] = None,
-        integration_id: Optional[int] = None,
-        library_id: Optional[int] = None,
+        key: str | None = None,
+        value: str | None = None,
+        integration_id: int | None = None,
+        library_id: int | None = None,
         associate_library: bool = False,
     ) -> int:
         ...
@@ -228,10 +214,10 @@ class CreateConfigSetting(Protocol):
 def create_config_setting() -> CreateConfigSetting:
     def fixture(
         connection: Connection,
-        key: Optional[str] = None,
-        value: Optional[str] = None,
-        integration_id: Optional[int] = None,
-        library_id: Optional[int] = None,
+        key: str | None = None,
+        value: str | None = None,
+        integration_id: int | None = None,
+        library_id: int | None = None,
         associate_library: bool = False,
     ) -> int:
         if type(value) in (tuple, list, dict):
@@ -258,3 +244,206 @@ def create_config_setting() -> CreateConfigSetting:
         return setting.id
 
     return fixture
+
+
+class CreateIntegrationConfiguration(Protocol):
+    def __call__(
+        self,
+        connection: Connection,
+        name: str,
+        protocol: str,
+        goal: str,
+        settings: dict[str, Any] | None = None,
+    ) -> int:
+        ...
+
+
+@pytest.fixture
+def create_integration_configuration() -> CreateIntegrationConfiguration:
+    def fixture(
+        connection: Connection,
+        name: str,
+        protocol: str,
+        goal: str,
+        settings: dict[str, Any] | None = None,
+    ) -> int:
+        if settings is None:
+            settings = {}
+
+        settings_str = json_serializer(settings)
+
+        integration_configuration = connection.execute(
+            "INSERT INTO integration_configurations (name, protocol, goal, settings, self_test_results, context) "
+            "VALUES (%s, %s, %s, %s, '{}', '{}') returning id",
+            name,
+            protocol,
+            goal,
+            settings_str,
+        ).fetchone()
+        assert integration_configuration is not None
+        assert isinstance(integration_configuration.id, int)
+        return integration_configuration.id
+
+    return fixture
+
+
+class CreateEdition(Protocol):
+    def __call__(
+        self,
+        connection: Connection,
+        title: str,
+        medium: str,
+        primary_identifier_id: int,
+    ) -> int:
+        ...
+
+
+@pytest.fixture
+def create_edition() -> CreateEdition:
+    def fixture(
+        connection: Connection, title: str, medium: str, primary_identifier_id: int
+    ) -> int:
+        edition = connection.execute(
+            "INSERT INTO editions (title, medium, primary_identifier_id) VALUES (%s, %s, %s) returning id",
+            title,
+            medium,
+            primary_identifier_id,
+        ).fetchone()
+        assert edition is not None
+        return cast(int, edition.id)
+
+    return fixture
+
+
+class CreateIdentifier:
+    def __call__(
+        self,
+        connection: Connection,
+        identifier: str | None = None,
+        type: str | None = None,
+    ) -> int:
+        identifier = identifier or self.random_name()
+        type = type or self.random_name()
+        identifier_row = connection.execute(
+            "INSERT INTO identifiers (identifier, type) VALUES (%s, %s) returning id",
+            identifier,
+            type,
+        ).fetchone()
+        assert identifier_row is not None
+        assert isinstance(identifier_row.id, int)
+        return identifier_row.id
+
+    def __init__(self, random_name: RandomName) -> None:
+        self.random_name = random_name
+
+
+@pytest.fixture
+def create_identifier(random_name: RandomName) -> CreateIdentifier:
+    return CreateIdentifier(random_name)
+
+
+class CreateLicensePool(Protocol):
+    def __call__(
+        self,
+        connection: Connection,
+        collection_id: int,
+        identifier_id: int | None = None,
+        should_track_playtime: bool | None = False,
+    ) -> int:
+        ...
+
+
+@pytest.fixture
+def create_license_pool() -> CreateLicensePool:
+    def fixture(
+        connection: Connection,
+        collection_id: int,
+        identifier_id: int | None = None,
+        should_track_playtime: bool | None = False,
+    ) -> int:
+        licensepool = connection.execute(
+            "INSERT into licensepools (collection_id, identifier_id, should_track_playtime) VALUES (%(id)s, %(identifier_id)s, %(track)s) returning id",
+            id=collection_id,
+            identifier_id=identifier_id,
+            track=should_track_playtime,
+        ).fetchone()
+        assert licensepool is not None
+        return cast(int, licensepool.id)
+
+    return fixture
+
+
+class CreateLane:
+    def __call__(
+        self,
+        connection: Connection,
+        library_id: int,
+        name: str | None = None,
+        priority: int = 0,
+        inherit_parent_restrictions: bool = False,
+        include_self_in_grouped_feed: bool = False,
+        visible: bool = True,
+    ) -> int:
+        name = name or self.random_name()
+        lane = connection.execute(
+            "INSERT INTO lanes "
+            "(library_id, display_name, priority, size, inherit_parent_restrictions, "
+            "include_self_in_grouped_feed, visible) "
+            " VALUES (%s, %s, %s, 0, %s, %s, %s) returning id",
+            library_id,
+            name,
+            priority,
+            inherit_parent_restrictions,
+            include_self_in_grouped_feed,
+            visible,
+        ).fetchone()
+        assert lane is not None
+        assert isinstance(lane.id, int)
+        return lane.id
+
+    def __init__(self, random_name: RandomName) -> None:
+        self.random_name = random_name
+
+
+@pytest.fixture
+def create_lane(random_name: RandomName) -> CreateLane:
+    return CreateLane(random_name)
+
+
+class CreateCoverageRecord:
+    def __call__(
+        self,
+        connection: Connection,
+        operation: str | None = None,
+        identifier_id: int | None = None,
+        collection_id: int | None = None,
+    ) -> int:
+        if identifier_id is None:
+            identifier_id = self.create_identifier(connection)
+
+        if operation is None:
+            operation = self.random_name()
+
+        row = connection.execute(
+            "INSERT INTO coveragerecords (operation, identifier_id, collection_id, timestamp) "
+            "VALUES (%s, %s, %s, '2021-01-01') returning id",
+            operation,
+            identifier_id,
+            collection_id,
+        ).first()
+        assert row is not None
+        assert isinstance(row.id, int)
+        return row.id
+
+    def __init__(
+        self, create_identifier: CreateIdentifier, random_name: RandomName
+    ) -> None:
+        self.create_identifier = create_identifier
+        self.random_name = random_name
+
+
+@pytest.fixture
+def create_coverage_record(
+    create_identifier: CreateIdentifier, random_name: RandomName
+) -> CreateCoverageRecord:
+    return CreateCoverageRecord(create_identifier, random_name)

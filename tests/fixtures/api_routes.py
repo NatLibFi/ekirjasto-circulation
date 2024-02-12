@@ -1,12 +1,13 @@
 import logging
-from typing import Any, Generator, Optional
+from collections.abc import Generator
+from typing import Any
 
 import flask
 import pytest
 from werkzeug.exceptions import MethodNotAllowed
 
 from api import routes
-from api.controller import CirculationManagerController
+from api.controller.circulation_manager import CirculationManagerController
 from tests.api.mockapi.circulation import MockCirculationManager
 from tests.fixtures.api_controller import ControllerFixture
 from tests.fixtures.database import DatabaseTransactionFixture
@@ -136,8 +137,8 @@ class RouteTestFixture:
         self.original_app = self.routes.app
         self.resolver = self.original_app.url_map.bind("", "/")
 
-        self.controller: Optional[CirculationManagerController] = None
-        self.real_controller: Optional[CirculationManagerController] = None
+        self.controller: CirculationManagerController | None = None
+        self.real_controller: CirculationManagerController | None = None
         self.routes.app = app  # type: ignore
 
     def set_controller_name(self, name: str):

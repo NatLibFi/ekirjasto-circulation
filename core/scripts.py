@@ -8,10 +8,10 @@ import sys
 import traceback
 import unicodedata
 import uuid
+from collections.abc import Generator
 from enum import Enum
-from typing import Generator, Optional, Type
 
-from sqlalchemy import and_, exists, or_, tuple_
+from sqlalchemy import and_, exists, or_, select, tuple_
 from sqlalchemy.orm import Query, Session, defer
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
@@ -23,6 +23,7 @@ from core.external_search import (
     Filter,
     SearchIndexCoverageProvider,
 )
+from core.integration.goals import Goals
 from core.lane import Lane
 from core.metadata_layer import TimestampData
 from core.model import (
@@ -35,6 +36,7 @@ from core.model import (
     Edition,
     ExternalIntegration,
     Identifier,
+    IntegrationConfiguration,
     Library,
     LicensePool,
     LicensePoolDeliveryMechanism,
@@ -118,7 +120,7 @@ class Script:
                     continue
         raise ValueError("Could not parse time: %s" % time_string)
 
-    def __init__(self, _db=None, services: Optional[Services] = None, *args, **kwargs):
+    def __init__(self, _db=None, services: Services | None = None, *args, **kwargs):
         """Basic constructor.
 
         :_db: A database session to be used instead of
@@ -1111,14 +1113,23 @@ class ShowCollectionsScript(Script):
         args = self.parse_command_line(_db, cmd_args=cmd_args)
         if args.name:
             name = args.name
-            collection = get_one(_db, Collection, name=name)
+            collection = Collection.by_name(_db, name)
             if collection:
                 collections = [collection]
             else:
                 output.write("Could not locate collection by name: %s" % name)
                 collections = []
         else:
-            collections = _db.query(Collection).order_by(Collection.name).all()
+            collections = (
+                _db.execute(
+                    select(Collection)
+                    .join(IntegrationConfiguration)
+                    .where(IntegrationConfiguration.goal == Goals.LICENSE_GOAL)
+                    .order_by(IntegrationConfiguration.name)
+                )
+                .scalars()
+                .all()
+            )
         if not collections:
             output.write("No collections found.\n")
         for collection in collections:
@@ -1243,7 +1254,7 @@ class ConfigureCollectionScript(ConfigurationSettingScript):
         protocol = None
         name = args.name
         protocol = args.protocol
-        collection = get_one(_db, Collection, Collection.name == name)
+        collection = Collection.by_name(_db, name)
         if not collection:
             if protocol:
                 collection, is_new = Collection.by_name_and_protocol(
@@ -1258,20 +1269,16 @@ class ConfigureCollectionScript(ConfigurationSettingScript):
                 )
         config = collection.integration_configuration
         settings = config.settings_dict.copy()
-        integration = collection.external_integration
         if protocol:
             config.protocol = protocol
-            integration.protocol = protocol
         if args.external_account_id:
-            collection.external_account_id = args.external_account_id
-
+            settings["external_account_id"] = args.external_account_id
         if args.url:
             settings["url"] = args.url
         if args.username:
             settings["username"] = args.username
         if args.password:
             settings["password"] = args.password
-        self.apply_settings(args.setting, integration)
         if args.setting:
             for setting in args.setting:
                 key, value = ConfigurationSettingScript._parse_setting(setting)
@@ -1288,8 +1295,7 @@ class ConfigureCollectionScript(ConfigurationSettingScript):
                         message += " I only know about: %s" % library_names
                     raise ValueError(message)
                 if collection not in library.collections:
-                    library.collections.append(collection)
-                    config.for_library(library.id, create=True)
+                    collection.libraries.append(library)
         site_configuration_has_changed(_db)
         _db.commit()
         output.write("Configuration settings stored.\n")
@@ -1556,7 +1562,6 @@ class AddClassificationScript(IdentifierInputScript):
             choose_summary=False,
             calculate_quality=False,
             choose_cover=False,
-            regenerate_marc_record=True,
             update_search_index=True,
             verbose=True,
         )
@@ -1725,7 +1730,6 @@ class WorkClassificationScript(WorkPresentationScript):
         choose_summary=False,
         calculate_quality=False,
         choose_cover=False,
-        regenerate_marc_record=False,
         update_search_index=False,
     )
 
@@ -1804,7 +1808,7 @@ class ReclassifyWorksForUncheckedSubjectsScript(WorkClassificationScript):
         the ordering of the rows follows all the joined tables"""
 
         for subject in self._unchecked_subjects():
-            last_work: Optional[Work] = None  # Last work object of the previous page
+            last_work: Work | None = None  # Last work object of the previous page
             # IDs of the last work, for paging
             work_id, license_id, iden_id, classn_id = (
                 None,
@@ -1873,7 +1877,6 @@ class WorkOPDSScript(WorkPresentationScript):
         choose_summary=False,
         calculate_quality=False,
         choose_cover=False,
-        regenerate_marc_record=True,
         update_search_index=True,
     )
 
@@ -1934,7 +1937,8 @@ class CollectionInputScript(Script):
         """
         parsed.collections = []
         for name in parsed.collection_names:
-            collection = get_one(_db, Collection, name=name)
+            collection = Collection.by_name(_db, name)
+
             if not collection:
                 raise ValueError("Unknown collection: %s" % name)
             parsed.collections.append(collection)
@@ -2005,7 +2009,7 @@ class OPDSImportScript(CollectionInputScript):
     name = "Import all books from the OPDS feed associated with a collection."
 
     IMPORTER_CLASS = OPDSImporter
-    MONITOR_CLASS: Type[OPDSImportMonitor] = OPDSImportMonitor
+    MONITOR_CLASS: type[OPDSImportMonitor] = OPDSImportMonitor
     PROTOCOL = ExternalIntegration.OPDS_IMPORT
 
     def __init__(
@@ -2463,7 +2467,7 @@ class WhereAreMyBooksScript(CollectionInputScript):
     """
 
     def __init__(
-        self, _db=None, output=None, search: Optional[ExternalSearchIndex] = None
+        self, _db=None, output=None, search: ExternalSearchIndex | None = None
     ):
         _db = _db or self._db
         super().__init__(_db)

@@ -10,7 +10,6 @@ import csv
 import datetime
 import logging
 from collections import defaultdict
-from typing import List, Optional
 
 from dateutil.parser import parse
 from dependency_injector.wiring import Provide, inject
@@ -526,14 +525,14 @@ class LicenseData(LicenseFunctions):
     def __init__(
         self,
         identifier: str,
-        checkout_url: Optional[str],
+        checkout_url: str | None,
         status_url: str,
         status: LicenseStatus,
         checkouts_available: int,
-        expires: Optional[datetime.datetime] = None,
-        checkouts_left: Optional[int] = None,
-        terms_concurrency: Optional[int] = None,
-        content_types: Optional[List[str]] = None,
+        expires: datetime.datetime | None = None,
+        checkouts_left: int | None = None,
+        terms_concurrency: int | None = None,
+        content_types: list[str] | None = None,
     ):
         self.identifier = identifier
         self.checkout_url = checkout_url
@@ -697,6 +696,7 @@ class CirculationData:
         links=None,
         licenses=None,
         last_checked=None,
+        should_track_playtime=False,
     ):
         """Constructor.
 
@@ -746,6 +746,9 @@ class CirculationData:
         # given licenses then they are used to calculate values for the LicensePool
         # instead of directly using the values that are given to CirculationData.
         self.licenses = licenses
+
+        # Whether the license should contain a playtime tracking link
+        self.should_track_playtime = should_track_playtime
 
     @property
     def links(self):
@@ -877,6 +880,7 @@ class CirculationData:
             license_pool.open_access = self.has_open_access_link
             license_pool.availability_time = self.last_checked
             license_pool.last_checked = self.last_checked
+            license_pool.should_track_playtime = self.should_track_playtime
 
         return license_pool, is_new
 
@@ -969,6 +973,7 @@ class CirculationData:
         # with the book reflect the formats in self.formats.
         old_lpdms = new_lpdms = []
         if pool:
+            pool.should_track_playtime = self.should_track_playtime
             old_lpdms = list(pool.delivery_mechanisms)
 
         # Before setting and unsetting delivery mechanisms, which may

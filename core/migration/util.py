@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, List
+import logging
+from typing import Any
 
 import sqlalchemy as sa
 
@@ -10,8 +11,8 @@ def pg_update_enum(
     table: str,
     column: str,
     enum_name: str,
-    old_values: List[str],
-    new_values: List[str],
+    old_values: list[str],
+    new_values: list[str],
 ) -> None:
     """
     Alembic migration helper function to update an enum type.
@@ -64,3 +65,15 @@ def drop_enum(op: Any, enum_name: str, checkfirst: bool = True) -> None:
     Alembic migration helper function to drop an enum type.
     """
     sa.Enum(name=enum_name).drop(op.get_bind(), checkfirst=checkfirst)
+
+
+def migration_logger(revision: str) -> logging.Logger:
+    """
+    Create a logger for a migration revision.
+
+    This logger will be used to log messages during the migration.
+    """
+    log = logging.getLogger(f"palace.migration.{revision}")
+    log.setLevel(logging.INFO)
+    log.disabled = False
+    return log

@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import dataclasses
-import logging
 import sys
 from io import BytesIO
 from string import Formatter
 from types import TracebackType
-from typing import TYPE_CHECKING, BinaryIO, List, Optional, Type
+from typing import TYPE_CHECKING, BinaryIO
 from urllib.parse import quote
 
 from botocore.exceptions import BotoCoreError, ClientError
@@ -37,19 +36,19 @@ class MultipartS3ContextManager(LoggerMixin):
         bucket: str,
         key: str,
         url: str,
-        media_type: Optional[str] = None,
+        media_type: str | None = None,
     ) -> None:
         self.client = client
         self.key = key
         self.bucket = bucket
         self.part_number = 1
-        self.parts: List[MultipartS3UploadPart] = []
+        self.parts: list[MultipartS3UploadPart] = []
         self.media_type = media_type
-        self.upload: Optional[CreateMultipartUploadOutputTypeDef] = None
-        self.upload_id: Optional[str] = None
+        self.upload: CreateMultipartUploadOutputTypeDef | None = None
+        self.upload_id: str | None = None
         self._complete = False
         self._url = url
-        self._exception: Optional[BaseException] = None
+        self._exception: BaseException | None = None
 
     def __enter__(self) -> Self:
         params = {
@@ -64,9 +63,9 @@ class MultipartS3ContextManager(LoggerMixin):
 
     def __exit__(
         self,
-        exc_type: Optional[Type[BaseException]],
-        exc_val: Optional[BaseException],
-        exc_tb: Optional[TracebackType],
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
     ) -> bool:
         if exc_val is None:
             self._upload_complete()
@@ -77,15 +76,13 @@ class MultipartS3ContextManager(LoggerMixin):
             )
             self._upload_abort()
             self._exception = exc_val
-            if isinstance(exc_val, (ClientError, BotoCoreError)):
-                return True
-        return False
+        return True
 
     def upload_part(self, content: bytes) -> None:
         if self.complete or self.exception or self.upload_id is None:
             raise RuntimeError("Upload already complete or aborted.")
 
-        logging.info(
+        self.log.info(
             f"Uploading part {self.part_number} of {self.key} to {self.bucket}"
         )
         result = self.client.upload_part(
@@ -100,7 +97,7 @@ class MultipartS3ContextManager(LoggerMixin):
 
     def _upload_complete(self) -> None:
         if not self.parts:
-            logging.info(f"Upload of {self.key} was empty.")
+            self.log.info(f"Upload of {self.key} was empty.")
             self._upload_abort()
         elif self.upload_id is None:
             raise RuntimeError("Upload ID not set.")
@@ -114,7 +111,7 @@ class MultipartS3ContextManager(LoggerMixin):
             self._complete = True
 
     def _upload_abort(self) -> None:
-        logging.info(f"Aborting upload of {self.key}.")
+        self.log.info(f"Aborting upload of {self.key}.")
         if self.upload_id is not None:
             self.client.abort_multipart_upload(
                 Bucket=self.bucket,
@@ -122,7 +119,7 @@ class MultipartS3ContextManager(LoggerMixin):
                 UploadId=self.upload_id,
             )
         else:
-            logging.error("Upload ID not set, unable to abort.")
+            self.log.error("Upload ID not set, unable to abort.")
 
     @property
     def url(self) -> str:
@@ -133,7 +130,7 @@ class MultipartS3ContextManager(LoggerMixin):
         return self._complete
 
     @property
-    def exception(self) -> Optional[BaseException]:
+    def exception(self) -> BaseException | None:
         return self._exception
 
 
@@ -141,7 +138,7 @@ class S3Service(LoggerMixin):
     def __init__(
         self,
         client: S3Client,
-        region: Optional[str],
+        region: str | None,
         bucket: str,
         url_template: str,
     ) -> None:
@@ -167,10 +164,10 @@ class S3Service(LoggerMixin):
     def factory(
         cls,
         client: S3Client,
-        region: Optional[str],
-        bucket: Optional[str],
+        region: str | None,
+        bucket: str | None,
         url_template: str,
-    ) -> Optional[Self]:
+    ) -> Self | None:
         if bucket is None:
             return None
         return cls(client, region, bucket, url_template)
@@ -180,12 +177,15 @@ class S3Service(LoggerMixin):
             bucket=self.bucket, key=quote(key), region=self.region
         )
 
+    def delete(self, key: str) -> None:
+        self.client.delete_object(Bucket=self.bucket, Key=key)
+
     def store(
         self,
         key: str,
         content: str | bytes,
-        content_type: Optional[str] = None,
-    ) -> Optional[str]:
+        content_type: str | None = None,
+    ) -> str | None:
         if isinstance(content, str):
             content = content.encode("utf8")
         return self.store_stream(
@@ -196,8 +196,8 @@ class S3Service(LoggerMixin):
         self,
         key: str,
         stream: BinaryIO,
-        content_type: Optional[str] = None,
-    ) -> Optional[str]:
+        content_type: str | None = None,
+    ) -> str | None:
         try:
             extra_args = {} if content_type is None else {"ContentType": content_type}
             self.client.upload_fileobj(
@@ -223,7 +223,7 @@ class S3Service(LoggerMixin):
         return url
 
     def multipart(
-        self, key: str, content_type: Optional[str] = None
+        self, key: str, content_type: str | None = None
     ) -> MultipartS3ContextManager:
         url = self.generate_url(key)
         return MultipartS3ContextManager(

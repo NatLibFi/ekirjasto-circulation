@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import re
 from datetime import datetime, timedelta
-from typing import List
 from unittest.mock import MagicMock, call, patch
 
 import pytest
@@ -11,13 +10,14 @@ from freezegun import freeze_time
 
 from api.model.time_tracking import PlaytimeTimeEntry
 from core.config import Configuration
+from core.equivalents_coverage import EquivalentIdentifiersCoverageProvider
 from core.jobs.playtime_entries import (
     PlaytimeEntriesEmailReportsScript,
     PlaytimeEntriesSummationScript,
 )
 from core.model import create
 from core.model.collection import Collection
-from core.model.identifier import Identifier
+from core.model.identifier import Equivalency, Identifier
 from core.model.library import Library
 from core.model.time_tracking import PlaytimeEntry, PlaytimeSummary
 from core.util.datetime_helpers import datetime_utc, previous_months, utc_now
@@ -30,7 +30,7 @@ def create_playtime_entries(
     collection: Collection,
     library: Library,
     *entries: PlaytimeTimeEntry,
-) -> List[PlaytimeEntry]:
+) -> list[PlaytimeEntry]:
     all_inserted = []
     for entry in entries:
         inserted = PlaytimeEntry(
@@ -200,8 +200,8 @@ class TestPlaytimeEntriesSummationScript:
         ) == [("4",), ("5",)]
 
 
-def date3m(days):
-    return previous_months(number_of_months=3)[0] + timedelta(days=days)
+def date1m(days):
+    return previous_months(number_of_months=1)[0] + timedelta(days=days)
 
 
 def playtime(session, identifier, collection, library, timestamp, total_seconds):
@@ -229,60 +229,132 @@ class TestPlaytimeEntriesEmailReportsScript:
         collection2 = db.collection()
         library2 = db.library()
 
-        playtime(db.session, identifier, collection, library, date3m(3), 1)
-        playtime(db.session, identifier, collection, library, date3m(31), 2)
+        isbn_ids: dict[str, Identifier] = {
+            "i1": db.identifier(
+                identifier_type=Identifier.ISBN, foreign_id="080442957X"
+            ),
+            "i2": db.identifier(
+                identifier_type=Identifier.ISBN, foreign_id="9788175257665"
+            ),
+        }
+        identifier.equivalencies = [
+            Equivalency(
+                input_id=identifier.id, output_id=isbn_ids["i1"].id, strength=0.5
+            ),
+            Equivalency(
+                input_id=isbn_ids["i1"].id, output_id=isbn_ids["i2"].id, strength=1
+            ),
+        ]
+        strongest_isbn = isbn_ids["i2"].identifier
+        no_isbn = ""
+
+        # We're using the RecursiveEquivalencyCache, so must refresh it.
+        EquivalentIdentifiersCoverageProvider(db.session).run()
+
+        playtime(db.session, identifier, collection, library, date1m(3), 1)
+        playtime(db.session, identifier, collection, library, date1m(31), 2)
         playtime(
-            db.session, identifier, collection, library, date3m(-31), 60
-        )  # out of range: more than a month prior to the quarter
+            db.session, identifier, collection, library, date1m(-31), 60
+        )  # out of range: prior to the beginning of the default reporting period
         playtime(
-            db.session, identifier, collection, library, date3m(95), 60
+            db.session, identifier, collection, library, date1m(95), 60
         )  # out of range: future
-        playtime(db.session, identifier2, collection, library, date3m(3), 5)
-        playtime(db.session, identifier2, collection, library, date3m(4), 6)
+        playtime(db.session, identifier2, collection, library, date1m(3), 5)
+        playtime(db.session, identifier2, collection, library, date1m(4), 6)
 
         # Collection2
-        playtime(db.session, identifier, collection2, library, date3m(3), 100)
+        playtime(db.session, identifier, collection2, library, date1m(3), 100)
         # library2
-        playtime(db.session, identifier, collection, library2, date3m(3), 200)
+        playtime(db.session, identifier, collection, library2, date1m(3), 200)
         # collection2 library2
-        playtime(db.session, identifier, collection2, library2, date3m(3), 300)
+        playtime(db.session, identifier, collection2, library2, date1m(3), 300)
 
         reporting_name = "test cm"
 
-        # Horrible unbracketted syntax for python 3.8
-        with patch("core.jobs.playtime_entries.csv.writer") as writer, patch(
-            "core.jobs.playtime_entries.EmailManager"
-        ) as email, patch(
-            "core.jobs.playtime_entries.os.environ",
-            new={
-                Configuration.REPORTING_EMAIL_ENVIRONMENT_VARIABLE: "reporting@test.email",
-                Configuration.REPORTING_NAME_ENVIRONMENT_VARIABLE: reporting_name,
-            },
+        with (
+            patch("core.jobs.playtime_entries.csv.writer") as writer,
+            patch("core.jobs.playtime_entries.EmailManager") as email,
+            patch(
+                "core.jobs.playtime_entries.os.environ",
+                new={
+                    Configuration.REPORTING_EMAIL_ENVIRONMENT_VARIABLE: "reporting@test.email",
+                    Configuration.REPORTING_NAME_ENVIRONMENT_VARIABLE: reporting_name,
+                },
+            ),
         ):
+            # Act
             PlaytimeEntriesEmailReportsScript(db.session).run()
 
+        # Assert
         assert (
             writer().writerow.call_count == 6
         )  # 1 header, 5 identifier,collection,library entries
 
-        cutoff = date3m(0).replace(day=1)
+        cutoff = date1m(0).replace(day=1)
         until = utc_now().date().replace(day=1)
         column1 = f"{cutoff} - {until}"
         call_args = writer().writerow.call_args_list
         assert call_args == [
             call(
-                ["date", "urn", "collection", "library", "title", "total seconds"]
+                [
+                    "date",
+                    "urn",
+                    "isbn",
+                    "collection",
+                    "library",
+                    "title",
+                    "total seconds",
+                ]
             ),  # Header
-            call((column1, identifier.urn, collection2.name, library2.name, None, 300)),
-            call((column1, identifier.urn, collection2.name, library.name, None, 100)),
-            call((column1, identifier.urn, collection.name, library2.name, None, 200)),
             call(
-                (column1, identifier.urn, collection.name, library.name, None, 3)
+                (
+                    column1,
+                    identifier.urn,
+                    strongest_isbn,
+                    collection2.name,
+                    library2.name,
+                    None,
+                    300,
+                )
+            ),
+            call(
+                (
+                    column1,
+                    identifier.urn,
+                    strongest_isbn,
+                    collection2.name,
+                    library.name,
+                    None,
+                    100,
+                )
+            ),
+            call(
+                (
+                    column1,
+                    identifier.urn,
+                    strongest_isbn,
+                    collection.name,
+                    library2.name,
+                    None,
+                    200,
+                )
+            ),
+            call(
+                (
+                    column1,
+                    identifier.urn,
+                    strongest_isbn,
+                    collection.name,
+                    library.name,
+                    None,
+                    1,
+                )
             ),  # Identifier without edition
             call(
                 (
                     column1,
                     identifier2.urn,
+                    no_isbn,
                     collection.name,
                     library.name,
                     edition.title,
@@ -305,7 +377,7 @@ class TestPlaytimeEntriesEmailReportsScript:
         identifier = db.identifier()
         collection = db.default_collection()
         library = db.default_library()
-        entry = playtime(db.session, identifier, collection, library, date3m(20), 1)
+        _ = playtime(db.session, identifier, collection, library, date1m(20), 1)
 
         with patch("core.jobs.playtime_entries.os.environ", new={}):
             script = PlaytimeEntriesEmailReportsScript(db.session)
@@ -314,7 +386,86 @@ class TestPlaytimeEntriesEmailReportsScript:
 
             assert script._log.error.call_count == 1
             assert script._log.warning.call_count == 1
-            assert "date,urn,collection," in script._log.warning.call_args[0][0]
+            assert "date,urn,isbn,collection," in script._log.warning.call_args[0][0]
+
+    @pytest.mark.parametrize(
+        "id_key, equivalents, default_value, expected_isbn",
+        [
+            # If the identifier is an ISBN, we will not use an equivalency.
+            [
+                "i1",
+                (("g1", "g2", 1), ("g2", "i1", 1), ("g1", "i2", 0.5)),
+                "",
+                "080442957X",
+            ],
+            [
+                "i2",
+                (("g1", "g2", 1), ("g2", "i1", 0.5), ("g1", "i2", 1)),
+                "",
+                "9788175257665",
+            ],
+            ["i1", (("i1", "i2", 200),), "", "080442957X"],
+            ["i2", (("i2", "i1", 200),), "", "9788175257665"],
+            # If identifier is not an ISBN, but has an equivalency that is, use the strongest match.
+            [
+                "g2",
+                (("g1", "g2", 1), ("g2", "i1", 1), ("g1", "i2", 0.5)),
+                "",
+                "080442957X",
+            ],
+            [
+                "g2",
+                (("g1", "g2", 1), ("g2", "i1", 0.5), ("g1", "i2", 1)),
+                "",
+                "9788175257665",
+            ],
+            # If we don't find an equivalent ISBN identifier, then we'll use the default.
+            ["g2", (), "default value", "default value"],
+            ["g1", (("g1", "g2", 1),), "default value", "default value"],
+            # If identifier is None, expect default value.
+            [None, (), "default value", "default value"],
+        ],
+    )
+    def test__isbn_for_identifier(
+        self,
+        db: DatabaseTransactionFixture,
+        id_key: str | None,
+        equivalents: tuple[tuple[str, str, int | float]],
+        default_value: str,
+        expected_isbn: str,
+    ):
+        ids: dict[str, Identifier] = {
+            "i1": db.identifier(
+                identifier_type=Identifier.ISBN, foreign_id="080442957X"
+            ),
+            "i2": db.identifier(
+                identifier_type=Identifier.ISBN, foreign_id="9788175257665"
+            ),
+            "g1": db.identifier(identifier_type=Identifier.GUTENBERG_ID),
+            "g2": db.identifier(identifier_type=Identifier.GUTENBERG_ID),
+        }
+        equivalencies = [
+            Equivalency(
+                input_id=ids[equivalent[0]].id,
+                output_id=ids[equivalent[1]].id,
+                strength=equivalent[2],
+            )
+            for equivalent in equivalents
+        ]
+        test_identifier: Identifier | None = ids[id_key] if id_key is not None else None
+        if test_identifier is not None:
+            test_identifier.equivalencies = equivalencies
+
+        # We're using the RecursiveEquivalencyCache, so must refresh it.
+        EquivalentIdentifiersCoverageProvider(db.session).run()
+
+        # Act
+        result = PlaytimeEntriesEmailReportsScript._isbn_for_identifier(
+            test_identifier,
+            default_value=default_value,
+        )
+        # Assert
+        assert result == expected_isbn
 
     @pytest.mark.parametrize(
         "current_utc_time, start_arg, expected_start, until_arg, expected_until",
@@ -323,14 +474,14 @@ class TestPlaytimeEntriesEmailReportsScript:
             [
                 datetime(2020, 1, 1, 0, 0, 0),
                 None,
-                datetime_utc(2019, 10, 1, 0, 0, 0),
+                datetime_utc(2019, 12, 1, 0, 0, 0),
                 None,
                 datetime_utc(2020, 1, 1, 0, 0, 0),
             ],
             [
                 datetime(2020, 1, 31, 0, 0, 0),
                 None,
-                datetime_utc(2019, 10, 1, 0, 0, 0),
+                datetime_utc(2019, 12, 1, 0, 0, 0),
                 None,
                 datetime_utc(2020, 1, 1, 0, 0, 0),
             ],
@@ -346,9 +497,9 @@ class TestPlaytimeEntriesEmailReportsScript:
             [
                 datetime(2020, 1, 31, 0, 0, 0),
                 None,
-                datetime_utc(2019, 10, 1, 0, 0, 0),
-                "2019-11-20",
-                datetime_utc(2019, 11, 20, 0, 0, 0),
+                datetime_utc(2019, 12, 1, 0, 0, 0),
+                "2019-12-20",
+                datetime_utc(2019, 12, 20, 0, 0, 0),
             ],
             # When both dates are specified, the current datetime doesn't matter.
             # Both dates specified, but we test at a specific time here anyway.
@@ -413,7 +564,7 @@ class TestPlaytimeEntriesEmailReportsScript:
             [
                 datetime(2020, 1, 31, 0, 0, 0),
                 None,
-                datetime_utc(2019, 10, 1, 0, 0, 0),
+                datetime_utc(2019, 12, 1, 0, 0, 0),
                 "2019-06-11",
                 datetime_utc(2019, 6, 11, 0, 0, 0),
             ],

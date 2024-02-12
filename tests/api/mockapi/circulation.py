@@ -1,6 +1,5 @@
 from abc import ABC
 from collections import defaultdict
-from typing import Type
 
 from sqlalchemy.orm import Session
 
@@ -11,7 +10,7 @@ from api.circulation import (
     LoanInfo,
     PatronActivityCirculationAPI,
 )
-from api.controller import CirculationManager
+from api.circulation_manager import CirculationManager
 from core.external_search import ExternalSearchIndex
 from core.integration.settings import BaseSettings
 from core.model import DataSource, Hold, Loan, get_one_or_create
@@ -29,11 +28,11 @@ class MockPatronActivityCirculationAPI(PatronActivityCirculationAPI, ABC):
         return ""
 
     @classmethod
-    def settings_class(cls) -> Type[BaseSettings]:
+    def settings_class(cls) -> type[BaseSettings]:
         return BaseSettings
 
     @classmethod
-    def library_settings_class(cls) -> Type[BaseSettings]:
+    def library_settings_class(cls) -> type[BaseSettings]:
         return BaseSettings
 
 

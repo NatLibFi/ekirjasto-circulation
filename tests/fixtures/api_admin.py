@@ -1,13 +1,12 @@
 from contextlib import contextmanager
-from typing import List
 
 import flask
 import pytest
 
 from api.admin.controller import setup_admin_controllers
 from api.app import initialize_admin
+from api.circulation_manager import CirculationManager
 from api.config import Configuration
-from api.controller import CirculationManager
 from core.integration.goals import Goals
 from core.model import create
 from core.model.admin import Admin, AdminRole
@@ -22,7 +21,7 @@ class AdminControllerFixture:
     admin: Admin
     manager: CirculationManager
 
-    BOOKS: List[WorkSpec] = []
+    BOOKS: list[WorkSpec] = []
 
     def __init__(self, controller_fixture: ControllerFixture):
         self.ctrl = controller_fixture

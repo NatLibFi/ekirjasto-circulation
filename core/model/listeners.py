@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import datetime
 from threading import RLock
-from typing import Union
 
 from sqlalchemy import event, text
 from sqlalchemy.orm import Session
@@ -108,8 +107,6 @@ def _site_configuration_has_changed(_db, cooldown=1):
 # catch most that slip through the cracks.
 @event.listens_for(Collection.children, "append")
 @event.listens_for(Collection.children, "remove")
-@event.listens_for(Collection.libraries, "append")
-@event.listens_for(Collection.libraries, "remove")
 @event.listens_for(ExternalIntegration.settings, "append")
 @event.listens_for(ExternalIntegration.settings, "remove")
 @event.listens_for(Library.integrations, "append")
@@ -210,9 +207,7 @@ def recursive_equivalence_on_identifier_create(
 
 
 @Listener.before_flush((Work, LicensePool), ListenerState.new)
-def add_work_to_customlists(
-    session: Session, instance: Union[Work, LicensePool]
-) -> None:
+def add_work_to_customlists(session: Session, instance: Work | LicensePool) -> None:
     """Whenever a Work or LicensePool is created we must add it to the custom lists
     for its collection"""
     add_work_to_customlists_for_collection(instance)

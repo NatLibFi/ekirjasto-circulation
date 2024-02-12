@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import functools
+from collections.abc import Generator
 from io import BytesIO
-from typing import TYPE_CHECKING, Generator, Optional
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock
 
 import pytest
@@ -98,6 +99,15 @@ class TestS3Service:
         service = s3_service_fixture.service(url_template=template)
         url = service.generate_url(key)
         assert url == expected
+
+    def test_delete(self, s3_service_fixture: S3ServiceFixture):
+        """The S3Service.delete method deletes the object from the bucket."""
+        service = s3_service_fixture.service()
+        service.client.delete_object = MagicMock()
+        service.delete("key")
+        service.client.delete_object.assert_called_once_with(
+            Bucket=s3_service_fixture.bucket, Key="key"
+        )
 
     @pytest.mark.parametrize(
         "content",
@@ -200,9 +210,7 @@ class TestS3Service:
         assert upload.exception is None
         s3_service_fixture.mock_s3_client.complete_multipart_upload.assert_called_once()
 
-    def test_multipart_upload_boto_exception(
-        self, s3_service_fixture: S3ServiceFixture
-    ):
+    def test_multipart_upload_exception(self, s3_service_fixture: S3ServiceFixture):
         service = s3_service_fixture.service()
         exception = BotoCoreError()
         s3_service_fixture.mock_s3_client.upload_part.side_effect = exception
@@ -219,28 +227,6 @@ class TestS3Service:
         assert upload.exception is exception
         s3_service_fixture.mock_s3_client.abort_multipart_upload.assert_called_once()
 
-    def test_multipart_upload_other_exception(
-        self, s3_service_fixture: S3ServiceFixture
-    ):
-        service = s3_service_fixture.service()
-        exception = ValueError("foo")
-        s3_service_fixture.mock_s3_client.upload_part.side_effect = exception
-
-        # A non-boto exception is raised during upload, the upload is aborted
-        # and the exception is raised.
-        with pytest.raises(ValueError) as excinfo:
-            with service.multipart(key="key") as upload:
-                assert upload.complete is False
-                assert upload.url == "https://region.test.com/bucket/key"
-                assert upload.exception is None
-                upload.upload_part(b"test")
-
-        assert upload.complete is False
-        assert upload.exception is exception
-        s3_service_fixture.mock_s3_client.abort_multipart_upload.assert_called_once()
-        assert excinfo.value is exception
-
-        # Calling upload_part after the upload is complete raises an error.
         with pytest.raises(RuntimeError):
             upload.upload_part(b"foo")
 
@@ -312,6 +298,24 @@ def s3_service_integration_fixture() -> (
 
 @pytest.mark.minio
 class TestS3ServiceIntegration:
+    def test_delete(self, s3_service_integration_fixture: S3ServiceIntegrationFixture):
+        """The S3Service.delete method deletes the object from the bucket."""
+        service = s3_service_integration_fixture.public
+        bucket = service.bucket
+
+        raw_client = s3_service_integration_fixture.s3_client
+        content = BytesIO()
+        content.write(b"foo bar baz")
+        raw_client.upload_fileobj(content, bucket, "key")
+
+        bucket_contents = raw_client.list_objects(Bucket=bucket).get("Contents", [])
+        assert len(bucket_contents) == 1
+        assert bucket_contents[0]["Key"] == "key"
+
+        service.delete("key")
+        bucket_contents = raw_client.list_objects(Bucket=bucket).get("Contents", [])
+        assert len(bucket_contents) == 0
+
     @pytest.mark.parametrize(
         "key, bucket, content, content_type",
         [
@@ -328,7 +332,7 @@ class TestS3ServiceIntegration:
         key: str,
         bucket: str,
         content: bytes | str,
-        content_type: Optional[str],
+        content_type: str | None,
         s3_service_integration_fixture: S3ServiceIntegrationFixture,
     ):
         """The S3Service.store method stores content in the bucket."""
@@ -368,7 +372,7 @@ class TestS3ServiceIntegration:
         key: str,
         bucket: str,
         content: bytes,
-        content_type: Optional[str],
+        content_type: str | None,
         s3_service_integration_fixture: S3ServiceIntegrationFixture,
     ):
         service = getattr(s3_service_integration_fixture, bucket)

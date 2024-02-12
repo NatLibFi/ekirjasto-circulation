@@ -1,7 +1,7 @@
 # BaseCoverageRecord, Timestamp, CoverageRecord, WorkCoverageRecord
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     Column,
@@ -614,7 +614,6 @@ class WorkCoverageRecord(Base, BaseCoverageRecord):
     CLASSIFY_OPERATION = "classify"
     SUMMARY_OPERATION = "summary"
     QUALITY_OPERATION = "quality"
-    GENERATE_MARC_OPERATION = "generate-marc"
     UPDATE_SEARCH_INDEX_OPERATION = "update-search-index"
 
     id = Column(Integer, primary_key=True)
@@ -791,7 +790,7 @@ class EquivalencyCoverageRecord(Base, BaseCoverageRecord):
     def bulk_add(
         cls,
         _db,
-        equivalents: List[Equivalency],
+        equivalents: list[Equivalency],
         operation: str,
         status=BaseCoverageRecord.REGISTERED,
         batch_size=100,

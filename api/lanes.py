@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 
 import core.classifier as genres
 from api.config import CannotLoadConfiguration, Configuration
@@ -957,8 +956,8 @@ class DatabaseExclusiveWorkList(DatabaseBackedWorkList):
 class WorkBasedLane(DynamicLane):
     """A lane that shows works related to one particular Work."""
 
-    DISPLAY_NAME: Optional[str] = None
-    ROUTE: Optional[str] = None
+    DISPLAY_NAME: str | None = None
+    ROUTE: str | None = None
 
     def __init__(self, library, work, display_name=None, children=None, **kwargs):
         self.work = work
@@ -1361,7 +1360,15 @@ class CrawlableFacets(Facets):
 
     @classmethod
     def available_facets(cls, config, facet_group_name):
-        return [cls.SETTINGS[facet_group_name]]
+        facets = [cls.SETTINGS[facet_group_name]]
+
+        if (
+            facet_group_name == Facets.DISTRIBUTOR_FACETS_GROUP_NAME
+            or facet_group_name == Facets.COLLECTION_NAME_FACETS_GROUP_NAME
+        ) and config is not None:
+            facets.extend(config.enabled_facets(facet_group_name))
+
+        return facets
 
     @classmethod
     def default_facet(cls, config, facet_group_name):

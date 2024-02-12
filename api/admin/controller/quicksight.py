@@ -1,5 +1,4 @@
 import logging
-from typing import Dict
 
 import boto3
 import flask
@@ -10,7 +9,7 @@ from api.admin.model.quicksight import (
     QuicksightGenerateUrlRequest,
     QuicksightGenerateUrlResponse,
 )
-from api.controller import CirculationManagerController
+from api.controller.circulation_manager import CirculationManagerController
 from api.problem_details import NOT_FOUND_ON_REMOTE
 from core.config import Configuration
 from core.model.admin import Admin
@@ -20,7 +19,7 @@ from core.util.problem_detail import ProblemError
 
 
 class QuickSightController(CirculationManagerController):
-    def generate_quicksight_url(self, dashboard_name) -> Dict:
+    def generate_quicksight_url(self, dashboard_name) -> dict:
         log = logging.getLogger(self.__class__.__name__)
         admin: Admin = getattr(flask.request, "admin")
         request_data = QuicksightGenerateUrlRequest(**flask.request.args)
@@ -56,16 +55,16 @@ class QuickSightController(CirculationManagerController):
             if admin.is_librarian(library):
                 allowed_libraries.append(library)
 
-        if request_data.library_ids:
-            allowed_library_ids = list(
-                set(request_data.library_ids).intersection(
-                    {l.id for l in allowed_libraries}
+        if request_data.library_uuids:
+            allowed_library_uuids = list(
+                set(map(str, request_data.library_uuids)).intersection(
+                    {l.uuid for l in allowed_libraries}
                 )
             )
         else:
-            allowed_library_ids = [l.id for l in allowed_libraries]
+            allowed_library_uuids = [l.uuid for l in allowed_libraries]
 
-        if not allowed_library_ids:
+        if not allowed_library_uuids:
             raise ProblemError(
                 NOT_FOUND_ON_REMOTE.detailed(
                     "No library was found for this Admin that matched the request."
@@ -73,13 +72,15 @@ class QuickSightController(CirculationManagerController):
             )
 
         libraries = self._db.execute(
-            select(Library.name)
-            .where(Library.id.in_(allowed_library_ids))
+            select(Library.short_name)
+            .where(Library.uuid.in_(allowed_library_uuids))
             .order_by(Library.name)
         ).all()
 
         try:
-            delimiter = "|"
+            short_names = [x.short_name for x in libraries]
+            session_tags = self._build_session_tags_array(short_names)
+
             client = boto3.client("quicksight", region_name=region)
             response = client.generate_embed_url_for_anonymous_user(
                 AwsAccountId=aws_account_id,
@@ -88,31 +89,50 @@ class QuickSightController(CirculationManagerController):
                 ExperienceConfiguration={
                     "Dashboard": {"InitialDashboardId": dashboard_id}
                 },
-                SessionTags=[
-                    dict(
-                        Key="library_name",
-                        Value=delimiter.join([l.name for l in libraries]),
-                    )
-                ],
+                SessionTags=session_tags,
             )
         except Exception as ex:
-            log.error(f"Error while fetching the Quisksight Embed url: {ex}")
+            log.error(f"Error while fetching the Quicksight Embed url: {ex}")
             raise ProblemError(
                 INTERNAL_SERVER_ERROR.detailed(
-                    "Error while fetching the Quisksight Embed url."
+                    "Error while fetching the Quicksight Embed url."
                 )
             )
 
         embed_url = response.get("EmbedUrl")
         if response.get("Status") // 100 != 2 or embed_url is None:
-            log.error(f"QuiskSight Embed url error response {response}")
+            log.error(f"Quicksight Embed url error response {response}")
             raise ProblemError(
                 INTERNAL_SERVER_ERROR.detailed(
-                    "Error while fetching the Quisksight Embed url."
+                    "Error while fetching the Quicksight Embed url."
                 )
             )
 
         return QuicksightGenerateUrlResponse(embed_url=embed_url).api_dict()
+
+    def _build_session_tags_array(self, short_names: list[str]) -> list[dict[str, str]]:
+        delimiter = "|"  # specified by AWS's session tag limit
+        max_chars_per_tag = 256
+        session_tags: list[str] = []
+        session_tag = ""
+        for short_name in short_names:
+            if len(session_tag + delimiter + short_name) > max_chars_per_tag:
+                session_tags.append(session_tag)
+                session_tag = ""
+            if session_tag:
+                session_tag += delimiter + short_name
+            else:
+                session_tag = short_name
+        if session_tag:
+            session_tags.append(session_tag)
+
+        return [
+            {
+                "Key": f"library_short_name_{tag_index}",
+                "Value": tag_value,
+            }
+            for tag_index, tag_value in enumerate(session_tags)
+        ]
 
     def get_dashboard_names(self):
         """Get the named dashboard IDs defined in the configuration"""

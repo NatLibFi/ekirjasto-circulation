@@ -4,7 +4,7 @@ import datetime
 import logging
 import time
 from collections import defaultdict
-from typing import TYPE_CHECKING, Any, List, Optional
+from typing import Any
 from urllib.parse import quote_plus
 
 from flask_babel import lazy_gettext as _
@@ -48,6 +48,7 @@ from core.model import (
     DataSource,
     Edition,
     Genre,
+    IntegrationConfiguration,
     Library,
     LicensePool,
     Work,
@@ -57,11 +58,7 @@ from core.model import (
     tuple_to_numericrange,
 )
 from core.model.before_flush_decorator import Listener
-from core.model.configuration import (
-    ConfigurationAttributeValue,
-    ConfigurationSetting,
-    ExternalIntegration,
-)
+from core.model.configuration import ConfigurationAttributeValue, ExternalIntegration
 from core.model.constants import EditionConstants
 from core.model.hybrid import hybrid_property
 from core.model.listeners import site_configuration_has_changed
@@ -71,9 +68,6 @@ from core.util.accept_language import parse_accept_language
 from core.util.datetime_helpers import utc_now
 from core.util.opds_writer import OPDSFeed
 from core.util.problem_detail import ProblemDetail
-
-if TYPE_CHECKING:
-    from core.model import CachedMARCFile  # noqa: autoflake
 
 
 class BaseFacets(FacetConstants):
@@ -711,7 +705,7 @@ class Facets(FacetsWithEntryPoint):
                 self.collection_name
                 and self.collection_name != self.COLLECTION_NAME_ALL
             ):
-                collection = get_one(_db, Collection, name=self.collection_name)
+                collection = Collection.by_name(_db, self.collection_name)
                 if collection:
                     filter.collection_ids = [collection.id]
 
@@ -1328,7 +1322,7 @@ class WorkList:
     # If a certain type of Worklist should always have its OPDS feeds
     # cached under a specific type, define that type as
     # CACHED_FEED_TYPE.
-    CACHED_FEED_TYPE: Optional[str] = None
+    CACHED_FEED_TYPE: str | None = None
 
     # By default, a WorkList is always visible.
     @property
@@ -2301,22 +2295,21 @@ class DatabaseBackedWorkList(WorkList):
         # Modify the query to not show holds on collections
         # that don't allow it
         # This query looks like a prime candidate for some in-memory caching
-        restricted_collections = (
-            _db.query(Collection.id)
+        restricted_collections = _db.execute(
+            select(Collection.id)
             .join(
-                ConfigurationSetting,
-                Collection.external_integration_id
-                == ConfigurationSetting.external_integration_id,
+                IntegrationConfiguration,
+                Collection.integration_configuration_id == IntegrationConfiguration.id,
             )
-            .filter(
-                Collection.id.in_(self.collection_ids),
-                ConfigurationSetting.library_id == self.library_id,
-                ConfigurationSetting.key == ExternalIntegration.DISPLAY_RESERVES,
-                ConfigurationSetting.value == ConfigurationAttributeValue.NOVALUE.value,
+            .where(
+                IntegrationConfiguration.settings_dict.contains(
+                    {
+                        ExternalIntegration.DISPLAY_RESERVES: ConfigurationAttributeValue.NOVALUE.value
+                    }
+                )
             )
-            .all()
-        )
-        restricted_collection_ids = (r[0] for r in restricted_collections)
+        ).all()
+        restricted_collection_ids = (r.id for r in restricted_collections)
 
         # If a licensepool is from a collection that restricts holds
         # and has no available copies, then we don't want to see it
@@ -2618,7 +2611,7 @@ class Lane(Base, DatabaseBackedWorkList, HierarchyWorkList):
     size_by_entrypoint = Column(JSON, nullable=True)
 
     # A lane may have one parent lane and many sublanes.
-    sublanes: Mapped[List[Lane]] = relationship(
+    sublanes: Mapped[list[Lane]] = relationship(
         "Lane",
         backref=backref("parent", remote_side=[id]),
     )
@@ -2626,7 +2619,7 @@ class Lane(Base, DatabaseBackedWorkList, HierarchyWorkList):
     # A lane may have multiple associated LaneGenres. For most lanes,
     # this is how the contents of the lanes are defined.
     genres = association_proxy("lane_genres", "genre", creator=LaneGenre.from_genre)
-    lane_genres: Mapped[List[LaneGenre]] = relationship(
+    lane_genres: Mapped[list[LaneGenre]] = relationship(
         "LaneGenre",
         foreign_keys="LaneGenre.lane_id",
         backref="lane",
@@ -2685,7 +2678,7 @@ class Lane(Base, DatabaseBackedWorkList, HierarchyWorkList):
     )
 
     # Only the books on these specific CustomLists will be shown.
-    customlists: Mapped[List[CustomList]] = relationship(
+    customlists: Mapped[list[CustomList]] = relationship(
         "CustomList", secondary=lambda: lanes_customlists, backref="lane"  # type: ignore
     )
 
@@ -2719,13 +2712,6 @@ class Lane(Base, DatabaseBackedWorkList, HierarchyWorkList):
     # Only a visible lane will show up in the user interface.  The
     # admin interface can see all the lanes, visible or not.
     _visible = Column("visible", Boolean, default=True, nullable=False)
-
-    # A Lane may have many CachedMARCFiles.
-    cachedmarcfiles: Mapped[List[CachedMARCFile]] = relationship(
-        "CachedMARCFile",
-        backref="lane",
-        cascade="all, delete-orphan",
-    )
 
     __table_args__ = (UniqueConstraint("parent_id", "display_name"),)
 

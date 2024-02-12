@@ -5,7 +5,7 @@ from __future__ import annotations
 import datetime
 import logging
 from enum import Enum as PythonEnum
-from typing import TYPE_CHECKING, List, Literal, Optional, Tuple, overload
+from typing import TYPE_CHECKING, Literal, overload
 
 from sqlalchemy import Boolean, Column, DateTime
 from sqlalchemy import Enum as AlchemyEnum
@@ -140,13 +140,22 @@ class License(Base, LicenseFunctions):
     )
 
     # One License can have many Loans.
-    loans: Mapped[List[Loan]] = relationship(
+    loans: Mapped[list[Loan]] = relationship(
         "Loan", back_populates="license", cascade="all, delete-orphan"
     )
 
     __table_args__ = (UniqueConstraint("identifier", "license_pool_id"),)
 
-    def loan_to(self, patron: Patron, **kwargs) -> Tuple[Loan, bool]:
+    @property
+    def is_available_for_borrowing(self) -> bool:
+        """Can this license currently be used to borrow a book?"""
+        return (
+            not self.is_inactive
+            and self.checkouts_available is not None
+            and self.checkouts_available > 0
+        )
+
+    def loan_to(self, patron: Patron, **kwargs) -> tuple[Loan, bool]:
         loan, is_new = self.license_pool.loan_to(patron, **kwargs)
         loan.license = self
         return loan, is_new
@@ -215,7 +224,7 @@ class LicensePool(Base):
 
     # If the source provides information about individual licenses, the
     # LicensePool may have many Licenses.
-    licenses: Mapped[List[License]] = relationship(
+    licenses: Mapped[list[License]] = relationship(
         "License",
         back_populates="license_pool",
         cascade="all, delete-orphan",
@@ -223,17 +232,17 @@ class LicensePool(Base):
     )
 
     # One LicensePool can have many Loans.
-    loans: Mapped[List[Loan]] = relationship(
+    loans: Mapped[list[Loan]] = relationship(
         "Loan", back_populates="license_pool", cascade="all, delete-orphan"
     )
 
     # One LicensePool can have many Holds.
-    holds: Mapped[List[Hold]] = relationship(
+    holds: Mapped[list[Hold]] = relationship(
         "Hold", back_populates="license_pool", cascade="all, delete-orphan"
     )
 
     # One LicensePool can have many CirculationEvents
-    circulation_events: Mapped[List[CirculationEvent]] = relationship(
+    circulation_events: Mapped[list[CirculationEvent]] = relationship(
         "CirculationEvent", backref="license_pool", cascade="all, delete-orphan"
     )
 
@@ -261,6 +270,7 @@ class LicensePool(Base):
     licenses_available: int = Column(Integer, default=0, index=True)
     licenses_reserved: int = Column(Integer, default=0)
     patrons_in_hold_queue = Column(Integer, default=0)
+    should_track_playtime = Column(Boolean, default=False, nullable=False)
 
     # This lets us cache the work of figuring out the best open access
     # link for this LicensePool.
@@ -272,7 +282,7 @@ class LicensePool(Base):
         UniqueConstraint("identifier_id", "data_source_id", "collection_id"),
     )
 
-    delivery_mechanisms: Mapped[List[LicensePoolDeliveryMechanism]] = relationship(
+    delivery_mechanisms: Mapped[list[LicensePoolDeliveryMechanism]] = relationship(
         "LicensePoolDeliveryMechanism",
         primaryjoin="and_(LicensePool.data_source_id==LicensePoolDeliveryMechanism.data_source_id, LicensePool.identifier_id==LicensePoolDeliveryMechanism.identifier_id)",
         foreign_keys=(data_source_id, identifier_id),
@@ -332,7 +342,7 @@ class LicensePool(Base):
         foreign_id,
         rights_status=None,
         collection=None,
-    ) -> Tuple[LicensePool, bool]:
+    ) -> tuple[LicensePool, bool]:
         ...
 
     @classmethod
@@ -346,7 +356,7 @@ class LicensePool(Base):
         rights_status,
         collection,
         autocreate: Literal[False],
-    ) -> Tuple[LicensePool | None, bool]:
+    ) -> tuple[LicensePool | None, bool]:
         ...
 
     @classmethod
@@ -359,7 +369,7 @@ class LicensePool(Base):
         rights_status=None,
         collection=None,
         autocreate=True,
-    ) -> Tuple[LicensePool | None, bool]:
+    ) -> tuple[LicensePool | None, bool]:
         """Find or create a LicensePool for the given foreign ID."""
         from core.model.collection import CollectionMissing
         from core.model.datasource import DataSource
@@ -1017,7 +1027,7 @@ class LicensePool(Base):
         end=None,
         fulfillment=None,
         external_identifier=None,
-    ) -> Tuple[Loan, bool]:
+    ) -> tuple[Loan, bool]:
         _db = Session.object_session(patron)
         kwargs = dict(start=start or utc_now(), end=end)
         loan, is_new = get_one_or_create(
@@ -1080,22 +1090,9 @@ class LicensePool(Base):
         The worst option would be pay-per-use, but we don't yet support any distributors that
         offer that model.
         """
-        best: Optional[License] = None
-        now = utc_now()
+        best: License | None = None
 
-        for license in self.licenses:
-            if license.is_inactive:
-                continue
-
-            active_loan_count = len(
-                [l for l in license.loans if not l.end or l.end > now]
-            )
-            checkouts_available = (
-                license.checkouts_available if license.checkouts_available else 0
-            )
-            if active_loan_count >= checkouts_available:
-                continue
-
+        for license in (l for l in self.licenses if l.is_available_for_borrowing):
             if (
                 not best
                 or (license.is_time_limited and not best.is_time_limited)
@@ -1479,7 +1476,7 @@ class LicensePoolDeliveryMechanism(Base):
     )
 
     # One LicensePoolDeliveryMechanism may fulfill many Loans.
-    fulfills: Mapped[List[Loan]] = relationship("Loan", back_populates="fulfillment")
+    fulfills: Mapped[list[Loan]] = relationship("Loan", back_populates="fulfillment")
 
     # One LicensePoolDeliveryMechanism may be associated with one RightsStatus.
     rightsstatus_id = Column(Integer, ForeignKey("rightsstatus.id"), index=True)
@@ -1748,7 +1745,7 @@ class DeliveryMechanism(Base, HasSessionCache):
             default_client_can_fulfill_lookup.add((_media_type, BEARER_TOKEN))
 
     license_pool_delivery_mechanisms: Mapped[
-        List[LicensePoolDeliveryMechanism]
+        list[LicensePoolDeliveryMechanism]
     ] = relationship(
         "LicensePoolDeliveryMechanism",
         back_populates="delivery_mechanism",
@@ -2002,11 +1999,11 @@ class RightsStatus(Base):
 
     # One RightsStatus may apply to many LicensePoolDeliveryMechanisms.
     licensepooldeliverymechanisms: Mapped[
-        List[LicensePoolDeliveryMechanism]
+        list[LicensePoolDeliveryMechanism]
     ] = relationship("LicensePoolDeliveryMechanism", backref="rights_status")
 
     # One RightsStatus may apply to many Resources.
-    resources: Mapped[List[Resource]] = relationship(
+    resources: Mapped[list[Resource]] = relationship(
         "Resource", backref="rights_status"
     )
 

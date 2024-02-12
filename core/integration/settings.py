@@ -1,18 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from enum import Enum
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Dict,
-    List,
-    Mapping,
-    Optional,
-    Tuple,
-    Union,
-)
+from typing import TYPE_CHECKING, Any, Union
 
 from pydantic import (
     BaseModel,
@@ -74,29 +65,29 @@ def FormField(
     default: Any = Undefined,
     *,
     form: ConfigurationFormItem = None,  # type: ignore[assignment]
-    default_factory: Optional[NoArgAnyCallable] = None,
-    alias: Optional[str] = None,
-    title: Optional[str] = None,
-    description: Optional[str] = None,
-    exclude: Union[AbstractSetIntStr, MappingIntStrAny, Any] = None,
-    include: Union[AbstractSetIntStr, MappingIntStrAny, Any] = None,
-    const: Optional[bool] = None,
-    gt: Optional[float] = None,
-    ge: Optional[float] = None,
-    lt: Optional[float] = None,
-    le: Optional[float] = None,
-    multiple_of: Optional[float] = None,
-    allow_inf_nan: Optional[bool] = None,
-    max_digits: Optional[int] = None,
-    decimal_places: Optional[int] = None,
-    min_items: Optional[int] = None,
-    max_items: Optional[int] = None,
-    unique_items: Optional[bool] = None,
-    min_length: Optional[int] = None,
-    max_length: Optional[int] = None,
+    default_factory: NoArgAnyCallable | None = None,
+    alias: str | None = None,
+    title: str | None = None,
+    description: str | None = None,
+    exclude: AbstractSetIntStr | MappingIntStrAny | Any = None,
+    include: AbstractSetIntStr | MappingIntStrAny | Any = None,
+    const: bool | None = None,
+    gt: float | None = None,
+    ge: float | None = None,
+    lt: float | None = None,
+    le: float | None = None,
+    multiple_of: float | None = None,
+    allow_inf_nan: bool | None = None,
+    max_digits: int | None = None,
+    decimal_places: int | None = None,
+    min_items: int | None = None,
+    max_items: int | None = None,
+    unique_items: bool | None = None,
+    min_length: int | None = None,
+    max_length: int | None = None,
     allow_mutation: bool = True,
-    regex: Optional[str] = None,
-    discriminator: Optional[str] = None,
+    regex: str | None = None,
+    discriminator: str | None = None,
     repr: bool = True,
     **extra: Any,
 ) -> Any:
@@ -155,6 +146,9 @@ class ConfigurationFormItemType(Enum):
     IMAGE = "image"
 
 
+ConfigurationFormOptionsType = Mapping[Union[Enum, str, None], str]
+
+
 @dataclass(frozen=True)
 class ConfigurationFormItem:
     """
@@ -182,9 +176,9 @@ class ConfigurationFormItem:
     # When the type is SELECT, LIST, or MENU, the options are used to populate the
     # field in the admin interface. This can either be a callable that returns a
     # dictionary of options or a dictionary of options.
-    options: Callable[[Session], Dict[Enum | str, str]] | Mapping[
-        Enum | str, str
-    ] | None = None
+    options: Callable[
+        [Session], ConfigurationFormOptionsType
+    ] | ConfigurationFormOptionsType | None = None
 
     # Required is usually determined by the Pydantic model, but can be overridden
     # here, in the case where a field would not be required in the model, but is
@@ -198,6 +192,8 @@ class ConfigurationFormItem:
 
     @staticmethod
     def get_form_value(value: Any) -> Any:
+        if value is None:
+            return ""
         if isinstance(value, Enum):
             return value.value
         if isinstance(value, bool):
@@ -208,13 +204,13 @@ class ConfigurationFormItem:
 
     def to_dict(
         self, db: Session, key: str, required: bool = False, default: Any = None
-    ) -> Tuple[int, Dict[str, Any]]:
+    ) -> tuple[int, dict[str, Any]]:
         """
         Convert the ConfigurationFormItem to a dictionary
 
         The dictionary is in the format expected by the admin interface.
         """
-        form_entry: Dict[str, Any] = {
+        form_entry: dict[str, Any] = {
             "label": self.label,
             "key": key,
             "required": required or self.required,
@@ -260,7 +256,7 @@ class BaseSettings(BaseModel, LoggerMixin):
     """
 
     @root_validator(pre=True)
-    def extra_args(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+    def extra_args(cls, values: dict[str, Any]) -> dict[str, Any]:
         # We log any extra arguments that are passed to the model, but
         # we don't raise an error, these arguments may be old configuration
         # settings that have not been cleaned up by a migration yet.
@@ -305,8 +301,19 @@ class BaseSettings(BaseModel, LoggerMixin):
         # not the alias.
         allow_population_by_field_name = True
 
+    # If your settings class needs additional form fields that are not
+    # defined on the model, you can add them here. This is useful if you
+    # need to add a custom form field, but don't want the data in the field
+    # to be stored on the model in the database. For example, if you want
+    # to add a custom form field that allows the user to upload an image, but
+    # want to store that image data outside the settings model.
+    #
+    # The key for the dictionary should be the field name, and the value
+    # should be a ConfigurationFormItem object that defines the form field.
+    _additional_form_fields: dict[str, ConfigurationFormItem] = {}
+
     @classmethod
-    def configuration_form(cls, db: Session) -> List[Dict[str, Any]]:
+    def configuration_form(cls, db: Session) -> list[dict[str, Any]]:
         """Get the configuration dictionary for this class"""
         config = []
         for field in cls.__fields__.values():
@@ -327,10 +334,18 @@ class BaseSettings(BaseModel, LoggerMixin):
         config.sort(key=lambda x: x[0])
         return [item[1] for item in config]
 
-    def dict(self, *args: Any, **kwargs: Any) -> Dict[str, Any]:
+    def dict(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
         """Override the dict method to remove the default values"""
+
         if "exclude_defaults" not in kwargs:
             kwargs["exclude_defaults"] = True
+
+        # Allow us to exclude extra fields that are not defined on the model
+        if "exclude_extra" in kwargs:
+            exclude_extra = kwargs.pop("exclude_extra")
+            if exclude_extra:
+                kwargs["exclude"] = self.__fields_set__ - self.__fields__.keys()
+
         return super().dict(*args, **kwargs)
 
     @classmethod
@@ -346,17 +361,6 @@ class BaseSettings(BaseModel, LoggerMixin):
             return item.field_info.form.label
         else:
             return field_name
-
-    # If your settings class needs additional form fields that are not
-    # defined on the model, you can add them here. This is useful if you
-    # need to add a custom form field, but don't want the data in the field
-    # to be stored on the model in the database. For example, if you want
-    # to add a custom form field that allows the user to upload an image, but
-    # want to store that image data outside the settings model.
-    #
-    # The key for the dictionary should be the field name, and the value
-    # should be a ConfigurationFormItem object that defines the form field.
-    _additional_form_fields: Dict[str, ConfigurationFormItem] = {}
 
     def __init__(self, **data: Any):
         """

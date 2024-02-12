@@ -10,9 +10,10 @@ import re
 import time
 import urllib.parse
 from abc import ABC
+from collections.abc import Generator
 from datetime import datetime, timedelta
 from io import BytesIO
-from typing import Dict, Generator, List, Tuple, Type, TypeVar, Union
+from typing import Optional, TypeVar
 
 import dateutil.parser
 from dependency_injector.wiring import Provide, inject
@@ -22,6 +23,7 @@ from pymarc import parse_xml_to_array
 
 from api.circulation import (
     BaseCirculationAPI,
+    BaseCirculationApiSettings,
     BaseCirculationLoanSettings,
     FulfillmentInfo,
     HoldInfo,
@@ -35,7 +37,6 @@ from core.analytics import Analytics
 from core.config import CannotLoadConfiguration
 from core.coverage import BibliographicCoverageProvider
 from core.integration.settings import (
-    BaseSettings,
     ConfigurationFormItem,
     ConfigurationFormItemType,
     FormField,
@@ -82,7 +83,7 @@ from core.util.http import HTTP
 from core.util.xmlparser import XMLParser, XMLProcessor
 
 
-class BibliothecaSettings(BaseSettings):
+class BibliothecaSettings(BaseCirculationApiSettings):
     username: str = FormField(
         form=ConfigurationFormItem(
             label=_("Account ID"),
@@ -95,7 +96,7 @@ class BibliothecaSettings(BaseSettings):
             required=True,
         )
     )
-    external_account_id: Optional[str] = FormField(
+    external_account_id: str = FormField(
         form=ConfigurationFormItem(
             label=_("Library ID"),
             required=True,
@@ -104,7 +105,7 @@ class BibliothecaSettings(BaseSettings):
 
 
 class BibliothecaLibrarySettings(BaseCirculationLoanSettings):
-    dont_display_reserves: Optional[str] = FormField(
+    dont_display_reserves: str | None = FormField(
         form=ConfigurationFormItem(
             label=_("Show/Hide Titles with No Available Loans"),
             required=False,
@@ -171,7 +172,7 @@ class BibliothecaAPI(
         self.version = self.DEFAULT_VERSION
         self.account_id = settings.username
         self.account_key = settings.password
-        self.library_id = collection.external_account_id
+        self.library_id = settings.external_account_id
         self.base_url = self.DEFAULT_BASE_URL
 
         if not self.account_id or not self.account_key or not self.library_id:
@@ -339,9 +340,6 @@ class BibliothecaAPI(
         """This will be overridden in MockBibliothecaAPI."""
         return Representation.simple_http_get(url, headers, *args, **kwargs)
 
-    def external_integration(self, _db):
-        return self.collection.external_integration
-
     def _run_self_tests(self, _db):
         def _count_events():
             now = utc_now()
@@ -361,7 +359,7 @@ class BibliothecaAPI(
 
             def _count_activity():
                 result = self.patron_activity(patron, pin)
-                return "Found %d loans/holds" % len(result)
+                return "Found %d loans/holds" % len(list(result))
 
             yield self.run_test(
                 "Checking activity for test patron for library %s" % library.name,
@@ -669,9 +667,9 @@ class ItemListParser(XMLProcessor[Metadata]):
 
     @classmethod
     def contributors_from_string(
-        cls, string: Optional[str], role: str = Contributor.AUTHOR_ROLE
-    ) -> List[ContributorData]:
-        contributors: List[ContributorData] = []
+        cls, string: str | None, role: str = Contributor.AUTHOR_ROLE
+    ) -> list[ContributorData]:
+        contributors: list[ContributorData] = []
         if not string:
             return contributors
 
@@ -688,8 +686,8 @@ class ItemListParser(XMLProcessor[Metadata]):
         return contributors
 
     @classmethod
-    def parse_genre_string(self, s: Optional[str]) -> List[SubjectData]:
-        genres: List[SubjectData] = []
+    def parse_genre_string(self, s: str | None) -> list[SubjectData]:
+        genres: list[SubjectData] = []
         if not s:
             return genres
         for i in s.split(","):
@@ -711,9 +709,7 @@ class ItemListParser(XMLProcessor[Metadata]):
             )
         return genres
 
-    def process_one(
-        self, tag: _Element, namespaces: Optional[Dict[str, str]]
-    ) -> Metadata:
+    def process_one(self, tag: _Element, namespaces: dict[str, str] | None) -> Metadata:
         """Turn an <item> tag into a Metadata and an encompassed CirculationData
         objects, and return the Metadata."""
 
@@ -959,7 +955,7 @@ class ErrorParser(BibliothecaParser[Exception]):
         return return_val
 
     def process_one(
-        self, error_tag: _Element, namespaces: Optional[Dict[str, str]]
+        self, error_tag: _Element, namespaces: dict[str, str] | None
     ) -> Exception:
         message = self.text_of_optional_subtag(error_tag, "Message")
         if not message:
@@ -1034,9 +1030,7 @@ class PatronCirculationParser(XMLParser):
     def __init__(self, collection: Collection) -> None:
         self.collection = collection
 
-    def process_all(
-        self, string: bytes | str
-    ) -> itertools.chain[Union[LoanInfo, HoldInfo]]:
+    def process_all(self, string: bytes | str) -> itertools.chain[LoanInfo | HoldInfo]:
         xml = self._load_xml(string)
         loans = self._process_all(
             xml, "//Checkouts/Item", namespaces={}, handler=self.process_one_loan
@@ -1050,26 +1044,26 @@ class PatronCirculationParser(XMLParser):
         return itertools.chain(loans, holds, reserves)
 
     def process_one_loan(
-        self, tag: _Element, namespaces: Dict[str, str]
-    ) -> Optional[LoanInfo]:
+        self, tag: _Element, namespaces: dict[str, str]
+    ) -> LoanInfo | None:
         return self.process_one(tag, namespaces, LoanInfo)
 
     def process_one_hold(
-        self, tag: _Element, namespaces: Dict[str, str]
-    ) -> Optional[HoldInfo]:
+        self, tag: _Element, namespaces: dict[str, str]
+    ) -> HoldInfo | None:
         return self.process_one(tag, namespaces, HoldInfo)
 
     def process_one_reserve(
-        self, tag: _Element, namespaces: Dict[str, str]
-    ) -> Optional[HoldInfo]:
+        self, tag: _Element, namespaces: dict[str, str]
+    ) -> HoldInfo | None:
         hold_info = self.process_one(tag, namespaces, HoldInfo)
         if hold_info is not None:
             hold_info.hold_position = 0
         return hold_info
 
     def process_one(
-        self, tag: _Element, namespaces: Dict[str, str], source_class: Type[T]
-    ) -> Optional[T]:
+        self, tag: _Element, namespaces: dict[str, str], source_class: type[T]
+    ) -> T | None:
         if not tag.xpath("ItemId"):
             # This happens for events associated with books
             # no longer in our collection.
@@ -1102,16 +1096,16 @@ class PatronCirculationParser(XMLParser):
 class DateResponseParser(BibliothecaParser[Optional[datetime]], ABC):
     """Extract a date from a response."""
 
-    RESULT_TAG_NAME: Optional[str] = None
-    DATE_TAG_NAME: Optional[str] = None
+    RESULT_TAG_NAME: str | None = None
+    DATE_TAG_NAME: str | None = None
 
     @property
     def xpath_expression(self) -> str:
         return f"/{self.RESULT_TAG_NAME}/{self.DATE_TAG_NAME}"
 
     def process_one(
-        self, tag: _Element, namespaces: Optional[Dict[str, str]]
-    ) -> Optional[datetime]:
+        self, tag: _Element, namespaces: dict[str, str] | None
+    ) -> datetime | None:
         due_date = tag.text
         if not due_date:
             return None
@@ -1161,7 +1155,7 @@ class EventParser(BibliothecaParser):
     def process_all(
         self, string: bytes | str, no_events_error=False
     ) -> Generator[
-        Tuple[str, str, Optional[str], datetime, Optional[datetime], str], None, None
+        tuple[str, str, str | None, datetime, datetime | None, str], None, None
     ]:
         has_events = False
         for i in super().process_all(string):
@@ -1184,8 +1178,8 @@ class EventParser(BibliothecaParser):
             )
 
     def process_one(
-        self, tag: _Element, namespaces: Optional[Dict[str, str]]
-    ) -> Tuple[str, str, Optional[str], datetime, Optional[datetime], str]:
+        self, tag: _Element, namespaces: dict[str, str] | None
+    ) -> tuple[str, str, str | None, datetime, datetime | None, str]:
         isbn = self.text_of_subtag(tag, "ISBN")
         bibliotheca_id = self.text_of_subtag(tag, "ItemId")
         patron_id = self.text_of_optional_subtag(tag, "PatronId")

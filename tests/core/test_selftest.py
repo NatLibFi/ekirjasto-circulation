@@ -6,7 +6,7 @@ configured, not that the code is correct.
 """
 
 import datetime
-from typing import Generator, Optional
+from collections.abc import Generator
 from unittest.mock import MagicMock
 
 from sqlalchemy.orm import Session
@@ -38,7 +38,7 @@ class TestSelfTestResult:
         )
 
         # A SelfTestResult may have an associated Collection.
-        db.default_collection().name = "CollectionA"
+        db.default_collection().integration_configuration.name = "CollectionA"
         result.collection = db.default_collection()
         assert (
             "<SelfTestResult: name='success1' collection='CollectionA' duration=5.00sec success=True result='The result'>"
@@ -104,7 +104,7 @@ class TestHasSelfTests:
         """
 
         class Tester(HasSelfTests):
-            integration: Optional[ExternalIntegration]
+            integration: ExternalIntegration | None
 
             def __init__(self, extra_arg=None):
                 """This constructor works."""

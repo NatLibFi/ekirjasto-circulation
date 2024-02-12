@@ -31,7 +31,14 @@ from core.entrypoint import AudiobooksEntryPoint
 from core.external_search import Filter
 from core.lane import DefaultSortOrderFacets, Facets, FeaturedFacets, Lane, WorkList
 from core.metadata_layer import ContributorData, Metadata
-from core.model import Contributor, DataSource, Edition, ExternalIntegration, create
+from core.model import (
+    Contributor,
+    DataSource,
+    Edition,
+    ExternalIntegration,
+    Library,
+    create,
+)
 from tests.fixtures.database import DatabaseTransactionFixture
 from tests.fixtures.library import LibraryFixture
 from tests.fixtures.search import ExternalSearchFixtureFake
@@ -908,14 +915,67 @@ class TestContributorLane:
 class TestCrawlableFacets:
     def test_default(self, db: DatabaseTransactionFixture):
         facets = CrawlableFacets.default(db.default_library())
-        assert CrawlableFacets.COLLECTION_FULL == facets.collection
-        assert CrawlableFacets.AVAILABLE_ALL == facets.availability
-        assert CrawlableFacets.ORDER_LAST_UPDATE == facets.order
-        assert False == facets.order_ascending
+        assert facets.collection == CrawlableFacets.COLLECTION_FULL
+        assert facets.availability == CrawlableFacets.AVAILABLE_ALL
+        assert facets.order == CrawlableFacets.ORDER_LAST_UPDATE
+        assert facets.order_ascending is False
 
-        # There's only one enabled value for each facet group.
-        for group in facets.enabled_facets:
-            assert 1 == len(group)
+        [
+            order,
+            availability,
+            collection,
+            distributor,
+            collectionName,
+        ] = facets.enabled_facets
+
+        # The default facets are the only ones enabled.
+        for facet in [order, availability, collection]:
+            assert len(facet) == 1
+
+        # Except for distributor and collectionName, which have the default
+        # and data for each collection in the library.
+        for facet in [distributor, collectionName]:
+            assert len(facet) == 1 + len(db.default_library().collections)
+
+    @pytest.mark.parametrize(
+        "group_name, expected",
+        [
+            (Facets.ORDER_FACET_GROUP_NAME, Facets.ORDER_LAST_UPDATE),
+            (Facets.AVAILABILITY_FACET_GROUP_NAME, Facets.AVAILABLE_ALL),
+            (Facets.COLLECTION_FACET_GROUP_NAME, Facets.COLLECTION_FULL),
+            (Facets.DISTRIBUTOR_FACETS_GROUP_NAME, Facets.DISTRIBUTOR_ALL),
+            (Facets.COLLECTION_NAME_FACETS_GROUP_NAME, Facets.COLLECTION_NAME_ALL),
+        ],
+    )
+    def test_available_none(self, group_name: str, expected: list[str]) -> None:
+        assert CrawlableFacets.available_facets(None, group_name) == [expected]
+
+    @pytest.mark.parametrize(
+        "group_name, expected",
+        [
+            (Facets.ORDER_FACET_GROUP_NAME, [Facets.ORDER_LAST_UPDATE]),
+            (Facets.AVAILABILITY_FACET_GROUP_NAME, [Facets.AVAILABLE_ALL]),
+            (Facets.COLLECTION_FACET_GROUP_NAME, [Facets.COLLECTION_FULL]),
+            (Facets.DISTRIBUTOR_FACETS_GROUP_NAME, [Facets.DISTRIBUTOR_ALL, "foo"]),
+            (
+                Facets.COLLECTION_NAME_FACETS_GROUP_NAME,
+                [Facets.COLLECTION_NAME_ALL, "foo"],
+            ),
+        ],
+    )
+    def test_available(self, group_name: str, expected: list[str]):
+        mock = MagicMock(spec=Library)
+        mock.enabled_facets = MagicMock(return_value=["foo"])
+
+        assert CrawlableFacets.available_facets(mock, group_name) == expected
+
+        if group_name in [
+            Facets.DISTRIBUTOR_FACETS_GROUP_NAME,
+            Facets.COLLECTION_NAME_FACETS_GROUP_NAME,
+        ]:
+            assert mock.enabled_facets.call_count == 1
+        else:
+            assert mock.enabled_facets.call_count == 0
 
 
 class TestCrawlableCollectionBasedLane:
@@ -927,7 +987,7 @@ class TestCrawlableCollectionBasedLane:
         library = db.default_library()
         default_collection = db.default_collection()
         other_library_collection = db.collection()
-        library.collections.append(other_library_collection)
+        other_library_collection.libraries.append(library)
 
         # This collection is not associated with any library.
         unused_collection = db.collection()
@@ -1111,12 +1171,13 @@ class TestJackpotWorkList:
         # The default library comes with a collection whose data
         # source is unspecified. Make another one whose data source _is_
         # specified.
+        library = db.default_library()
         overdrive_collection = db.collection(
             "Test Overdrive Collection",
             protocol=ExternalIntegration.OVERDRIVE,
             data_source_name=DataSource.OVERDRIVE,
         )
-        db.default_library().collections.append(overdrive_collection)
+        overdrive_collection.libraries.append(library)
 
         # Create another collection that is _not_ associated with this
         # library. It will not be used at all.
@@ -1127,11 +1188,11 @@ class TestJackpotWorkList:
         )
 
         # Pass in a JackpotFacets object
-        facets = JackpotFacets.default(db.default_library())
+        facets = JackpotFacets.default(library)
 
         # The JackpotWorkList has no works of its own -- only its children
         # have works.
-        wl = JackpotWorkList(db.default_library(), facets)
+        wl = JackpotWorkList(library, facets)
         assert [] == wl.works(db.session)
 
         # Let's take a look at the children.
@@ -1156,11 +1217,11 @@ class TestJackpotWorkList:
         # These worklists show ebooks and audiobooks from the two
         # collections associated with the default library.
         [
-            default_ebooks,
             default_audio,
-            overdrive_ebooks,
+            default_ebooks,
             overdrive_audio,
-        ] = available_now
+            overdrive_ebooks,
+        ] = sorted(available_now, key=lambda x: x.display_name)
 
         assert (
             "License source {OPDS} - Medium {Book} - Collection name {%s}"

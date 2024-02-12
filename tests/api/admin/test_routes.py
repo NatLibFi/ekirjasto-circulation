@@ -1,6 +1,7 @@
 import logging
+from collections.abc import Generator
 from pathlib import Path
-from typing import Any, Generator, Optional
+from typing import Any
 
 import flask
 import pytest
@@ -11,7 +12,7 @@ from api import routes as api_routes
 from api.admin import routes
 from api.admin.controller import setup_admin_controllers
 from api.admin.problem_details import *
-from api.controller import CirculationManagerController
+from api.controller.circulation_manager import CirculationManagerController
 from core.util.problem_detail import ProblemDetail, ProblemError
 from tests.api.mockapi.circulation import MockCirculationManager
 from tests.fixtures.api_controller import ControllerFixture
@@ -93,8 +94,8 @@ class AdminRouteFixture:
         self.original_api_app = self.api_routes.app
         self.resolver = self.original_app.url_map.bind("", "/")
 
-        self.controller: Optional[CirculationManagerController] = None
-        self.real_controller: Optional[CirculationManagerController] = None
+        self.controller: CirculationManagerController | None = None
+        self.real_controller: CirculationManagerController | None = None
 
         self.routes.app = app  # type: ignore
         # Need to also mock the route app from /api/routes.

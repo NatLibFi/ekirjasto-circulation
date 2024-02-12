@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import sys
-from typing import Any, List
+from typing import Any
 
 from pydantic import Field, NonNegativeInt
 
@@ -54,9 +54,6 @@ class InventoryStatistics(StatisticsBaseModel):
     available_titles: NonNegativeInt = Field(
         description="Number of books available to lend."
     )
-    self_hosted_titles: NonNegativeInt = Field(
-        description="Number of books that are self-hosted."
-    )
     open_access_titles: NonNegativeInt = Field(
         description="Number of books with an Open Access license."
     )
@@ -90,7 +87,10 @@ class LibraryStatistics(CustomBaseModel):
     inventory_summary: InventoryStatistics = Field(
         description="Summary of inventory statistics for this library."
     )
-    collection_ids: List[int] = Field(
+    inventory_by_medium: dict[str, InventoryStatistics] = Field(
+        description="Per-medium inventory statistics for this library."
+    )
+    collection_ids: list[int] = Field(
         description="List of associated collection identifiers."
     )
 
@@ -103,19 +103,25 @@ class CollectionInventory(CustomBaseModel):
     inventory: InventoryStatistics = Field(
         description="Inventory statistics for this collection."
     )
+    inventory_by_medium: dict[str, InventoryStatistics] = Field(
+        description="Per-medium inventory statistics for this collection."
+    )
 
 
 class StatisticsResponse(CustomBaseModel):
     """Statistics response for authorized libraries and collections."""
 
-    collections: List[CollectionInventory] = Field(
+    collections: list[CollectionInventory] = Field(
         description="List of collection-level statistics (includes collections not associated with a library."
     )
-    libraries: List[LibraryStatistics] = Field(
+    libraries: list[LibraryStatistics] = Field(
         description="List of library-level statistics."
     )
     inventory_summary: InventoryStatistics = Field(
         description="Summary inventory across all included collections."
+    )
+    inventory_by_medium: dict[str, InventoryStatistics] = Field(
+        description="Per-medium summary inventory across all included collections."
     )
     patron_summary: PatronStatistics = Field(
         description="Summary patron statistics across all libraries."

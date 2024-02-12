@@ -1,5 +1,3 @@
-from typing import Union
-
 import flask
 from flask import Response
 from sqlalchemy import and_, select
@@ -7,12 +5,7 @@ from sqlalchemy import and_, select
 from api.admin.controller.base import AdminPermissionsControllerMixin
 from api.admin.controller.integration_settings import IntegrationSettingsController
 from api.admin.form_data import ProcessFormData
-from api.admin.problem_details import (
-    INCOMPLETE_CONFIGURATION,
-    INTEGRATION_URL_ALREADY_IN_USE,
-    NO_PROTOCOL_FOR_NEW_SERVICE,
-    UNKNOWN_PROTOCOL,
-)
+from api.admin.problem_details import INTEGRATION_URL_ALREADY_IN_USE
 from api.discovery.opds_registration import OpdsRegistrationService
 from api.integration.registry.discovery import DiscoveryRegistry
 from core.model import (
@@ -30,7 +23,7 @@ class DiscoveryServicesController(
     def default_registry(self) -> DiscoveryRegistry:
         return DiscoveryRegistry()
 
-    def process_discovery_services(self) -> Union[Response, ProblemDetail]:
+    def process_discovery_services(self) -> Response | ProblemDetail:
         self.require_system_admin()
         if flask.request.method == "GET":
             return self.process_get()
@@ -65,30 +58,10 @@ class DiscoveryServicesController(
         )
         default_registry.settings_dict = settings.dict()
 
-    def process_post(self) -> Union[Response, ProblemDetail]:
+    def process_post(self) -> Response | ProblemDetail:
         try:
             form_data = flask.request.form
-            protocol = form_data.get("protocol", None, str)
-            id = form_data.get("id", None, int)
-            name = form_data.get("name", None, str)
-
-            if protocol is None and id is None:
-                raise ProblemError(NO_PROTOCOL_FOR_NEW_SERVICE)
-
-            if protocol is None or protocol not in self.registry:
-                self.log.warning(f"Unknown service protocol: {protocol}")
-                raise ProblemError(UNKNOWN_PROTOCOL)
-
-            if id is not None:
-                # Find an existing service to edit
-                service = self.get_existing_service(id, name, protocol)
-                response_code = 200
-            else:
-                # Create a new service
-                if name is None:
-                    raise ProblemError(INCOMPLETE_CONFIGURATION)
-                service = self.create_new_service(name, protocol)
-                response_code = 201
+            service, protocol, response_code = self.get_service(form_data)
 
             impl_cls = self.registry[protocol]
             settings_class = impl_cls.settings_class()
@@ -107,7 +80,7 @@ class DiscoveryServicesController(
 
         return Response(str(service.id), response_code)
 
-    def process_delete(self, service_id: int) -> Union[Response, ProblemDetail]:
+    def process_delete(self, service_id: int) -> Response | ProblemDetail:
         self.require_system_admin()
         try:
             return self.delete_service(service_id)

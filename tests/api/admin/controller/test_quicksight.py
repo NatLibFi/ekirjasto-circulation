@@ -1,8 +1,10 @@
+import uuid
+from typing import cast
 from unittest import mock
 
 import pytest
 
-from core.model import create
+from core.model import Library, create
 from core.model.admin import Admin, AdminRole
 from core.util.problem_detail import ProblemError
 from tests.fixtures.api_admin import AdminControllerFixture
@@ -54,8 +56,9 @@ class TestQuicksightController:
             )
             generate_method.return_value = {"Status": 201, "EmbedUrl": "https://embed"}
 
+            random_uuid = str(uuid.uuid4())
             with quicksight_fixture.request_context_with_admin(
-                f"/?library_ids={default.id},{library1.id},30000",
+                f"/?library_uuids={default.uuid},{library1.uuid},{random_uuid}",
                 admin=system_admin,
             ) as ctx:
                 response = ctrl.generate_quicksight_url("primary")
@@ -75,8 +78,10 @@ class TestQuicksightController:
                     },
                     SessionTags=[
                         dict(
-                            Key="library_name",
-                            Value="|".join([str(library1.name), str(default.name)]),
+                            Key="library_short_name_0",
+                            Value="|".join(
+                                [str(library1.short_name), str(default.short_name)]
+                            ),
                         )
                     ],
                 )
@@ -86,7 +91,7 @@ class TestQuicksightController:
             admin1.add_role(AdminRole.LIBRARY_MANAGER, library1)
 
             with quicksight_fixture.request_context_with_admin(
-                f"/?library_ids=1,{library1.id}",
+                f"/?library_uuids={default.uuid},{library1.uuid}",
                 admin=admin1,
             ) as ctx:
                 generate_method.reset_mock()
@@ -100,7 +105,79 @@ class TestQuicksightController:
                         "Dashboard": {"InitialDashboardId": "uuid2"}
                     },
                     SessionTags=[
-                        dict(Key="library_name", Value="|".join([str(library1.name)]))
+                        dict(
+                            Key="library_short_name_0",
+                            Value="|".join([str(library1.short_name)]),
+                        )
+                    ],
+                )
+
+    def test_generate_quicksight_url_with_a_large_number_of_libraries(
+        self, quicksight_fixture: QuickSightControllerFixture
+    ):
+        ctrl = quicksight_fixture.manager.admin_quicksight_controller
+        db = quicksight_fixture.ctrl.db
+
+        system_admin, _ = create(db.session, Admin, email="admin@email.com")
+        system_admin.add_role(AdminRole.SYSTEM_ADMIN)
+        default = db.default_library()
+
+        libraries: list[Library] = []
+        for x in range(0, 37):
+            libraries.append(db.library(short_name="TL" + str(x).zfill(4)))
+
+        with mock.patch(
+            "api.admin.controller.quicksight.boto3"
+        ) as mock_boto, mock.patch(
+            "api.admin.controller.quicksight.Configuration.quicksight_authorized_arns"
+        ) as mock_qs_arns:
+            arns = dict(
+                primary=[
+                    "arn:aws:quicksight:us-west-1:aws-account-id:dashboard/uuid1",
+                    "arn:aws:quicksight:us-west-1:aws-account-id:dashboard/uuid2",
+                ],
+            )
+            mock_qs_arns.return_value = arns
+            generate_method: mock.MagicMock = (
+                mock_boto.client().generate_embed_url_for_anonymous_user
+            )
+            generate_method.return_value = {"Status": 201, "EmbedUrl": "https://embed"}
+
+            random_uuid = str(uuid.uuid4())
+            with quicksight_fixture.request_context_with_admin(
+                f"/?library_uuids={','.join(cast(list[str], [x.uuid for x in libraries ]))}",
+                admin=system_admin,
+            ) as ctx:
+                response = ctrl.generate_quicksight_url("primary")
+
+                # Assert the right client was created, with a region
+                assert mock_boto.client.call_args == mock.call(
+                    "quicksight", region_name="us-west-1"
+                )
+                # Assert the reqest and response formats
+                assert response["embedUrl"] == "https://embed"
+                assert generate_method.call_args == mock.call(
+                    AwsAccountId="aws-account-id",
+                    Namespace="default",
+                    AuthorizedResourceArns=arns["primary"],
+                    ExperienceConfiguration={
+                        "Dashboard": {"InitialDashboardId": "uuid1"}
+                    },
+                    SessionTags=[
+                        dict(
+                            Key="library_short_name_0",
+                            Value="|".join(
+                                cast(list[str], [x.short_name for x in libraries[0:36]])
+                            ),
+                        ),
+                        dict(
+                            Key="library_short_name_1",
+                            Value="|".join(
+                                cast(
+                                    list[str], [x.short_name for x in libraries[36:37]]
+                                )
+                            ),
+                        ),
                     ],
                 )
 
@@ -129,7 +206,7 @@ class TestQuicksightController:
             mock_qs_arns.return_value = arns
 
             with quicksight_fixture.request_context_with_admin(
-                f"/?library_ids={library.id}",
+                f"/?library_uuids={library.uuid}",
                 admin=admin,
             ) as ctx:
                 with pytest.raises(ProblemError) as raised:
@@ -148,7 +225,7 @@ class TestQuicksightController:
                 )
 
             with quicksight_fixture.request_context_with_admin(
-                f"/?library_ids={library_not_allowed.id}",
+                f"/?library_uuids={library_not_allowed.uuid}",
                 admin=admin,
             ) as ctx:
                 mock_qs_arns.return_value = arns
@@ -160,7 +237,7 @@ class TestQuicksightController:
                 )
 
             with quicksight_fixture.request_context_with_admin(
-                f"/?library_ids={library.id}",
+                f"/?library_uuids={library.uuid}",
                 admin=admin,
             ) as ctx:
                 # Bad response from boto
@@ -171,7 +248,7 @@ class TestQuicksightController:
                     ctrl.generate_quicksight_url("primary")
                 assert (
                     raised.value.problem_detail.detail
-                    == "Error while fetching the Quisksight Embed url."
+                    == "Error while fetching the Quicksight Embed url."
                 )
 
                 # 200 status, but no url
@@ -182,7 +259,7 @@ class TestQuicksightController:
                     ctrl.generate_quicksight_url("primary")
                 assert (
                     raised.value.problem_detail.detail
-                    == "Error while fetching the Quisksight Embed url."
+                    == "Error while fetching the Quicksight Embed url."
                 )
 
                 # Boto threw an error
@@ -193,7 +270,7 @@ class TestQuicksightController:
                     ctrl.generate_quicksight_url("primary")
                 assert (
                     raised.value.problem_detail.detail
-                    == "Error while fetching the Quisksight Embed url."
+                    == "Error while fetching the Quicksight Embed url."
                 )
 
     def test_get_dashboard_names(self, quicksight_fixture: QuickSightControllerFixture):

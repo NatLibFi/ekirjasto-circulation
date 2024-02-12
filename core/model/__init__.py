@@ -3,7 +3,8 @@ from __future__ import annotations
 import json
 import logging
 import os
-from typing import Any, Generator, List, Literal, Tuple, Type, TypeVar
+from collections.abc import Generator
+from typing import Any, List, Literal, Tuple, Type, TypeVar, Union
 
 from contextlib2 import contextmanager
 from psycopg2.extensions import adapt as sqlescape
@@ -11,7 +12,7 @@ from psycopg2.extras import NumericRange
 from pydantic.json import pydantic_encoder
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Connection
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import DatabaseError, IntegrityError
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
@@ -54,6 +55,13 @@ def pg_advisory_lock(
         connection.execute(text(f"SELECT pg_advisory_lock({lock_id});"))
         try:
             yield
+        except IntegrityError:
+            # If there was an IntegrityError, and we are in a transaction,
+            # we need to roll it back before we are able to release the lock.
+            transaction = connection.get_transaction()
+            if transaction is not None:
+                transaction.rollback()
+            raise
         finally:
             # Close the lock
             connection.execute(text(f"SELECT pg_advisory_unlock({lock_id});"))
@@ -78,8 +86,8 @@ T = TypeVar("T")
 
 
 def create(
-    db: Session, model: Type[T], create_method="", create_method_kwargs=None, **kwargs
-) -> Tuple[T, Literal[True]]:
+    db: Session, model: type[T], create_method="", create_method_kwargs=None, **kwargs
+) -> tuple[T, Literal[True]]:
     kwargs.update(create_method_kwargs or {})
     created = getattr(model, create_method, model)(**kwargs)
     db.add(created)
@@ -88,7 +96,7 @@ def create(
 
 
 def get_one(
-    db: Session, model: Type[T], on_multiple="error", constraint=None, **kwargs
+    db: Session, model: type[T], on_multiple="error", constraint=None, **kwargs
 ) -> T | None:
     """Gets an object from the database based on its attributes.
 
@@ -124,8 +132,8 @@ def get_one(
 
 
 def get_one_or_create(
-    db: Session, model: Type[T], create_method="", create_method_kwargs=None, **kwargs
-) -> Tuple[T, bool]:
+    db: Session, model: type[T], create_method="", create_method_kwargs=None, **kwargs
+) -> tuple[T, bool]:
     one = get_one(db, model, **kwargs)
     if one:
         return one, False
@@ -204,13 +212,13 @@ class PresentationCalculationPolicy:
 
     def __init__(
         self,
+        *,
         choose_edition=True,
         set_edition_metadata=True,
         classify=True,
         choose_summary=True,
         calculate_quality=True,
         choose_cover=True,
-        regenerate_marc_record=False,
         update_search_index=False,
         verbose=True,
         equivalent_identifier_levels=DEFAULT_LEVELS,
@@ -231,8 +239,6 @@ class PresentationCalculationPolicy:
            quality of the Work?
         :param choose_cover: Should we reconsider which of the
            available cover images is the best?
-        :param regenerate_marc_record: Should we regenerate the MARC record
-           for this Work?
         :param update_search_index: Should we reindex this Work's
            entry in the search index?
         :param verbose: Should we print out information about the work we're
@@ -265,11 +271,6 @@ class PresentationCalculationPolicy:
         self.calculate_quality = calculate_quality
         self.choose_cover = choose_cover
 
-        # Regenerate MARC records, except that they will
-        # never be generated unless a MARC organization code is set
-        # in a sitewide configuration setting.
-        self.regenerate_marc_record = regenerate_marc_record
-
         # Similarly for update_search_index.
         self.update_search_index = update_search_index
 
@@ -285,7 +286,6 @@ class PresentationCalculationPolicy:
         everything, even when it doesn't seem necessary.
         """
         return PresentationCalculationPolicy(
-            regenerate_marc_record=True,
             update_search_index=True,
         )
 
@@ -346,8 +346,8 @@ class SessionManager:
 
     @classmethod
     def setup_event_listener(
-        cls, session: Union[Session, sessionmaker]
-    ) -> Union[Session, sessionmaker]:
+        cls, session: Session | sessionmaker
+    ) -> Session | sessionmaker:
         event.listen(session, "before_flush", Listener.before_flush_event_listener)
         return session
 
@@ -483,7 +483,7 @@ class SessionBulkOperation:
         self.bulk_method = bulk_method
         self.bulk_method_kwargs = bulk_method_kwargs or {}
         self.batch_size = batch_size
-        self._objects: List[Base] = []
+        self._objects: list[Base] = []
 
     def __enter__(self):
         return self
@@ -515,7 +515,6 @@ from api.saml.metadata.federations.model import (
     SAMLFederation,
 )
 from core.model.admin import Admin, AdminRole
-from core.model.cachedfeed import CachedMARCFile
 from core.model.circulationevent import CirculationEvent
 from core.model.classification import Classification, Genre, Subject
 from core.model.collection import (
@@ -554,6 +553,7 @@ from core.model.licensing import (
     RightsStatus,
 )
 from core.model.listeners import *
+from core.model.marcfile import MarcFile
 from core.model.measurement import Measurement
 from core.model.patron import (
     Annotation,

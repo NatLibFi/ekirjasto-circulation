@@ -6,7 +6,7 @@ from flask_babel import lazy_gettext as _
 
 from api.admin.controller.base import AdminPermissionsControllerMixin
 from api.admin.problem_details import *
-from api.controller import CirculationManagerController
+from api.controller.circulation_manager import CirculationManagerController
 from core.classifier import NO_NUMBER, NO_VALUE, SimplifiedGenreClassifier, genres
 from core.feed.acquisition import OPDSAcquisitionFeed
 from core.feed.annotator.admin import AdminAnnotator
@@ -339,7 +339,6 @@ class WorkController(CirculationManagerController, AdminPermissionsControllerMix
             # problem the user is trying to fix.
             policy = PresentationCalculationPolicy(
                 classify=True,
-                regenerate_marc_record=True,
                 update_search_index=True,
                 calculate_quality=changed_rating,
                 choose_summary=changed_summary,
@@ -621,7 +620,6 @@ class WorkController(CirculationManagerController, AdminPermissionsControllerMix
         # Update presentation
         policy = PresentationCalculationPolicy(
             classify=True,
-            regenerate_marc_record=True,
             update_search_index=True,
         )
         work.calculate_presentation(policy=policy)

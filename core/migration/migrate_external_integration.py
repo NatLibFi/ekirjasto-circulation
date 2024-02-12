@@ -1,9 +1,13 @@
 import json
 from collections import defaultdict
-from typing import Dict, Tuple, Type, TypeVar
+from typing import Any, TypeVar
 
 from sqlalchemy.engine import Connection, CursorResult, Row
 
+from core.integration.base import (
+    HasIntegrationConfiguration,
+    HasLibraryIntegrationConfiguration,
+)
 from core.integration.settings import (
     BaseSettings,
     ConfigurationFormItemType,
@@ -15,7 +19,7 @@ T = TypeVar("T", bound=BaseSettings)
 
 
 def _validate_and_load_settings(
-    settings_class: Type[T], settings_dict: Dict[str, str]
+    settings_class: type[T], settings_dict: dict[str, str]
 ) -> T:
     aliases = {
         f.alias: f.name
@@ -43,14 +47,14 @@ def _validate_and_load_settings(
 def get_configuration_settings(
     connection: Connection,
     integration: Row,
-) -> Tuple[Dict, Dict, str]:
+) -> tuple[dict[str, str], dict[str, dict[str, str]], str]:
     settings = connection.execute(
         "select cs.library_id, cs.key, cs.value from configurationsettings cs "
         "where cs.external_integration_id = (%s)",
         (integration.id,),
     )
     settings_dict = {}
-    library_settings: Dict[str, Dict[str, str]] = defaultdict(dict)
+    library_settings: dict[str, dict[str, str]] = defaultdict(dict)
     self_test_results = json_serializer({})
     for setting in settings:
         if not setting.value:
@@ -68,39 +72,43 @@ def get_configuration_settings(
 
 def _migrate_external_integration(
     connection: Connection,
-    integration: Row,
-    protocol_class: Type,
+    name: str,
+    protocol: str,
+    protocol_class: type[HasIntegrationConfiguration[BaseSettings]],
     goal: str,
-    settings_dict: Dict,
+    settings_dict: dict[str, Any],
     self_test_results: str,
-    name=None,
+    context: dict[str, Any] | None = None,
 ) -> int:
     # Load and validate the settings before storing them in the database.
     settings_class = protocol_class.settings_class()
     settings_obj = _validate_and_load_settings(settings_class, settings_dict)
     integration_configuration = connection.execute(
         "insert into integration_configurations "
-        "(protocol, goal, name, settings, self_test_results) "
-        "values (%s, %s, %s, %s, %s)"
+        "(protocol, goal, name, settings, context, self_test_results) "
+        "values (%s, %s, %s, %s, %s, %s)"
         "returning id",
         (
-            integration.protocol,
+            protocol,
             goal,
-            name or integration.name,
+            name,
             json_serializer(settings_obj.dict()),
+            json_serializer(context or {}),
             self_test_results,
         ),
     ).fetchone()
     assert integration_configuration is not None
-    return integration_configuration[0]
+    return integration_configuration[0]  # type: ignore[no-any-return]
 
 
 def _migrate_library_settings(
     connection: Connection,
     integration_id: int,
     library_id: int,
-    library_settings: Dict[str, str],
-    protocol_class: Type,
+    library_settings: dict[str, str],
+    protocol_class: type[
+        HasLibraryIntegrationConfiguration[BaseSettings, BaseSettings]
+    ],
 ) -> None:
     library_settings_class = protocol_class.library_settings_class()
     library_settings_obj = _validate_and_load_settings(

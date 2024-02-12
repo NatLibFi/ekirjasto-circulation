@@ -5,25 +5,10 @@ import traceback
 import urllib
 from abc import ABC, abstractmethod
 from collections import defaultdict
+from collections.abc import Callable, Generator, Iterable, Sequence
 from datetime import datetime
 from io import BytesIO
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Dict,
-    Generator,
-    Generic,
-    Iterable,
-    List,
-    Literal,
-    Optional,
-    Sequence,
-    Tuple,
-    Type,
-    TypeVar,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast, overload
 from urllib.parse import urljoin, urlparse
 from xml.etree.ElementTree import Element
 
@@ -32,15 +17,19 @@ import feedparser
 from feedparser import FeedParserDict
 from flask_babel import lazy_gettext as _
 from lxml import etree
-from pydantic import HttpUrl
+from pydantic import AnyHttpUrl
 from sqlalchemy.orm.session import Session
 
-from api.circulation import BaseCirculationAPI, FulfillmentInfo, HoldInfo, LoanInfo
+from api.circulation import (
+    BaseCirculationAPI,
+    BaseCirculationApiSettings,
+    FulfillmentInfo,
+    HoldInfo,
+    LoanInfo,
+)
 from api.circulation_exceptions import CurrentlyAvailable, FormatNotAvailable, NotOnHold
 from api.saml.credential import SAMLCredentialManager
-from api.selftest import HasCollectionSelfTests
 from core.classifier import Classifier
-from core.config import IntegrationException
 from core.connection_config import ConnectionSetting
 from core.coverage import CoverageFailure
 from core.integration.base import integration_settings_load
@@ -78,7 +67,6 @@ from core.model import (
     Subject,
     get_one,
 )
-from core.model.configuration import HasExternalIntegration
 from core.model.formats import FormatPrioritiesSettings
 from core.monitor import CollectionMonitor
 from core.saml.wayfless import (
@@ -86,7 +74,6 @@ from core.saml.wayfless import (
     SAMLWAYFlessFulfillmentError,
     SAMLWAYFlessSetttings,
 )
-from core.selftest import SelfTestResult
 from core.util import base64
 from core.util.datetime_helpers import datetime_utc, to_utc, utc_now
 from core.util.http import HTTP, BadResponseException
@@ -108,6 +95,7 @@ class OPDSXMLParser(XMLParser):
         "schema": "http://schema.org/",
         "atom": "http://www.w3.org/2005/Atom",
         "drm": "http://librarysimplified.org/terms/drm",
+        "palace": "http://palaceproject.io/terms",
     }
 
 
@@ -115,10 +103,9 @@ class OPDSImporterSettings(
     ConnectionSetting,
     SAMLWAYFlessSetttings,
     FormatPrioritiesSettings,
+    BaseCirculationApiSettings,
 ):
-    _NO_DEFAULT_AUDIENCE = ""
-
-    external_account_id: Optional[HttpUrl] = FormField(
+    external_account_id: AnyHttpUrl = FormField(
         form=ConfigurationFormItem(
             label=_("URL"),
             required=True,
@@ -129,8 +116,8 @@ class OPDSImporterSettings(
         form=ConfigurationFormItem(label=_("Data source name"), required=True)
     )
 
-    default_audience: str = FormField(
-        default=_NO_DEFAULT_AUDIENCE,
+    default_audience: str | None = FormField(
+        None,
         form=ConfigurationFormItem(
             label=_("Default audience"),
             description=_(
@@ -138,15 +125,15 @@ class OPDSImporterSettings(
                 "assume the books have this target audience."
             ),
             type=ConfigurationFormItemType.SELECT,
-            format="narrow",
-            options={_NO_DEFAULT_AUDIENCE: _("No default audience")}.update(
-                {audience: audience for audience in sorted(Classifier.AUDIENCES)}
-            ),
+            options={
+                **{None: _("No default audience")},
+                **{audience: audience for audience in sorted(Classifier.AUDIENCES)},
+            },
             required=False,
         ),
     )
 
-    username: Optional[str] = FormField(
+    username: str | None = FormField(
         form=ConfigurationFormItem(
             label=_("Username"),
             description=_(
@@ -156,7 +143,7 @@ class OPDSImporterSettings(
         )
     )
 
-    password: Optional[str] = FormField(
+    password: str | None = FormField(
         form=ConfigurationFormItem(
             label=_("Password"),
             description=_(
@@ -185,7 +172,7 @@ class OPDSImporterSettings(
         ),
     )
 
-    primary_identifier_source: Optional[str] = FormField(
+    primary_identifier_source: str | None = FormField(
         form=ConfigurationFormItem(
             label=_("Identifer"),
             required=False,
@@ -229,7 +216,7 @@ class BaseOPDSAPI(
         patron: Patron,
         pin: str,
         licensepool: LicensePool,
-        notification_email_address: Optional[str],
+        notification_email_address: str | None,
     ) -> HoldInfo:
         # Because all OPDS content is assumed to be simultaneously
         # available to all patrons, there is no such thing as a hold.
@@ -352,7 +339,7 @@ class BaseOPDSAPI(
 
     def can_fulfill_without_loan(
         self,
-        patron: Optional[Patron],
+        patron: Patron | None,
         pool: LicensePool,
         lpdm: LicensePoolDeliveryMechanism,
     ) -> bool:
@@ -371,8 +358,8 @@ class BaseOPDSImporter(
         self,
         _db: Session,
         collection: Collection,
-        data_source_name: Optional[str],
-        http_get: Optional[Callable[..., Tuple[int, Any, bytes]]] = None,
+        data_source_name: str | None,
+        http_get: Callable[..., tuple[int, Any, bytes]] | None = None,
     ):
         self._db = _db
         if collection.id is None:
@@ -402,29 +389,23 @@ class BaseOPDSImporter(
 
     @classmethod
     @abstractmethod
-    def settings_class(cls) -> Type[SettingsType]:
+    def settings_class(cls) -> type[SettingsType]:
         ...
 
     @abstractmethod
     def extract_feed_data(
-        self, feed: str | bytes, feed_url: Optional[str] = None
-    ) -> Tuple[Dict[str, Metadata], Dict[str, List[CoverageFailure]]]:
+        self, feed: str | bytes, feed_url: str | None = None
+    ) -> tuple[dict[str, Metadata], dict[str, list[CoverageFailure]]]:
         ...
 
     @abstractmethod
     def extract_last_update_dates(
         self, feed: str | bytes | FeedParserDict
-    ) -> List[Tuple[Optional[str], Optional[datetime]]]:
+    ) -> list[tuple[str | None, datetime | None]]:
         ...
 
     @abstractmethod
-    def extract_next_links(self, feed: str | bytes) -> List[str]:
-        ...
-
-    @abstractmethod
-    def assert_importable_content(
-        self, feed: str, feed_url: str, max_get_attempts: int = 5
-    ) -> Literal[True]:
+    def extract_next_links(self, feed: str | bytes) -> list[str]:
         ...
 
     @overload
@@ -432,10 +413,10 @@ class BaseOPDSImporter(
         ...
 
     @overload
-    def parse_identifier(self, identifier: Optional[str]) -> Optional[Identifier]:
+    def parse_identifier(self, identifier: str | None) -> Identifier | None:
         ...
 
-    def parse_identifier(self, identifier: Optional[str]) -> Optional[Identifier]:
+    def parse_identifier(self, identifier: str | None) -> Identifier | None:
         """Parse the identifier and return an Identifier object representing it.
 
         :param identifier: String containing the identifier
@@ -555,12 +536,12 @@ class BaseOPDSImporter(
         return pool, work
 
     def import_from_feed(
-        self, feed: str | bytes, feed_url: Optional[str] = None
-    ) -> Tuple[
-        List[Edition],
-        List[LicensePool],
-        List[Work],
-        Dict[str, List[CoverageFailure]],
+        self, feed: str | bytes, feed_url: str | None = None
+    ) -> tuple[
+        list[Edition],
+        list[LicensePool],
+        list[Work],
+        dict[str, list[CoverageFailure]],
     ]:
         # Keep track of editions that were imported. Pools and works
         # for those editions may be looked up or created.
@@ -643,11 +624,11 @@ class BaseOPDSImporter(
 
 class OPDSAPI(BaseOPDSAPI):
     @classmethod
-    def settings_class(cls) -> Type[OPDSImporterSettings]:
+    def settings_class(cls) -> type[OPDSImporterSettings]:
         return OPDSImporterSettings
 
     @classmethod
-    def library_settings_class(cls) -> Type[OPDSImporterLibrarySettings]:
+    def library_settings_class(cls) -> type[OPDSImporterLibrarySettings]:
         return OPDSImporterLibrarySettings
 
     @classmethod
@@ -678,15 +659,15 @@ class OPDSImporter(BaseOPDSImporter[OPDSImporterSettings]):
     PARSER_CLASS = OPDSXMLParser
 
     @classmethod
-    def settings_class(cls) -> Type[OPDSImporterSettings]:
+    def settings_class(cls) -> type[OPDSImporterSettings]:
         return OPDSImporterSettings
 
     def __init__(
         self,
         _db: Session,
         collection: Collection,
-        data_source_name: Optional[str] = None,
-        http_get: Optional[Callable[..., Tuple[int, Any, bytes]]] = None,
+        data_source_name: str | None = None,
+        http_get: Callable[..., tuple[int, Any, bytes]] | None = None,
     ):
         """:param collection: LicensePools created by this OPDS import
         will be associated with the given Collection. If this is None,
@@ -705,93 +686,14 @@ class OPDSImporter(BaseOPDSImporter[OPDSImporterSettings]):
         """
         super().__init__(_db, collection, data_source_name)
 
-        self.primary_identifier_source = None
-        if collection:
-            self.primary_identifier_source = collection.primary_identifier_source
+        self.primary_identifier_source = self.settings.primary_identifier_source
 
         # In general, we are cautious when mirroring resources so that
         # we don't, e.g. accidentally get our IP banned from
         # gutenberg.org.
         self.http_get = http_get or Representation.cautious_http_get
 
-    def assert_importable_content(
-        self, feed: str, feed_url: str, max_get_attempts: int = 5
-    ) -> Literal[True]:
-        """Raise an exception if the given feed contains nothing that can,
-        even theoretically, be turned into a LicensePool.
-
-        By default, this means the feed must link to open-access content
-        that can actually be retrieved.
-        """
-        metadata, failures = self.extract_feed_data(feed, feed_url)
-        get_attempts = 0
-
-        # Find an open-access link, and try to GET it just to make
-        # sure OPDS feed isn't hiding non-open-access stuff behind an
-        # open-access link.
-        #
-        # To avoid taking forever or antagonizing API providers, we'll
-        # give up after `max_get_attempts` failures.
-        for link in self._open_access_links(list(metadata.values())):
-            url = link.href
-            success = self._is_open_access_link(url, link.media_type)
-            if success:
-                return True
-            get_attempts += 1
-            if get_attempts >= max_get_attempts:
-                error = (
-                    "Was unable to GET supposedly open-access content such as %s (tried %s times)"
-                    % (url, get_attempts)
-                )
-                explanation = "This might be an OPDS For Distributors feed, or it might require different authentication credentials."
-                raise IntegrationException(error, explanation)
-
-        raise IntegrationException(
-            "No open-access links were found in the OPDS feed.",
-            "This might be an OPDS for Distributors feed.",
-        )
-
-    @classmethod
-    def _open_access_links(
-        cls, metadatas: List[Metadata]
-    ) -> Generator[LinkData, None, None]:
-        """Find all open-access links in a list of Metadata objects.
-
-        :param metadatas: A list of Metadata objects.
-        :yield: A sequence of `LinkData` objects.
-        """
-        for item in metadatas:
-            if not item.circulation:
-                continue
-            for link in item.circulation.links:
-                if link.rel == Hyperlink.OPEN_ACCESS_DOWNLOAD:
-                    yield link
-
-    def _is_open_access_link(
-        self, url: str, type: Optional[str]
-    ) -> str | Literal[False]:
-        """Is `url` really an open-access link?
-
-        That is, can we make a normal GET request and get something
-        that looks like a book?
-        """
-        headers = {}
-        if type:
-            headers["Accept"] = type
-        status, headers, body = self.http_get(url, headers=headers)
-        if status == 200 and len(body) > 1024 * 10:
-            # We could also check the media types, but this is good
-            # enough for now.
-            return "Found a book-like thing at %s" % url
-        self.log.error(
-            "Supposedly open-access link %s didn't give us a book. Status=%s, body length=%s",
-            url,
-            status,
-            len(body),
-        )
-        return False
-
-    def extract_next_links(self, feed: str | bytes | FeedParserDict) -> List[str]:
+    def extract_next_links(self, feed: str | bytes | FeedParserDict) -> list[str]:
         if isinstance(feed, (bytes, str)):
             parsed = feedparser.parse(feed)
         else:
@@ -806,7 +708,7 @@ class OPDSImporter(BaseOPDSImporter[OPDSImporterSettings]):
 
     def extract_last_update_dates(
         self, feed: str | bytes | FeedParserDict
-    ) -> List[Tuple[Optional[str], Optional[datetime]]]:
+    ) -> list[tuple[str | None, datetime | None]]:
         if isinstance(feed, (bytes, str)):
             parsed_feed = feedparser.parse(feed)
         else:
@@ -818,8 +720,8 @@ class OPDSImporter(BaseOPDSImporter[OPDSImporterSettings]):
         return [x for x in dates if x and x[1]]
 
     def extract_feed_data(
-        self, feed: str | bytes, feed_url: Optional[str] = None
-    ) -> Tuple[Dict[str, Metadata], Dict[str, List[CoverageFailure]]]:
+        self, feed: str | bytes, feed_url: str | None = None
+    ) -> tuple[dict[str, Metadata], dict[str, list[CoverageFailure]]]:
         """Turn an OPDS feed into lists of Metadata and CirculationData objects,
         with associated messages and next_links.
         """
@@ -909,6 +811,19 @@ class OPDSImporter(BaseOPDSImporter[OPDSImporterSettings]):
                     combined_circ["data_source"] = self.data_source_name
 
                 combined_circ["primary_identifier"] = identifier_obj
+
+                combined_circ["should_track_playtime"] = xml_data_dict.get(
+                    "should_track_playtime", False
+                )
+                if (
+                    combined_circ["should_track_playtime"]
+                    and xml_data_dict["medium"] != Edition.AUDIO_MEDIUM
+                ):
+                    combined_circ["should_track_playtime"] = False
+                    self.log.warning(
+                        f"Ignoring the time tracking flag for entry {identifier_obj.identifier}"
+                    )
+
                 circulation = CirculationData(**combined_circ)
 
                 self._add_format_data(circulation)
@@ -930,18 +845,18 @@ class OPDSImporter(BaseOPDSImporter[OPDSImporterSettings]):
     @overload
     def handle_failure(
         self, urn: str, failure: Identifier
-    ) -> Tuple[Identifier, Identifier]:
+    ) -> tuple[Identifier, Identifier]:
         ...
 
     @overload
     def handle_failure(
         self, urn: str, failure: CoverageFailure
-    ) -> Tuple[Identifier, CoverageFailure]:
+    ) -> tuple[Identifier, CoverageFailure]:
         ...
 
     def handle_failure(
         self, urn: str, failure: Identifier | CoverageFailure
-    ) -> Tuple[Identifier, CoverageFailure | Identifier]:
+    ) -> tuple[Identifier, CoverageFailure | Identifier]:
         """Convert a URN and a failure message that came in through
         an OPDS feed into an Identifier and a CoverageFailure object.
 
@@ -972,8 +887,8 @@ class OPDSImporter(BaseOPDSImporter[OPDSImporterSettings]):
 
     @classmethod
     def combine(
-        self, d1: Optional[Dict[str, Any]], d2: Optional[Dict[str, Any]]
-    ) -> Dict[str, Any]:
+        self, d1: dict[str, Any] | None, d2: dict[str, Any] | None
+    ) -> dict[str, Any]:
         """Combine two dictionaries that can be used as keyword arguments to
         the Metadata constructor.
         """
@@ -1010,7 +925,7 @@ class OPDSImporter(BaseOPDSImporter[OPDSImporterSettings]):
 
     def extract_data_from_feedparser(
         self, feed: str | bytes, data_source: DataSource
-    ) -> Tuple[Dict[str, Any], Dict[str, CoverageFailure]]:
+    ) -> tuple[dict[str, Any], dict[str, CoverageFailure]]:
         feedparser_parsed = feedparser.parse(feed)
         values = {}
         failures = {}
@@ -1040,9 +955,9 @@ class OPDSImporter(BaseOPDSImporter[OPDSImporterSettings]):
         cls,
         feed: bytes | str,
         data_source: DataSource,
-        feed_url: Optional[str] = None,
-        do_get: Optional[Callable[..., Tuple[int, Any, bytes]]] = None,
-    ) -> Tuple[Dict[str, Any], Dict[str, CoverageFailure]]:
+        feed_url: str | None = None,
+        do_get: Callable[..., tuple[int, Any, bytes]] | None = None,
+    ) -> tuple[dict[str, Any], dict[str, CoverageFailure]]:
         """Parse the OPDS as XML and extract all author and subject
         information, as well as ratings and medium.
 
@@ -1099,23 +1014,23 @@ class OPDSImporter(BaseOPDSImporter[OPDSImporterSettings]):
         return values, failures
 
     @classmethod
-    def _datetime(cls, entry: Dict[str, str], key: str) -> Optional[datetime]:
+    def _datetime(cls, entry: dict[str, str], key: str) -> datetime | None:
         value = entry.get(key, None)
         if not value:
             return None
         return datetime_utc(*value[:6])
 
     def last_update_date_for_feedparser_entry(
-        self, entry: Dict[str, Any]
-    ) -> Tuple[Optional[str], Optional[datetime]]:
+        self, entry: dict[str, Any]
+    ) -> tuple[str | None, datetime | None]:
         identifier = entry.get("id")
         updated = self._datetime(entry, "updated_parsed")
         return identifier, updated
 
     @classmethod
     def data_detail_for_feedparser_entry(
-        cls, entry: Dict[str, str], data_source: DataSource
-    ) -> Tuple[Optional[str], Optional[Dict[str, Any]], Optional[CoverageFailure]]:
+        cls, entry: dict[str, str], data_source: DataSource
+    ) -> tuple[str | None, dict[str, Any] | None, CoverageFailure | None]:
         """Turn an entry dictionary created by feedparser into dictionaries of data
         that can be used as keyword arguments to the Metadata and CirculationData constructors.
 
@@ -1140,8 +1055,8 @@ class OPDSImporter(BaseOPDSImporter[OPDSImporterSettings]):
 
     @classmethod
     def _data_detail_for_feedparser_entry(
-        cls, entry: Dict[str, Any], metadata_data_source: DataSource
-    ) -> Dict[str, Any]:
+        cls, entry: dict[str, Any], metadata_data_source: DataSource
+    ) -> dict[str, Any]:
         """Helper method that extracts metadata and circulation data from a feedparser
         entry. This method can be overridden in tests to check that callers handle things
         properly when it throws an exception.
@@ -1201,7 +1116,7 @@ class OPDSImporter(BaseOPDSImporter[OPDSImporterSettings]):
 
         links = []
 
-        def summary_to_linkdata(detail: Optional[Dict[str, str]]) -> Optional[LinkData]:
+        def summary_to_linkdata(detail: dict[str, str] | None) -> LinkData | None:
             if not detail:
                 return None
             if not "value" in detail or not detail["value"]:
@@ -1254,7 +1169,7 @@ class OPDSImporter(BaseOPDSImporter[OPDSImporterSettings]):
         return RightsStatus.rights_uri_from_string(rights_string)
 
     @classmethod
-    def rights_uri_from_feedparser_entry(cls, entry: Dict[str, str]) -> str:
+    def rights_uri_from_feedparser_entry(cls, entry: dict[str, str]) -> str:
         """Extract a rights URI from a parsed feedparser entry.
 
         :return: A rights URI.
@@ -1263,7 +1178,7 @@ class OPDSImporter(BaseOPDSImporter[OPDSImporterSettings]):
         return cls.rights_uri(rights)
 
     @classmethod
-    def rights_uri_from_entry_tag(cls, entry: Element) -> Optional[str]:
+    def rights_uri_from_entry_tag(cls, entry: Element) -> str | None:
         """Extract a rights string from an lxml <entry> tag.
 
         :return: A rights URI.
@@ -1325,7 +1240,7 @@ class OPDSImporter(BaseOPDSImporter[OPDSImporterSettings]):
     @classmethod
     def coveragefailure_from_message(
         cls, data_source: DataSource, message: OPDSMessage
-    ) -> Optional[CoverageFailure]:
+    ) -> CoverageFailure | None:
         """Turn a <simplified:message> tag into a CoverageFailure."""
 
         _db = Session.object_session(data_source)
@@ -1370,9 +1285,9 @@ class OPDSImporter(BaseOPDSImporter[OPDSImporterSettings]):
         parser: OPDSXMLParser,
         entry_tag: Element,
         data_source: DataSource,
-        feed_url: Optional[str] = None,
-        do_get: Optional[Callable[..., Tuple[int, Any, bytes]]] = None,
-    ) -> Tuple[Optional[str], Optional[Dict[str, Any]], Optional[CoverageFailure]]:
+        feed_url: str | None = None,
+        do_get: Callable[..., tuple[int, Any, bytes]] | None = None,
+    ) -> tuple[str | None, dict[str, Any] | None, CoverageFailure | None]:
         """Turn an <atom:entry> tag into a dictionary of metadata that can be
         used as keyword arguments to the Metadata contructor.
 
@@ -1404,16 +1319,16 @@ class OPDSImporter(BaseOPDSImporter[OPDSImporterSettings]):
         cls,
         parser: OPDSXMLParser,
         entry_tag: Element,
-        feed_url: Optional[str] = None,
-        do_get: Optional[Callable[..., Tuple[int, Any, bytes]]] = None,
-    ) -> Dict[str, Any]:
+        feed_url: str | None = None,
+        do_get: Callable[..., tuple[int, Any, bytes]] | None = None,
+    ) -> dict[str, Any]:
         """Helper method that extracts metadata and circulation data from an elementtree
         entry. This method can be overridden in tests to check that callers handle things
         properly when it throws an exception.
         """
         # We will fill this dictionary with all the information
         # we can find.
-        data: Dict[str, Any] = dict()
+        data: dict[str, Any] = dict()
 
         alternate_identifiers = []
         for id_tag in parser._xpath(entry_tag, "dcterms:identifier"):
@@ -1470,10 +1385,14 @@ class OPDSImporter(BaseOPDSImporter[OPDSImporterSettings]):
                 # This entry had an issued tag, but it was in a format we couldn't parse.
                 pass
 
+        data["should_track_playtime"] = False
+        time_tracking_tag = parser._xpath(entry_tag, "palace:timeTracking")
+        if time_tracking_tag:
+            data["should_track_playtime"] = time_tracking_tag[0].text.lower() == "true"
         return data
 
     @classmethod
-    def get_medium_from_links(cls, links: List[LinkData]) -> Optional[str]:
+    def get_medium_from_links(cls, links: list[LinkData]) -> str | None:
         """Get medium if derivable from information in an acquisition link."""
         derived = None
         for link in links:
@@ -1489,7 +1408,7 @@ class OPDSImporter(BaseOPDSImporter[OPDSImporterSettings]):
         return derived
 
     @classmethod
-    def extract_identifier(cls, identifier_tag: Element) -> Optional[IdentifierData]:
+    def extract_identifier(cls, identifier_tag: Element) -> IdentifierData | None:
         """Turn a <dcterms:identifier> tag into an IdentifierData object."""
         try:
             if identifier_tag.text is None:
@@ -1503,8 +1422,8 @@ class OPDSImporter(BaseOPDSImporter[OPDSImporterSettings]):
 
     @classmethod
     def extract_medium(
-        cls, entry_tag: Optional[Element], default: Optional[str] = Edition.BOOK_MEDIUM
-    ) -> Optional[str]:
+        cls, entry_tag: Element | None, default: str | None = Edition.BOOK_MEDIUM
+    ) -> str | None:
         """Derive a value for Edition.medium from schema:additionalType or
         from a <dcterms:format> subtag.
 
@@ -1528,7 +1447,7 @@ class OPDSImporter(BaseOPDSImporter[OPDSImporterSettings]):
     @classmethod
     def extract_contributor(
         cls, parser: OPDSXMLParser, author_tag: Element
-    ) -> Optional[ContributorData]:
+    ) -> ContributorData | None:
         """Turn an <atom:author> tag into a ContributorData object."""
         subtag = parser.text_of_optional_subtag
         sort_name = subtag(author_tag, "simplified:sort_name")
@@ -1591,9 +1510,9 @@ class OPDSImporter(BaseOPDSImporter[OPDSImporterSettings]):
     def extract_link(
         cls,
         link_tag: Element,
-        feed_url: Optional[str] = None,
-        entry_rights_uri: Optional[str] = None,
-    ) -> Optional[LinkData]:
+        feed_url: str | None = None,
+        entry_rights_uri: str | None = None,
+    ) -> LinkData | None:
         """Convert a <link> tag into a LinkData object.
 
         :param feed_url: The URL to the enclosing feed, for use in resolving
@@ -1628,10 +1547,10 @@ class OPDSImporter(BaseOPDSImporter[OPDSImporterSettings]):
     def make_link_data(
         cls,
         rel: str,
-        href: Optional[str] = None,
-        media_type: Optional[str] = None,
-        rights_uri: Optional[str] = None,
-        content: Optional[str] = None,
+        href: str | None = None,
+        media_type: str | None = None,
+        rights_uri: str | None = None,
+        content: str | None = None,
     ) -> LinkData:
         """Hook method for creating a LinkData object.
 
@@ -1646,7 +1565,7 @@ class OPDSImporter(BaseOPDSImporter[OPDSImporterSettings]):
         )
 
     @classmethod
-    def consolidate_links(cls, links: Sequence[LinkData | None]) -> List[LinkData]:
+    def consolidate_links(cls, links: Sequence[LinkData | None]) -> list[LinkData]:
         """Try to match up links with their thumbnails.
 
         If link n is an image and link n+1 is a thumbnail, then the
@@ -1709,7 +1628,7 @@ class OPDSImporter(BaseOPDSImporter[OPDSImporterSettings]):
         return new_links
 
     @classmethod
-    def extract_measurement(cls, rating_tag: Element) -> Optional[MeasurementData]:
+    def extract_measurement(cls, rating_tag: Element) -> MeasurementData | None:
         type = rating_tag.get("{http://schema.org/}additionalType")
         value = rating_tag.get("{http://schema.org/}ratingValue")
         if not value:
@@ -1730,16 +1649,14 @@ class OPDSImporter(BaseOPDSImporter[OPDSImporterSettings]):
             return None
 
     @classmethod
-    def extract_series(cls, series_tag: Element) -> Tuple[Optional[str], Optional[str]]:
+    def extract_series(cls, series_tag: Element) -> tuple[str | None, str | None]:
         attr = series_tag.attrib
         series_name = attr.get("{http://schema.org/}name", None)
         series_position = attr.get("{http://schema.org/}position", None)
         return series_name, series_position
 
 
-class OPDSImportMonitor(
-    CollectionMonitor, HasCollectionSelfTests, HasExternalIntegration
-):
+class OPDSImportMonitor(CollectionMonitor):
     """Periodically monitor a Collection's OPDS archive feed and import
     every title it mentions.
     """
@@ -1758,7 +1675,7 @@ class OPDSImportMonitor(
         self,
         _db: Session,
         collection: Collection,
-        import_class: Type[BaseOPDSImporter[OPDSImporterSettings]],
+        import_class: type[BaseOPDSImporter[OPDSImporterSettings]],
         force_reimport: bool = False,
         **import_class_kwargs: Any,
     ) -> None:
@@ -1779,16 +1696,13 @@ class OPDSImportMonitor(
                 "Collection %s has no associated data source." % collection.name
             )
 
-        self.external_integration_id = collection.external_integration.id
-        feed_url = self.opds_url(collection)
-        self.feed_url = "" if feed_url is None else feed_url
-
         self.force_reimport = force_reimport
 
         self.importer = import_class(_db, collection=collection, **import_class_kwargs)
         settings = self.importer.settings
         self.username = settings.username
         self.password = settings.password
+        self.feed_url = settings.external_account_id
 
         self.custom_accept_header = settings.custom_accept_header
         self._max_retry_count = settings.max_retry_count
@@ -1797,35 +1711,9 @@ class OPDSImportMonitor(
         self._feed_base_url = f"{parsed_url.scheme}://{parsed_url.hostname}{(':' + str(parsed_url.port)) if parsed_url.port else ''}/"
         super().__init__(_db, collection)
 
-    def external_integration(self, _db: Session) -> Optional[ExternalIntegration]:
-        return get_one(_db, ExternalIntegration, id=self.external_integration_id)
-
-    def _run_self_tests(self, _db: Session) -> Generator[SelfTestResult, None, None]:
-        """Retrieve the first page of the OPDS feed"""
-        first_page = self.run_test(
-            "Retrieve the first page of the OPDS feed (%s)" % self.feed_url,
-            self.follow_one_link,
-            self.feed_url,
-        )
-        yield first_page
-        if not first_page.result:
-            return
-
-        # We got a page, but does it have anything the importer can
-        # turn into a Work?
-        #
-        # By default, this means it must contain an open-access link.
-        next_links, content = first_page.result
-        yield self.run_test(
-            "Checking for importable content",
-            self.importer.assert_importable_content,
-            content,
-            self.feed_url,
-        )
-
     def _get(
-        self, url: str, headers: Dict[str, str]
-    ) -> Tuple[int, Dict[str, str], bytes]:
+        self, url: str, headers: dict[str, str]
+    ) -> tuple[int, dict[str, str], bytes]:
         """Make the sort of HTTP request that's normal for an OPDS feed.
 
         Long timeout, raise error on anything but 2xx or 3xx.
@@ -1852,7 +1740,7 @@ class OPDSImportMonitor(
             ]
         )
 
-    def _update_headers(self, headers: Optional[Dict[str, str]]) -> Dict[str, str]:
+    def _update_headers(self, headers: dict[str, str] | None) -> dict[str, str]:
         headers = dict(headers) if headers else {}
         if self.username and self.password and not "Authorization" in headers:
             headers["Authorization"] = "Basic %s" % base64.b64encode(
@@ -1866,15 +1754,7 @@ class OPDSImportMonitor(
 
         return headers
 
-    def opds_url(self, collection: Collection) -> Optional[str]:
-        """Returns the OPDS import URL for the given collection.
-
-        By default, this URL is stored as the external account ID, but
-        subclasses may override this.
-        """
-        return collection.external_account_id
-
-    def data_source(self, collection: Collection) -> Optional[DataSource]:
+    def data_source(self, collection: Collection) -> DataSource | None:
         """Returns the data source name for the given collection.
 
         By default, this URL is stored as a setting on the collection, but
@@ -1913,7 +1793,7 @@ class OPDSImportMonitor(
         return new_data
 
     def identifier_needs_import(
-        self, identifier: Optional[Identifier], last_updated_remote: Optional[datetime]
+        self, identifier: Identifier | None, last_updated_remote: datetime | None
     ) -> bool:
         """Does the remote side have new information about this Identifier?
 
@@ -1979,7 +1859,7 @@ class OPDSImportMonitor(
         return False
 
     def _verify_media_type(
-        self, url: str, status_code: int, headers: Dict[str, str], feed: bytes
+        self, url: str, status_code: int, headers: dict[str, str], feed: bytes
     ) -> None:
         # Make sure we got an OPDS feed, and not an error page that was
         # sent with a 200 status code.
@@ -1993,8 +1873,8 @@ class OPDSImportMonitor(
             )
 
     def follow_one_link(
-        self, url: str, do_get: Optional[Callable[..., Tuple[int, Any, bytes]]] = None
-    ) -> Tuple[List[str], Optional[bytes]]:
+        self, url: str, do_get: Callable[..., tuple[int, Any, bytes]] | None = None
+    ) -> tuple[list[str], bytes | None]:
         """Download a representation of a URL and extract the useful
         information.
 
@@ -2023,13 +1903,13 @@ class OPDSImportMonitor(
 
     def import_one_feed(
         self, feed: bytes | str
-    ) -> Tuple[List[Edition], Dict[str, List[CoverageFailure]]]:
+    ) -> tuple[list[Edition], dict[str, list[CoverageFailure]]]:
         """Import every book mentioned in an OPDS feed."""
 
         # Because we are importing into a Collection, we will immediately
         # mark a book as presentation-ready if possible.
         imported_editions, pools, works, failures = self.importer.import_from_feed(
-            feed, feed_url=self.opds_url(self.collection)
+            feed, feed_url=self.feed_url
         )
 
         # Create CoverageRecords for the successful imports.
@@ -2051,9 +1931,9 @@ class OPDSImportMonitor(
 
         return imported_editions, failures
 
-    def _get_feeds(self) -> Iterable[Tuple[str, bytes]]:
+    def _get_feeds(self) -> Iterable[tuple[str, bytes]]:
         feeds = []
-        queue = [self.feed_url]
+        queue = [cast(str, self.feed_url)]
         seen_links = set()
 
         # First, follow the feed's next links until we reach a page with

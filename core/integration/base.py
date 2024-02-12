@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Dict, Generic, Mapping, Protocol, Type, TypeVar
+from collections.abc import Mapping
+from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar
 
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import Mapped, flag_modified
@@ -13,15 +14,15 @@ if TYPE_CHECKING:
 
 
 class IntegrationConfigurationProtocol(Protocol):
-    settings_dict: Mapped[Dict[str, Any]]
+    settings_dict: Mapped[dict[str, Any]]
 
 
 T = TypeVar("T", bound=BaseSettings)
 
 
 def integration_settings_load(
-    settings_cls: Type[T],
-    integration: IntegrationConfigurationProtocol,
+    settings_cls: type[T],
+    integration: IntegrationConfigurationProtocol | dict[str, Any],
 ) -> T:
     """
     Load the settings object for an integration from the database.
@@ -31,17 +32,20 @@ def integration_settings_load(
     when round tripping from the database (such as enum) and construct() doesn't do that.
 
     :param settings_cls: The settings class that the settings should be loaded into.
-    :param integration: The integration to load the settings from. This should be a
-        SQLAlchemy model with a settings_dict JSONB column.
+    :param integration: The integration to load the settings from or a dict that should
+     be loaded into the model. If it is an integration, it should be a SQLAlchemy model
+     with a settings_dict JSONB column.
 
     :return: An instance of the settings class loaded with the settings from the database.
     """
-    settings_dict = integration.settings_dict
+    settings_dict = (
+        integration if isinstance(integration, dict) else integration.settings_dict
+    )
     return settings_cls(**settings_dict)
 
 
 def integration_settings_update(
-    settings_cls: Type[BaseSettings],
+    settings_cls: type[BaseSettings],
     integration: IntegrationConfigurationProtocol,
     new_settings: BaseSettings | Mapping[str, Any],
     merge: bool = False,
@@ -72,6 +76,7 @@ def integration_settings_update(
 
 SettingsType = TypeVar("SettingsType", bound=BaseSettings, covariant=True)
 LibrarySettingsType = TypeVar("LibrarySettingsType", bound=BaseSettings, covariant=True)
+ChildSettingsType = TypeVar("ChildSettingsType", bound=BaseSettings, covariant=True)
 
 
 class HasIntegrationConfiguration(Generic[SettingsType], ABC):
@@ -89,7 +94,7 @@ class HasIntegrationConfiguration(Generic[SettingsType], ABC):
 
     @classmethod
     @abstractmethod
-    def settings_class(cls) -> Type[SettingsType]:
+    def settings_class(cls) -> type[SettingsType]:
         """Get the settings for this integration"""
         ...
 
@@ -135,7 +140,7 @@ class HasLibraryIntegrationConfiguration(
 ):
     @classmethod
     @abstractmethod
-    def library_settings_class(cls) -> Type[LibrarySettingsType]:
+    def library_settings_class(cls) -> type[LibrarySettingsType]:
         """Get the library settings for this integration"""
         ...
 
@@ -167,9 +172,58 @@ class HasLibraryIntegrationConfiguration(
         )
 
 
-class HasChildIntegrationConfiguration(HasIntegrationConfiguration[SettingsType], ABC):
+class HasChildIntegrationConfiguration(
+    Generic[SettingsType, ChildSettingsType],
+    HasIntegrationConfiguration[SettingsType],
+    ABC,
+):
     @classmethod
     @abstractmethod
-    def child_settings_class(cls) -> Type[BaseSettings]:
+    def child_settings_class(cls) -> type[ChildSettingsType]:
         """Get the child settings class"""
         ...
+
+    @classmethod
+    def child_settings_load(cls, child: IntegrationConfiguration) -> ChildSettingsType:
+        """
+        Load the child settings object for this integration from the database.
+        """
+        return integration_settings_load(cls.child_settings_class(), child)
+
+    @classmethod
+    def settings_load(
+        cls,
+        integration: IntegrationConfiguration,
+        parent: IntegrationConfiguration | None = None,
+    ) -> SettingsType:
+        """
+        Load the full settings object for this integration from the database.
+
+        If a parent is provided, the child settings will be merged with the parent settings, with the child
+        settings taking precedence.
+        """
+        if parent is None:
+            return super().settings_load(integration)
+        else:
+            parent_settings = super().settings_load(parent)
+            child_settings = cls.child_settings_load(integration)
+
+            merged_settings = parent_settings.dict()
+            merged_settings.update(child_settings.dict())
+            return integration_settings_load(cls.settings_class(), merged_settings)
+
+    @classmethod
+    def child_settings_update(
+        cls,
+        integration: IntegrationConfiguration,
+        new_settings: BaseSettings | Mapping[str, Any],
+        merge: bool = False,
+    ) -> None:
+        """
+        Update the settings for this library integration in the database.
+
+        See the documentation for `integration_settings_update` for more details.
+        """
+        integration_settings_update(
+            cls.child_settings_class(), integration, new_settings, merge
+        )

@@ -1,6 +1,5 @@
 import dataclasses
 import logging
-from typing import Optional
 from unittest.mock import MagicMock
 
 import pytest
@@ -33,7 +32,7 @@ def mock_settings(mock_problem_detail):
                 raise SettingsValidationError(mock_problem_detail)
             return v
 
-        test: Optional[str] = FormField(
+        test: str | None = FormField(
             "test",
             form=ConfigurationFormItem(label="Test", description="Test description"),
         )
@@ -159,6 +158,13 @@ def test_settings_extra_args(mock_settings, caplog):
     # Make sure that we record a log message when encountering an extra arg
     assert len(caplog.records) == 1
     assert "Unexpected extra argument 'extra' for model MockSettings" in caplog.text
+
+    # Exclude extra defaults to False, but we call it explicitly here
+    # to make sure it can be explicitly set to False.
+    assert settings.dict(exclude_extra=False) == {"number": 1, "extra": "extra"}
+
+    # The extra args will be ignored if we call dict with exclude_extra=True
+    assert settings.dict(exclude_extra=True) == {"number": 1}
 
 
 def test_settings_logger(mock_settings):

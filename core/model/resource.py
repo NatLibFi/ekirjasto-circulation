@@ -10,7 +10,6 @@ import time
 import traceback
 from hashlib import md5
 from io import BytesIO
-from typing import TYPE_CHECKING, Dict, List, Tuple
 from urllib.parse import quote, urlparse, urlsplit
 
 import requests
@@ -42,9 +41,6 @@ from core.model.licensing import LicensePoolDeliveryMechanism
 from core.util.datetime_helpers import utc_now
 from core.util.http import HTTP
 
-if TYPE_CHECKING:
-    from core.model import CachedMARCFile
-
 
 class Resource(Base):
     """An external resource that may be mirrored locally.
@@ -69,7 +65,7 @@ class Resource(Base):
 
     # Many Editions may choose this resource (as opposed to other
     # resources linked to them with rel="image") as their cover image.
-    cover_editions: Mapped[List[Edition]] = relationship(
+    cover_editions: Mapped[list[Edition]] = relationship(
         "Edition", backref="cover", foreign_keys=[Edition.cover_id]
     )
 
@@ -77,21 +73,21 @@ class Resource(Base):
     # linked to them with rel="description") as their summary.
     from core.model.work import Work
 
-    summary_works: Mapped[List[Work]] = relationship(
+    summary_works: Mapped[list[Work]] = relationship(
         "Work", backref="summary", foreign_keys=[Work.summary_id]
     )
 
     # Many LicensePools (but probably one at most) may use this
     # resource in a delivery mechanism.
     licensepooldeliverymechanisms: Mapped[
-        List[LicensePoolDeliveryMechanism]
+        list[LicensePoolDeliveryMechanism]
     ] = relationship(
         "LicensePoolDeliveryMechanism",
         back_populates="resource",
         foreign_keys=[LicensePoolDeliveryMechanism.resource_id],
     )
 
-    links: Mapped[List[Hyperlink]] = relationship("Hyperlink", backref="resource")
+    links: Mapped[list[Hyperlink]] = relationship("Hyperlink", backref="resource")
 
     # The DataSource that is the controlling authority for this Resource.
     data_source_id = Column(Integer, ForeignKey("datasources.id"), index=True)
@@ -106,7 +102,7 @@ class Resource(Base):
     rights_explanation = Column(Unicode)
 
     # A Resource may be transformed into many derivatives.
-    transformations: Mapped[List[ResourceTransformation]] = relationship(
+    transformations: Mapped[list[ResourceTransformation]] = relationship(
         "ResourceTransformation",
         foreign_keys="ResourceTransformation.original_id",
         lazy="joined",
@@ -379,7 +375,7 @@ class ResourceTransformation(Base):
     original_id = Column(Integer, ForeignKey("resources.id"), index=True)
 
     # The settings used for the transformation.
-    settings: Mapped[Dict[str, str]] = Column(MutableDict.as_mutable(JSON), default={})
+    settings: Mapped[dict[str, str]] = Column(MutableDict.as_mutable(JSON), default={})
 
 
 class Hyperlink(Base, LinkRelations):
@@ -502,7 +498,7 @@ class Representation(Base, MediaTypes):
     # Representation.
     thumbnail_of_id = Column(Integer, ForeignKey("representations.id"), index=True)
 
-    thumbnails: Mapped[List[Representation]] = relationship(
+    thumbnails: Mapped[list[Representation]] = relationship(
         "Representation",
         backref=backref("thumbnail_of", remote_side=[id]),
         lazy="joined",
@@ -541,13 +537,6 @@ class Representation(Base, MediaTypes):
     # representation may be stored on a local file relative to the
     # data root.
     local_content_path = Column(Unicode)
-
-    # A Representation may be a CachedMARCFile.
-    marc_file: Mapped[CachedMARCFile] = relationship(
-        "CachedMARCFile",
-        back_populates="representation",
-        cascade="all, delete-orphan",
-    )
 
     # At any given time, we will have a single representation for a
     # given URL and media type.
@@ -1020,7 +1009,7 @@ class Representation(Base, MediaTypes):
     @classmethod
     def simple_http_get(
         cls, url, headers, **kwargs
-    ) -> Tuple[int, Dict[str, str], bytes]:
+    ) -> tuple[int, dict[str, str], bytes]:
         """The most simple HTTP-based GET."""
         if not "allow_redirects" in kwargs:
             kwargs["allow_redirects"] = True

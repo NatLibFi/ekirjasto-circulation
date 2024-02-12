@@ -1,17 +1,16 @@
 import copy
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from core.feed.annotator.circulation import LibraryAnnotator
 from core.feed.types import FeedData, Link, WorkEntry
-from core.model.configuration import ExternalIntegration
 from core.model.constants import EditionConstants, LinkRelations
 from core.model.patron import Hold, Patron
 
 
 class LibraryLoanAndHoldAnnotator(LibraryAnnotator):
     @staticmethod
-    def choose_best_hold_for_work(list_of_holds: List[Hold]) -> Hold:
+    def choose_best_hold_for_work(list_of_holds: list[Hold]) -> Hold:
         # We don't want holds that are connected to license pools without any licenses owned. Also, we want hold that
         # would result in the least wait time for the patron.
 
@@ -45,7 +44,7 @@ class LibraryLoanAndHoldAnnotator(LibraryAnnotator):
 
         return best
 
-    def drm_device_registration_feed_tags(self, patron: Patron) -> Dict[str, Any]:
+    def drm_device_registration_feed_tags(self, patron: Patron) -> dict[str, Any]:
         """Return tags that provide information on DRM device deregistration
         independent of any particular loan. These tags will go under
         the <feed> tag.
@@ -90,7 +89,7 @@ class LibraryLoanAndHoldAnnotator(LibraryAnnotator):
                 feed.metadata.drm_licensor = tags["drm_licensor"]
 
     def annotate_work_entry(
-        self, entry: WorkEntry, updated: Optional[datetime] = None
+        self, entry: WorkEntry, updated: datetime | None = None
     ) -> None:
         super().annotate_work_entry(entry, updated=updated)
         if not entry.computed:
@@ -104,8 +103,7 @@ class LibraryLoanAndHoldAnnotator(LibraryAnnotator):
         if (
             edition.medium == EditionConstants.AUDIO_MEDIUM
             and active_license_pool
-            and active_license_pool.collection.protocol
-            == ExternalIntegration.OPDS_FOR_DISTRIBUTORS
+            and active_license_pool.should_track_playtime is True
             and work in self.active_loans_by_work
         ):
             entry.computed.other_links.append(

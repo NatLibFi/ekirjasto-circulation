@@ -7,8 +7,9 @@ import shutil
 import tempfile
 import time
 import uuid
+from collections.abc import Generator, Iterable
 from textwrap import dedent
-from typing import Generator, Iterable, List, Optional, Tuple
+from typing import Any
 
 import pytest
 import sqlalchemy
@@ -98,7 +99,7 @@ class DatabaseFixture:
         self._connection = connection
 
     @staticmethod
-    def _get_database_connection() -> Tuple[Engine, Connection]:
+    def _get_database_connection() -> tuple[Engine, Connection]:
         url = Configuration.database_url()
         engine = SessionManager.engine(url)
         connection = engine.connect()
@@ -139,12 +140,12 @@ class DatabaseTransactionFixture:
     """A fixture representing a single transaction. The transaction is automatically rolled back."""
 
     _database: DatabaseFixture
-    _default_library: Optional[Library]
-    _default_collection: Optional[Collection]
+    _default_library: Library | None
+    _default_collection: Collection | None
     _session: Session
     _transaction: Transaction
     _counter: int
-    _isbns: List[str]
+    _isbns: list[str]
 
     def __init__(
         self, database: DatabaseFixture, session: Session, transaction: Transaction
@@ -169,10 +170,9 @@ class DatabaseTransactionFixture:
             "Default Collection",
             protocol=ExternalIntegration.OPDS_IMPORT,
             data_source_name="OPDS",
+            external_account_id="http://opds.example.com/feed",
         )
-        collection.integration_configuration.for_library(library.id, create=True)
-        if collection not in library.collections:
-            library.collections.append(collection)
+        collection.libraries.append(library)
         return library
 
     @staticmethod
@@ -207,7 +207,7 @@ class DatabaseTransactionFixture:
     def session(self) -> Session:
         return self._session
 
-    def default_collection(self):
+    def default_collection(self) -> Collection:
         """A Collection that will only be created once throughout
         a given test.
 
@@ -241,9 +241,9 @@ class DatabaseTransactionFixture:
 
     def library(
         self,
-        name: Optional[str] = None,
-        short_name: Optional[str] = None,
-        settings: Optional[LibrarySettings] = None,
+        name: str | None = None,
+        short_name: str | None = None,
+        settings: LibrarySettings | None = None,
     ) -> Library:
         # Just a dummy key used for testing.
         key_string = """\
@@ -296,19 +296,20 @@ class DatabaseTransactionFixture:
         username=None,
         password=None,
         data_source_name=None,
+        settings: dict[str, Any] | None = None,
     ) -> Collection:
         name = name or self.fresh_str()
-        collection, ignore = get_one_or_create(self.session, Collection, name=name)
-        collection.external_account_id = external_account_id
-        integration = collection.create_external_integration(protocol)
-        integration.goal = ExternalIntegration.LICENSE_GOAL
-        config = collection.create_integration_configuration(protocol)
-        config.goal = Goals.LICENSE_GOAL
-        config.settings_dict = {
-            "url": url,
-            "username": username,
-            "password": password,
-        }
+        collection, _ = Collection.by_name_and_protocol(self.session, name, protocol)
+        settings = settings or {}
+        if url:
+            settings["url"] = url
+        if username:
+            settings["username"] = username
+        if password:
+            settings["password"] = password
+        if external_account_id:
+            settings["external_account_id"] = external_account_id
+        collection.integration_configuration.settings_dict = settings
 
         if data_source_name:
             collection.data_source = data_source_name
@@ -722,13 +723,14 @@ class DatabaseTransactionFixture:
             goal=goal,
             name=(name or random_string(16)),
         )
-        if libraries and not isinstance(libraries, list):
-            libraries = [libraries]
-        else:
+
+        if libraries is None:
             libraries = []
 
-        for library in libraries:
-            integration.for_library(library.id, create=True)
+        if not isinstance(libraries, list):
+            libraries = [libraries]
+
+        integration.libraries.extend(libraries)
 
         integration.settings_dict = kwargs
         return integration
@@ -971,7 +973,7 @@ class IntegrationConfigurationFixture:
         self.db = db
 
     def __call__(
-        self, protocol: Optional[str], goal: Goals, settings_dict: Optional[dict] = None
+        self, protocol: str | None, goal: Goals, settings_dict: dict | None = None
     ) -> IntegrationConfiguration:
         integration, _ = create(
             self.db.session,
@@ -984,7 +986,7 @@ class IntegrationConfigurationFixture:
         return integration
 
     def discovery_service(
-        self, protocol: Optional[str] = None, url: Optional[str] = None
+        self, protocol: str | None = None, url: str | None = None
     ) -> IntegrationConfiguration:
         registry = DiscoveryRegistry()
         if protocol is None:
@@ -1018,7 +1020,7 @@ class IntegrationLibraryConfigurationFixture:
         self,
         library: Library,
         parent: IntegrationConfiguration,
-        settings_dict: Optional[dict] = None,
+        settings_dict: dict | None = None,
     ) -> IntegrationLibraryConfiguration:
         settings_dict = settings_dict or {}
         integration, _ = create(

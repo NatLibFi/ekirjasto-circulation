@@ -1,4 +1,4 @@
-from typing import Any, List, Optional
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -12,10 +12,10 @@ from tests.fixtures.database import DatabaseTransactionFixture
 
 class MockEnkiAPI(EnkiAPI):
     def __init__(
-        self, _db: Session, library: Library, collection: Optional[Collection] = None
+        self, _db: Session, library: Library, collection: Collection | None = None
     ) -> None:
-        self.responses: List[MockRequestsResponse] = []
-        self.requests: List[List[Any]] = []
+        self.responses: list[MockRequestsResponse] = []
+        self.requests: list[list[Any]] = []
 
         if not collection:
             collection, ignore = Collection.by_name_and_protocol(
@@ -24,14 +24,14 @@ class MockEnkiAPI(EnkiAPI):
             assert collection is not None
             collection.protocol = EnkiAPI.ENKI
         if collection not in library.collections:
-            library.collections.append(collection)
+            collection.libraries.append(library)
 
         # Set the "Enki library ID" variable between the default library
         # and this Enki collection.
-        assert library.id is not None
+        library_config = collection.integration_configuration.for_library(library)
+        assert library_config is not None
         DatabaseTransactionFixture.set_settings(
-            collection.integration_configuration.for_library(library.id, create=True),
-            **{self.ENKI_LIBRARY_ID_KEY: "c"}
+            library_config, **{self.ENKI_LIBRARY_ID_KEY: "c"}
         )
         _db.commit()
 
@@ -40,7 +40,7 @@ class MockEnkiAPI(EnkiAPI):
     def queue_response(self, status_code, headers={}, content=None):
         self.responses.insert(0, MockRequestsResponse(status_code, headers, content))
 
-    def _request(self, method, url, headers, data, params, **kwargs):
+    def _request(self, url, method, headers, data, params, **kwargs):
         """Override EnkiAPI._request to pull responses from a
         queue instead of making real HTTP requests
         """

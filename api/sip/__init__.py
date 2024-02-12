@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import json
+from collections.abc import Callable
 from datetime import datetime
-from typing import Callable, Optional, Type, Union
+from typing import Any, Dict, Optional, Type, Union
 
 from pydantic import Field, PositiveInt
 
@@ -10,6 +13,7 @@ from api.authentication.basic import (
     BasicAuthProviderLibrarySettings,
     BasicAuthProviderSettings,
 )
+from api.problem_details import INVALID_CREDENTIALS
 from api.sip.client import Sip2Encoding, SIPClient
 from api.sip.dialect import Dialect as Sip2Dialect
 from core.analytics import Analytics
@@ -21,6 +25,7 @@ from core.integration.settings import (
 from core.model import Patron
 from core.util import MoneyUtility
 from core.util.http import RemoteIntegrationException
+from core.util.problem_detail import ProblemDetail, ProblemError
 
 
 class SIP2Settings(BasicAuthProviderSettings):
@@ -40,14 +45,14 @@ class SIP2Settings(BasicAuthProviderSettings):
     # This is _not_ a patron identifier (SIP field AA); it identifies the SC
     # creating the SIP session. SIP2 defines SC as "...any library automation
     # device dealing with patrons or library materials."
-    username: Optional[str] = FormField(
+    username: str | None = FormField(
         None,
         form=ConfigurationFormItem(
             label="Login User ID",
         ),
     )
     # Sip field CO; the password to use when initiating a SIP session, if necessary.
-    password: Optional[str] = FormField(
+    password: str | None = FormField(
         None,
         form=ConfigurationFormItem(
             label="Login Password",
@@ -58,7 +63,7 @@ class SIP2Settings(BasicAuthProviderSettings):
     # machine within a library system. Some libraries require a special location
     # code to be provided when authenticating patrons; others may require the
     # circulation manager to be treated as its own special 'location'.
-    location_code: Optional[str] = FormField(
+    location_code: str | None = FormField(
         None,
         form=ConfigurationFormItem(
             label="Location Code",
@@ -125,7 +130,7 @@ class SIP2Settings(BasicAuthProviderSettings):
             required=True,
         ),
     )
-    ssl_certificate: Optional[str] = FormField(
+    ssl_certificate: str | None = FormField(
         None,
         form=ConfigurationFormItem(
             label="SSL Certificate",
@@ -139,7 +144,7 @@ class SIP2Settings(BasicAuthProviderSettings):
             type=ConfigurationFormItemType.TEXTAREA,
         ),
     )
-    ssl_key: Optional[str] = FormField(
+    ssl_key: str | None = FormField(
         None,
         form=ConfigurationFormItem(
             label="SSL Key",
@@ -181,7 +186,7 @@ class SIP2Settings(BasicAuthProviderSettings):
 
 class SIP2LibrarySettings(BasicAuthProviderLibrarySettings):
     # Used as the SIP2 AO field.
-    institution_id: Optional[str] = FormField(
+    institution_id: str | None = FormField(
         None,
         form=ConfigurationFormItem(
             label="Institution ID",
@@ -216,8 +221,8 @@ class SIP2AuthenticationProvider(
         integration_id: int,
         settings: SIP2Settings,
         library_settings: SIP2LibrarySettings,
-        analytics: Optional[Analytics] = None,
-        client: Optional[Callable[..., SIPClient]] = None,
+        analytics: Analytics | None = None,
+        client: Callable[..., SIPClient] | None = None,
     ):
         """An object capable of communicating with a SIP server."""
         super().__init__(
@@ -280,14 +285,16 @@ class SIP2AuthenticationProvider(
         return "SIP2 Patron Authentication"
 
     @classmethod
-    def settings_class(cls) -> Type[SIP2Settings]:
+    def settings_class(cls) -> type[SIP2Settings]:
         return SIP2Settings
 
     @classmethod
-    def library_settings_class(cls) -> Type[SIP2LibrarySettings]:
+    def library_settings_class(cls) -> type[SIP2LibrarySettings]:
         return SIP2LibrarySettings
 
-    def patron_information(self, username, password):
+    def patron_information(
+        self, username: str | None, password: str | None
+    ) -> dict[str, Any] | ProblemDetail:
         try:
             sip = self.client
             sip.connect()
@@ -298,19 +305,23 @@ class SIP2AuthenticationProvider(
             return info
 
         except OSError as e:
-            raise RemoteIntegrationException(self.server or "unknown server", str(e))
+            server_name = self.server or "unknown server"
+            self.log.warning(f"SIP2 error ({server_name}): {str(e)}", exc_info=e)
+            return INVALID_CREDENTIALS.detailed(
+                f"Error contacting authentication server ({server_name}). Please try again later."
+            )
 
     def remote_patron_lookup(
-        self, patron_or_patrondata: Union[PatronData, Patron]
-    ) -> Optional[PatronData]:
+        self, patron_or_patrondata: PatronData | Patron
+    ) -> PatronData | None | ProblemDetail:
         info = self.patron_information(
             patron_or_patrondata.authorization_identifier, None
         )
         return self.info_to_patrondata(info, False)
 
     def remote_authenticate(
-        self, username: Optional[str], password: Optional[str]
-    ) -> Optional[PatronData]:
+        self, username: str | None, password: str | None
+    ) -> PatronData | None | ProblemDetail:
         """Authenticate a patron with the SIP2 server.
 
         :param username: The patron's username/barcode/card
@@ -371,11 +382,16 @@ class SIP2AuthenticationProvider(
                     ("Raw test patron information"), raw_patron_information
                 )
 
-    def info_to_patrondata(self, info, validate_password=True) -> Optional[PatronData]:
+    def info_to_patrondata(
+        self, info: dict[str, Any] | ProblemDetail, validate_password: bool = True
+    ) -> PatronData | None | ProblemDetail:
         """Convert the SIP-specific dictionary obtained from
         SIPClient.patron_information() to an abstract,
         authenticator-independent PatronData object.
         """
+        if isinstance(info, ProblemDetail):
+            return info
+
         if info.get("valid_patron", "N") == "N":
             # The patron could not be identified as a patron of this
             # library. Don't return any data.
@@ -428,12 +444,12 @@ class SIP2AuthenticationProvider(
 
     def info_to_patrondata_block_reason(
         self, info, patrondata: PatronData
-    ) -> Union[PatronData.NoValue, str]:
+    ) -> PatronData.NoValue | str:
         # A True value in most (but not all) subfields of the
         # patron_status field will prohibit the patron from borrowing
         # books.
         status = info["patron_status_parsed"]
-        block_reason: Union[str, PatronData.NoValue] = PatronData.NO_VALUE
+        block_reason: str | PatronData.NoValue = PatronData.NO_VALUE
         for field in self.fields_that_deny_borrowing:
             if status.get(field) is True:
                 block_reason = self.SPECIFIC_BLOCK_REASONS.get(

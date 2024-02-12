@@ -1,5 +1,4 @@
 import datetime
-from typing import Dict, Optional
 
 from opensearch_dsl import Search
 from opensearchpy import OpenSearch
@@ -111,8 +110,8 @@ class OpenSearchAnalyticsProvider(LocalAnalyticsProvider):
         time: datetime.datetime,
         old_value,
         new_value,
-        neighborhood: Optional[str] = None,
-    ) -> Dict:
+        neighborhood: str | None = None,
+    ) -> dict:
         """Create a Python dict containing required information about the event.
 
         :param library: Library associated with the event

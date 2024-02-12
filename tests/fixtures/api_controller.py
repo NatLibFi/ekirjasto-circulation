@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import datetime
 import logging
+from collections.abc import Callable
 from contextlib import contextmanager
-from typing import Any, Callable, Optional
+from typing import Any
 
 import flask
 import pytest
@@ -11,8 +12,9 @@ from werkzeug.datastructures import Authorization
 
 from api.adobe_vendor_id import AuthdataUtility
 from api.app import app
+from api.circulation_manager import CirculationManager
 from api.config import Configuration
-from api.controller import CirculationManager, CirculationManagerController
+from api.controller.circulation_manager import CirculationManagerController
 from api.integration.registry.patron_auth import PatronAuthRegistry
 from api.lanes import create_default_lanes
 from api.simple_authentication import SimpleAuthenticationProvider
@@ -57,7 +59,7 @@ class ControllerFixture:
     """A test that requires a functional app server."""
 
     app: PalaceFlask
-    authdata: Optional[AuthdataUtility]
+    authdata: AuthdataUtility | None
     collection: Collection
     collections: list[Collection]
     controller: CirculationManagerController

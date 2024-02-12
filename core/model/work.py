@@ -7,7 +7,7 @@ import sys
 from collections import Counter
 from datetime import date, datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING, Any, List, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import pytz
 from sqlalchemy import (
@@ -19,7 +19,6 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     Numeric,
-    String,
     Unicode,
 )
 from sqlalchemy.dialects.postgresql import INT4RANGE
@@ -123,7 +122,7 @@ class Work(Base):
     id = Column(Integer, primary_key=True)
 
     # One Work may have copies scattered across many LicensePools.
-    license_pools: Mapped[List[LicensePool]] = relationship(
+    license_pools: Mapped[list[LicensePool]] = relationship(
         "LicensePool", backref="work", lazy="joined", uselist=True
     )
 
@@ -132,20 +131,20 @@ class Work(Base):
     presentation_edition_id = Column(Integer, ForeignKey("editions.id"), index=True)
 
     # One Work may have many associated WorkCoverageRecords.
-    coverage_records: Mapped[List[WorkCoverageRecord]] = relationship(
+    coverage_records: Mapped[list[WorkCoverageRecord]] = relationship(
         "WorkCoverageRecord", back_populates="work", cascade="all, delete-orphan"
     )
 
     # One Work may be associated with many CustomListEntries.
     # However, a CustomListEntry may lose its Work without
     # ceasing to exist.
-    custom_list_entries: Mapped[List[CustomListEntry]] = relationship(
+    custom_list_entries: Mapped[list[CustomListEntry]] = relationship(
         "CustomListEntry", backref="work"
     )
 
     # One Work may participate in many WorkGenre assignments.
     genres = association_proxy("work_genres", "genre", creator=WorkGenre.from_genre)
-    work_genres: Mapped[List[WorkGenre]] = relationship(
+    work_genres: Mapped[list[WorkGenre]] = relationship(
         "WorkGenre", backref="work", cascade="all, delete-orphan"
     )
     audience = Column(Unicode, index=True)
@@ -209,15 +208,9 @@ class Work(Base):
     # will be made to make the Work presentation ready.
     presentation_ready_exception = Column(Unicode, default=None, index=True)
 
-    # A precalculated MARC record containing metadata about this
-    # work that would be relevant to display in a library's public
-    # catalog.
-    marc_record = Column(String, default=None)
-
     # These fields are potentially large and can be deferred if you
     # don't need all the data in a Work.
     LARGE_FIELDS = [
-        "marc_record",
         "summary_text",
     ]
 
@@ -264,7 +257,7 @@ class Work(Base):
         return self.presentation_edition.sort_author or self.presentation_edition.author
 
     @property
-    def language(self) -> Optional[str]:
+    def language(self) -> str | None:
         if self.presentation_edition:
             return self.presentation_edition.language
         return None
@@ -1017,9 +1010,6 @@ class Work(Base):
             # change it.
             self.last_update_time = utc_now()
 
-        if changed or policy.regenerate_marc_record:
-            self.calculate_marc_record()
-
         if (changed or policy.update_search_index) and not exclude_search:
             self.external_index_needs_updating()
 
@@ -1146,17 +1136,6 @@ class Work(Base):
 
         l = [_ensure(s) for s in l]
         return "\n".join(l)
-
-    def calculate_marc_record(self):
-        from core.marc import Annotator, MARCExporter
-
-        _db = Session.object_session(self)
-        record = MARCExporter.create_record(
-            self, annotator=Annotator, force_create=True
-        )
-        WorkCoverageRecord.add_for(
-            self, operation=WorkCoverageRecord.GENERATE_MARC_OPERATION
-        )
 
     def active_license_pool(self, library: Library | None = None) -> LicensePool | None:
         # The active license pool is the one that *would* be
@@ -2206,9 +2185,7 @@ class Work(Base):
         _db.delete(self)
 
 
-def add_work_to_customlists_for_collection(
-    pool_or_work: Union[LicensePool, Work]
-) -> None:
+def add_work_to_customlists_for_collection(pool_or_work: LicensePool | Work) -> None:
     if isinstance(pool_or_work, Work):
         work = pool_or_work
         pools = work.license_pools

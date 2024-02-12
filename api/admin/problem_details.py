@@ -154,27 +154,11 @@ MISSING_COLLECTION = pd(
     detail=_("The specified collection does not exist."),
 )
 
-MISSING_COLLECTION_NAME = pd(
-    "http://librarysimplified.org/terms/problem/missing-collection-name",
-    status_code=400,
-    title=_("Missing collection name."),
-    detail=_("You must identify the collection by its name."),
-)
-
 MISSING_ANALYTICS_NAME = pd(
     "http://librarysimplified.org/terms/problem/missing-analytics-name",
     status_code=400,
     title=_("Missing analytics name."),
     detail=_("You must identify the analytics service by its name."),
-)
-
-COLLECTION_NAME_ALREADY_IN_USE = pd(
-    "http://librarysimplified.org/terms/problem/collection-name-already-in-use",
-    status_code=400,
-    title=_("Collection name already in use"),
-    detail=_(
-        "The collection name must be unique, and there's already a collection with the specified name."
-    ),
 )
 
 CANNOT_DELETE_COLLECTION_WITH_CHILDREN = pd(
@@ -209,11 +193,11 @@ CANNOT_CHANGE_PROTOCOL = pd(
     detail=_("A protocol can't be changed once it has been set."),
 )
 
-MISSING_PATRON_AUTH_NAME = pd(
-    "http://librarysimplified.org/terms/problem/missing-patron-auth-name",
+MISSING_SERVICE_NAME = pd(
+    "http://librarysimplified.org/terms/problem/missing-service-name",
     status_code=400,
-    title=_("Missing patron auth service name."),
-    detail=_("You must identify the patron auth service by its name."),
+    title=_("Missing service name."),
+    detail=_("You must identify the service by its name."),
 )
 
 PROTOCOL_DOES_NOT_SUPPORT_PARENTS = pd(

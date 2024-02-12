@@ -264,7 +264,7 @@ class TestWork:
 
         # The Work now has a complete set of WorkCoverageRecords
         # associated with it, reflecting all the operations that
-        # occured as part of calculate_presentation().
+        # occurred as part of calculate_presentation().
         #
         # All the work has actually been done, except for the work of
         # updating the search index, which has been registered and
@@ -278,16 +278,15 @@ class TestWork:
             (wcr.CLASSIFY_OPERATION, success),
             (wcr.SUMMARY_OPERATION, success),
             (wcr.QUALITY_OPERATION, success),
-            (wcr.GENERATE_MARC_OPERATION, success),
             (wcr.UPDATE_SEARCH_INDEX_OPERATION, wcr.REGISTERED),
         }
         assert expect == {(x.operation, x.status) for x in records}
 
         # Now mark the pool with the presentation edition as suppressed.
         # work.calculate_presentation() will call work.mark_licensepools_as_superceded(),
-        # which will mark the suppressed pool as superceded and take its edition out of the running.
+        # which will mark the suppressed pool as superseded and take its edition out of the running.
         # Make sure that work's presentation edition and work's author, etc.
-        # fields are updated accordingly, and that the superceded pool's edition
+        # fields are updated accordingly, and that the superseded pool's edition
         # knows it's no longer the champ.
         pool2.suppressed = True
 
@@ -314,7 +313,7 @@ class TestWork:
         # Updating availability also modified work.last_update_time.
         assert (utc_now() - work.last_update_time) < datetime.timedelta(seconds=2)
 
-        # make a staff (admin interface) edition.  its fields should supercede all others below it
+        # make a staff (admin interface) edition.  its fields should supersede all others below it
         # except when it has no contributors, and they do.
         pool2.suppressed = False
 
@@ -333,7 +332,7 @@ class TestWork:
 
         work.calculate_presentation(search_index_client=index)
 
-        # The title of the Work got superceded.
+        # The title of the Work got superseded.
         assert "The Staff Title" == work.title
 
         # The author of the Work is still the author of edition2 and was not clobbered.
@@ -1002,7 +1001,7 @@ class TestWork:
         # for the same Work.
         collection1 = db.default_collection()
         collection2 = db.collection()
-        db.default_library().collections.append(collection2)
+        collection2.libraries.append(db.default_library())
         pool2 = db.licensepool(edition=edition, collection=collection2)
         pool2.work_id = work.id
         pool2.licenses_available = 0
@@ -1634,13 +1633,6 @@ class TestWork:
         classification2.subject.checked = True
         assert [] == qu.all()
 
-    def test_calculate_marc_record(self, db: DatabaseTransactionFixture):
-        work = db.work(with_license_pool=True)
-
-        work.calculate_marc_record()
-        assert work.title in work.marc_record
-        assert "online resource" in work.marc_record
-
     def test_active_licensepool_ignores_superceded_licensepools(
         self, db: DatabaseTransactionFixture
     ):
@@ -1714,8 +1706,8 @@ class TestWork:
         l2 = db.library()
         c1 = db.collection()
         c2 = db.collection()
-        l1.collections = [c1]
-        l2.collections = [c2]
+        c1.libraries = [l1]
+        c2.libraries = [l2]
         work: Work = db.work(presentation_edition=db.edition())
         lp1: LicensePool = db.licensepool(
             work.presentation_edition,

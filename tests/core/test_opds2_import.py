@@ -1,16 +1,14 @@
 import datetime
-from typing import Generator, List, Union
+from collections.abc import Generator
 from unittest.mock import MagicMock, patch
 
 import pytest
 from _pytest.logging import LogCaptureFixture
 from requests import Response
-from webpub_manifest_parser.opds2 import OPDS2FeedParserFactory
 
 from api.circulation import CirculationAPI, FulfillmentInfo
 from api.circulation_exceptions import CannotFulfill
 from core.model import (
-    ConfigurationSetting,
     Contribution,
     Contributor,
     DataSource,
@@ -27,7 +25,12 @@ from core.model import (
 )
 from core.model.collection import Collection
 from core.model.constants import IdentifierType
-from core.opds2_import import OPDS2API, OPDS2Importer, RWPMManifestParser
+from core.opds2_import import (
+    OPDS2API,
+    OPDS2Importer,
+    PalaceOPDS2FeedParserFactory,
+    RWPMManifestParser,
+)
 from tests.fixtures.database import DatabaseTransactionFixture
 from tests.fixtures.opds2_files import OPDS2FilesFixture
 
@@ -96,15 +99,19 @@ def opds2_importer_fixture(
 ) -> TestOPDS2ImporterFixture:
     data = TestOPDS2ImporterFixture()
     data.transaction = db
-    data.collection = db.collection(protocol=OPDS2API.label())
+    data.collection = db.collection(
+        protocol=OPDS2API.label(),
+        data_source_name="OPDS 2.0 Data Source",
+        external_account_id="http://opds2.example.org/feed",
+    )
     data.library = db.default_library()
-    data.library.collections.append(data.collection)
+    data.collection.libraries.append(data.library)
     data.data_source = DataSource.lookup(
         db.session, "OPDS 2.0 Data Source", autocreate=True
     )
     data.collection.data_source = data.data_source
     data.importer = OPDS2Importer(
-        db.session, data.collection, RWPMManifestParser(OPDS2FeedParserFactory())
+        db.session, data.collection, RWPMManifestParser(PalaceOPDS2FeedParserFactory())
     )
     return data
 
@@ -140,7 +147,7 @@ class TestOPDS2Importer(OPDS2Test):
             opds2_importer_fixture.transaction.session,
         )
         content_server_feed_text = opds2_files_fixture.sample_text("feed.json")
-        content_server_feed: Union[str, bytes]
+        content_server_feed: str | bytes
 
         if manifest_type == "bytes":
             content_server_feed = content_server_feed_text.encode()
@@ -167,7 +174,7 @@ class TestOPDS2Importer(OPDS2Test):
         assert "Moby-Dick" == moby_dick_edition.title
         assert "eng" == moby_dick_edition.language
         assert "eng" == moby_dick_edition.language
-        assert EditionConstants.BOOK_MEDIUM == moby_dick_edition.medium
+        assert EditionConstants.AUDIO_MEDIUM == moby_dick_edition.medium
         assert "Herman Melville" == moby_dick_edition.author
         assert moby_dick_edition.duration == 100.2
 
@@ -260,6 +267,7 @@ class TestOPDS2Importer(OPDS2Test):
         assert moby_dick_license_pool.open_access
         assert LicensePool.UNLIMITED_ACCESS == moby_dick_license_pool.licenses_owned
         assert LicensePool.UNLIMITED_ACCESS == moby_dick_license_pool.licenses_available
+        assert True == moby_dick_license_pool.should_track_playtime
 
         assert 1 == len(moby_dick_license_pool.delivery_mechanisms)
         [moby_dick_delivery_mechanism] = moby_dick_license_pool.delivery_mechanisms
@@ -268,7 +276,7 @@ class TestOPDS2Importer(OPDS2Test):
             == moby_dick_delivery_mechanism.delivery_mechanism.drm_scheme
         )
         assert (
-            MediaTypes.EPUB_MEDIA_TYPE
+            MediaTypes.AUDIOBOOK_MANIFEST_MEDIA_TYPE
             == moby_dick_delivery_mechanism.delivery_mechanism.content_type
         )
 
@@ -285,6 +293,7 @@ class TestOPDS2Importer(OPDS2Test):
             LicensePool.UNLIMITED_ACCESS
             == huckleberry_finn_license_pool.licenses_available
         )
+        assert False == huckleberry_finn_license_pool.should_track_playtime
 
         assert 2 == len(huckleberry_finn_license_pool.delivery_mechanisms)
         huckleberry_finn_delivery_mechanisms = (
@@ -396,7 +405,7 @@ class TestOPDS2Importer(OPDS2Test):
         opds2_importer_fixture: TestOPDS2ImporterFixture,
         opds2_files_fixture: OPDS2FilesFixture,
         this_identifier_type,
-        ignore_identifier_type: List[IdentifierType],
+        ignore_identifier_type: list[IdentifierType],
         identifier: str,
     ) -> None:
         """Ensure that OPDS2Importer imports only publications having supported identifier types.
@@ -453,27 +462,25 @@ class TestOPDS2Importer(OPDS2Test):
         imported_editions, pools, works, failures = data.importer.import_from_feed(
             content
         )
-        setting = ConfigurationSetting.for_externalintegration(
-            ExternalIntegration.TOKEN_AUTH, data.collection.external_integration
+        token_endpoint = data.collection.integration_configuration.context.get(
+            ExternalIntegration.TOKEN_AUTH
         )
 
         # Did the token endpoint get stored correctly?
-        assert setting.value == "http://example.org/auth?userName={patron_id}"
+        assert token_endpoint == "http://example.org/auth?userName={patron_id}"
 
 
 class Opds2ApiFixture:
     def __init__(self, db: DatabaseTransactionFixture, mock_http: MagicMock):
         self.patron = db.patron()
         self.collection: Collection = db.collection(
-            protocol=ExternalIntegration.OPDS2_IMPORT, data_source_name="test"
+            protocol=ExternalIntegration.OPDS2_IMPORT,
+            data_source_name="test",
+            external_account_id="http://opds2.example.org/feed",
         )
-        self.integration = self.collection.create_external_integration(
-            ExternalIntegration.OPDS2_IMPORT
-        )
-        self.setting = ConfigurationSetting.for_externalintegration(
-            ExternalIntegration.TOKEN_AUTH, self.integration
-        )
-        self.setting.value = "http://example.org/token?userName={patron_id}"
+        self.collection.integration_configuration.context = {
+            ExternalIntegration.TOKEN_AUTH: "http://example.org/token?userName={patron_id}"
+        }
 
         self.mock_response = MagicMock(spec=Response)
         self.mock_response.status_code = 200
@@ -525,7 +532,7 @@ class TestOpds2Api:
 
         work = works[0]
 
-        api = CirculationAPI(db.session, db.default_library())
+        api = CirculationAPI(db.session, opds2_importer_fixture.library)
         patron = db.patron()
 
         # Borrow the book from the library

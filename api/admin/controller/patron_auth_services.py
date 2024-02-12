@@ -1,5 +1,3 @@
-from typing import List, Set, Type, Union
-
 import flask
 from flask import Response
 
@@ -32,14 +30,14 @@ class PatronAuthServicesController(
         return PatronAuthRegistry()
 
     @property
-    def basic_auth_protocols(self) -> Set[str]:
+    def basic_auth_protocols(self) -> set[str]:
         return {
             name
             for name, api in self.registry
             if issubclass(api, BasicAuthenticationProvider)
         }
 
-    def process_patron_auth_services(self) -> Union[Response, ProblemDetail]:
+    def process_patron_auth_services(self) -> Response | ProblemDetail:
         self.require_system_admin()
 
         if flask.request.method == "GET":
@@ -59,33 +57,11 @@ class PatronAuthServicesController(
             mimetype="application/json",
         )
 
-    def process_post(self) -> Union[Response, ProblemDetail]:
+    def process_post(self) -> Response | ProblemDetail:
         try:
             form_data = flask.request.form
-            protocol = form_data.get("protocol", None, str)
-            id = form_data.get("id", None, int)
-            name = form_data.get("name", None, str)
-            libraries_data = form_data.get("libraries", None, str)
-
-            if protocol is None and id is None:
-                raise ProblemError(NO_PROTOCOL_FOR_NEW_SERVICE)
-
-            if protocol is None or protocol not in self.registry:
-                self.log.warning(
-                    f"Unknown patron authentication service protocol: {protocol}"
-                )
-                raise ProblemError(UNKNOWN_PROTOCOL)
-
-            if id is not None:
-                # Find an existing service to edit
-                auth_service = self.get_existing_service(id, name, protocol)
-                response_code = 200
-            else:
-                # Create a new service
-                if name is None:
-                    raise ProblemError(MISSING_PATRON_AUTH_NAME)
-                auth_service = self.create_new_service(name, protocol)
-                response_code = 201
+            libraries_data = self.get_libraries_data(form_data)
+            auth_service, protocol, response_code = self.get_service(form_data)
 
             # Update settings
             impl_cls = self.registry[protocol]
@@ -134,14 +110,14 @@ class PatronAuthServicesController(
 
     def process_updated_libraries(
         self,
-        libraries: List[UpdatedLibrarySettingsTuple],
-        settings_class: Type[BaseSettings],
+        libraries: list[UpdatedLibrarySettingsTuple],
+        settings_class: type[BaseSettings],
     ) -> None:
         super().process_updated_libraries(libraries, settings_class)
         for integration, _ in libraries:
             self.library_integration_validation(integration)
 
-    def process_delete(self, service_id: int) -> Union[Response, ProblemDetail]:
+    def process_delete(self, service_id: int) -> Response | ProblemDetail:
         self.require_system_admin()
         try:
             return self.delete_service(service_id)
