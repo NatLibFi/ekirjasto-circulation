@@ -324,6 +324,7 @@ class Facets(FacetsWithEntryPoint):
         entrypoint=None,
         distributor=None,
         collection_name=None,
+        language=None,
     ):
         return cls(
             library,
@@ -332,6 +333,7 @@ class Facets(FacetsWithEntryPoint):
             order=order,
             distributor=distributor,
             collection_name=collection_name,
+            language=language,
             entrypoint=entrypoint,
         )
 
@@ -436,12 +438,21 @@ class Facets(FacetsWithEntryPoint):
                 400,
             )
 
+        # Finland
+        g = Facets.LANGUAGE_FACET_GROUP_NAME
+        language: str = get_argument(g, cls.default_facet(config, g))
+        language_facets = cls.available_facets(config, g)
+        # In the case of language, don't want to limit the input to only the
+        # available facet values as we might get searches from elsewhere with
+        # other languages.
+
         enabled = {
             Facets.ORDER_FACET_GROUP_NAME: order_facets,
             Facets.AVAILABILITY_FACET_GROUP_NAME: availability_facets,
             Facets.COLLECTION_FACET_GROUP_NAME: collection_facets,
             Facets.DISTRIBUTOR_FACETS_GROUP_NAME: distributor_facets,
             Facets.COLLECTION_NAME_FACETS_GROUP_NAME: collection_name_facets,
+            Facets.LANGUAGE_FACET_GROUP_NAME: language_facets,  # Finland
         }
 
         return dict(
@@ -451,6 +462,7 @@ class Facets(FacetsWithEntryPoint):
             distributor=distributor,
             collection_name=collection_name,
             enabled_facets=enabled,
+            language=language,  # Finland
         )
 
     @classmethod
@@ -484,6 +496,7 @@ class Facets(FacetsWithEntryPoint):
         order,
         distributor,
         collection_name,
+        language,
         order_ascending=None,
         enabled_facets=None,
         entrypoint=None,
@@ -536,6 +549,9 @@ class Facets(FacetsWithEntryPoint):
         self.collection_name = collection_name or self.default_facet(
             library, self.COLLECTION_NAME_FACETS_GROUP_NAME
         )
+        self.language: str = language or self.default_facet(
+            library, self.LANGUAGE_FACET_GROUP_NAME
+        )
         if order_ascending == self.ORDER_ASCENDING:
             order_ascending = True
         elif order_ascending == self.ORDER_DESCENDING:
@@ -551,6 +567,7 @@ class Facets(FacetsWithEntryPoint):
         entrypoint=None,
         distributor=None,
         collection_name=None,
+        language=None,
     ):
         """Create a slightly different Facets object from this one."""
         return self.__class__(
@@ -560,6 +577,7 @@ class Facets(FacetsWithEntryPoint):
             order=order or self.order,
             distributor=distributor or self.distributor,
             collection_name=collection_name or self.collection_name,
+            language=language or self.language,
             enabled_facets=self.facets_enabled_at_init,
             entrypoint=(entrypoint or self.entrypoint),
             entrypoint_is_default=False,
@@ -577,6 +595,8 @@ class Facets(FacetsWithEntryPoint):
             yield (self.DISTRIBUTOR_FACETS_GROUP_NAME, self.distributor)
         if self.collection_name:
             yield (self.COLLECTION_NAME_FACETS_GROUP_NAME, self.collection_name)
+        if self.language:
+            yield (self.LANGUAGE_FACET_GROUP_NAME, self.language)
 
     @property
     def enabled_facets(self):
@@ -595,6 +615,7 @@ class Facets(FacetsWithEntryPoint):
                 self.COLLECTION_FACET_GROUP_NAME,
                 self.DISTRIBUTOR_FACETS_GROUP_NAME,
                 self.COLLECTION_NAME_FACETS_GROUP_NAME,
+                self.LANGUAGE_FACET_GROUP_NAME,
             ]
             for facet_type in facet_types:
                 yield self.facets_enabled_at_init.get(facet_type, [])
@@ -606,6 +627,7 @@ class Facets(FacetsWithEntryPoint):
                 Facets.COLLECTION_FACET_GROUP_NAME,
                 Facets.DISTRIBUTOR_FACETS_GROUP_NAME,
                 Facets.COLLECTION_NAME_FACETS_GROUP_NAME,
+                Facets.LANGUAGE_FACET_GROUP_NAME,
             ):
                 yield self.available_facets(self.library, group_name)
 
@@ -625,6 +647,7 @@ class Facets(FacetsWithEntryPoint):
             collection_facets,
             distributor_facets,
             collection_name_facets,
+            language_facets,
         ) = self.enabled_facets
 
         def dy(new_value):
@@ -674,6 +697,13 @@ class Facets(FacetsWithEntryPoint):
                 facets = self.navigate(collection_name=facet)
                 yield (group, facet, facets, facet == current_value)
 
+        if len(language_facets) > 1:
+            for facet in language_facets:
+                group = self.LANGUAGE_FACET_GROUP_NAME
+                current_value = self.language
+                facets = self.navigate(language=facet)
+                yield (group, facet, facets, facet == current_value)
+
     def modify_search_filter(self, filter):
         """Modify the given external_search.Filter object
         so that it reflects the settings of this Facets object.
@@ -691,6 +721,10 @@ class Facets(FacetsWithEntryPoint):
 
         filter.availability = self.availability
         filter.subcollection = self.collection
+
+        # Finland
+        if self.language and self.language != self.LANGUAGE_ALL:
+            filter.languages = [self.language]
 
         # We can only have distributor and collection name facets if we have a library
         if self.library:
@@ -973,6 +1007,7 @@ class SearchFacets(Facets):
         kwargs.setdefault("availability", None)
         kwargs.setdefault("distributor", None)
         kwargs.setdefault("collection_name", None)
+        kwargs.setdefault("language", None)
         order = kwargs.setdefault("order", None)
 
         if order in (None, self.ORDER_BY_RELEVANCE):
@@ -2935,6 +2970,7 @@ class Lane(Base, DatabaseBackedWorkList, HierarchyWorkList):
                 order=FacetConstants.ORDER_WORK_ID,
                 distributor=FacetConstants.DISTRIBUTOR_ALL,
                 collection_name=FacetConstants.COLLECTION_NAME_ALL,
+                language=FacetConstants.LANGUAGE_ALL,
                 entrypoint=entrypoint,
             )
             filter = self.filter(_db, facets)

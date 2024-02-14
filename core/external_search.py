@@ -1768,8 +1768,10 @@ class Filter(SearchBase):
         excluded_audiobook_data_sources = [DataSource.lookup(_db, x) for x in excluded]
         if library is None:
             allow_holds = True
+            facets_enabled_language = FacetConstants.LANGUAGE_ALL
         else:
             allow_holds = library.settings.allow_holds
+            facets_enabled_language = library.settings.facets_enabled_language
         return cls(
             collections,
             media,
@@ -1784,6 +1786,7 @@ class Filter(SearchBase):
             allow_holds=allow_holds,
             license_datasource=license_datasource_id,
             lane_building=True,
+            facets_enabled_language=facets_enabled_language,
         )
 
     def __init__(
@@ -1938,6 +1941,10 @@ class Filter(SearchBase):
 
         self.lane_building = kwargs.pop("lane_building", False)
 
+        self.facets_enabled_language = kwargs.pop(
+            "facets_enabled_language", FacetConstants.LANGUAGE_ALL
+        )
+
         # At this point there should be no keyword arguments -- you can't pass
         # whatever you want into this method.
         if kwargs:
@@ -2065,7 +2072,22 @@ class Filter(SearchBase):
         if self.media:
             f = chain(f, Terms(medium=scrub_list(self.media)))
 
-        if self.languages:
+        # Finland, logic for LANGUAGE_OTHERS
+        if self.languages == [FacetConstants.LANGUAGE_OTHERS]:
+            excluded_terms = [
+                language
+                for language in self.facets_enabled_language
+                if language
+                not in {
+                    FacetConstants.LANGUAGE_ALL,
+                    FacetConstants.LANGUAGE_OTHERS,
+                }
+            ]
+            exclusion_query = Bool(
+                must_not=[Terms(language=scrub_list(excluded_terms))]
+            )
+            f = chain(f, exclusion_query)
+        elif self.languages:
             f = chain(f, Terms(language=scrub_list(self.languages)))
 
         if self.fiction is not None:

@@ -918,6 +918,7 @@ class TestCrawlableFacets:
         assert facets.collection == CrawlableFacets.COLLECTION_FULL
         assert facets.availability == CrawlableFacets.AVAILABLE_ALL
         assert facets.order == CrawlableFacets.ORDER_LAST_UPDATE
+        assert facets.language == CrawlableFacets.LANGUAGE_ALL
         assert facets.order_ascending is False
 
         [
@@ -926,10 +927,11 @@ class TestCrawlableFacets:
             collection,
             distributor,
             collectionName,
+            language,
         ] = facets.enabled_facets
 
         # The default facets are the only ones enabled.
-        for facet in [order, availability, collection]:
+        for facet in [order, availability, collection, language]:
             assert len(facet) == 1
 
         # Except for distributor and collectionName, which have the default
