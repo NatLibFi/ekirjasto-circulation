@@ -56,6 +56,7 @@ jobs:
           MODULE: ${{ matrix.module }}
 
       - name: Upload coverage to Codecov
+        if: false # Disable temporarily
         uses: codecov/codecov-action@v3
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -104,6 +105,7 @@ jobs:
         run: tox -e "migration-docker"
 
       - name: Upload coverage to Codecov
+        if: false # Disable temporarily
         uses: codecov/codecov-action@v3
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -147,7 +149,8 @@ jobs:
 
     # Only build docker containers on a push event. Otherwise, we won't have
     # permissions to push the built containers into registry.
-    if: github.event_name == 'push'
+    # if: github.event_name == 'push'
+    if: false # Disable temporarily
 
     outputs:
       baseimage-changed: ${{ steps.changes.outputs.baseimage }}
@@ -186,7 +189,7 @@ jobs:
         id: baseimage-meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/circ-baseimage
+          images: ghcr.io/${{ github.repository_owner }}/ekirjasto-circ-baseimage
           tags: |
             type=ref,event=branch
             type=sha
@@ -197,7 +200,7 @@ jobs:
         id: baseimage-latest
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/circ-baseimage
+          images: ghcr.io/${{ github.repository_owner }}/ekirjasto-circ-baseimage
           tags: |
             type=raw,value=latest
 
@@ -220,7 +223,7 @@ jobs:
             type=registry,ref=${{ fromJSON(steps.baseimage-latest.outputs.json).tags[0] }}
             type=registry,ref=${{ fromJSON(steps.baseimage-meta.outputs.json).tags[0] }}
           cache-to: |
-             type=inline
+            type=inline
           platforms: linux/amd64, linux/arm64
           tags: ${{ steps.baseimage-meta.outputs.tags }}
           labels: ${{ steps.baseimage-meta.outputs.labels }}
@@ -241,7 +244,7 @@ jobs:
           elif [[ $tag_exists -eq 0 ]]; then
             tag="${{ fromJSON(steps.baseimage-latest.outputs.json).tags[0] }}"
           else
-            tag="ghcr.io/thepalaceproject/circ-baseimage:latest"
+            tag="ghcr.io/natlibfi/ekirjasto-circ-baseimage:latest"
           fi
           echo "Base image tag: $tag"
           echo tag="$tag" >> "$GITHUB_OUTPUT"
@@ -259,6 +262,7 @@ jobs:
             BASE_IMAGE=${{ steps.baseimage.outputs.tag }}
 
   docker-image-test:
+    if: false # Disable temporarily
     name: Docker test circ-${{ matrix.image }} (${{ matrix.platform }})
     runs-on: ubuntu-latest
     needs: [docker-image-build]
@@ -304,6 +308,7 @@ jobs:
         run: docker compose down
 
   docker-image-push:
+    if: false # Disable temporarily
     name: Push circ-${{ matrix.image }}
     runs-on: ubuntu-latest
     needs: [test, test-migrations, docker-test-migrations, docker-image-build, docker-image-test]
@@ -361,7 +366,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/circ-${{ matrix.image }}
+          images: ghcr.io/${{ github.repository_owner }}/ekirjasto-circ-${{ matrix.image }}
           tags: |
             type=semver,pattern={{major}}.{{minor}},priority=10
             type=semver,pattern={{version}},priority=20

@@ -29,6 +29,7 @@ COPY --chown=simplified:simplified . /var/www/circulation
 
 FROM common AS exec
 
+ENV TZ=Europe/Helsinki
 ENV SIMPLIFIED_SCRIPT_NAME ""
 
 VOLUME /var/log
@@ -44,7 +45,7 @@ CMD ["/sbin/my_init", "--skip-runit", "--quiet", "--", \
 FROM common AS scripts
 
 # Set the local timezone and setup cron
-ENV TZ=US/Eastern
+ENV TZ=Europe/Helsinki
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && \
     touch /var/log/cron.log
 
@@ -61,6 +62,7 @@ CMD ["/sbin/my_init"]
 ###############################################################################
 
 FROM common AS webapp
+ENV TZ=Europe/Helsinki
 
 # Setup nginx
 COPY docker/services/nginx /etc/nginx/

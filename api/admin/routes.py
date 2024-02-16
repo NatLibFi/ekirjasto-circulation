@@ -2,7 +2,7 @@ from datetime import timedelta
 from functools import wraps
 
 import flask
-from flask import Response, make_response, redirect, url_for
+from flask import Response, make_response, redirect, request, url_for
 from flask_pydantic_spec import FileResponse as SpecFileResponse
 from flask_pydantic_spec import Request as SpecRequest
 from flask_pydantic_spec import Response as SpecResponse
@@ -304,6 +304,34 @@ def bulk_circulation_events():
     return response
 
 
+# Finland
+@library_route("/admin/circulation_loan_statistics_excel")
+@returns_json_or_response_or_problem_detail
+@allows_library
+@requires_admin
+def bulk_circulation_events_excel():
+    """Returns an Excel file containing loan amounts and co-authors
+    for each work on a given timeframe."""
+    (
+        data,
+        date,
+        date_end,
+        library,
+    ) = app.manager.admin_dashboard_controller.circulation_loan_statistics_excel()
+    if isinstance(data, ProblemDetail):
+        return data
+
+    response = Response(data)
+    response.headers[
+        "Content-Type"
+    ] = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    response.headers[
+        "Content-Disposition"
+    ] = f"attachment; filename=lainaukset_{library}_{date}_{date_end}.xlsx"
+
+    return response
+
+
 @library_route("/admin/circulation_events")
 @has_library
 @returns_json_or_response_or_problem_detail
@@ -347,6 +375,37 @@ def generate_quicksight_url(dashboard_name: str):
 @requires_admin
 def get_quicksight_names():
     return app.manager.admin_quicksight_controller.get_dashboard_names()
+
+
+# Finland
+@library_route("/admin/events/terms")
+@returns_json_or_response_or_problem_detail
+@has_library
+@requires_admin
+def events_query_terms():
+    """Returns results from OpenSearch analytics events based on query parameters."""
+    return app.manager.opensearch_analytics_search.events(params=request.args)
+
+
+# Finland
+@library_route("/admin/events/histogram")
+@returns_json_or_response_or_problem_detail
+@has_library
+@requires_admin
+def events_query_histogram():
+    """Returns results from OpenSearch analytics based on query parameters
+    in histogram buckets for time series graphs"""
+    return app.manager.opensearch_analytics_search.events_histogram(params=request.args)
+
+
+# Finland
+@library_route("/admin/events/facets")
+@returns_json_or_response_or_problem_detail
+@has_library
+@requires_admin
+def events_get_facets():
+    """Returns all the available facets from OpenSearch analytics events."""
+    return app.manager.opensearch_analytics_search.get_facets()
 
 
 @app.route("/admin/libraries", methods=["GET", "POST"])

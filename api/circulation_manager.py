@@ -14,6 +14,7 @@ from api.circulation import CirculationAPI
 from api.config import Configuration
 from api.controller.analytics import AnalyticsController
 from api.controller.annotation import AnnotationController
+from api.controller.catalog_descriptions import CatalogDescriptionsController  # Finland
 from api.controller.device_tokens import DeviceTokensController
 from api.controller.index import IndexController
 from api.controller.loan import LoanController
@@ -26,7 +27,9 @@ from api.controller.profile import ProfileController
 from api.controller.urn_lookup import URNLookupController
 from api.controller.work import WorkController
 from api.custom_index import CustomIndexView
+from api.ekirjasto_controller import EkirjastoController  # Finland
 from api.lanes import load_lanes
+from api.opensearch_analytics_search import OpenSearchAnalyticsSearch  # Finland
 from api.problem_details import *
 from api.saml.controller import SAMLController
 from core.app_server import ApplicationVersionController, load_facets_from_request
@@ -99,11 +102,15 @@ class CirculationManager(LoggerMixin):
     admin_dashboard_controller: DashboardController
     admin_patron_controller: PatronController
     admin_discovery_services_controller: DiscoveryServicesController
-    admin_discovery_service_library_registrations_controller: DiscoveryServiceLibraryRegistrationsController
+    admin_discovery_service_library_registrations_controller: (
+        DiscoveryServiceLibraryRegistrationsController
+    )
     admin_metadata_services_controller: MetadataServicesController
     admin_patron_auth_services_controller: PatronAuthServicesController
     admin_collection_settings_controller: CollectionSettingsController
-    admin_sitewide_configuration_settings_controller: SitewideConfigurationSettingsController
+    admin_sitewide_configuration_settings_controller: (
+        SitewideConfigurationSettingsController
+    )
     admin_library_settings_controller: LibrarySettingsController
     admin_individual_admin_settings_controller: IndividualAdminSettingsController
     admin_catalog_services_controller: CatalogServicesController
@@ -187,6 +194,9 @@ class CirculationManager(LoggerMixin):
 
         self.auth = Authenticator(self._db, libraries, self.analytics)
 
+        # Finland
+        self.setup_opensearch_analytics_search()
+
         # Track the Lane configuration for each library by mapping its
         # short name to the top-level lane.
         new_top_level_lanes = {}
@@ -256,6 +266,31 @@ class CirculationManager(LoggerMixin):
             max_len=1000, max_age_seconds=authentication_document_cache_time
         )
 
+    # Finland
+    @property
+    def opensearch_analytics_search(self):
+        """Retrieve or create a connection to the OpenSearch
+        analytics interface.
+
+        This is created lazily so that a failure to connect only
+        affects feeds that depend on the search engine, not the whole
+        circulation manager.
+        """
+        if not self._opensearch_analytics_search:
+            self.setup_opensearch_analytics_search()
+        return self._opensearch_analytics_search
+
+    # Finland
+    def setup_opensearch_analytics_search(self):
+        try:
+            self._opensearch_analytics_search = OpenSearchAnalyticsSearch()
+            self.opensearch_analytics_search_initialization_exception = None
+        except Exception as e:
+            self.log.error("Exception initializing search engine: %s", e)
+            self._opensearch_analytics_search = None
+            self.opensearch_analytics_search_initialization_exception = e
+        return self._opensearch_analytics_search
+
     def log_lanes(self, lanelist=None, level=0):
         """Output information about the lane layout."""
         lanelist = lanelist or self.top_level_lane.sublanes
@@ -287,6 +322,7 @@ class CirculationManager(LoggerMixin):
         self.version = ApplicationVersionController()
         self.odl_notification_controller = ODLNotificationController(self)
         self.patron_auth_token = PatronAuthTokenController(self)
+        self.catalog_descriptions = CatalogDescriptionsController(self)
         self.playtime_entries = PlaytimeEntriesController(self)
 
     def setup_configuration_dependent_controllers(self):
@@ -297,6 +333,9 @@ class CirculationManager(LoggerMixin):
         configuration changes.
         """
         self.saml_controller = SAMLController(self, self.auth)
+
+        # Finland
+        self.ekirjasto_controller = EkirjastoController(self, self.auth)
 
     def annotator(self, lane, facets=None, *args, **kwargs):
         """Create an appropriate OPDS annotator for the given lane.
