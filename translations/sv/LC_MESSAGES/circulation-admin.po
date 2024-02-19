@@ -1,13 +1,17 @@
-# This file was generated from admin-es.xlsx
+# Swedish translations for PROJECT.
+# Copyright (C) 2024 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2024.
+#
 msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2024-02-19 22:26+0200\n"
-"PO-Revision-Date: 2016-06-14 13:23-0400\n"
+"PO-Revision-Date: 2024-02-19 22:17+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language: es\n"
-"Language-Team: es <LL@li.org>\n"
+"Language: sv\n"
+"Language-Team: sv <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
@@ -84,12 +88,11 @@ msgstr ""
 
 #: api/admin/problem_details.py:25
 msgid "Invalid admin credentials"
-msgstr "credenciales de administrador inválidas"
+msgstr ""
 
 #: api/admin/problem_details.py:26
-#, fuzzy
 msgid "Valid library staff credentials are required."
-msgstr "Se requiere un correo electrónico válido del personal de la biblioteca"
+msgstr ""
 
 #: api/admin/problem_details.py:32
 msgid "Admin not authorized"
@@ -101,47 +104,47 @@ msgstr ""
 
 #: api/admin/problem_details.py:39
 msgid "Invalid CSRF token"
-msgstr "Ficha CSRF no válida"
+msgstr ""
 
 #: api/admin/problem_details.py:40
 msgid "There was an error saving your changes."
-msgstr "Se ha producido un error al guardar los cambios."
+msgstr ""
 
 #: api/admin/problem_details.py:46
 msgid "Invalid edit"
-msgstr "Editar no válido"
+msgstr ""
 
 #: api/admin/problem_details.py:47
 msgid "There was a problem with the edited metadata."
-msgstr "Hubo un problema con los metadatos editado."
+msgstr ""
 
 #: api/admin/problem_details.py:53
 msgid "Metadata refresh pending."
-msgstr "actualización de los metadatos pendiente."
+msgstr ""
 
 #: api/admin/problem_details.py:54
 msgid "The Metadata Wrangler is looking for new data. Check back later."
-msgstr "El metadatos Wrangler está buscando nuevos datos. Vuelva más tarde."
+msgstr ""
 
 #: api/admin/problem_details.py:60 api/admin/problem_details.py:61
 msgid "Metadata could not be refreshed."
-msgstr "Los metadatos no se pueden actualizar."
+msgstr ""
 
 #: api/admin/problem_details.py:67
 msgid "Genre not found."
-msgstr "Género no encontrado."
+msgstr ""
 
 #: api/admin/problem_details.py:68
 msgid "One of the submitted genres does not exist."
-msgstr "Uno de los géneros sometidos no existe."
+msgstr ""
 
 #: api/admin/problem_details.py:74
 msgid "Incompatible genre."
-msgstr "género incompatible."
+msgstr ""
 
 #: api/admin/problem_details.py:75
 msgid "The genre is incompatible with the fiction status of the work."
-msgstr "El género es incompatible con el estado de ficción de la obra."
+msgstr ""
 
 #: api/admin/problem_details.py:81
 msgid "Erotica is for Adults Only."
@@ -149,20 +152,19 @@ msgstr ""
 
 #: api/admin/problem_details.py:82
 msgid "The Erotica genre is incompatible with the submitted Audience."
-msgstr "El género Erótica es incompatible con la audiencia presentada."
+msgstr ""
 
 #: api/admin/problem_details.py:88
 msgid "Invalid series position."
-msgstr "Posición de serie inválido."
+msgstr ""
 
 #: api/admin/problem_details.py:89
 msgid "The series position must be a number or blank."
-msgstr "La posición de serie debe ser un número o en blanco."
+msgstr ""
 
 #: api/admin/problem_details.py:95
-#, fuzzy
 msgid "Invalid date format."
-msgstr "Editar no válido"
+msgstr ""
 
 #: api/admin/problem_details.py:96
 msgid "A date must be in the format YYYY-MM-DD."
@@ -189,9 +191,8 @@ msgid "Unknown role."
 msgstr ""
 
 #: api/admin/problem_details.py:117
-#, fuzzy
 msgid "One of the submitted roles is not one of the known roles."
-msgstr "Uno de los géneros sometidos no existe."
+msgstr ""
 
 #: api/admin/problem_details.py:123
 msgid "Unknown medium."
@@ -202,19 +203,16 @@ msgid "The submitted medium is not one of the known media types."
 msgstr ""
 
 #: api/admin/problem_details.py:130
-#, fuzzy
 msgid "Invalid rating."
-msgstr "Posición de serie inválido."
+msgstr ""
 
 #: api/admin/problem_details.py:131
-#, fuzzy
 msgid "The rating must be a number in the rating scale."
-msgstr "La posición de serie debe ser un número o en blanco."
+msgstr ""
 
 #: api/admin/problem_details.py:137
-#, fuzzy
 msgid "Invalid image"
-msgstr "Editar no válido"
+msgstr ""
 
 #: api/admin/problem_details.py:138
 msgid "The submitted image is invalid."
@@ -235,9 +233,8 @@ msgid "Missing collection."
 msgstr ""
 
 #: api/admin/problem_details.py:154
-#, fuzzy
 msgid "The specified collection does not exist."
-msgstr "Uno de los géneros sometidos no existe."
+msgstr ""
 
 #: api/admin/problem_details.py:160
 msgid "Missing analytics name."
@@ -360,9 +357,8 @@ msgid "There's already an integration of this type for this URL."
 msgstr ""
 
 #: api/admin/problem_details.py:268
-#, fuzzy
 msgid "Incompatible use of integration"
-msgstr "género incompatible."
+msgstr ""
 
 #: api/admin/problem_details.py:269
 msgid ""
@@ -375,9 +371,8 @@ msgid "Missing integration"
 msgstr ""
 
 #: api/admin/problem_details.py:278
-#, fuzzy
 msgid "The specified integration does not exist."
-msgstr "Uno de los géneros sometidos no existe."
+msgstr ""
 
 #: api/admin/problem_details.py:284
 msgid "Missing pgcrypto database extension"
@@ -394,50 +389,44 @@ msgid "Missing admin"
 msgstr ""
 
 #: api/admin/problem_details.py:294
-#, fuzzy
 msgid "The specified admin does not exist."
-msgstr "Uno de los géneros sometidos no existe."
+msgstr ""
 
 #: api/admin/problem_details.py:300
 msgid "Missing service"
 msgstr ""
 
 #: api/admin/problem_details.py:301
-#, fuzzy
 msgid "The specified service does not exist."
-msgstr "Uno de los géneros sometidos no existe."
+msgstr ""
 
 #: api/admin/problem_details.py:307
-#, fuzzy
 msgid "Invalid configuration option"
-msgstr "Ficha CSRF no válida"
+msgstr ""
 
 #: api/admin/problem_details.py:308
 msgid "The configuration has an invalid value."
 msgstr ""
 
 #: api/admin/problem_details.py:314
-#, fuzzy
 msgid "Invalid email format"
-msgstr "Editar no válido"
+msgstr ""
 
 #: api/admin/problem_details.py:315
 msgid "You must enter a valid email address."
 msgstr ""
 
 #: api/admin/problem_details.py:321
-#, fuzzy
 msgid "Invalid URL format"
-msgstr "Ficha CSRF no válida"
+msgstr ""
 
 #: api/admin/problem_details.py:322
 msgid "You must enter a valid URL."
 msgstr ""
 
 #: api/admin/problem_details.py:328
-#, fuzzy
 msgid "Invalid number format"
-msgstr "Editar no válido"
+msgstr ""
 
 #: api/admin/problem_details.py:329
 msgid "You must enter a number."
@@ -679,10 +668,4 @@ msgstr ""
 #, python-format
 msgid "%(field)s cannot be greater than %(max)s."
 msgstr ""
-
-#~ msgid "Minimum target age must be less than maximum target age."
-#~ msgstr "la edad objetivo mínimo debe ser menor que el máximo de edad objetivo"
-
-#~ msgid "Error: %(error)s"
-#~ msgstr "Error: %(error)s"
 

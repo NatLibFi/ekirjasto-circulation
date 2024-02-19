@@ -295,7 +295,7 @@ class Configuration(ConfigurationConstants):
 
     @classmethod
     def localization_languages(cls):
-        return [LanguageCodes.three_to_two["eng"]]
+        return [LanguageCodes.three_to_two["eng"], 'fi', 'sv']
 
     # The last time the database configuration is known to have changed.
     SITE_CONFIGURATION_LAST_UPDATE = None
