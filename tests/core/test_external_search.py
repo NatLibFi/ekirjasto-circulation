@@ -894,6 +894,7 @@ class TestExternalSearchWithWorks:
                 order=Facets.ORDER_TITLE,
                 distributor=None,
                 collection_name=None,
+                language=None,
             )
             pages = []
             while pagination:
@@ -1102,6 +1103,7 @@ class TestFacetFilters:
                 order=Facets.ORDER_TITLE,
                 distributor=None,
                 collection_name=None,
+                language=None,
             )
             fixture.expect_results(works, None, Filter(facets=facets), ordered=False)
 
@@ -1379,6 +1381,7 @@ class TestSearchOrder:
                 order=sort_field,
                 distributor=None,
                 collection_name=None,
+                language=None,
                 order_ascending=True,
             )
             expect(order, None, Filter(facets=facets, **filter_kwargs))
@@ -2468,7 +2471,7 @@ class TestQuery:
             return built
 
         # When using the 'featured' collection...
-        built = from_facets(Facets.COLLECTION_FEATURED, None, None, None, None)
+        built = from_facets(Facets.COLLECTION_FEATURED, None, None, None, None, None)
 
         # There is no nested filter.
         assert [] == built.nested_filter_calls
@@ -2484,7 +2487,7 @@ class TestQuery:
 
         # When using the AVAILABLE_OPEN_ACCESS availability restriction...
         built = from_facets(
-            Facets.COLLECTION_FULL, Facets.AVAILABLE_OPEN_ACCESS, None, None, None
+            Facets.COLLECTION_FULL, Facets.AVAILABLE_OPEN_ACCESS, None, None, None, None
         )
 
         # An additional nested filter is applied.
@@ -2499,7 +2502,7 @@ class TestQuery:
 
         # When using the AVAILABLE_NOW restriction...
         built = from_facets(
-            Facets.COLLECTION_FULL, Facets.AVAILABLE_NOW, None, None, None
+            Facets.COLLECTION_FULL, Facets.AVAILABLE_NOW, None, None, None, None
         )
 
         # An additional nested filter is applied.
@@ -2526,7 +2529,7 @@ class TestQuery:
 
         # When using the AVAILABLE_NOT_NOW restriction...
         built = from_facets(
-            Facets.COLLECTION_FULL, Facets.AVAILABLE_NOT_NOW, None, None, None
+            Facets.COLLECTION_FULL, Facets.AVAILABLE_NOT_NOW, None, None, None, None
         )
 
         # An additional nested filter is applied.
@@ -2556,6 +2559,7 @@ class TestQuery:
             None,
             DataSource.OVERDRIVE,
             None,
+            None,
         )
         [datasource_only] = built.nested_filter_calls
         nested_filter = datasource_only["query"]
@@ -2566,7 +2570,12 @@ class TestQuery:
         # Collection Name builds
         collection = db.default_collection()
         built = from_facets(
-            Facets.COLLECTION_FULL, Facets.AVAILABLE_ALL, None, None, collection.name
+            Facets.COLLECTION_FULL,
+            Facets.AVAILABLE_ALL,
+            None,
+            None,
+            collection.name,
+            None,
         )
         [collection_only] = built.nested_filter_calls
         nested_filter = collection_only["query"]
@@ -2593,6 +2602,7 @@ class TestQuery:
             order=Facets.ORDER_AUTHOR,
             distributor=None,
             collection_name=None,
+            language=None,
             order_ascending=False,
         )
 

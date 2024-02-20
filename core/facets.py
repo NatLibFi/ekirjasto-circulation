@@ -30,6 +30,22 @@ class FacetConstants:
         AVAILABLE_OPEN_ACCESS,
     ]
 
+    # Finland
+    # Subset the collection by language.
+    LANGUAGE_FACET_GROUP_NAME = "language"
+    LANGUAGE_ALL = "all"
+    LANGUAGE_FINNISH = "fin"
+    LANGUAGE_SWEDISH = "swe"
+    LANGUAGE_ENGLISH = "eng"
+    LANGUAGE_OTHERS = "others"
+    LANGUAGE_FACETS: list[str] = [
+        LANGUAGE_ALL,
+        LANGUAGE_FINNISH,
+        LANGUAGE_SWEDISH,
+        LANGUAGE_ENGLISH,
+        LANGUAGE_OTHERS,
+    ]
+
     # The names of the order facets.
     ORDER_FACET_GROUP_NAME = "order"
     ORDER_TITLE = "title"
@@ -66,6 +82,7 @@ class FacetConstants:
         COLLECTION_FACET_GROUP_NAME: COLLECTION_FACETS,
         AVAILABILITY_FACET_GROUP_NAME: AVAILABILITY_FACETS,
         ORDER_FACET_GROUP_NAME: ORDER_FACETS,
+        LANGUAGE_FACET_GROUP_NAME: LANGUAGE_FACETS,  # Finland
     }
 
     GROUP_DISPLAY_TITLES = {
@@ -74,6 +91,7 @@ class FacetConstants:
         COLLECTION_FACET_GROUP_NAME: _("Collection"),
         DISTRIBUTOR_FACETS_GROUP_NAME: _("Distributor"),
         COLLECTION_NAME_FACETS_GROUP_NAME: _("Collection Name"),
+        LANGUAGE_FACET_GROUP_NAME: _("Language"),  # Finland
     }
 
     GROUP_DESCRIPTIONS = {
@@ -84,6 +102,7 @@ class FacetConstants:
         COLLECTION_NAME_FACETS_GROUP_NAME: _(
             "Allow patrons to filter by collection name"
         ),
+        LANGUAGE_FACET_GROUP_NAME: _("Allow patrons to filter by language"),  # Finland
     }
 
     FACET_DISPLAY_TITLES = {
@@ -98,6 +117,11 @@ class FacetConstants:
         AVAILABLE_OPEN_ACCESS: _("Yours to keep"),
         COLLECTION_FULL: _("Everything"),
         COLLECTION_FEATURED: _("Popular Books"),
+        LANGUAGE_ALL: _("All"),
+        LANGUAGE_FINNISH: _("Finnish"),
+        LANGUAGE_SWEDISH: _("Swedish"),
+        LANGUAGE_ENGLISH: _("English"),
+        LANGUAGE_OTHERS: _("Others"),
     }
 
     # For titles generated based on some runtime value
@@ -118,6 +142,7 @@ class FacetConstants:
         COLLECTION_FACET_GROUP_NAME: [COLLECTION_FULL, COLLECTION_FEATURED],
         DISTRIBUTOR_FACETS_GROUP_NAME: [DISTRIBUTOR_ALL],
         COLLECTION_NAME_FACETS_GROUP_NAME: [COLLECTION_NAME_ALL],
+        LANGUAGE_FACET_GROUP_NAME: LANGUAGE_FACETS,
     }
 
     # Unless a library offers an alternate configuration, these
@@ -128,6 +153,7 @@ class FacetConstants:
         COLLECTION_FACET_GROUP_NAME: COLLECTION_FULL,
         DISTRIBUTOR_FACETS_GROUP_NAME: DISTRIBUTOR_ALL,
         COLLECTION_NAME_FACETS_GROUP_NAME: COLLECTION_NAME_ALL,
+        LANGUAGE_FACET_GROUP_NAME: LANGUAGE_ALL,
     }
 
     SORT_ORDER_TO_OPENSEARCH_FIELD_NAME = {
