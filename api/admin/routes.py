@@ -8,6 +8,7 @@ from flask_pydantic_spec import Request as SpecRequest
 from flask_pydantic_spec import Response as SpecResponse
 
 from api.admin.config import Configuration as AdminClientConfig
+from api.admin.config import OperationalMode
 from api.admin.controller.custom_lists import CustomListsController
 from api.admin.dashboard_stats import generate_statistics
 from api.admin.model.dashboard_statistics import StatisticsResponse
@@ -18,6 +19,7 @@ from api.admin.model.quicksight import (
 )
 from api.admin.templates import admin_sign_in_again as sign_in_again_template
 from api.app import api_spec, app
+from api.controller.static_file import StaticFileController
 from api.routes import allows_library, has_library, library_route
 from core.app_server import ensure_pydantic_after_problem_detail, returns_problem_detail
 from core.util.problem_detail import ProblemDetail, ProblemDetailModel, ProblemError
@@ -445,8 +447,10 @@ def collection(collection_id):
 @requires_admin
 @requires_csrf_token
 def collection_self_tests(identifier):
-    return app.manager.admin_collection_self_tests_controller.process_collection_self_tests(
-        identifier
+    return (
+        app.manager.admin_collection_settings_controller.process_collection_self_tests(
+            identifier
+        )
     )
 
 
@@ -494,7 +498,7 @@ def patron_auth_service(service_id):
 @requires_admin
 @requires_csrf_token
 def patron_auth_self_tests(identifier):
-    return app.manager.admin_patron_auth_service_self_tests_controller.process_patron_auth_service_self_tests(
+    return app.manager.admin_patron_auth_services_controller.process_patron_auth_service_self_tests(
         identifier
     )
 
@@ -538,33 +542,7 @@ def metadata_service(service_id):
 @requires_admin
 @requires_csrf_token
 def metadata_service_self_tests(identifier):
-    return app.manager.admin_metadata_service_self_tests_controller.process_metadata_service_self_tests(
-        identifier
-    )
-
-
-@app.route("/admin/search_services", methods=["GET", "POST"])
-@returns_json_or_response_or_problem_detail
-@requires_admin
-@requires_csrf_token
-def search_services():
-    return app.manager.admin_search_services_controller.process_services()
-
-
-@app.route("/admin/search_service/<service_id>", methods=["DELETE"])
-@returns_json_or_response_or_problem_detail
-@requires_admin
-@requires_csrf_token
-def search_service(service_id):
-    return app.manager.admin_search_services_controller.process_delete(service_id)
-
-
-@app.route("/admin/search_service_self_tests/<identifier>", methods=["GET", "POST"])
-@returns_json_or_response_or_problem_detail
-@requires_admin
-@requires_csrf_token
-def search_service_self_tests(identifier):
-    return app.manager.admin_search_service_self_tests_controller.process_search_service_self_tests(
+    return app.manager.admin_metadata_services_controller.process_metadata_service_self_tests(
         identifier
     )
 
@@ -831,9 +809,11 @@ def admin_base(**kwargs):
 
 
 # This path is used only in debug mode to serve frontend assets.
-@app.route("/admin/static/<filename>")
-@returns_problem_detail
-def admin_static_file(filename):
-    return app.manager.static_files.static_file(
-        AdminClientConfig.static_files_directory(), filename
-    )
+if AdminClientConfig.operational_mode() == OperationalMode.development:
+
+    @app.route("/admin/static/<filename>")
+    @returns_problem_detail
+    def admin_static_file(filename):
+        return StaticFileController.static_file(
+            AdminClientConfig.static_files_directory(), filename
+        )
