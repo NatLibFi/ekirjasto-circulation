@@ -2,6 +2,7 @@ import logging
 from functools import update_wrapper, wraps
 
 import flask
+import flask_babel
 from flask import Response, make_response, request
 from flask_cors.core import get_cors_options, set_cors_headers
 from flask_pydantic_spec import Response as SpecResponse
@@ -20,6 +21,11 @@ def print_cache(response):
         log = logging.getLogger("core.model.hassessioncache")
         for cls, cache in app._db.info[HasSessionCache.CACHE_ATTRIBUTE].items():
             log.debug(f"{cls}: {cache.stats.hits}/{cache.stats.misses} hits/misses")
+    return response
+
+@app.after_request
+def set_content_language_header(response):
+    response.headers["Content-Language"] = flask_babel.get_locale()
     return response
 
 
