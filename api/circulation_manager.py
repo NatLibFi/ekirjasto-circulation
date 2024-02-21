@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 import flask
 from dependency_injector.wiring import Provide, inject
 from expiringdict import ExpiringDict
-from flask_babel import lazy_gettext as _
+from flask_babel import lazy_gettext as _, gettext
 from sqlalchemy import select
 
 from api.authenticator import Authenticator
@@ -433,7 +433,7 @@ class CirculationManager(LoggerMixin):
             self.circulation_apis[library.id],
             lane,
             library,
-            top_level_title="All Books",
+            top_level_title=gettext("All Books"),
             library_identifies_patrons=library_identifies_patrons,
             facets=facets,
             *args,
