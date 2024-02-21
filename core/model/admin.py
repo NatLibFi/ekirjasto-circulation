@@ -44,6 +44,12 @@ class Admin(Base, HasSessionCache):
         "AdminRole", backref="admin", cascade="all, delete-orphan", uselist=True
     )
 
+    admin_credentials: Mapped[list[AdminCredential]] = relationship(
+        "AdminCredential",
+        cascade="all, delete-orphan",
+        back_populates="admin",
+    )
+
     # Token age is max 30 minutes, in seconds
     RESET_PASSWORD_TOKEN_MAX_AGE = 1800
 
@@ -214,6 +220,10 @@ class Admin(Base, HasSessionCache):
                 return True
         return False
 
+    # Finland
+    def is_authenticated_externally(self) -> bool:
+        return len(self.admin_credentials) > 0
+
     def add_role(self, role, library=None):
         _db = Session.object_session(self)
         role, is_new = get_one_or_create(
@@ -327,6 +337,20 @@ class AdminRole(Base, HasSessionCache):
             return self.LESS_THAN
         else:
             return self.GREATER_THAN
+
+
+# Finland
+# Store credentials from external authentication providers (e.g. e-kirjasto)
+class AdminCredential(Base):
+    __tablename__ = "admincredentials"
+
+    id = Column(Integer, primary_key=True)
+    external_id = Column(Unicode, nullable=False)
+
+    admin_id = Column(
+        Integer, ForeignKey("admins.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    admin: Mapped[Admin] = relationship("Admin", back_populates="admin_credentials")
 
 
 Index(

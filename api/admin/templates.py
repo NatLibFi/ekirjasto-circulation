@@ -58,6 +58,11 @@ sign_in_template = """
 </form>
 """
 
+# Finland
+ekirjasto_sign_in_template = """
+<a href="%(ekirjasto_auth_url)s">Sign in with Suomi.fi e-Identification</a>
+"""
+
 forgot_password_template = """
 <form action="%(forgot_password_url)s" method="post">
 <input type="hidden" name="redirect" value="%(redirect)s"/>

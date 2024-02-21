@@ -70,7 +70,8 @@ class ResetPasswordController(AdminController):
 
         admin = self._extract_admin_from_request(flask.request)
 
-        if not admin:
+        # Finland, extra check to disable password reset for ekirjasto authenticated users.
+        if not admin or admin.is_authenticated_externally():
             return self._response_with_message_and_redirect_button(
                 INVALID_ADMIN_CREDENTIALS.detail,
                 url_for("admin_forgot_password"),
