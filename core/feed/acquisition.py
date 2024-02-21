@@ -32,6 +32,7 @@ from core.util.datetime_helpers import utc_now
 from core.util.flask_util import OPDSEntryResponse, OPDSFeedResponse
 from core.util.opds_writer import OPDSMessage
 from core.util.problem_detail import ProblemDetail
+from flask_babel import gettext
 
 if TYPE_CHECKING:
     from api.circulation import CirculationAPI, FulfillmentInfo
@@ -248,7 +249,7 @@ class OPDSAcquisitionFeed(BaseOPDSFeed):
         """Create arguments for add_link_to_feed for a link that navigates
         between EntryPoints.
         """
-        display_title = EntryPoint.DISPLAY_TITLES.get(entrypoint)
+        display_title = str(EntryPoint.LOCALIZED_DISPLAY_TITLES.get(entrypoint))
         if not display_title:
             # Shouldn't happen.
             return None

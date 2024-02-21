@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from flask_babel import lazy_gettext as _, LazyString
 
 class EntryPoint:
 
@@ -23,6 +24,7 @@ class EntryPoint:
     ENTRY_POINTS: list[type[EntryPoint]] = []
     DEFAULT_ENABLED: list[type[EntryPoint]] = []
     DISPLAY_TITLES: dict[type[EntryPoint], str] = {}
+    LOCALIZED_DISPLAY_TITLES: dict[type[EntryPoint], LazyString] = {}
     BY_INTERNAL_NAME: dict[str, type[EntryPoint]] = {}
 
     # A distinctive URI designating the sort of thing found through this
@@ -42,6 +44,7 @@ class EntryPoint:
             enabled by default.
         """
         value = getattr(entrypoint_class, "INTERNAL_NAME", None)
+        localized_display_title = getattr(entrypoint_class, "LOCALIZED_DISPLAY_TITLE", None)
         if not value:
             raise ValueError(
                 "EntryPoint class %s must define INTERNAL_NAME."
@@ -57,6 +60,7 @@ class EntryPoint:
         if default_enabled:
             cls.DEFAULT_ENABLED.append(entrypoint_class)
         cls.DISPLAY_TITLES[entrypoint_class] = display_title
+        cls.LOCALIZED_DISPLAY_TITLES[entrypoint_class] = localized_display_title
 
     @classmethod
     def unregister(cls, entrypoint_class):
@@ -67,6 +71,7 @@ class EntryPoint:
         cls.ENTRY_POINTS.remove(entrypoint_class)
         del cls.BY_INTERNAL_NAME[entrypoint_class.INTERNAL_NAME]
         del cls.DISPLAY_TITLES[entrypoint_class]
+        del cls.LOCALIZED_DISPLAY_TITLES[entrypoint_class]
         if entrypoint_class in cls.DEFAULT_ENABLED:
             cls.DEFAULT_ENABLED.remove(entrypoint_class)
 
@@ -95,6 +100,7 @@ class EverythingEntryPoint(EntryPoint):
     """An entry point that has everything."""
 
     INTERNAL_NAME = "All"
+    LOCALIZED_DISPLAY_TITLE = _("All")
     URI = "http://schema.org/CreativeWork"
 
 
@@ -131,6 +137,7 @@ class MediumEntryPoint(EntryPoint):
 
 class EbooksEntryPoint(MediumEntryPoint):
     INTERNAL_NAME = "Book"
+    LOCALIZED_DISPLAY_TITLE = _("eBooks")
     URI = "http://schema.org/EBook"
 
 
@@ -139,6 +146,7 @@ EntryPoint.register(EbooksEntryPoint, "eBooks", default_enabled=True)
 
 class AudiobooksEntryPoint(MediumEntryPoint):
     INTERNAL_NAME = "Audio"
+    LOCALIZED_DISPLAY_TITLE = _("Audiobooks")
     URI = "http://bib.schema.org/Audiobook"
 
 
