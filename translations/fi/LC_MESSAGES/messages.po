@@ -1763,7 +1763,7 @@ msgstr ""
 
 #: core/facets.py:97
 msgid "All"
-msgstr ""
+msgstr "Kaikki"
 
 #: core/facets.py:98
 msgid "Yours to keep"
