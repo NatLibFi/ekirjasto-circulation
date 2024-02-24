@@ -64,9 +64,11 @@ class EkirjastoController:
         if self.is_configured != True:
             return EKIRJASTO_PROVIDER_NOT_CONFIGURED, None, None, None
 
-        token = authorization.token
-        if token is None or len(token) == 0:
+        if (authorization is None or authorization.token is None 
+                or len(authorization.token) == 0):
             return EKIRJASTO_REMOTE_AUTHENTICATION_FAILED, None, None, None
+
+        token = authorization.token
 
         ekirjasto_token = None
         delegate_token = None
@@ -79,8 +81,8 @@ class EkirjastoController:
                 token, validate_expire=validate_expire, decrypt_ekirjasto_token=True
             )
             if isinstance(delegate_payload, ProblemDetail):
-                # The ekirjasto_token might be ProblemDetail, indicating that the token
-                # is not valid. Still it might be ekirjasto_token (which is not JWT or
+                # The delegate_payload might be ProblemDetail, indicating that the token
+                # is not valid. Still thetoken might be ekirjasto_token (which is not JWT or
                 # at least not signed by us), so we can continue.
                 ekirjasto_token = token
             else:
@@ -193,4 +195,33 @@ class EkirjastoController:
             {"access_token": delegate_token, "patron_info": patron_info}
         )
         response_code = 201 if is_patron_new else 200
+        return Response(response_json, response_code, mimetype="application/json")
+
+    def call_remote_endpoint(self, remote_path, request, _db):
+        """Call E-kirjasto API's passkey register endpoints on behalf of the user.
+        """
+        if self.is_configured != True:
+            return EKIRJASTO_PROVIDER_NOT_CONFIGURED
+        
+        (
+            delegate_token,
+            ekirjasto_token,
+            delegate_sub,
+            delegate_expired,
+        ) = self.get_tokens(request.authorization)
+        if isinstance(delegate_token, ProblemDetail):
+            return delegate_token
+        elif delegate_token == None:
+            return INVALID_EKIRJASTO_DELEGATE_TOKEN
+            
+        response_json, response_code = self._authenticator.ekirjasto_provider.remote_endpoint(
+            remote_path, ekirjasto_token, request.method, request.json
+        )
+        if isinstance(response_json, ProblemDetail):
+            return response_json
+        elif isinstance(response_json, dict):
+            response_json = json.dumps(response_json)
+        else: 
+            response_json = None
+        
         return Response(response_json, response_code, mimetype="application/json")
