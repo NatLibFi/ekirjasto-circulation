@@ -825,8 +825,8 @@ class TestEkirjastoAuthentication:
 
         response_json, response_code = provider.remote_endpoint("/v1/auth/userinfo", token, "GET")
 
-        assert response_json == None
-        assert response_code == 401
+        assert isinstance(response_json, ProblemDetail)
+        assert response_json.status_code == 401
 
     def test_remote_endpoint_unsupported_method(
         self,
