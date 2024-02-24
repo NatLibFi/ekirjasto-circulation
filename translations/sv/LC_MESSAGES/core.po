@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2024-02-19 22:26+0200\n"
+"POT-Creation-Date: 2024-02-23 15:11+0200\n"
 "PO-Revision-Date: 2024-02-19 22:17+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: sv\n"
@@ -114,6 +114,18 @@ msgid ""
 "related errors."
 msgstr ""
 
+#: core/entrypoint.py:103 core/facets.py:97
+msgid "All"
+msgstr ""
+
+#: core/entrypoint.py:140
+msgid "eBooks"
+msgstr ""
+
+#: core/entrypoint.py:149
+msgid "Audiobooks"
+msgstr ""
+
 #: core/external_search.py:108 core/opds_import.py:110
 msgid "URL"
 msgstr ""
@@ -209,10 +221,6 @@ msgstr ""
 
 #: core/facets.py:96
 msgid "Available now"
-msgstr ""
-
-#: core/facets.py:97
-msgid "All"
 msgstr ""
 
 #: core/facets.py:98
@@ -455,6 +463,566 @@ msgstr ""
 #: core/user_profile.py:83
 #, python-format
 msgid "\"%s\" is not a writable setting."
+msgstr ""
+
+#: core/classifier/localized_names.py:4
+msgid "Adventure"
+msgstr ""
+
+#: core/classifier/localized_names.py:5
+msgid "Classics"
+msgstr ""
+
+#: core/classifier/localized_names.py:6
+msgid "Comics & Graphic Novels"
+msgstr ""
+
+#: core/classifier/localized_names.py:7
+msgid "Drama"
+msgstr ""
+
+#: core/classifier/localized_names.py:8
+msgid "Erotica"
+msgstr ""
+
+#: core/classifier/localized_names.py:9
+msgid "Fantasy"
+msgstr ""
+
+#: core/classifier/localized_names.py:10
+msgid "Epic Fantasy"
+msgstr ""
+
+#: core/classifier/localized_names.py:11
+msgid "Historical Fantasy"
+msgstr ""
+
+#: core/classifier/localized_names.py:12
+msgid "Urban Fantasy"
+msgstr ""
+
+#: core/classifier/localized_names.py:13
+msgid "Folklore"
+msgstr ""
+
+#: core/classifier/localized_names.py:14
+msgid "Historical Fiction"
+msgstr ""
+
+#: core/classifier/localized_names.py:15
+msgid "Horror"
+msgstr ""
+
+#: core/classifier/localized_names.py:16
+msgid "Gothic Horror"
+msgstr ""
+
+#: core/classifier/localized_names.py:17
+msgid "Ghost Stories"
+msgstr ""
+
+#: core/classifier/localized_names.py:18
+msgid "Vampires"
+msgstr ""
+
+#: core/classifier/localized_names.py:19
+msgid "Werewolves"
+msgstr ""
+
+#: core/classifier/localized_names.py:20
+msgid "Occult Horror"
+msgstr ""
+
+#: core/classifier/localized_names.py:21
+msgid "Humorous Fiction"
+msgstr ""
+
+#: core/classifier/localized_names.py:22
+msgid "Literary Fiction"
+msgstr ""
+
+#: core/classifier/localized_names.py:23
+msgid "LGBTQ Fiction"
+msgstr ""
+
+#: core/classifier/localized_names.py:24
+msgid "Mystery"
+msgstr ""
+
+#: core/classifier/localized_names.py:25
+msgid "Crime & Detective Stories"
+msgstr ""
+
+#: core/classifier/localized_names.py:26
+msgid "Hard-Boiled Mystery"
+msgstr ""
+
+#: core/classifier/localized_names.py:27
+msgid "Police Procedural"
+msgstr ""
+
+#: core/classifier/localized_names.py:28
+msgid "Cozy Mystery"
+msgstr ""
+
+#: core/classifier/localized_names.py:29
+msgid "Historical Mystery"
+msgstr ""
+
+#: core/classifier/localized_names.py:30
+msgid "Paranormal Mystery"
+msgstr ""
+
+#: core/classifier/localized_names.py:31
+msgid "Women Detectives"
+msgstr ""
+
+#: core/classifier/localized_names.py:32
+msgid "Poetry"
+msgstr ""
+
+#: core/classifier/localized_names.py:33
+msgid "Religious Fiction"
+msgstr ""
+
+#: core/classifier/localized_names.py:34
+msgid "Romance"
+msgstr ""
+
+#: core/classifier/localized_names.py:35
+msgid "Contemporary Romance"
+msgstr ""
+
+#: core/classifier/localized_names.py:36
+msgid "Gothic Romance"
+msgstr ""
+
+#: core/classifier/localized_names.py:37
+msgid "Historical Romance"
+msgstr ""
+
+#: core/classifier/localized_names.py:38
+msgid "Paranormal Romance"
+msgstr ""
+
+#: core/classifier/localized_names.py:39
+msgid "Western Romance"
+msgstr ""
+
+#: core/classifier/localized_names.py:40
+msgid "Romantic Suspense"
+msgstr ""
+
+#: core/classifier/localized_names.py:41
+msgid "Science Fiction"
+msgstr ""
+
+#: core/classifier/localized_names.py:42
+msgid "Dystopian SF"
+msgstr ""
+
+#: core/classifier/localized_names.py:43
+msgid "Space Opera"
+msgstr ""
+
+#: core/classifier/localized_names.py:44
+msgid "Cyberpunk"
+msgstr ""
+
+#: core/classifier/localized_names.py:45
+msgid "Military SF"
+msgstr ""
+
+#: core/classifier/localized_names.py:46
+msgid "Alternative History"
+msgstr ""
+
+#: core/classifier/localized_names.py:47
+msgid "Steampunk"
+msgstr ""
+
+#: core/classifier/localized_names.py:48
+msgid "Romantic SF"
+msgstr ""
+
+#: core/classifier/localized_names.py:49
+msgid "Media Tie-in SF"
+msgstr ""
+
+#: core/classifier/localized_names.py:50
+msgid "Short Stories"
+msgstr ""
+
+#: core/classifier/localized_names.py:51
+msgid "Suspense/Thriller"
+msgstr ""
+
+#: core/classifier/localized_names.py:52
+msgid "Historical Thriller"
+msgstr ""
+
+#: core/classifier/localized_names.py:53
+msgid "Espionage"
+msgstr ""
+
+#: core/classifier/localized_names.py:54
+msgid "Supernatural Thriller"
+msgstr ""
+
+#: core/classifier/localized_names.py:55
+msgid "Medical Thriller"
+msgstr ""
+
+#: core/classifier/localized_names.py:56
+msgid "Political Thriller"
+msgstr ""
+
+#: core/classifier/localized_names.py:57
+msgid "Psychological Thriller"
+msgstr ""
+
+#: core/classifier/localized_names.py:58
+msgid "Technothriller"
+msgstr ""
+
+#: core/classifier/localized_names.py:59
+msgid "Legal Thriller"
+msgstr ""
+
+#: core/classifier/localized_names.py:60
+msgid "Military Thriller"
+msgstr ""
+
+#: core/classifier/localized_names.py:61
+msgid "Urban Fiction"
+msgstr ""
+
+#: core/classifier/localized_names.py:62
+msgid "Westerns"
+msgstr ""
+
+#: core/classifier/localized_names.py:63
+msgid "Women's Fiction"
+msgstr ""
+
+#: core/classifier/localized_names.py:64
+msgid "Art & Design"
+msgstr ""
+
+#: core/classifier/localized_names.py:65
+msgid "Architecture"
+msgstr ""
+
+#: core/classifier/localized_names.py:66
+msgid "Art"
+msgstr ""
+
+#: core/classifier/localized_names.py:67
+msgid "Art Criticism & Theory"
+msgstr ""
+
+#: core/classifier/localized_names.py:68
+msgid "Art History"
+msgstr ""
+
+#: core/classifier/localized_names.py:69
+msgid "Design"
+msgstr ""
+
+#: core/classifier/localized_names.py:70
+msgid "Fashion"
+msgstr ""
+
+#: core/classifier/localized_names.py:71
+msgid "Photography"
+msgstr ""
+
+#: core/classifier/localized_names.py:72
+msgid "Biography & Memoir"
+msgstr ""
+
+#: core/classifier/localized_names.py:73
+msgid "Education"
+msgstr ""
+
+#: core/classifier/localized_names.py:74
+msgid "Personal Finance & Business"
+msgstr ""
+
+#: core/classifier/localized_names.py:75
+msgid "Business"
+msgstr ""
+
+#: core/classifier/localized_names.py:76
+msgid "Economics"
+msgstr ""
+
+#: core/classifier/localized_names.py:77
+msgid "Management & Leadership"
+msgstr ""
+
+#: core/classifier/localized_names.py:78
+msgid "Personal Finance & Investing"
+msgstr ""
+
+#: core/classifier/localized_names.py:79
+msgid "Real Estate"
+msgstr ""
+
+#: core/classifier/localized_names.py:80
+msgid "Parenting & Family"
+msgstr ""
+
+#: core/classifier/localized_names.py:81
+msgid "Family & Relationships"
+msgstr ""
+
+#: core/classifier/localized_names.py:82
+msgid "Parenting"
+msgstr ""
+
+#: core/classifier/localized_names.py:83
+msgid "Food & Health"
+msgstr ""
+
+#: core/classifier/localized_names.py:84
+msgid "Bartending & Cocktails"
+msgstr ""
+
+#: core/classifier/localized_names.py:85
+msgid "Cooking"
+msgstr ""
+
+#: core/classifier/localized_names.py:86
+msgid "Health & Diet"
+msgstr ""
+
+#: core/classifier/localized_names.py:87
+msgid "Vegetarian & Vegan"
+msgstr ""
+
+#: core/classifier/localized_names.py:88
+msgid "History"
+msgstr ""
+
+#: core/classifier/localized_names.py:89
+msgid "African History"
+msgstr ""
+
+#: core/classifier/localized_names.py:90
+msgid "Ancient History"
+msgstr ""
+
+#: core/classifier/localized_names.py:91
+msgid "Asian History"
+msgstr ""
+
+#: core/classifier/localized_names.py:92
+msgid "Civil War History"
+msgstr ""
+
+#: core/classifier/localized_names.py:93
+msgid "European History"
+msgstr ""
+
+#: core/classifier/localized_names.py:94
+msgid "Latin American History"
+msgstr ""
+
+#: core/classifier/localized_names.py:95
+msgid "Medieval History"
+msgstr ""
+
+#: core/classifier/localized_names.py:96
+msgid "Middle East History"
+msgstr ""
+
+#: core/classifier/localized_names.py:97
+msgid "Military History"
+msgstr ""
+
+#: core/classifier/localized_names.py:98
+msgid "Modern History"
+msgstr ""
+
+#: core/classifier/localized_names.py:99
+msgid "Renaissance & Early Modern History"
+msgstr ""
+
+#: core/classifier/localized_names.py:100
+msgid "United States History"
+msgstr ""
+
+#: core/classifier/localized_names.py:101
+msgid "World History"
+msgstr ""
+
+#: core/classifier/localized_names.py:102
+msgid "Hobbies & Home"
+msgstr ""
+
+#: core/classifier/localized_names.py:103
+msgid "Antiques & Collectibles"
+msgstr ""
+
+#: core/classifier/localized_names.py:104
+msgid "Crafts & Hobbies"
+msgstr ""
+
+#: core/classifier/localized_names.py:105
+msgid "Gardening"
+msgstr ""
+
+#: core/classifier/localized_names.py:106
+msgid "Games"
+msgstr ""
+
+#: core/classifier/localized_names.py:107
+msgid "House & Home"
+msgstr ""
+
+#: core/classifier/localized_names.py:108
+msgid "Pets"
+msgstr ""
+
+#: core/classifier/localized_names.py:109
+msgid "Humorous Nonfiction"
+msgstr ""
+
+#: core/classifier/localized_names.py:110
+msgid "Entertainment"
+msgstr ""
+
+#: core/classifier/localized_names.py:111
+msgid "Film & TV"
+msgstr ""
+
+#: core/classifier/localized_names.py:112
+msgid "Music"
+msgstr ""
+
+#: core/classifier/localized_names.py:113
+msgid "Performing Arts"
+msgstr ""
+
+#: core/classifier/localized_names.py:114
+msgid "Life Strategies"
+msgstr ""
+
+#: core/classifier/localized_names.py:115
+msgid "Literary Criticism"
+msgstr ""
+
+#: core/classifier/localized_names.py:116
+msgid "Periodicals"
+msgstr ""
+
+#: core/classifier/localized_names.py:117
+msgid "Philosophy"
+msgstr ""
+
+#: core/classifier/localized_names.py:118
+msgid "Political Science"
+msgstr ""
+
+#: core/classifier/localized_names.py:119
+msgid "Reference & Study Aids"
+msgstr ""
+
+#: core/classifier/localized_names.py:120
+msgid "Dictionaries"
+msgstr ""
+
+#: core/classifier/localized_names.py:121
+msgid "Foreign Language Study"
+msgstr ""
+
+#: core/classifier/localized_names.py:122
+msgid "Law"
+msgstr ""
+
+#: core/classifier/localized_names.py:123
+msgid "Study Aids"
+msgstr ""
+
+#: core/classifier/localized_names.py:124
+msgid "Religion & Spirituality"
+msgstr ""
+
+#: core/classifier/localized_names.py:125
+msgid "Body, Mind & Spirit"
+msgstr ""
+
+#: core/classifier/localized_names.py:126
+msgid "Buddhism"
+msgstr ""
+
+#: core/classifier/localized_names.py:127
+msgid "Christianity"
+msgstr ""
+
+#: core/classifier/localized_names.py:128
+msgid "Hinduism"
+msgstr ""
+
+#: core/classifier/localized_names.py:129
+msgid "Islam"
+msgstr ""
+
+#: core/classifier/localized_names.py:130
+msgid "Judaism"
+msgstr ""
+
+#: core/classifier/localized_names.py:131
+msgid "Science & Technology"
+msgstr ""
+
+#: core/classifier/localized_names.py:132
+msgid "Computers"
+msgstr ""
+
+#: core/classifier/localized_names.py:133
+msgid "Mathematics"
+msgstr ""
+
+#: core/classifier/localized_names.py:134
+msgid "Medical"
+msgstr ""
+
+#: core/classifier/localized_names.py:135
+msgid "Nature"
+msgstr ""
+
+#: core/classifier/localized_names.py:136
+msgid "Psychology"
+msgstr ""
+
+#: core/classifier/localized_names.py:137
+msgid "Science"
+msgstr ""
+
+#: core/classifier/localized_names.py:138
+msgid "Social Sciences"
+msgstr ""
+
+#: core/classifier/localized_names.py:139
+msgid "Technology"
+msgstr ""
+
+#: core/classifier/localized_names.py:140
+msgid "Self-Help"
+msgstr ""
+
+#: core/classifier/localized_names.py:141
+msgid "Sports"
+msgstr ""
+
+#: core/classifier/localized_names.py:142
+msgid "Travel"
+msgstr ""
+
+#: core/classifier/localized_names.py:143
+msgid "True Crime"
 msgstr ""
 
 #: core/util/http.py:27
