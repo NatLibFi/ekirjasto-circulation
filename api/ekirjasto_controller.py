@@ -65,8 +65,8 @@ class EkirjastoController:
             return EKIRJASTO_PROVIDER_NOT_CONFIGURED, None, None, None
 
         if (
-            authorization is None 
-            or authorization.token is None 
+            authorization is None
+            or authorization.token is None
             or len(authorization.token) == 0
         ):
             return EKIRJASTO_REMOTE_AUTHENTICATION_FAILED, None, None, None
@@ -218,7 +218,7 @@ class EkirjastoController:
 
         (
             response_json,
-            response_code
+            response_code,
         ) = self._authenticator.ekirjasto_provider.remote_endpoint(
             remote_path, ekirjasto_token, request.method, request.json
         )

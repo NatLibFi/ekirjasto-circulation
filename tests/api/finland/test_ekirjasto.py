@@ -795,9 +795,7 @@ class TestEkirjastoAuthentication:
         token, expires = provider.mock_api.get_test_access_token_for_user(user_id)
 
         response_json, response_code = provider.remote_endpoint(
-            "/v1/auth/userinfo",
-            token,
-            "GET"
+            "/v1/auth/userinfo", token, "GET"
         )
 
         assert isinstance(response_json, dict)
@@ -812,10 +810,7 @@ class TestEkirjastoAuthentication:
         token, expires = provider.mock_api.get_test_access_token_for_user(user_id)
 
         response_json, response_code = provider.remote_endpoint(
-            "/v1/auth/refresh",
-            token,
-            "POST",
-            {"empty": "json"}
+            "/v1/auth/refresh", token, "POST", {"empty": "json"}
         )
 
         assert isinstance(response_json, dict)
@@ -828,14 +823,12 @@ class TestEkirjastoAuthentication:
         provider = create_provider()
         user_id = "verified"
         token, expires = provider.mock_api.get_test_access_token_for_user(user_id)
-        
+
         # Invalidate the token.
         provider.mock_api._refresh_token_for_user_id(user_id)
 
         response_json, response_code = provider.remote_endpoint(
-            "/v1/auth/userinfo",
-            token,
-            "GET"
+            "/v1/auth/userinfo", token, "GET"
         )
 
         assert isinstance(response_json, ProblemDetail)
@@ -848,9 +841,7 @@ class TestEkirjastoAuthentication:
         provider = create_provider()
 
         response_json, response_code = provider.remote_endpoint(
-            "/v1/auth/userinfo",
-            "token",
-            "PUT"
+            "/v1/auth/userinfo", "token", "PUT"
         )
 
         assert isinstance(response_json, ProblemDetail)

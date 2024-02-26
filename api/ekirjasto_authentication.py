@@ -186,7 +186,7 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
             "links": [
                 {
                     "rel": "authenticate",
-                    "href": self._create_circulation_url("ekirjasto_authenticate", _db)
+                    "href": self._create_circulation_url("ekirjasto_authenticate", _db),
                 },
                 {"rel": "api", "href": self._ekirjasto_api_url},
                 {
