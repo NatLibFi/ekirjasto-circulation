@@ -64,8 +64,11 @@ class EkirjastoController:
         if self.is_configured != True:
             return EKIRJASTO_PROVIDER_NOT_CONFIGURED, None, None, None
 
-        if (authorization is None or authorization.token is None 
-                or len(authorization.token) == 0):
+        if (
+            authorization is None 
+            or authorization.token is None 
+            or len(authorization.token) == 0
+        ):
             return EKIRJASTO_REMOTE_AUTHENTICATION_FAILED, None, None, None
 
         token = authorization.token
@@ -198,11 +201,10 @@ class EkirjastoController:
         return Response(response_json, response_code, mimetype="application/json")
 
     def call_remote_endpoint(self, remote_path, request, _db):
-        """Call E-kirjasto API's passkey register endpoints on behalf of the user.
-        """
+        """Call E-kirjasto API's passkey register endpoints on behalf of the user."""
         if self.is_configured != True:
             return EKIRJASTO_PROVIDER_NOT_CONFIGURED
-        
+
         (
             delegate_token,
             ekirjasto_token,
@@ -213,15 +215,18 @@ class EkirjastoController:
             return delegate_token
         elif delegate_token == None:
             return INVALID_EKIRJASTO_DELEGATE_TOKEN
-            
-        response_json, response_code = self._authenticator.ekirjasto_provider.remote_endpoint(
+
+        (
+            response_json,
+            response_code
+        ) = self._authenticator.ekirjasto_provider.remote_endpoint(
             remote_path, ekirjasto_token, request.method, request.json
         )
         if isinstance(response_json, ProblemDetail):
             return response_json
         elif isinstance(response_json, dict):
             response_json = json.dumps(response_json)
-        else: 
+        else:
             response_json = None
-        
+
         return Response(response_json, response_code, mimetype="application/json")

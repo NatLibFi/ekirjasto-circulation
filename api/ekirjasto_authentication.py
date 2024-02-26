@@ -30,11 +30,11 @@ from api.circulation_exceptions import (
 from api.config import Configuration
 from api.problem_details import (
     EKIRJASTO_REMOTE_AUTHENTICATION_FAILED,
+    EKIRJASTO_REMOTE_ENDPOINT_FAILED,
+    EKIRJASTO_REMOTE_METHOD_NOT_SUPPORTED,
     INVALID_EKIRJASTO_DELEGATE_TOKEN,
     INVALID_EKIRJASTO_TOKEN,
     UNSUPPORTED_AUTHENTICATION_MECHANISM,
-    EKIRJASTO_REMOTE_METHOD_NOT_SUPPORTED,
-    EKIRJASTO_REMOTE_ENDPOINT_FAILED,
 )
 from api.util.patron import PatronUtility
 from core.analytics import Analytics
@@ -184,7 +184,10 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
             "type": self.flow_type,
             "description": self.label(),
             "links": [
-                {"rel": "authenticate", "href": self._create_circulation_url("ekirjasto_authenticate", _db)},
+                {
+                    "rel": "authenticate",
+                    "href": self._create_circulation_url("ekirjasto_authenticate", _db)
+                },
                 {"rel": "api", "href": self._ekirjasto_api_url},
                 {
                     "rel": "tunnistus_start",
@@ -204,11 +207,15 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
                 },
                 {
                     "rel": "passkey_register_start",
-                    "href": self._create_circulation_url("ekirjasto_passkey_register_start", _db),
+                    "href": self._create_circulation_url(
+                        "ekirjasto_passkey_register_start", _db
+                    ),
                 },
                 {
                     "rel": "passkey_register_finish",
-                    "href": self._create_circulation_url("ekirjasto_passkey_register_finish", _db),
+                    "href": self._create_circulation_url(
+                        "ekirjasto_passkey_register_finish", _db
+                    ),
                 },
             ],
         }
@@ -578,12 +585,12 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
             return INVALID_EKIRJASTO_TOKEN, None
         elif response.status_code != 200:
             return EKIRJASTO_REMOTE_ENDPOINT_FAILED, None
-            
+
         try:
             response_json = response.json()
         except requests.exceptions.JSONDecodeError as e:
             response_json = None
-        
+
         return response_json, response.status_code
 
     def authenticate_and_update_patron(
