@@ -258,6 +258,14 @@ EKIRJASTO_PROVIDER_NOT_CONFIGURED = pd(
     detail=_("Ekirjasto provider was not configured for the library"),
 )
 
+# Finland
+EKIRJASTO_REMOTE_METHOD_NOT_SUPPORTED = pd(
+    "http://librarysimplified.org/terms/problem/requested-provider-not-configured",
+    status_code=415,
+    title=_("Ekirjasto remote method not supported."),
+    detail=_("Method for a remote call not supported."),
+)
+
 INVALID_SAML_BEARER_TOKEN = pd(
     "http://librarysimplified.org/terms/problem/credentials-invalid",
     status_code=401,
@@ -289,6 +297,14 @@ EKIRJASTO_REMOTE_AUTHENTICATION_FAILED = pd(
     status_code=400,
     title=_("Authentication with ekirjasto API failed."),
     detail=_("Authentication with ekirjasto API failed, for unknown reason."),
+)
+
+# Finland
+EKIRJASTO_REMOTE_ENDPOINT_FAILED = pd(
+    "http://librarysimplified.org/terms/problem/credentials-invalid",
+    status_code=400,
+    title=_("Call to ekirjasto API failed."),
+    detail=_("Call to ekirjasto API failed, for unknown reason."),
 )
 
 UNSUPPORTED_AUTHENTICATION_MECHANISM = pd(
