@@ -1,7 +1,7 @@
 import logging
 from collections.abc import Generator
-from pathlib import Path
 from typing import Any
+from unittest.mock import MagicMock
 
 import flask
 import pytest
@@ -80,7 +80,7 @@ class AdminRouteFixture:
         self.controller_fixture = controller_fixture
         self.setup_circulation_manager = False
         if not self.REAL_CIRCULATION_MANAGER:
-            circ_manager = MockCirculationManager(self.db.session)
+            circ_manager = MockCirculationManager(self.db.session, MagicMock())
             setup_admin_controllers(circ_manager)
             self.REAL_CIRCULATION_MANAGER = circ_manager
 
@@ -494,15 +494,6 @@ class TestAdminCollectionSettings:
         )
         fixture.assert_supported_methods(url, "DELETE")
 
-
-class TestAdminCollectionSelfTests:
-    CONTROLLER_NAME = "admin_collection_self_tests_controller"
-
-    @pytest.fixture(scope="function")
-    def fixture(self, admin_route_fixture: AdminRouteFixture) -> AdminRouteFixture:
-        admin_route_fixture.set_controller_name(self.CONTROLLER_NAME)
-        return admin_route_fixture
-
     def test_process_collection_self_tests(self, fixture: AdminRouteFixture):
         url = "/admin/collection_self_tests/<identifier>"
         fixture.assert_authenticated_request_calls(
@@ -554,15 +545,6 @@ class TestAdminPatronAuthServices:
             url, fixture.controller.process_delete, "<service_id>", http_method="DELETE"  # type: ignore
         )
         fixture.assert_supported_methods(url, "DELETE")
-
-
-class TestAdminPatronAuthServicesSelfTests:
-    CONTROLLER_NAME = "admin_patron_auth_service_self_tests_controller"
-
-    @pytest.fixture(scope="function")
-    def fixture(self, admin_route_fixture: AdminRouteFixture) -> AdminRouteFixture:
-        admin_route_fixture.set_controller_name(self.CONTROLLER_NAME)
-        return admin_route_fixture
 
     def test_process_patron_auth_service_self_tests(self, fixture: AdminRouteFixture):
         url = "/admin/patron_auth_service_self_tests/<identifier>"
@@ -618,45 +600,6 @@ class TestAdminMetadataServices:
             url, fixture.controller.process_delete, "<service_id>", http_method="DELETE"  # type: ignore
         )
         fixture.assert_supported_methods(url, "DELETE")
-
-
-class TestAdminSearchServices:
-    CONTROLLER_NAME = "admin_search_services_controller"
-
-    @pytest.fixture(scope="function")
-    def fixture(self, admin_route_fixture: AdminRouteFixture) -> AdminRouteFixture:
-        admin_route_fixture.set_controller_name(self.CONTROLLER_NAME)
-        return admin_route_fixture
-
-    def test_process_services(self, fixture: AdminRouteFixture):
-        url = "/admin/search_services"
-        fixture.assert_authenticated_request_calls(
-            url, fixture.controller.process_services  # type: ignore
-        )
-        fixture.assert_supported_methods(url, "GET", "POST")
-
-    def test_process_delete(self, fixture: AdminRouteFixture):
-        url = "/admin/search_service/<service_id>"
-        fixture.assert_authenticated_request_calls(
-            url, fixture.controller.process_delete, "<service_id>", http_method="DELETE"  # type: ignore
-        )
-        fixture.assert_supported_methods(url, "DELETE")
-
-
-class TestAdminSearchServicesSelfTests:
-    CONTROLLER_NAME = "admin_search_service_self_tests_controller"
-
-    @pytest.fixture(scope="function")
-    def fixture(self, admin_route_fixture: AdminRouteFixture) -> AdminRouteFixture:
-        admin_route_fixture.set_controller_name(self.CONTROLLER_NAME)
-        return admin_route_fixture
-
-    def test_process_search_service_self_tests(self, fixture: AdminRouteFixture):
-        url = "/admin/search_service_self_tests/<identifier>"
-        fixture.assert_authenticated_request_calls(
-            url, fixture.controller.process_search_service_self_tests, "<identifier>"  # type: ignore
-        )
-        fixture.assert_supported_methods(url, "GET", "POST")
 
 
 class TestAdminCatalogServices:
@@ -856,37 +799,6 @@ class TestAdminView:
 
         url = "/admin/web/a/path"
         fixture.assert_request_calls(url, fixture.controller, None, None, path="a/path")
-
-
-class TestAdminStatic:
-    CONTROLLER_NAME = "static_files"
-
-    @pytest.fixture(scope="function")
-    def fixture(self, admin_route_fixture: AdminRouteFixture) -> AdminRouteFixture:
-        admin_route_fixture.set_controller_name(self.CONTROLLER_NAME)
-        return admin_route_fixture
-
-    def test_static_file(self, fixture: AdminRouteFixture):
-        # Go to the back to the root folder to get the right
-        # path for the static files.
-        root_path = Path(__file__).parent.parent.parent.parent
-        local_path = (
-            root_path
-            / "api/admin/node_modules/@natlibfi/ekirjasto-circulation-admin/dist"
-        )
-
-        url = "/admin/static/circulation-admin.js"
-        fixture.assert_request_calls(
-            url, fixture.controller.static_file, str(local_path), "circulation-admin.js"  # type: ignore
-        )
-
-        url = "/admin/static/circulation-admin.css"
-        fixture.assert_request_calls(
-            url,
-            fixture.controller.static_file,  # type: ignore
-            str(local_path),
-            "circulation-admin.css",
-        )
 
 
 def test_returns_json_or_response_or_problem_detail():

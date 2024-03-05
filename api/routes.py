@@ -589,6 +589,28 @@ def ekirjasto_authenticate():
 
 
 # Finland
+# Authenticate with the ekirjasto token.
+@library_route("/ekirjasto/passkey/register/start", methods=["POST"])
+@has_library
+@returns_problem_detail
+def ekirjasto_passkey_register_start():
+    return app.manager.ekirjasto_controller.call_remote_endpoint(
+        "/v1/auth/passkey/register/start", request, app.manager._db
+    )
+
+
+# Finland
+# Authenticate with the ekirjasto token.
+@library_route("/ekirjasto/passkey/register/finish", methods=["POST"])
+@has_library
+@returns_problem_detail
+def ekirjasto_passkey_register_finish():
+    return app.manager.ekirjasto_controller.call_remote_endpoint(
+        "/v1/auth/passkey/register/finish", request, app.manager._db
+    )
+
+
+# Finland
 # Get descriptions for the library catalogs in the system.
 # This is public route.
 @app.route("/libraries", defaults={"library_uuid": None}, methods=["GET"])

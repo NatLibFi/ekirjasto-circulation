@@ -1,8 +1,9 @@
 import datetime
 import json
 import urllib.parse
+from collections.abc import Generator
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, create_autospec
 
 import feedparser
 import flask
@@ -18,11 +19,12 @@ from api.lanes import (
     SeriesFacets,
     SeriesLane,
 )
-from api.novelist import MockNoveListAPI
+from api.metadata.novelist import NoveListAPI
 from api.problem_details import NO_SUCH_LANE, NOT_FOUND_ON_REMOTE
 from core.classifier import Classifier
 from core.entrypoint import AudiobooksEntryPoint
-from core.external_search import SortKeyPagination, mock_search_index
+from core.external_search import SortKeyPagination
+from core.facets import FacetConstants
 from core.feed.acquisition import OPDSAcquisitionFeed
 from core.feed.annotator.circulation import LibraryAnnotator
 from core.feed.types import WorkEntry
@@ -46,7 +48,6 @@ from core.util.opds_writer import OPDSFeed
 from core.util.problem_detail import ProblemDetail
 from tests.fixtures.api_controller import CirculationControllerFixture
 from tests.fixtures.database import DatabaseTransactionFixture
-from tests.mocks.search import fake_hits
 
 
 class WorkFixture(CirculationControllerFixture):
@@ -64,8 +65,10 @@ class WorkFixture(CirculationControllerFixture):
 
 
 @pytest.fixture(scope="function")
-def work_fixture(db: DatabaseTransactionFixture):
-    return WorkFixture(db)
+def work_fixture(db: DatabaseTransactionFixture) -> Generator[WorkFixture, None, None]:
+    fixture = WorkFixture(db)
+    with fixture.wired_container():
+        yield fixture
 
 
 class TestWorkController:
@@ -99,11 +102,6 @@ class TestWorkController:
         assert "Unknown contributor: Unknown Author" == response.detail
 
         contributor = contributor.display_name
-
-        # Search index misconfiguration -> Problem detail
-        work_fixture.assert_bad_search_index_gives_problem_detail(
-            lambda: work_fixture.manager.work_controller.series(contributor, None, None)
-        )
 
         # Bad facet data -> ProblemDetail
         with work_fixture.request_context_with_library("/?order=nosuchorder"):
@@ -139,7 +137,7 @@ class TestWorkController:
         facet_links = [
             link for link in links if link["rel"] == "http://opds-spec.org/facet"
         ]
-        assert 10 == len(facet_links)
+        assert 10 + len(FacetConstants.LANGUAGE_FACETS) == len(facet_links)
 
         # At this point we don't want to generate real feeds anymore.
         # We can't do a real end-to-end test without setting up a real
@@ -187,7 +185,7 @@ class TestWorkController:
         kwargs = self.called_with  # type: ignore
 
         assert work_fixture.db.session == kwargs.pop("_db")
-        assert work_fixture.manager._external_search == kwargs.pop("search_engine")
+        assert work_fixture.manager.external_search == kwargs.pop("search_engine")
 
         # The feed is named after the contributor the request asked
         # about.
@@ -498,7 +496,7 @@ class TestWorkController:
         # Prep an empty recommendation.
         source = DataSource.lookup(work_fixture.db.session, self.datasource)
         metadata = Metadata(source)
-        mock_api = MockNoveListAPI(work_fixture.db.session)
+        mock_api = create_autospec(NoveListAPI)
 
         args = [self.identifier.type, self.identifier.identifier]
         kwargs: dict[str, Any] = dict(novelist_api=mock_api)
@@ -517,13 +515,6 @@ class TestWorkController:
             )
             assert 400 == response.status_code
 
-        # Or if the search index is misconfigured.
-        work_fixture.assert_bad_search_index_gives_problem_detail(
-            lambda: work_fixture.manager.work_controller.recommendations(
-                *args, **kwargs
-            )
-        )
-
         # If no NoveList API is configured, the lane does not exist.
         with work_fixture.request_context_with_library("/"):
             response = work_fixture.manager.work_controller.recommendations(*args)
@@ -533,12 +524,6 @@ class TestWorkController:
 
         # If the NoveList API is configured, the search index is asked
         # about its recommendations.
-        #
-        # This test no longer makes sense, the external_search no longer blindly returns information
-        # The query_works is not overidden, so we mock it manually
-        work_fixture.manager.external_search.query_works = MagicMock(
-            return_value=fake_hits([work_fixture.english_1])
-        )
         with work_fixture.request_context_with_library("/"):
             response = work_fixture.manager.work_controller.recommendations(
                 *args, **kwargs
@@ -666,13 +651,6 @@ class TestWorkController:
         # creation process -- an invalid entrypoint will simply be
         # ignored.
 
-        # Bad search index setup -> Problem detail
-        work_fixture.assert_bad_search_index_gives_problem_detail(
-            lambda: work_fixture.manager.work_controller.related(
-                identifier.type, identifier.identifier
-            )
-        )
-
         # The mock search engine will return this Work for every
         # search. That means this book will show up as a 'same author'
         # recommendation, a 'same series' recommentation, and a
@@ -682,7 +660,7 @@ class TestWorkController:
         )
         work_fixture.manager.external_search.mock_query_works([same_author_and_series])
 
-        mock_api = MockNoveListAPI(work_fixture.db.session)
+        mock_api = create_autospec(NoveListAPI)
 
         # Create a fresh book, and set up a mock NoveList API to
         # recommend its identifier for any input.
@@ -696,16 +674,15 @@ class TestWorkController:
         metadata = Metadata(overdrive)
         recommended_identifier = work_fixture.db.identifier()
         metadata.recommendations = [recommended_identifier]
-        mock_api.setup_method(metadata)
+        mock_api.lookup.return_value = metadata
 
         # Now, ask for works related to work_fixture.english_1.
-        with mock_search_index(work_fixture.manager.external_search):
-            with work_fixture.request_context_with_library("/?entrypoint=Book"):
-                response = work_fixture.manager.work_controller.related(
-                    work_fixture.identifier.type,
-                    work_fixture.identifier.identifier,
-                    novelist_api=mock_api,
-                )
+        with work_fixture.request_context_with_library("/?entrypoint=Book"):
+            response = work_fixture.manager.work_controller.related(
+                work_fixture.identifier.type,
+                work_fixture.identifier.identifier,
+                novelist_api=mock_api,
+            )
         assert 200 == response.status_code
         assert OPDSFeed.ACQUISITION_FEED_TYPE == response.headers["content-type"]
         feed = feedparser.parse(response.data)
@@ -759,7 +736,6 @@ class TestWorkController:
                 resp.as_response.return_value = Response("An OPDS feed")
                 return resp
 
-        mock_api.setup_method(metadata)
         with work_fixture.request_context_with_library("/?entrypoint=Audio"):
             response = work_fixture.manager.work_controller.related(
                 work_fixture.identifier.type,
@@ -870,11 +846,6 @@ class TestWorkController:
             )
             assert 400 == response.status_code
 
-        # Or if the search index isn't set up.
-        work_fixture.assert_bad_search_index_gives_problem_detail(
-            lambda: work_fixture.manager.work_controller.series(series_name, None, None)
-        )
-
         # Set up the mock search engine to return our work no matter
         # what query it's given. The fact that this book isn't
         # actually in the series doesn't matter, since determining
@@ -905,7 +876,7 @@ class TestWorkController:
         facet_links = [
             link for link in links if link["rel"] == "http://opds-spec.org/facet"
         ]
-        assert 11 == len(facet_links)
+        assert 11 + len(FacetConstants.LANGUAGE_FACETS) == len(facet_links)
 
         # The facet link we care most about is the default sort order,
         # put into place by SeriesFacets.

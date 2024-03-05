@@ -24,7 +24,6 @@ from api.controller.opds_feed import OPDSFeedController
 from api.controller.patron_auth_token import PatronAuthTokenController
 from api.controller.playtime_entries import PlaytimeEntriesController
 from api.controller.profile import ProfileController
-from api.controller.static_file import StaticFileController
 from api.controller.urn_lookup import URNLookupController
 from api.controller.work import WorkController
 from api.custom_index import CustomIndexView
@@ -34,7 +33,6 @@ from api.opensearch_analytics_search import OpenSearchAnalyticsSearch  # Finland
 from api.problem_details import *
 from api.saml.controller import SAMLController
 from core.app_server import ApplicationVersionController, load_facets_from_request
-from core.external_search import ExternalSearchIndex
 from core.feed.annotator.circulation import (
     CirculationManagerAnnotator,
     LibraryAnnotator,
@@ -50,7 +48,6 @@ if TYPE_CHECKING:
     from api.admin.controller.admin_search import AdminSearchController
     from api.admin.controller.announcement_service import AnnouncementSettings
     from api.admin.controller.catalog_services import CatalogServicesController
-    from api.admin.controller.collection_self_tests import CollectionSelfTestsController
     from api.admin.controller.collection_settings import CollectionSettingsController
     from api.admin.controller.custom_lists import CustomListsController
     from api.admin.controller.dashboard import DashboardController
@@ -64,27 +61,12 @@ if TYPE_CHECKING:
     )
     from api.admin.controller.lanes import LanesController
     from api.admin.controller.library_settings import LibrarySettingsController
-    from api.admin.controller.metadata_service_self_tests import (
-        MetadataServiceSelfTestsController,
-    )
     from api.admin.controller.metadata_services import MetadataServicesController
     from api.admin.controller.patron import PatronController
-    from api.admin.controller.patron_auth_service_self_tests import (
-        PatronAuthServiceSelfTestsController,
-    )
     from api.admin.controller.patron_auth_services import PatronAuthServicesController
     from api.admin.controller.quicksight import QuickSightController
     from api.admin.controller.reset_password import ResetPasswordController
-    from api.admin.controller.search_service_self_tests import (
-        SearchServiceSelfTestsController,
-    )
-    from api.admin.controller.self_tests import SelfTestsController
-    from api.admin.controller.settings import SettingsController
     from api.admin.controller.sign_in import SignInController
-    from api.admin.controller.sitewide_services import (
-        SearchServicesController,
-        SitewideServicesController,
-    )
     from api.admin.controller.sitewide_settings import (
         SitewideConfigurationSettingsController,
     )
@@ -107,7 +89,6 @@ class CirculationManager(LoggerMixin):
     patron_devices: DeviceTokensController
     version: ApplicationVersionController
     odl_notification_controller: ODLNotificationController
-    static_files: StaticFileController
     playtime_entries: PlaytimeEntriesController
 
     # Admin controllers
@@ -119,23 +100,19 @@ class CirculationManager(LoggerMixin):
     admin_custom_lists_controller: CustomListsController
     admin_lanes_controller: LanesController
     admin_dashboard_controller: DashboardController
-    admin_settings_controller: SettingsController
     admin_patron_controller: PatronController
-    admin_self_tests_controller: SelfTestsController
     admin_discovery_services_controller: DiscoveryServicesController
-    admin_discovery_service_library_registrations_controller: DiscoveryServiceLibraryRegistrationsController
+    admin_discovery_service_library_registrations_controller: (
+        DiscoveryServiceLibraryRegistrationsController
+    )
     admin_metadata_services_controller: MetadataServicesController
-    admin_metadata_service_self_tests_controller: MetadataServiceSelfTestsController
     admin_patron_auth_services_controller: PatronAuthServicesController
-    admin_patron_auth_service_self_tests_controller: PatronAuthServiceSelfTestsController
     admin_collection_settings_controller: CollectionSettingsController
-    admin_collection_self_tests_controller: CollectionSelfTestsController
-    admin_sitewide_configuration_settings_controller: SitewideConfigurationSettingsController
+    admin_sitewide_configuration_settings_controller: (
+        SitewideConfigurationSettingsController
+    )
     admin_library_settings_controller: LibrarySettingsController
     admin_individual_admin_settings_controller: IndividualAdminSettingsController
-    admin_sitewide_services_controller: SitewideServicesController
-    admin_search_service_self_tests_controller: SearchServiceSelfTestsController
-    admin_search_services_controller: SearchServicesController
     admin_catalog_services_controller: CatalogServicesController
     admin_announcement_service: AnnouncementSettings
     admin_search_controller: AdminSearchController
@@ -151,6 +128,7 @@ class CirculationManager(LoggerMixin):
         self._db = _db
         self.services = services
         self.analytics = services.analytics.analytics()
+        self.external_search = services.search.index()
         self.site_configuration_last_update = (
             Configuration.site_configuration_last_update(self._db, timeout=0)
         )
@@ -213,11 +191,8 @@ class CirculationManager(LoggerMixin):
         ):
             # Populate caches
             Library.cache_warm(self._db, lambda: libraries)
-            ConfigurationSetting.cache_warm(self._db)
 
         self.auth = Authenticator(self._db, libraries, self.analytics)
-
-        self.setup_external_search()
 
         # Finland
         self.setup_opensearch_analytics_search()
@@ -255,14 +230,9 @@ class CirculationManager(LoggerMixin):
             url = url.strip()
             if url == "*":
                 return url
-            (
-                scheme,
-                netloc,
-                path,
-                parameters,
-                query,
-                fragment,
-            ) = urllib.parse.urlparse(url)
+            scheme, netloc, path, parameters, query, fragment = urllib.parse.urlparse(
+                url
+            )
             if scheme and netloc:
                 return scheme + "://" + netloc
             else:
@@ -321,28 +291,6 @@ class CirculationManager(LoggerMixin):
             self.opensearch_analytics_search_initialization_exception = e
         return self._opensearch_analytics_search
 
-    @property
-    def external_search(self):
-        """Retrieve or create a connection to the search interface.
-
-        This is created lazily so that a failure to connect only
-        affects feeds that depend on the search engine, not the whole
-        circulation manager.
-        """
-        if not self._external_search:
-            self.setup_external_search()
-        return self._external_search
-
-    def setup_external_search(self):
-        try:
-            self._external_search = self.setup_search()
-            self.external_search_initialization_exception = None
-        except Exception as e:
-            self.log.error("Exception initializing search engine: %s", e)
-            self._external_search = None
-            self.external_search_initialization_exception = e
-        return self._external_search
-
     def log_lanes(self, lanelist=None, level=0):
         """Output information about the lane layout."""
         lanelist = lanelist or self.top_level_lane.sublanes
@@ -350,14 +298,6 @@ class CirculationManager(LoggerMixin):
             self.log.debug("%s%r", "-" * level, lane)
             if lane.sublanes:
                 self.log_lanes(lane.sublanes, level + 1)
-
-    def setup_search(self):
-        """Set up a search client."""
-        search = ExternalSearchIndex(self._db)
-        if not search:
-            self.log.warn("No external search server configured.")
-            return None
-        return search
 
     def setup_circulation(self, library, analytics):
         """Set up the Circulation object."""
@@ -381,7 +321,6 @@ class CirculationManager(LoggerMixin):
         self.patron_devices = DeviceTokensController(self)
         self.version = ApplicationVersionController()
         self.odl_notification_controller = ODLNotificationController(self)
-        self.static_files = StaticFileController(self)
         self.patron_auth_token = PatronAuthTokenController(self)
         self.catalog_descriptions = CatalogDescriptionsController(self)
         self.playtime_entries = PlaytimeEntriesController(self)

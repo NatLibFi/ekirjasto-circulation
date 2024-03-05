@@ -10,8 +10,9 @@ from lxml import etree
 
 from api.adobe_vendor_id import AuthdataUtility
 from api.circulation import BaseCirculationAPI, CirculationAPI, FulfillmentInfo
+from api.integration.registry.metadata import MetadataRegistry
 from api.lanes import ContributorLane
-from api.novelist import NoveListAPI
+from api.metadata.novelist import NoveListAPI, NoveListApiSettings
 from core.classifier import (  # type: ignore[attr-defined]
     Classifier,
     Fantasy,
@@ -24,6 +25,7 @@ from core.feed.annotator.loan_and_hold import LibraryLoanAndHoldAnnotator
 from core.feed.opds import UnfulfillableWork
 from core.feed.types import FeedData, WorkEntry
 from core.feed.util import strftime
+from core.integration.goals import Goals
 from core.lane import Facets, FacetsWithEntryPoint, Pagination
 from core.lcp.credential import LCPCredentialFactory, LCPHashedPassphrase
 from core.model import (
@@ -31,7 +33,6 @@ from core.model import (
     Contributor,
     DataSource,
     DeliveryMechanism,
-    ExternalIntegration,
     Hyperlink,
     PresentationCalculationPolicy,
     Representation,
@@ -43,9 +44,10 @@ from core.service.container import container_instance
 from core.util.datetime_helpers import utc_now
 from core.util.flask_util import OPDSFeedResponse
 from core.util.opds_writer import OPDSFeed
-from tests.api.feed.fixtures import PatchedUrlFor, patch_url_for  # noqa
+from tests.api.feed.conftest import PatchedUrlFor, patch_url_for  # noqa
 from tests.fixtures.database import DatabaseTransactionFixture
 from tests.fixtures.library import LibraryFixture
+from tests.fixtures.search import ExternalSearchFixtureFake
 from tests.fixtures.vendor_id import VendorIDFixture
 
 
@@ -77,7 +79,9 @@ class LibraryAnnotatorFixture:
 
 @pytest.fixture(scope="function")
 def annotator_fixture(
-    db: DatabaseTransactionFixture, patch_url_for: PatchedUrlFor
+    db: DatabaseTransactionFixture,
+    patch_url_for: PatchedUrlFor,
+    external_search_fake_fixture: ExternalSearchFixtureFake,
 ) -> LibraryAnnotatorFixture:
     return LibraryAnnotatorFixture(db)
 
@@ -863,13 +867,15 @@ class TestLibraryAnnotator:
         ]
 
         # There's a recommendation link when configuration is found, though!
-        NoveListAPI.IS_CONFIGURED = None
-        annotator_fixture.db.external_integration(
-            ExternalIntegration.NOVELIST,
-            goal=ExternalIntegration.METADATA_GOAL,
-            username="library",
-            password="sure",
+        protocol = MetadataRegistry().get_protocol(NoveListAPI)
+        assert protocol is not None
+        integration = annotator_fixture.db.integration_configuration(
+            protocol=protocol,
+            goal=Goals.METADATA_GOAL,
             libraries=[annotator_fixture.db.default_library()],
+        )
+        NoveListAPI.settings_update(
+            integration, NoveListApiSettings(username="library", password="sure")
         )
 
         feed = self.get_parsed_feed(annotator_fixture, [work])

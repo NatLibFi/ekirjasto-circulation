@@ -30,6 +30,8 @@ from api.circulation_exceptions import (
 from api.config import Configuration
 from api.problem_details import (
     EKIRJASTO_REMOTE_AUTHENTICATION_FAILED,
+    EKIRJASTO_REMOTE_ENDPOINT_FAILED,
+    EKIRJASTO_REMOTE_METHOD_NOT_SUPPORTED,
     INVALID_EKIRJASTO_DELEGATE_TOKEN,
     INVALID_EKIRJASTO_TOKEN,
     UNSUPPORTED_AUTHENTICATION_MECHANISM,
@@ -182,7 +184,10 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
             "type": self.flow_type,
             "description": self.label(),
             "links": [
-                {"rel": "authenticate", "href": self._create_authenticate_url(_db)},
+                {
+                    "rel": "authenticate",
+                    "href": self._create_circulation_url("ekirjasto_authenticate", _db),
+                },
                 {"rel": "api", "href": self._ekirjasto_api_url},
                 {
                     "rel": "tunnistus_start",
@@ -202,18 +207,22 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
                 },
                 {
                     "rel": "passkey_register_start",
-                    "href": f"{self._ekirjasto_api_url}/v1/auth/passkey/register/start",
+                    "href": self._create_circulation_url(
+                        "ekirjasto_passkey_register_start", _db
+                    ),
                 },
                 {
                     "rel": "passkey_register_finish",
-                    "href": f"{self._ekirjasto_api_url}/v1/auth/passkey/register/finish",
+                    "href": self._create_circulation_url(
+                        "ekirjasto_passkey_register_finish", _db
+                    ),
                 },
             ],
         }
 
         return flow_doc
 
-    def _create_authenticate_url(self, db):
+    def _create_circulation_url(self, endpoint, db):
         """Returns an authentication link used by clients to authenticate patrons
 
         :param db: Database session
@@ -226,7 +235,7 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
         library = self.library(db)
 
         return url_for(
-            "ekirjasto_authenticate",
+            endpoint,
             _external=True,
             library_short_name=library.short_name,
             provider=self.label(),
@@ -551,6 +560,39 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
 
         return self.remote_patron_lookup(ekirjasto_token)
 
+    def remote_endpoint(
+        self, remote_path: str, token: str, method: str, json_body: object = None
+    ) -> tuple[ProblemDetail, None] | tuple[object, int]:
+        """Call E-kirjasto API's passkey register endpoints on behalf of the user.
+
+        :return: token and expire timestamp if refresh was succesfull or None | ProblemDetail otherwise.
+        """
+
+        url = self._ekirjasto_api_url + remote_path
+
+        try:
+            if method == "POST":
+                response = self.requests_post(url, token, json_body)
+            elif method == "GET":
+                response = self.requests_get(url, token)
+            else:
+                return EKIRJASTO_REMOTE_METHOD_NOT_SUPPORTED, None
+        except requests.exceptions.ConnectionError as e:
+            raise RemoteInitiatedServerError(str(e), self.__class__.__name__)
+
+        if response.status_code == 401:
+            # Do nothing if authentication fails, e.g. token expired.
+            return INVALID_EKIRJASTO_TOKEN, None
+        elif response.status_code != 200:
+            return EKIRJASTO_REMOTE_ENDPOINT_FAILED, None
+
+        try:
+            response_json = response.json()
+        except requests.exceptions.JSONDecodeError as e:
+            response_json = None
+
+        return response_json, response.status_code
+
     def authenticate_and_update_patron(
         self, _db: Session, ekirjasto_token: str | None
     ) -> Patron | PatronData | ProblemDetail | None:
@@ -715,8 +757,8 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
             headers = {"Authorization": f"Bearer {ekirjasto_token}"}
         return requests.get(url, headers=headers)
 
-    def requests_post(self, url, ekirjasto_token=None):
+    def requests_post(self, url, ekirjasto_token=None, json_body=None):
         headers = None
         if ekirjasto_token:
             headers = {"Authorization": f"Bearer {ekirjasto_token}"}
-        return requests.post(url, headers=headers)
+        return requests.post(url, headers=headers, json=json_body)

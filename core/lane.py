@@ -4,9 +4,10 @@ import datetime
 import logging
 import time
 from collections import defaultdict
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from urllib.parse import quote_plus
 
+from dependency_injector.wiring import Provide, inject
 from flask_babel import lazy_gettext as _
 from opensearchpy.exceptions import OpenSearchException
 from sqlalchemy import (
@@ -68,6 +69,9 @@ from core.util.accept_language import parse_accept_language
 from core.util.datetime_helpers import utc_now
 from core.util.opds_writer import OPDSFeed
 from core.util.problem_detail import ProblemDetail
+
+if TYPE_CHECKING:
+    from core.external_search import ExternalSearchIndex, WorkSearchResult
 
 
 class BaseFacets(FacetConstants):
@@ -324,6 +328,7 @@ class Facets(FacetsWithEntryPoint):
         entrypoint=None,
         distributor=None,
         collection_name=None,
+        language=None,
     ):
         return cls(
             library,
@@ -332,6 +337,7 @@ class Facets(FacetsWithEntryPoint):
             order=order,
             distributor=distributor,
             collection_name=collection_name,
+            language=language,
             entrypoint=entrypoint,
         )
 
@@ -436,12 +442,21 @@ class Facets(FacetsWithEntryPoint):
                 400,
             )
 
+        # Finland
+        g = Facets.LANGUAGE_FACET_GROUP_NAME
+        language: str = get_argument(g, cls.default_facet(config, g))
+        language_facets = cls.available_facets(config, g)
+        # In the case of language, don't want to limit the input to only the
+        # available facet values as we might get searches from elsewhere with
+        # other languages.
+
         enabled = {
             Facets.ORDER_FACET_GROUP_NAME: order_facets,
             Facets.AVAILABILITY_FACET_GROUP_NAME: availability_facets,
             Facets.COLLECTION_FACET_GROUP_NAME: collection_facets,
             Facets.DISTRIBUTOR_FACETS_GROUP_NAME: distributor_facets,
             Facets.COLLECTION_NAME_FACETS_GROUP_NAME: collection_name_facets,
+            Facets.LANGUAGE_FACET_GROUP_NAME: language_facets,  # Finland
         }
 
         return dict(
@@ -451,6 +466,7 @@ class Facets(FacetsWithEntryPoint):
             distributor=distributor,
             collection_name=collection_name,
             enabled_facets=enabled,
+            language=language,  # Finland
         )
 
     @classmethod
@@ -484,6 +500,7 @@ class Facets(FacetsWithEntryPoint):
         order,
         distributor,
         collection_name,
+        language,
         order_ascending=None,
         enabled_facets=None,
         entrypoint=None,
@@ -536,6 +553,7 @@ class Facets(FacetsWithEntryPoint):
         self.collection_name = collection_name or self.default_facet(
             library, self.COLLECTION_NAME_FACETS_GROUP_NAME
         )
+        self.language: str = language
         if order_ascending == self.ORDER_ASCENDING:
             order_ascending = True
         elif order_ascending == self.ORDER_DESCENDING:
@@ -551,6 +569,7 @@ class Facets(FacetsWithEntryPoint):
         entrypoint=None,
         distributor=None,
         collection_name=None,
+        language=None,
     ):
         """Create a slightly different Facets object from this one."""
         return self.__class__(
@@ -560,6 +579,7 @@ class Facets(FacetsWithEntryPoint):
             order=order or self.order,
             distributor=distributor or self.distributor,
             collection_name=collection_name or self.collection_name,
+            language=language or self.language,
             enabled_facets=self.facets_enabled_at_init,
             entrypoint=(entrypoint or self.entrypoint),
             entrypoint_is_default=False,
@@ -577,6 +597,8 @@ class Facets(FacetsWithEntryPoint):
             yield (self.DISTRIBUTOR_FACETS_GROUP_NAME, self.distributor)
         if self.collection_name:
             yield (self.COLLECTION_NAME_FACETS_GROUP_NAME, self.collection_name)
+        if self.language:
+            yield (self.LANGUAGE_FACET_GROUP_NAME, self.language)
 
     @property
     def enabled_facets(self):
@@ -595,6 +617,7 @@ class Facets(FacetsWithEntryPoint):
                 self.COLLECTION_FACET_GROUP_NAME,
                 self.DISTRIBUTOR_FACETS_GROUP_NAME,
                 self.COLLECTION_NAME_FACETS_GROUP_NAME,
+                self.LANGUAGE_FACET_GROUP_NAME,
             ]
             for facet_type in facet_types:
                 yield self.facets_enabled_at_init.get(facet_type, [])
@@ -606,6 +629,7 @@ class Facets(FacetsWithEntryPoint):
                 Facets.COLLECTION_FACET_GROUP_NAME,
                 Facets.DISTRIBUTOR_FACETS_GROUP_NAME,
                 Facets.COLLECTION_NAME_FACETS_GROUP_NAME,
+                Facets.LANGUAGE_FACET_GROUP_NAME,
             ):
                 yield self.available_facets(self.library, group_name)
 
@@ -625,6 +649,7 @@ class Facets(FacetsWithEntryPoint):
             collection_facets,
             distributor_facets,
             collection_name_facets,
+            language_facets,
         ) = self.enabled_facets
 
         def dy(new_value):
@@ -674,6 +699,13 @@ class Facets(FacetsWithEntryPoint):
                 facets = self.navigate(collection_name=facet)
                 yield (group, facet, facets, facet == current_value)
 
+        if len(language_facets) > 1:
+            for facet in language_facets:
+                group = self.LANGUAGE_FACET_GROUP_NAME
+                current_value = self.language
+                facets = self.navigate(language=facet)
+                yield (group, facet, facets, facet == current_value)
+
     def modify_search_filter(self, filter):
         """Modify the given external_search.Filter object
         so that it reflects the settings of this Facets object.
@@ -691,6 +723,12 @@ class Facets(FacetsWithEntryPoint):
 
         filter.availability = self.availability
         filter.subcollection = self.collection
+
+        # Finland
+        if self.language == self.LANGUAGE_ALL:
+            filter.languages = []
+        elif self.language:
+            filter.languages = [self.language]
 
         # We can only have distributor and collection name facets if we have a library
         if self.library:
@@ -973,6 +1011,7 @@ class SearchFacets(Facets):
         kwargs.setdefault("availability", None)
         kwargs.setdefault("distributor", None)
         kwargs.setdefault("collection_name", None)
+        kwargs.setdefault("language", None)
         order = kwargs.setdefault("order", None)
 
         if order in (None, self.ORDER_BY_RELEVANCE):
@@ -1745,13 +1784,14 @@ class WorkList:
         """
         return facets
 
+    @inject
     def groups(
         self,
         _db,
         include_sublanes=True,
         pagination=None,
         facets=None,
-        search_engine=None,
+        search_engine: ExternalSearchIndex = Provide["search.index"],
         debug=False,
     ):
         """Extract a list of samples from each child of this WorkList.  This
@@ -1814,12 +1854,13 @@ class WorkList:
         ):
             yield work, worklist
 
+    @inject
     def works(
         self,
         _db,
         facets=None,
         pagination=None,
-        search_engine=None,
+        search_engine: ExternalSearchIndex = Provide["search.index"],
         debug=False,
         **kwargs,
     ):
@@ -1842,9 +1883,6 @@ class WorkList:
             that generates such a list when executed.
 
         """
-        from core.external_search import ExternalSearchIndex
-
-        search_engine = search_engine or ExternalSearchIndex.load(_db)
         filter = self.filter(_db, facets)
         hits = search_engine.query_works(
             query_string=None, filter=filter, pagination=pagination, debug=debug
@@ -1997,6 +2035,7 @@ class WorkList:
 
         return results
 
+    @inject
     def _groups_for_lanes(
         self,
         _db,
@@ -2004,7 +2043,7 @@ class WorkList:
         queryable_lanes,
         pagination,
         facets,
-        search_engine=None,
+        search_engine: ExternalSearchIndex = Provide["search.index"],
         debug=False,
     ):
         """Ask the search engine for groups of featurable works in the
@@ -2041,10 +2080,6 @@ class WorkList:
         else:
             target_size = pagination.size
 
-        from core.external_search import ExternalSearchIndex
-
-        search_engine = search_engine or ExternalSearchIndex.load(_db)
-
         if isinstance(self, Lane):
             parent_lane = self
         else:
@@ -2075,15 +2110,15 @@ class WorkList:
                 by_lane[lane].extend(list(might_need_to_reuse.values())[:num_missing])
 
         used_works = set()
-        by_lane = defaultdict(list)
+        by_lane: dict[Lane, list[WorkSearchResult]] = defaultdict(list)
         working_lane = None
-        might_need_to_reuse = dict()
+        might_need_to_reuse: dict[int, WorkSearchResult] = dict()
         for work, lane in works_and_lanes:
             if lane != working_lane:
                 # Either we're done with the old lane, or we're just
                 # starting and there was no old lane.
                 if working_lane:
-                    _done_with_lane(working_lane)
+                    _done_with_lane(working_lane)  # type: ignore[unreachable]
                 working_lane = lane
                 used_works_this_lane = set()
                 might_need_to_reuse = dict()
@@ -2918,12 +2953,9 @@ class Lane(Base, DatabaseBackedWorkList, HierarchyWorkList):
             return True
         return False
 
-    def update_size(self, _db, search_engine=None):
+    def update_size(self, _db, search_engine: ExternalSearchIndex):
         """Update the stored estimate of the number of Works in this Lane."""
         library = self.get_library(_db)
-        from core.external_search import ExternalSearchIndex
-
-        search_engine = search_engine or ExternalSearchIndex.load(_db)
 
         # Do the estimate for every known entry point.
         by_entrypoint = dict()
@@ -2935,6 +2967,7 @@ class Lane(Base, DatabaseBackedWorkList, HierarchyWorkList):
                 order=FacetConstants.ORDER_WORK_ID,
                 distributor=FacetConstants.DISTRIBUTOR_ALL,
                 collection_name=FacetConstants.COLLECTION_NAME_ALL,
+                language=FacetConstants.LANGUAGE_ALL,
                 entrypoint=entrypoint,
             )
             filter = self.filter(_db, facets)
@@ -3130,13 +3163,14 @@ class Lane(Base, DatabaseBackedWorkList, HierarchyWorkList):
             size = self.size_by_entrypoint[entrypoint_name]
         return size
 
+    @inject
     def groups(
         self,
         _db,
         include_sublanes=True,
         pagination=None,
         facets=None,
-        search_engine=None,
+        search_engine: ExternalSearchIndex = Provide["search.index"],
         debug=False,
     ):
         """Return a list of (Work, Lane) 2-tuples
@@ -3169,7 +3203,6 @@ class Lane(Base, DatabaseBackedWorkList, HierarchyWorkList):
             queryable_lanes,
             pagination=pagination,
             facets=facets,
-            search_engine=search_engine,
             debug=debug,
         )
 

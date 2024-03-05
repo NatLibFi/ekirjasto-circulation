@@ -34,7 +34,6 @@ from core.external_search import (
     QueryParseException,
     QueryParser,
     SearchBase,
-    SearchIndexCoverageProvider,
     SortKeyPagination,
     WorkSearchResult,
 )
@@ -56,6 +55,7 @@ from core.model.classification import Subject
 from core.model.work import Work
 from core.problem_details import INVALID_INPUT
 from core.scripts import RunWorkCoverageProviderScript
+from core.search.coverage_provider import SearchIndexCoverageProvider
 from core.search.document import SearchMappingDocument
 from core.search.revision import SearchSchemaRevision
 from core.search.revision_directory import SearchRevisionDirectory
@@ -131,85 +131,6 @@ class TestExternalSearch:
         assert isinstance(pagination, Pagination)
         assert pagination.offset == default.offset
         assert pagination.size == default.size
-
-    def test__run_self_tests(self, end_to_end_search_fixture: EndToEndSearchFixture):
-        transaction = end_to_end_search_fixture.db
-        session = transaction.session
-        index = end_to_end_search_fixture.external_search_index
-
-        # Intrusively set the search term to something useful.
-        index._test_search_term = "How To Search"
-
-        # Start with an up-to-date but empty index.
-        index.start_migration().finish()
-
-        # First, see what happens when the search returns no results.
-        test_results = [x for x in index._run_self_tests(session)]
-
-        assert "Search results for 'How To Search':" == test_results[0].name
-        assert True == test_results[0].success
-        assert [] == test_results[0].result
-
-        assert "Search document for 'How To Search':" == test_results[1].name
-        assert True == test_results[1].success
-        assert {} != test_results[1].result
-
-        assert "Raw search results for 'How To Search':" == test_results[2].name
-        assert True == test_results[2].success
-        assert [] == test_results[2].result
-
-        assert (
-            "Total number of search results for 'How To Search':"
-            == test_results[3].name
-        )
-        assert True == test_results[3].success
-        assert "0" == test_results[3].result
-
-        assert "Total number of documents in this search index:" == test_results[4].name
-        assert True == test_results[4].success
-        assert "0" == test_results[4].result
-
-        assert "Total number of documents per collection:" == test_results[5].name
-        assert True == test_results[5].success
-        assert "{}" == test_results[5].result
-
-        # Set up the search index so it will return a result.
-        work = end_to_end_search_fixture.external_search.default_work(
-            title="How To Search"
-        )
-        work.presentation_ready = True
-        work.presentation_edition.subtitle = "How To Search"
-        work.presentation_edition.series = "Classics"
-        work.summary_text = "How To Search!"
-        work.presentation_edition.publisher = "Project Gutenberg"
-        work.last_update_time = datetime_utc(2019, 1, 1)
-        work.license_pools[0].licenses_available = 100000
-
-        docs = index.start_updating_search_documents()
-        docs.add_documents(index.create_search_documents_from_works([work]))
-        docs.finish()
-
-        test_results = [x for x in index._run_self_tests(session)]
-
-        assert "Search results for 'How To Search':" == test_results[0].name
-        assert True == test_results[0].success
-        assert [f"How To Search ({work.author})"] == test_results[0].result
-
-        assert (
-            "Total number of search results for 'How To Search':"
-            == test_results[3].name
-        )
-        assert True == test_results[3].success
-        assert "1" == test_results[3].result
-
-        assert "Total number of documents in this search index:" == test_results[4].name
-        assert True == test_results[4].success
-        assert "1" == test_results[4].result
-
-        assert "Total number of documents per collection:" == test_results[5].name
-        assert True == test_results[5].success
-        result = json.loads(test_results[5].result)
-        assert {"Default Collection": 1} == result
 
 
 class TestSearchV5:
@@ -973,12 +894,16 @@ class TestExternalSearchWithWorks:
                 order=Facets.ORDER_TITLE,
                 distributor=None,
                 collection_name=None,
+                language=None,
             )
             pages = []
             while pagination:
                 pages.append(
                     worklist.works(
-                        session, facets, pagination, fixture.external_search_index
+                        session,
+                        facets,
+                        pagination,
+                        search_engine=fixture.external_search_index,
                     )
                 )
                 pagination = pagination.next_page
@@ -1106,14 +1031,14 @@ class TestExternalSearchWithWorks:
         expect([data.lincoln_vampire], "fantasy")
 
     def test_remove_work(self, end_to_end_search_fixture: EndToEndSearchFixture):
-        search = end_to_end_search_fixture.external_search.search
+        client = end_to_end_search_fixture.external_search.client
         data = self._populate_works(end_to_end_search_fixture)
         end_to_end_search_fixture.populate_search_index()
         end_to_end_search_fixture.external_search_index.remove_work(data.moby_dick)
         end_to_end_search_fixture.external_search_index.remove_work(data.moby_duck)
 
         # Immediately querying never works, the search index needs to refresh its cache/index/data
-        search.indices.refresh()
+        client.indices.refresh()
 
         end_to_end_search_fixture.expect_results([], "Moby")
 
@@ -1178,6 +1103,7 @@ class TestFacetFilters:
                 order=Facets.ORDER_TITLE,
                 distributor=None,
                 collection_name=None,
+                language=None,
             )
             fixture.expect_results(works, None, Filter(facets=facets), ordered=False)
 
@@ -1455,6 +1381,7 @@ class TestSearchOrder:
                 order=sort_field,
                 distributor=None,
                 collection_name=None,
+                language=None,
                 order_ascending=True,
             )
             expect(order, None, Filter(facets=facets, **filter_kwargs))
@@ -2113,7 +2040,11 @@ class TestFeaturedFacets:
         # available books will show up before all of the unavailable
         # books.
         only_availability_matters = worklist.works(
-            session, facets, None, fixture.external_search_index, debug=True
+            session,
+            facets,
+            None,
+            search_engine=fixture.external_search_index,
+            debug=True,
         )
         assert 5 == len(only_availability_matters)
         last_two = only_availability_matters[-2:]
@@ -2540,7 +2471,7 @@ class TestQuery:
             return built
 
         # When using the 'featured' collection...
-        built = from_facets(Facets.COLLECTION_FEATURED, None, None, None, None)
+        built = from_facets(Facets.COLLECTION_FEATURED, None, None, None, None, None)
 
         # There is no nested filter.
         assert [] == built.nested_filter_calls
@@ -2556,7 +2487,7 @@ class TestQuery:
 
         # When using the AVAILABLE_OPEN_ACCESS availability restriction...
         built = from_facets(
-            Facets.COLLECTION_FULL, Facets.AVAILABLE_OPEN_ACCESS, None, None, None
+            Facets.COLLECTION_FULL, Facets.AVAILABLE_OPEN_ACCESS, None, None, None, None
         )
 
         # An additional nested filter is applied.
@@ -2571,7 +2502,7 @@ class TestQuery:
 
         # When using the AVAILABLE_NOW restriction...
         built = from_facets(
-            Facets.COLLECTION_FULL, Facets.AVAILABLE_NOW, None, None, None
+            Facets.COLLECTION_FULL, Facets.AVAILABLE_NOW, None, None, None, None
         )
 
         # An additional nested filter is applied.
@@ -2598,7 +2529,7 @@ class TestQuery:
 
         # When using the AVAILABLE_NOT_NOW restriction...
         built = from_facets(
-            Facets.COLLECTION_FULL, Facets.AVAILABLE_NOT_NOW, None, None, None
+            Facets.COLLECTION_FULL, Facets.AVAILABLE_NOT_NOW, None, None, None, None
         )
 
         # An additional nested filter is applied.
@@ -2628,6 +2559,7 @@ class TestQuery:
             None,
             DataSource.OVERDRIVE,
             None,
+            None,
         )
         [datasource_only] = built.nested_filter_calls
         nested_filter = datasource_only["query"]
@@ -2638,7 +2570,12 @@ class TestQuery:
         # Collection Name builds
         collection = db.default_collection()
         built = from_facets(
-            Facets.COLLECTION_FULL, Facets.AVAILABLE_ALL, None, None, collection.name
+            Facets.COLLECTION_FULL,
+            Facets.AVAILABLE_ALL,
+            None,
+            None,
+            collection.name,
+            None,
         )
         [collection_only] = built.nested_filter_calls
         nested_filter = collection_only["query"]
@@ -2665,6 +2602,7 @@ class TestQuery:
             order=Facets.ORDER_AUTHOR,
             distributor=None,
             collection_name=None,
+            language=None,
             order_ascending=False,
         )
 
@@ -4723,7 +4661,9 @@ class TestBulkUpdate:
         # All three works were inserted into the index, even the one
         # that's not presentation-ready.
         ids = set(
-            map(lambda d: d["_id"], external_search_fake_fixture.search.documents_all())
+            map(
+                lambda d: d["_id"], external_search_fake_fixture.service.documents_all()
+            )
         )
         assert {w1.id, w2.id, w3.id} == ids
 
@@ -4736,7 +4676,9 @@ class TestBulkUpdate:
         )
         docs.finish()
         assert {w1.id, w2.id, w3.id} == set(
-            map(lambda d: d["_id"], external_search_fake_fixture.search.documents_all())
+            map(
+                lambda d: d["_id"], external_search_fake_fixture.service.documents_all()
+            )
         )
         assert [] == failures
 
@@ -4750,7 +4692,7 @@ class TestSearchErrors:
             external_search_fake_fixture.db,
         )
 
-        search.search.set_failing_mode(
+        search.service.set_failing_mode(
             mode=SearchServiceFailureMode.FAIL_INDEXING_DOCUMENTS_TIMEOUT
         )
         work = transaction.work()
@@ -4766,7 +4708,7 @@ class TestSearchErrors:
 
         # Submissions are not retried by the base service
         assert [work.id] == [
-            docs["_id"] for docs in search.search.document_submission_attempts
+            docs["_id"] for docs in search.service.document_submission_attempts
         ]
 
     def test_search_single_document_error(
@@ -4777,7 +4719,7 @@ class TestSearchErrors:
             external_search_fake_fixture.db,
         )
 
-        search.search.set_failing_mode(
+        search.service.set_failing_mode(
             mode=SearchServiceFailureMode.FAIL_INDEXING_DOCUMENTS
         )
         work = transaction.work()
@@ -4793,7 +4735,7 @@ class TestSearchErrors:
 
         # Submissions are not retried by the base service
         assert [work.id] == [
-            docs["_id"] for docs in search.search.document_submission_attempts
+            docs["_id"] for docs in search.service.document_submission_attempts
         ]
 
 
@@ -4942,7 +4884,7 @@ class TestSearchIndexCoverageProvider:
         assert [work] == results
 
         # The work was added to the search index.
-        search_service = external_search_fake_fixture.search
+        search_service = external_search_fake_fixture.service
         assert 1 == len(search_service.documents_all())
 
     def test_failure(
@@ -4953,7 +4895,7 @@ class TestSearchIndexCoverageProvider:
         work = db.work()
         work.set_presentation_ready()
         index = external_search_fake_fixture.external_search
-        external_search_fake_fixture.search.set_failing_mode(
+        external_search_fake_fixture.service.set_failing_mode(
             SearchServiceFailureMode.FAIL_INDEXING_DOCUMENTS
         )
 

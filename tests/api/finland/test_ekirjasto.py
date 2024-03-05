@@ -155,9 +155,11 @@ class MockEkirjastoAuthenticationAPI(EkirjastoAuthenticationAPI):
 
         self.mock_api = MockEkirjastoRemoteAPI()
 
-    def _create_authenticate_url(self, db):
+    def _create_circulation_url(self, endpoint, db):
+        library = self.library(db)
+
         return url_for(
-            "ekirjasto_authenticate",
+            endpoint,
             _external=True,
             library_short_name="test-library",
             provider=self.label(),
@@ -178,7 +180,7 @@ class MockEkirjastoAuthenticationAPI(EkirjastoAuthenticationAPI):
 
         assert None, f"Mockup for GET {url} not created"
 
-    def requests_post(self, url, ekirjasto_token=None):
+    def requests_post(self, url, ekirjasto_token=None, json_body=None):
         if self.bad_connection:
             raise requests.exceptions.ConnectionError(
                 "Connection error", self.__class__.__name__
@@ -245,6 +247,18 @@ class TestEkirjastoAuthentication:
             assert (
                 doc["links"][0]["href"]
                 == "http://localhost/test-library/ekirjasto_authenticate?provider=E-kirjasto+provider+for+circulation+manager"
+            )
+
+            assert (
+                doc["links"][6]["rel"] == "passkey_register_start"
+                and doc["links"][6]["href"]
+                == "http://localhost/test-library/ekirjasto/passkey/register/start?provider=E-kirjasto+provider+for+circulation+manager"
+            )
+
+            assert (
+                doc["links"][7]["rel"] == "passkey_register_finish"
+                and doc["links"][7]["href"]
+                == "http://localhost/test-library/ekirjasto/passkey/register/finish?provider=E-kirjasto+provider+for+circulation+manager"
             )
 
     def test_from_config(
@@ -771,3 +785,65 @@ class TestEkirjastoAuthentication:
         )
         assert isinstance(patron, Patron)
         assert PatronUtility.needs_external_sync(patron) == False
+
+    def test_remote_endpoint_get_success(
+        self,
+        create_provider: Callable[..., MockEkirjastoAuthenticationAPI],
+    ):
+        provider = create_provider()
+        user_id = "verified"
+        token, expires = provider.mock_api.get_test_access_token_for_user(user_id)
+
+        response_json, response_code = provider.remote_endpoint(
+            "/v1/auth/userinfo", token, "GET"
+        )
+
+        assert isinstance(response_json, dict)
+        assert response_code == 200
+
+    def test_remote_endpoint_post_success(
+        self,
+        create_provider: Callable[..., MockEkirjastoAuthenticationAPI],
+    ):
+        provider = create_provider()
+        user_id = "verified"
+        token, expires = provider.mock_api.get_test_access_token_for_user(user_id)
+
+        response_json, response_code = provider.remote_endpoint(
+            "/v1/auth/refresh", token, "POST", {"empty": "json"}
+        )
+
+        assert isinstance(response_json, dict)
+        assert response_code == 200
+
+    def test_remote_endpoint_invalid_token(
+        self,
+        create_provider: Callable[..., MockEkirjastoAuthenticationAPI],
+    ):
+        provider = create_provider()
+        user_id = "verified"
+        token, expires = provider.mock_api.get_test_access_token_for_user(user_id)
+
+        # Invalidate the token.
+        provider.mock_api._refresh_token_for_user_id(user_id)
+
+        response_json, response_code = provider.remote_endpoint(
+            "/v1/auth/userinfo", token, "GET"
+        )
+
+        assert isinstance(response_json, ProblemDetail)
+        assert response_json.status_code == 401
+
+    def test_remote_endpoint_unsupported_method(
+        self,
+        create_provider: Callable[..., MockEkirjastoAuthenticationAPI],
+    ):
+        provider = create_provider()
+
+        response_json, response_code = provider.remote_endpoint(
+            "/v1/auth/userinfo", "token", "PUT"
+        )
+
+        assert isinstance(response_json, ProblemDetail)
+        assert response_json.status_code == 415
+        assert response_code == None
