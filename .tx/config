@@ -1,0 +1,27 @@
+[main]
+host = https://app.transifex.com
+
+[o:national-library-of-finland:p:ekirjasto-circulation-admin:r:circulationadminpo]
+file_filter            = translations/<lang>/LC_MESSAGES/circulation-admin.po
+source_file            = translations/en/LC_MESSAGES/circulation-admin.po
+type                   = PO
+minimum_perc           = 0
+replace_edited_strings = false
+keep_translations      = false
+
+[o:national-library-of-finland:p:ekirjasto-circulation:r:circulationpo]
+file_filter            = translations/<lang>/LC_MESSAGES/circulation.po
+source_file            = translations/en/LC_MESSAGES/circulation.po
+type                   = PO
+minimum_perc           = 0
+replace_edited_strings = false
+keep_translations      = false
+
+[o:national-library-of-finland:p:ekirjasto-circulation:r:corepo]
+file_filter            = translations/<lang>/LC_MESSAGES/core.po
+source_file            = translations/en/LC_MESSAGES/core.po
+type                   = PO
+minimum_perc           = 0
+replace_edited_strings = false
+keep_translations      = false
+
