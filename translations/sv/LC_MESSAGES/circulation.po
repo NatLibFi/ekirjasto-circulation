@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2024-02-19 22:26+0200\n"
+"POT-Creation-Date: 2024-03-05 22:39+0200\n"
 "PO-Revision-Date: 2024-02-19 22:17+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: sv\n"
@@ -41,7 +41,7 @@ msgstr ""
 msgid "Username"
 msgstr ""
 
-#: api/axis.py:102 api/novelist.py:51
+#: api/axis.py:102
 msgid "Password"
 msgstr ""
 
@@ -140,8 +140,12 @@ msgstr ""
 msgid "Integration error communicating with %(service_name)s"
 msgstr ""
 
-#: api/circulation_manager.py:179
+#: api/circulation_manager.py:157
 msgid "Lane does not exist"
+msgstr ""
+
+#: api/circulation_manager.py:375
+msgid "All Books"
 msgstr ""
 
 #: api/config.py:81
@@ -235,26 +239,26 @@ msgstr ""
 msgid "Send patrons to the lane with this ID."
 msgstr ""
 
-#: api/ekirjasto_authentication.py:63
+#: api/ekirjasto_authentication.py:65
 msgid "E-kirjasto API environment"
 msgstr ""
 
-#: api/ekirjasto_authentication.py:64
+#: api/ekirjasto_authentication.py:66
 msgid "Select what environment of E-kirjasto accounts should be used."
 msgstr ""
 
-#: api/ekirjasto_authentication.py:81
+#: api/ekirjasto_authentication.py:83
 msgid "Delegate token expire time in seconds"
 msgstr ""
 
-#: api/ekirjasto_authentication.py:82
+#: api/ekirjasto_authentication.py:84
 msgid ""
 "Expire time for a delegate token to authorize in behalf of a ekirjasto "
 "token. This should be less than the expire time for ekirjasto token, so "
 "it can be refreshed."
 msgstr ""
 
-#: api/enki.py:74 api/firstbook2.py:27 api/kansas_patron.py:20
+#: api/enki.py:74 api/kansas_patron.py:20
 msgid "URL"
 msgstr ""
 
@@ -262,36 +266,8 @@ msgstr ""
 msgid "Integrate an Enki collection."
 msgstr ""
 
-#: api/firstbook2.py:28
-msgid "The URL for the First Book authentication service."
-msgstr ""
-
-#: api/firstbook2.py:35
-msgid "Key"
-msgstr ""
-
-#: api/firstbook2.py:36
-msgid "The key for the First Book authentication service."
-msgstr ""
-
 #: api/millenium_patron.py:177
 msgid "III Millenium Patron API"
-msgstr ""
-
-#: api/novelist.py:42
-msgid "Novelist API"
-msgstr ""
-
-#: api/novelist.py:50
-msgid "Profile"
-msgstr ""
-
-#: api/nyt.py:63
-msgid "NYT Best Seller API"
-msgstr ""
-
-#: api/nyt.py:67
-msgid "API key"
 msgstr ""
 
 #: api/odl.py:85
@@ -693,173 +669,189 @@ msgstr ""
 msgid "Ekirjasto provider was not configured for the library"
 msgstr ""
 
-#: api/problem_details.py:264
-msgid "Invalid SAML bearer token."
+#: api/problem_details.py:265
+msgid "Ekirjasto remote method not supported."
 msgstr ""
 
-#: api/problem_details.py:265
-msgid "The provided SAML bearer token couldn't be verified."
+#: api/problem_details.py:266
+msgid "Method for a remote call not supported."
 msgstr ""
 
 #: api/problem_details.py:272
-msgid "Invalid delegate token for ekirjasto authentication provider."
+msgid "Invalid SAML bearer token."
 msgstr ""
 
 #: api/problem_details.py:273
+msgid "The provided SAML bearer token couldn't be verified."
+msgstr ""
+
+#: api/problem_details.py:280
+msgid "Invalid delegate token for ekirjasto authentication provider."
+msgstr ""
+
+#: api/problem_details.py:281
 msgid ""
 "The provided delegate token couldn't be verified for ekirjasto "
 "authentication provider or it is expired."
 msgstr ""
 
-#: api/problem_details.py:282
+#: api/problem_details.py:290
 msgid "Invalid ekirjasto token for ekirjasto API."
 msgstr ""
 
-#: api/problem_details.py:283
+#: api/problem_details.py:291
 msgid "The provided ekirjasto token couldn't be verified for ekirjasto API."
 msgstr ""
 
-#: api/problem_details.py:290
+#: api/problem_details.py:298
 msgid "Authentication with ekirjasto API failed."
 msgstr ""
 
-#: api/problem_details.py:291
+#: api/problem_details.py:299
 msgid "Authentication with ekirjasto API failed, for unknown reason."
 msgstr ""
 
-#: api/problem_details.py:297
+#: api/problem_details.py:306
+msgid "Call to ekirjasto API failed."
+msgstr ""
+
+#: api/problem_details.py:307
+msgid "Call to ekirjasto API failed, for unknown reason."
+msgstr ""
+
+#: api/problem_details.py:313
 msgid "Unsupported authentication mechanism."
 msgstr ""
 
-#: api/problem_details.py:298
+#: api/problem_details.py:314
 msgid "The specified authentication mechanism isn't supported."
 msgstr ""
 
-#: api/problem_details.py:304
+#: api/problem_details.py:320
 msgid "Invalid analytics event type."
 msgstr ""
 
-#: api/problem_details.py:305
+#: api/problem_details.py:321
 msgid "The analytics event must be a supported type."
 msgstr ""
 
-#: api/problem_details.py:311
+#: api/problem_details.py:327
 msgid "Invalid annotation motivation."
 msgstr ""
 
-#: api/problem_details.py:312
+#: api/problem_details.py:328
 msgid "The annotation must have a supported motivation."
 msgstr ""
 
-#: api/problem_details.py:318
+#: api/problem_details.py:334
 msgid "Invalid annotation target."
 msgstr ""
 
-#: api/problem_details.py:319
+#: api/problem_details.py:335
 msgid "The annotation target must be a work in your current loans."
 msgstr ""
 
-#: api/problem_details.py:325
+#: api/problem_details.py:341
 msgid "Invalid annotation format."
 msgstr ""
 
-#: api/problem_details.py:326
+#: api/problem_details.py:342
 msgid "The annotation could not be parsed as JSON-LD."
 msgstr ""
 
-#: api/problem_details.py:332
+#: api/problem_details.py:348
 msgid "No annotation."
 msgstr ""
 
-#: api/problem_details.py:333
+#: api/problem_details.py:349
 msgid "The annotation you requested does not exist."
 msgstr ""
 
-#: api/problem_details.py:339
+#: api/problem_details.py:355
 msgid "Library not found."
 msgstr ""
 
-#: api/problem_details.py:340
+#: api/problem_details.py:356
 msgid "No library with the requested name on this server."
 msgstr ""
 
-#: api/problem_details.py:346
+#: api/problem_details.py:362
 msgid "Wrong library"
 msgstr ""
 
-#: api/problem_details.py:347
+#: api/problem_details.py:363
 msgid "You are not a patron of the selected library."
 msgstr ""
 
-#: api/problem_details.py:353
+#: api/problem_details.py:369
 msgid "Invalid loan for ODL notification"
 msgstr ""
 
-#: api/problem_details.py:354
+#: api/problem_details.py:370
 msgid "The ODL notification is for a loan that's not from an ODL collection."
 msgstr ""
 
-#: api/problem_details.py:360
+#: api/problem_details.py:376
 msgid "Invalid registration"
 msgstr ""
 
-#: api/problem_details.py:361
+#: api/problem_details.py:377
 msgid "You did not submit enough information to register with the collection."
 msgstr ""
 
-#: api/problem_details.py:367
+#: api/problem_details.py:383
 msgid "Decryption error"
 msgstr ""
 
-#: api/problem_details.py:368
+#: api/problem_details.py:384
 msgid "Failed to decrypt a shared secret retrieved from another computer."
 msgstr ""
 
-#: api/problem_details.py:374
+#: api/problem_details.py:390
 msgid "Device token not found"
 msgstr ""
 
-#: api/problem_details.py:375
+#: api/problem_details.py:391
 msgid "Patron does not have a device registered with this token."
 msgstr ""
 
-#: api/problem_details.py:381
+#: api/problem_details.py:397
 msgid "Device token already exists"
 msgstr ""
 
-#: api/problem_details.py:382
+#: api/problem_details.py:398
 msgid "A device token with the same token already exists."
 msgstr ""
 
-#: api/problem_details.py:388
+#: api/problem_details.py:404
 msgid "Device token type invalid"
 msgstr ""
 
-#: api/problem_details.py:389
+#: api/problem_details.py:405
 msgid "The token type provided is not valid."
 msgstr ""
 
-#: api/problem_details.py:395
+#: api/problem_details.py:411
 msgid "Access token expired"
 msgstr ""
 
-#: api/problem_details.py:396
+#: api/problem_details.py:412
 msgid "The patron authentication access token has expired."
 msgstr ""
 
-#: api/problem_details.py:402
+#: api/problem_details.py:418
 msgid "Access token invalid"
 msgstr ""
 
-#: api/problem_details.py:403
+#: api/problem_details.py:419
 msgid "The patron authentication access token is invalid."
 msgstr ""
 
-#: api/problem_details.py:409
+#: api/problem_details.py:425
 msgid "Access token not possible"
 msgstr ""
 
-#: api/problem_details.py:410
+#: api/problem_details.py:426
 msgid ""
 "The patron authentication access token is not possible for this type of "
 "authentication."
@@ -876,4 +868,25 @@ msgstr ""
 #: api/sirsidynix_authentication_provider.py:34
 msgid "Patron has been blocked."
 msgstr ""
+
+#~ msgid "The URL for the First Book authentication service."
+#~ msgstr ""
+
+#~ msgid "Key"
+#~ msgstr ""
+
+#~ msgid "The key for the First Book authentication service."
+#~ msgstr ""
+
+#~ msgid "Novelist API"
+#~ msgstr ""
+
+#~ msgid "Profile"
+#~ msgstr ""
+
+#~ msgid "NYT Best Seller API"
+#~ msgstr ""
+
+#~ msgid "API key"
+#~ msgstr ""
 
