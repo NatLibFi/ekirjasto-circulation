@@ -1,7 +1,6 @@
 import logging
 
 import core.classifier as genres
-from core.classifier.localized_names import genres as localized_genre_names
 from api.config import CannotLoadConfiguration, Configuration
 from api.novelist import NoveListAPI
 from core import classifier
@@ -218,11 +217,7 @@ def lane_from_genres(
                 visible = instructions.get("visible")
 
     if not display_name:
-        localized_genres = [
-            localized_genre_names.get(genre)
-            for genre in genres
-        ]
-        display_name = ", ".join(sorted(localized_genres))
+        display_name = ", ".join(sorted(genres))
 
     lane, ignore = create(
         _db,

@@ -7,6 +7,7 @@ from decimal import Decimal
 from typing import Any
 from urllib.parse import quote
 
+from flask_babel import gettext
 from sqlalchemy.orm import Session, joinedload
 
 from core.classifier import Classifier
@@ -28,7 +29,6 @@ from core.model.licensing import LicensePool
 from core.model.resource import Hyperlink
 from core.model.work import Work
 from core.util.opds_writer import AtomFeed, OPDSFeed
-
 
 class ToFeedEntry:
     @classmethod
@@ -180,7 +180,7 @@ class ToFeedEntry:
 
         if simplified_genres:
             categories[Subject.SIMPLIFIED_GENRE] = [
-                dict(term=Subject.SIMPLIFIED_GENRE + quote(x), label=x)
+                dict(term=Subject.SIMPLIFIED_GENRE + quote(x), label=gettext(x))
                 for x in simplified_genres
             ]
 
