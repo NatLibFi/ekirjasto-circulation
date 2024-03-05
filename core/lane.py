@@ -553,9 +553,7 @@ class Facets(FacetsWithEntryPoint):
         self.collection_name = collection_name or self.default_facet(
             library, self.COLLECTION_NAME_FACETS_GROUP_NAME
         )
-        self.language: str = language or self.default_facet(
-            library, self.LANGUAGE_FACET_GROUP_NAME
-        )
+        self.language: str = language
         if order_ascending == self.ORDER_ASCENDING:
             order_ascending = True
         elif order_ascending == self.ORDER_DESCENDING:
@@ -727,7 +725,9 @@ class Facets(FacetsWithEntryPoint):
         filter.subcollection = self.collection
 
         # Finland
-        if self.language and self.language != self.LANGUAGE_ALL:
+        if self.language == self.LANGUAGE_ALL:
+            filter.languages = []
+        elif self.language:
             filter.languages = [self.language]
 
         # We can only have distributor and collection name facets if we have a library

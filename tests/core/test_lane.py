@@ -360,7 +360,7 @@ class TestFacets:
             ["collectionName", db.default_collection().name, False],
             ["distributor", "All", True],
             ["distributor", DataSource.AMAZON, False],
-            ["language", "all", True],
+            ["language", "all", False],
             ["language", "eng", False],
             ["language", "fin", False],
             ["language", "others", False],
