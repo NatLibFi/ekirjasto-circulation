@@ -250,10 +250,11 @@ class OPDSAcquisitionFeed(BaseOPDSFeed):
         """Create arguments for add_link_to_feed for a link that navigates
         between EntryPoints.
         """
-        display_title = str(EntryPoint.LOCALIZED_DISPLAY_TITLES.get(entrypoint))
+        display_title = EntryPoint.LOCALIZED_DISPLAY_TITLES.get(entrypoint)
         if not display_title:
             # Shouldn't happen.
             return None
+        display_title = str(display_title)
 
         url = url_generator(entrypoint)
         is_selected = entrypoint is selected_entrypoint
