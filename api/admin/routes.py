@@ -115,6 +115,14 @@ def admin_sign_in():
     return app.manager.admin_sign_in_controller.sign_in()
 
 
+# Finland
+# Ekirjasto auth client calls this endpoint when it finishes authenticating the user
+@app.route("/admin/ekirjasto_auth_finish", methods=["POST"])
+@returns_problem_detail
+def ekirjasto_auth_finish():
+    return app.manager.admin_sign_in_controller.ekirjasto_auth_finish()
+
+
 @app.route("/admin/sign_out")
 @returns_problem_detail
 @requires_admin

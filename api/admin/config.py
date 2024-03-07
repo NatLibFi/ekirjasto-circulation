@@ -3,7 +3,10 @@ from enum import Enum
 from urllib.parse import urljoin
 
 from requests import RequestException
+from sqlalchemy.engine.url import make_url
+from sqlalchemy.exc import ArgumentError
 
+from core.config import CannotLoadConfiguration
 from core.util.http import HTTP, RequestNetworkException
 from core.util.log import LoggerMixin
 
@@ -16,7 +19,7 @@ class OperationalMode(str, Enum):
 class Configuration(LoggerMixin):
     APP_NAME = "E-kirjasto Collection Manager"
     PACKAGE_NAME = "@natlibfi/ekirjasto-circulation-admin"
-    PACKAGE_VERSION = "0.1.0"
+    PACKAGE_VERSION = "0.2.0"
 
     STATIC_ASSETS = {
         "admin_js": "circulation-admin.js",
@@ -50,8 +53,30 @@ class Configuration(LoggerMixin):
     ENV_ADMIN_UI_PACKAGE_NAME = "TPP_CIRCULATION_ADMIN_PACKAGE_NAME"
     ENV_ADMIN_UI_PACKAGE_VERSION = "TPP_CIRCULATION_ADMIN_PACKAGE_VERSION"
 
+    # Finland
+    # Environment variable that defines admin ekirjasto sign in URL
+    ENV_ADMIN_EKIRJASTO_AUTHENTICATION_URL = "ADMIN_EKIRJASTO_AUTHENTICATION_URL"
+
     # Cache the package version after first lookup.
     _version: str | None = None
+
+    @classmethod
+    def ekirjasto_authentication_url(cls) -> str:
+        url = os.environ.get(cls.ENV_ADMIN_EKIRJASTO_AUTHENTICATION_URL)
+        if not url:
+            raise CannotLoadConfiguration(
+                "Admin Ekirjasto authentication url was not defined in environment variable %s."
+                % cls.ENV_ADMIN_EKIRJASTO_AUTHENTICATION_URL
+            )
+
+        try:
+            make_url(url)
+        except ArgumentError as e:
+            raise ArgumentError(
+                "Bad format for admin ekirjasto authentication URL (%s)." % url
+            )
+
+        return url
 
     @classmethod
     def operational_mode(cls) -> OperationalMode:

@@ -19,6 +19,7 @@ from api.admin.problem_details import (
 )
 from api.problem_details import LIBRARY_NOT_FOUND
 from core.model import Admin, AdminRole, Library, get_one, get_one_or_create
+from core.model.admin import AdminCredential
 from core.util.problem_detail import ProblemDetail
 
 
@@ -68,6 +69,10 @@ class IndividualAdminSettingsController(AdminPermissionsControllerMixin):
         if not highest_role:
             raise AdminNotAuthorized()
 
+        # Finland, don't allow externally authenticated users to manage admins.
+        if logged_in_admin.is_authenticated_externally():
+            raise AdminNotAuthorized()
+
         def append_role(roles, role):
             role_dict = dict(role=role.role)
             if role.library:
@@ -75,7 +80,14 @@ class IndividualAdminSettingsController(AdminPermissionsControllerMixin):
             roles.append(role_dict)
 
         admins = []
-        for admin in self._db.query(Admin).order_by(Admin.email):
+        for admin in (
+            self._db.query(Admin)
+            .outerjoin(
+                AdminCredential
+            )  # Finland, don't return externally authenticated admins
+            .filter(AdminCredential.admin_id.is_(None))
+            .order_by(Admin.email)
+        ):
             roles = []
             show_admin = True
             for role in admin.roles:
@@ -270,6 +282,13 @@ class IndividualAdminSettingsController(AdminPermissionsControllerMixin):
 
         if not settingUp:
             user = flask.request.admin
+
+            # Finland, don't allow editing externally authenticated users
+            if (
+                user.is_authenticated_externally()
+                or admin.is_authenticated_externally()
+            ):
+                raise AdminNotAuthorized()
 
             # System admin has all permissions.
             if user.is_system_admin():
