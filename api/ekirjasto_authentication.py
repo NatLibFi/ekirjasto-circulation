@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import flask_babel
 import uuid
 from abc import ABC
 from base64 import b64decode, b64encode
@@ -191,7 +192,7 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
                 {"rel": "api", "href": self._ekirjasto_api_url},
                 {
                     "rel": "tunnistus_start",
-                    "href": f"{self._ekirjasto_api_url}/v1/auth/tunnistus/start?locale=fi",
+                    "href": f"{self._ekirjasto_api_url}/v1/auth/tunnistus/start?locale={flask_babel.get_locale()}",
                 },
                 {
                     "rel": "tunnistus_finish",

@@ -257,11 +257,13 @@ class CirculationManager(LoggerMixin):
 
         self.patron_web_domains = patron_web_domains
         self.setup_configuration_dependent_controllers()
-        authentication_document_cache_time = int(
-            ConfigurationSetting.sitewide(
-                self._db, Configuration.AUTHENTICATION_DOCUMENT_CACHE_TIME
-            ).value_or_default(3600)
-        )
+        # Finland: Disabled cache, because the E-kirjasto authentication provider
+        # will have links containing a query parameter for user's locale.
+        authentication_document_cache_time = 0#int(
+        #    ConfigurationSetting.sitewide(
+        #        self._db, Configuration.AUTHENTICATION_DOCUMENT_CACHE_TIME
+        #    ).value_or_default(3600)
+        #)
         self.authentication_for_opds_documents = ExpiringDict(
             max_len=1000, max_age_seconds=authentication_document_cache_time
         )
