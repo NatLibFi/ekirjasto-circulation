@@ -19,12 +19,13 @@ class OperationalMode(str, Enum):
 class Configuration(LoggerMixin):
     APP_NAME = "E-kirjasto Collection Manager"
     PACKAGE_NAME = "@natlibfi/ekirjasto-circulation-admin"
-    PACKAGE_VERSION = "0.2.0"
+    PACKAGE_VERSION = "0.3.0"
 
     STATIC_ASSETS = {
         "admin_js": "circulation-admin.js",
         "admin_css": "circulation-admin.css",
         "admin_logo": "PalaceCollectionManagerLogo.svg",
+        "favicon": "favicon.ico",
     }
 
     # For proper operation, `package_url` MUST end with a slash ('/') and
