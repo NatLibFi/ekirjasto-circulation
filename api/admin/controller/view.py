@@ -71,6 +71,7 @@ class ViewController(AdminController):
         )
         admin_js = AdminClientConfig.lookup_asset_url(key="admin_js")
         admin_css = AdminClientConfig.lookup_asset_url(key="admin_css")
+        favicon_url = AdminClientConfig.lookup_asset_url(key="favicon")
 
         # Find the URL and text to use when rendering the Terms of
         # Service link in the footer.
@@ -101,6 +102,7 @@ class ViewController(AdminController):
                 auth_type=auth_type,
                 admin_js=admin_js,
                 admin_css=admin_css,
+                favicon_url=favicon_url,
             )
         )
 
