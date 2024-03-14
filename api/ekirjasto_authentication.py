@@ -59,6 +59,8 @@ class EkirjastoEnvironment(Enum):
 class EkirjastoAuthAPISettings(AuthProviderSettings):
     """Settings for the EkirjastoAuthenticationAPI."""
 
+    _DEFAULT_DELEGATE_EXPIRE_SECONDS = datetime.timedelta(hours=12).seconds
+
     # API environment form field, choose between dev and prod.
     ekirjasto_environment: EkirjastoEnvironment = FormField(
         EkirjastoEnvironment.FAKE,
@@ -79,7 +81,7 @@ class EkirjastoAuthAPISettings(AuthProviderSettings):
     )
 
     delegate_expire_time: int = FormField(
-        60 * 60 * 12,  # 12 hours
+        _DEFAULT_DELEGATE_EXPIRE_SECONDS,
         form=ConfigurationFormItem(
             label=_("Delegate token expire time in seconds"),
             description=_(
@@ -521,9 +523,7 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
                 )
             else:
                 return None
-
         url = self._ekirjasto_api_url + "/v1/auth/userinfo"
-
         try:
             response = self.requests_get(url, ekirjasto_token)
         except requests.exceptions.ConnectionError as e:
@@ -691,39 +691,36 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
         """
         # authorization is the decoded payload of the delegate token, including
         # encrypted ekirjasto token.
-        if type(authorization) != dict:
+
+        if (
+            type(authorization) is not dict
+            or "token" not in authorization
+            or "exp" not in authorization
+            or "sub" not in authorization
+        ):
             return UNSUPPORTED_AUTHENTICATION_MECHANISM
 
         ekirjasto_token = None
         delegate_patron = None
-        if (
-            "token" in authorization
-            and "exp" in authorization
-            and "sub" in authorization
-        ):
-            encrypted_ekirjasto_token = authorization["token"]
-            delegate_expired = from_timestamp(authorization["exp"]) < utc_now()
-            patron_delegate_id = authorization["sub"]
+        delegate_expired = from_timestamp(authorization["exp"]) < utc_now()
+        if delegate_expired:
+            # Causes to return 401 error
+            return None
 
-            if delegate_expired:
-                # Causes to return 401 error
-                return None
+        encrypted_ekirjasto_token = authorization["token"]
+        patron_delegate_id = authorization["sub"]
 
-            delegate_patron = self.get_patron_with_delegate_id(_db, patron_delegate_id)
-            if delegate_patron == None:
-                # Causes to return 401 error
-                return None
+        delegate_patron = self.get_patron_with_delegate_id(_db, patron_delegate_id)
+        if delegate_patron == None:
+            # Causes to return 401 error
+            return None
 
-            if PatronUtility.needs_external_sync(delegate_patron):
-                # We should sometimes try to update the patron from remote.
-                ekirjasto_token = self._decrypt_ekirjasto_token(
-                    encrypted_ekirjasto_token
-                )
-            else:
-                # No need to update patron.
-                return delegate_patron
+        if PatronUtility.needs_external_sync(delegate_patron):
+            # We should sometimes try to update the patron from remote.
+            ekirjasto_token = self._decrypt_ekirjasto_token(encrypted_ekirjasto_token)
         else:
-            return UNSUPPORTED_AUTHENTICATION_MECHANISM
+            # No need to update patron.
+            return delegate_patron
 
         # If we come here, we have ekirjasto_token and we should try to update the patron.
         with elapsed_time_logging(

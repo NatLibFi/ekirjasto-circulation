@@ -4,7 +4,7 @@ admin = """
 <head>
 <title>{{ app_name }}</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="shortcut icon" href="/images/favicon.ico">
+<link rel="shortcut icon" href="{{ favicon_url }}">
 <link href="{{ admin_css }}" rel="stylesheet" />
 </head>
 <body>
@@ -18,6 +18,7 @@ admin = """
         settingUp: {{ "true" if setting_up else "false" }},
         email: "{{ email }}",
         roles: [{% for role in roles %}{"role": "{{role.role}}"{% if role.library %}, "library": "{{role.library.short_name}}"{% endif %} },{% endfor %}],
+        authType: "{{ auth_type }}",
         featureFlags: {
           enableAutoList: true,
         },
@@ -56,6 +57,11 @@ sign_in_template = """
 <a href="%(forgot_password_url)s">Forgot password?</a>
 <button type="submit" style="{button}">Sign In</button>
 </form>
+"""
+
+# Finland
+ekirjasto_sign_in_template = """
+<a href="%(ekirjasto_auth_url)s">Sign in with Suomi.fi e-Identification</a>
 """
 
 forgot_password_template = """

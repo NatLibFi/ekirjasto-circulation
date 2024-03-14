@@ -6,6 +6,9 @@ import urllib.parse
 
 import flask
 
+from api.admin.ekirjasto_admin_authentication_provider import (
+    EkirjastoAdminAuthenticationProvider,
+)
 from api.admin.exceptions import AdminNotAuthorized
 from api.admin.password_admin_authentication_provider import (
     PasswordAdminAuthenticationProvider,
@@ -35,8 +38,10 @@ class AdminController:
     @property
     def admin_auth_providers(self):
         if Admin.with_password(self._db).count() != 0:
-            return [PasswordAdminAuthenticationProvider()]
-
+            return [
+                EkirjastoAdminAuthenticationProvider(),
+                PasswordAdminAuthenticationProvider(),
+            ]
         return []
 
     def admin_auth_provider(self, type):
@@ -129,6 +134,14 @@ class AdminController:
 
 class AdminPermissionsControllerMixin:
     """Mixin that provides methods for verifying an admin's roles."""
+
+    # Finland, allows extra restrictions for ekirjasto users
+    # This should be applied on top of existing authorization,
+    # not as a replacement
+    def ekirjasto_require_system_admin(self):
+        admin = getattr(flask.request, "admin", None)
+        if admin.is_authenticated_externally and not admin.is_system_admin():
+            raise AdminNotAuthorized()
 
     def require_system_admin(self):
         admin = getattr(flask.request, "admin", None)

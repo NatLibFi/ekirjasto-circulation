@@ -2,6 +2,7 @@ import flask
 import pytest
 from werkzeug.datastructures import ImmutableMultiDict
 
+from api.admin.controller.sign_in import SignInController
 from api.admin.password_admin_authentication_provider import (
     PasswordAdminAuthenticationProvider,
 )
@@ -11,6 +12,7 @@ from api.admin.problem_details import (
     INVALID_ADMIN_CREDENTIALS,
 )
 from core.model import Admin, create
+from core.model.admin import AdminRole
 from tests.fixtures.api_admin import AdminControllerFixture
 from tests.fixtures.api_controller import ControllerFixture
 
@@ -40,17 +42,18 @@ class TestSignInController:
                 sign_in_fixture.ctrl.db.session, Admin, email="pw@nypl.org"
             )
             pw_admin.password = "password"
-            assert 1 == len(ctrl.admin_auth_providers)
-            assert {
-                PasswordAdminAuthenticationProvider.NAME,
-            } == {provider.NAME for provider in ctrl.admin_auth_providers}
+            assert ctrl.admin_auth_providers
+            assert any(
+                provider.NAME == PasswordAdminAuthenticationProvider.NAME
+                for provider in ctrl.admin_auth_providers
+            )
 
             # Only an admin with a password is left.
             sign_in_fixture.ctrl.db.session.delete(sign_in_fixture.admin)
-            assert 1 == len(ctrl.admin_auth_providers)
-            assert {
-                PasswordAdminAuthenticationProvider.NAME,
-            } == {provider.NAME for provider in ctrl.admin_auth_providers}
+            assert any(
+                provider.NAME == PasswordAdminAuthenticationProvider.NAME
+                for provider in ctrl.admin_auth_providers
+            )
 
             # No admins. No one can log in anymore
             sign_in_fixture.ctrl.db.session.delete(pw_admin)
@@ -293,3 +296,25 @@ class TestSignInController:
             # The admin's credentials have been removed from the session.
             assert None == flask.session.get("admin_email")
             assert None == flask.session.get("auth_type")
+
+    def test_update_roles_if_changed(self, sign_in_fixture: SignInFixture):
+        admin, ignore = create(
+            sign_in_fixture.ctrl.db.session,
+            Admin,
+            email=sign_in_fixture.ctrl.db.fresh_str(),
+        )
+        initial_roles = [(AdminRole.SYSTEM_ADMIN, None)]
+        for role in initial_roles:
+            admin.add_role(AdminRole.SYSTEM_ADMIN, library=None)
+
+        SignInController._update_roles_if_changed(admin, AdminRole.SYSTEM_ADMIN)
+        sign_in_fixture.ctrl.db.session.refresh(admin)
+        assert initial_roles == [(role.role, role.library) for role in admin.roles]
+
+        admin.add_role(role=AdminRole.LIBRARY_MANAGER, library=None)
+        admin.add_role(role=AdminRole.LIBRARIAN, library=None)
+        SignInController._update_roles_if_changed(
+            admin, new_role=AdminRole.SYSTEM_ADMIN
+        )
+        sign_in_fixture.ctrl.db.session.refresh(admin)
+        assert initial_roles == [(role.role, role.library) for role in admin.roles]

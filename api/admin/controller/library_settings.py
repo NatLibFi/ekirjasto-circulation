@@ -97,6 +97,9 @@ class LibrarySettingsController(AdminPermissionsControllerMixin):
         )
 
     def process_post(self) -> Response:
+        # Finland, for ekirjasto users, restrict library update to system admins only
+        self.ekirjasto_require_system_admin()
+
         is_new = False
         form_data = flask.request.form
 

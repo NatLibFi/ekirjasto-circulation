@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import Literal
 from urllib.parse import quote_plus
 
 import flask
@@ -19,6 +20,7 @@ class ViewController(AdminController):
         setting_up = self.admin_auth_providers == []
         email = None
         roles = []
+        auth_type: Literal["password", "external"] = "password"
         if not setting_up:
             admin = self.authenticated_admin_from_request()
             if isinstance(admin, ProblemDetail):
@@ -60,12 +62,16 @@ class ViewController(AdminController):
                     roles.append({"role": role.role, "library": role.library})
                 else:
                     roles.append({"role": role.role})
+            auth_type = (
+                "external" if admin.is_authenticated_externally() else "password"
+            )
 
         csrf_token = (
             flask.request.cookies.get("csrf_token") or self.generate_csrf_token()
         )
         admin_js = AdminClientConfig.lookup_asset_url(key="admin_js")
         admin_css = AdminClientConfig.lookup_asset_url(key="admin_css")
+        favicon_url = AdminClientConfig.lookup_asset_url(key="favicon")
 
         # Find the URL and text to use when rendering the Terms of
         # Service link in the footer.
@@ -93,8 +99,10 @@ class ViewController(AdminController):
                 setting_up=setting_up,
                 email=email,
                 roles=roles,
+                auth_type=auth_type,
                 admin_js=admin_js,
                 admin_css=admin_css,
+                favicon_url=favicon_url,
             )
         )
 

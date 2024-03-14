@@ -10,12 +10,17 @@ from werkzeug import Response as WerkzeugResponse
 
 from api.admin.config import Configuration as AdminClientConfig
 from api.admin.controller.base import AdminController
+from api.admin.ekirjasto_admin_authentication_provider import (
+    EkirjastoAdminAuthenticationProvider,
+    EkirjastoUserInfo,
+)
 from api.admin.password_admin_authentication_provider import (
     PasswordAdminAuthenticationProvider,
 )
 from api.admin.problem_details import (
     ADMIN_AUTH_MECHANISM_NOT_CONFIGURED,
     ADMIN_AUTH_NOT_CONFIGURED,
+    ADMIN_NOT_AUTHORIZED,
     INVALID_ADMIN_CREDENTIALS,
 )
 from api.admin.template_styles import (
@@ -26,6 +31,9 @@ from api.admin.template_styles import (
     section_style,
     small_link_style,
 )
+from api.problem_details import EKIRJASTO_REMOTE_AUTHENTICATION_FAILED
+from core.model import get_one, get_one_or_create
+from core.model.admin import Admin, AdminCredential, AdminRole
 from core.util.problem_detail import ProblemDetail
 
 
@@ -67,6 +75,99 @@ class SignInController(AdminController):
         logo=logo_style,
     )
 
+    # Finland
+    def ekirjasto_auth_finish(self):
+        auth: EkirjastoAdminAuthenticationProvider = self.admin_auth_provider(
+            EkirjastoAdminAuthenticationProvider.NAME
+        )
+        if not auth:
+            return ADMIN_AUTH_MECHANISM_NOT_CONFIGURED
+
+        result = flask.request.form.get("result")
+        if result != "success":
+            logging.error("Ekirjasto authentication failed, result = %s", result)
+            return self.error_response(EKIRJASTO_REMOTE_AUTHENTICATION_FAILED)
+
+        ekirjasto_token = flask.request.form.get("token")
+
+        user_info = auth.ekirjasto_authenticate(ekirjasto_token)
+        if isinstance(user_info, ProblemDetail):
+            return user_info
+
+        circulation_role = self._to_circulation_role(user_info.role)
+        if not circulation_role:
+            return self.error_response(ADMIN_NOT_AUTHORIZED)
+
+        try:
+            credentials = get_one(self._db, AdminCredential, external_id=user_info.sub)
+            if credentials:
+                admin = credentials.admin
+            else:
+                admin = self._create_admin_with_external_credentials(user_info)
+
+            self._update_roles_if_changed(admin, circulation_role)
+        except Exception as e:
+            logging.exception("Internal error during signup")
+            self._db.rollback()
+            return EKIRJASTO_REMOTE_AUTHENTICATION_FAILED
+
+        self._setup_admin_flask_session(admin, auth, ekirjasto_token)
+
+        redirect_uri = flask.request.args.get("redirect_uri", "/admin/web")
+        return SanitizedRedirections.redirect(redirect_uri)
+
+    def _create_admin_with_external_credentials(self, user_info: EkirjastoUserInfo):
+        admin, _ = get_one_or_create(
+            self._db,
+            Admin,
+            email=user_info.sub,
+        )
+        get_one_or_create(
+            self._db,
+            AdminCredential,
+            external_id=user_info.sub,
+            admin_id=admin.id,
+        )
+        return admin
+
+    @staticmethod
+    def _update_roles_if_changed(admin: Admin, new_role: str):
+        existing_roles = [(role.role, role.library) for role in admin.roles]
+        if [(new_role, None)] != existing_roles:
+            for role in admin.roles:
+                admin.remove_role(role.role, role.library)
+            admin.add_role(new_role)
+
+    @staticmethod
+    def _setup_admin_flask_session(
+        admin: Admin,
+        auth: EkirjastoAdminAuthenticationProvider,
+        ekirjasto_token: str,
+    ):
+        # Set up the admin's flask session.
+        flask.session["admin_email"] = admin.email
+        flask.session["auth_type"] = auth.NAME
+
+        # This one is extra compared to password auth provider
+        flask.session["ekirjasto_token"] = ekirjasto_token
+
+        # A permanent session expires after a fixed time, rather than
+        # when the user closes the browser.
+        flask.session.permanent = True
+
+    @staticmethod
+    def _to_circulation_role(ekirjasto_role: str) -> str | None:
+        if ekirjasto_role == "orgadmin":
+            return AdminRole.SYSTEM_ADMIN
+        elif ekirjasto_role == "admin":
+            return AdminRole.SITEWIDE_LIBRARY_MANAGER
+        elif ekirjasto_role == "librarian":
+            return AdminRole.SITEWIDE_LIBRARIAN
+        else:
+            # other possible values are "sysadmin", "registrant" and "customer",
+            # these are not allowed as circulation admins
+            return None
+
     def sign_in(self):
         """Redirects admin if they're signed in, or shows the sign in page."""
         if not self.admin_auth_providers:
@@ -98,7 +199,9 @@ class SignInController(AdminController):
             headers["Content-Type"] = "text/html"
             return Response(html, 200, headers)
         elif admin:
-            return SanitizedRedirections.redirect(flask.request.args.get("redirect"))
+            return SanitizedRedirections.redirect(
+                flask.request.args.get("redirect", "/admin/web")
+            )
 
     def password_sign_in(self):
         if not self.admin_auth_providers:
@@ -117,6 +220,10 @@ class SignInController(AdminController):
 
     def change_password(self):
         admin = flask.request.admin
+
+        if admin.is_authenticated_externally():
+            return ADMIN_NOT_AUTHORIZED
+
         new_password = flask.request.form.get("password")
         if new_password:
             admin.password = new_password
@@ -127,12 +234,24 @@ class SignInController(AdminController):
         flask.session.pop("admin_email", None)
         flask.session.pop("auth_type", None)
 
+        # Finland, revoke ekirjasto session
+        self._try_revoke_ekirjasto_session()
+
         redirect_url = url_for(
             "admin_sign_in",
             redirect=url_for("admin_view", _external=True),
             _external=True,
         )
         return SanitizedRedirections.redirect(redirect_url)
+
+    # Finland
+    def _try_revoke_ekirjasto_session(self):
+        ekirjasto_token = flask.session.pop("ekirjasto_token", None)
+        auth: EkirjastoAdminAuthenticationProvider = self.admin_auth_provider(
+            EkirjastoAdminAuthenticationProvider.NAME
+        )
+        if ekirjasto_token and auth:
+            auth.try_revoke_ekirjasto_session(ekirjasto_token)
 
     def error_response(self, problem_detail):
         """Returns a problem detail as an HTML response"""
