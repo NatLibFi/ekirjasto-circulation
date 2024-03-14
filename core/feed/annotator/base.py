@@ -30,6 +30,7 @@ from core.model.resource import Hyperlink
 from core.model.work import Work
 from core.util.opds_writer import AtomFeed, OPDSFeed
 
+
 class ToFeedEntry:
     @classmethod
     def authors(cls, edition: Edition) -> dict[str, list[Author]]:

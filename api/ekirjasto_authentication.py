@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import datetime
-import flask_babel
 import uuid
 from abc import ABC
 from base64 import b64decode, b64encode
 from enum import Enum
 from typing import Any
 
+import flask_babel
 import jwt
 import requests
 from cryptography.fernet import Fernet, InvalidToken

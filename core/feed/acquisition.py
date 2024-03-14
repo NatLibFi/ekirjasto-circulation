@@ -33,7 +33,6 @@ from core.util.datetime_helpers import utc_now
 from core.util.flask_util import OPDSEntryResponse, OPDSFeedResponse
 from core.util.opds_writer import OPDSMessage
 from core.util.problem_detail import ProblemDetail
-from flask_babel import gettext
 
 if TYPE_CHECKING:
     from api.circulation import CirculationAPI, FulfillmentInfo

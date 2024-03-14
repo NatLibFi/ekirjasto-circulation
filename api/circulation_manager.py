@@ -6,7 +6,8 @@ from typing import TYPE_CHECKING
 import flask
 from dependency_injector.wiring import Provide, inject
 from expiringdict import ExpiringDict
-from flask_babel import lazy_gettext as _, gettext
+from flask_babel import gettext
+from flask_babel import lazy_gettext as _
 from sqlalchemy import select
 
 from api.authenticator import Authenticator
@@ -259,11 +260,11 @@ class CirculationManager(LoggerMixin):
         self.setup_configuration_dependent_controllers()
         # Finland: Disabled cache, because the E-kirjasto authentication provider
         # will have links containing a query parameter for user's locale.
-        authentication_document_cache_time = 0#int(
+        authentication_document_cache_time = 0  # int(
         #    ConfigurationSetting.sitewide(
         #        self._db, Configuration.AUTHENTICATION_DOCUMENT_CACHE_TIME
         #    ).value_or_default(3600)
-        #)
+        # )
         self.authentication_for_opds_documents = ExpiringDict(
             max_len=1000, max_age_seconds=authentication_document_cache_time
         )

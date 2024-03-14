@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from flask_babel import lazy_gettext as _, LazyString
+from flask_babel import LazyString
+from flask_babel import lazy_gettext as _
+
 
 class EntryPoint:
 
@@ -44,7 +46,9 @@ class EntryPoint:
             enabled by default.
         """
         value = getattr(entrypoint_class, "INTERNAL_NAME", None)
-        localized_display_title = getattr(entrypoint_class, "LOCALIZED_DISPLAY_TITLE", None)
+        localized_display_title = getattr(
+            entrypoint_class, "LOCALIZED_DISPLAY_TITLE", None
+        )
         if not value:
             raise ValueError(
                 "EntryPoint class %s must define INTERNAL_NAME."

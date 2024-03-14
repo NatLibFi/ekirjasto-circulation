@@ -668,4 +668,3 @@ msgstr ""
 #, python-format
 msgid "%(field)s cannot be greater than %(max)s."
 msgstr ""
-

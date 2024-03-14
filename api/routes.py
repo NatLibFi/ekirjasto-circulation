@@ -23,6 +23,7 @@ def print_cache(response):
             log.debug(f"{cls}: {cache.stats.hits}/{cache.stats.misses} hits/misses")
     return response
 
+
 @app.after_request
 def set_content_language_header(response):
     response.headers["Content-Language"] = flask_babel.get_locale()

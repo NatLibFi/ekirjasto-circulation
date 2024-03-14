@@ -153,7 +153,9 @@ class LibrarySettings(BaseSettings):
             "audiobook vendors: Bibliotheca, Axis 360",
             type=ConfigurationFormItemType.MENU,
             options={
-                entrypoint.INTERNAL_NAME: str(EntryPoint.LOCALIZED_DISPLAY_TITLES[entrypoint])
+                entrypoint.INTERNAL_NAME: str(
+                    EntryPoint.LOCALIZED_DISPLAY_TITLES[entrypoint]
+                )
                 for entrypoint in EntryPoint.ENTRY_POINTS
             },
             category="Lanes & Filters",
