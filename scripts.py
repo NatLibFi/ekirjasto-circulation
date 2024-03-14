@@ -472,7 +472,7 @@ class CollectTranslationsScript(Script):
             )
             file.write("genres = {\n")
             for genre in genres:
-                file.write(f'  "{genre.name}": _("{genre.name}"),\n')
+                file.write(f'    "{genre.name}": _("{genre.name}"),\n')
             file.write("}\n")
 
         os.system("./bin/util/generate_translation_template")
