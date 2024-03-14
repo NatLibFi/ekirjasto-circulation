@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2024-02-19 22:26+0200\n"
+"POT-Creation-Date: 2024-03-05 22:39+0200\n"
 "PO-Revision-Date: 2024-02-19 22:15+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -668,7 +668,6 @@ msgstr ""
 #, python-format
 msgid "%(field)s cannot be greater than %(max)s."
 msgstr ""
-
 # English translations for PROJECT.
 # Copyright (C) 2024 ORGANIZATION
 # This file is distributed under the same license as the PROJECT project.
@@ -678,7 +677,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2024-02-19 22:26+0200\n"
+"POT-Creation-Date: 2024-03-05 22:39+0200\n"
 "PO-Revision-Date: 2024-02-19 22:15+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -712,7 +711,7 @@ msgstr ""
 msgid "Username"
 msgstr ""
 
-#: api/axis.py:102 api/novelist.py:51
+#: api/axis.py:102
 msgid "Password"
 msgstr ""
 
@@ -811,8 +810,12 @@ msgstr ""
 msgid "Integration error communicating with %(service_name)s"
 msgstr ""
 
-#: api/circulation_manager.py:179
+#: api/circulation_manager.py:157
 msgid "Lane does not exist"
+msgstr ""
+
+#: api/circulation_manager.py:375
+msgid "All Books"
 msgstr ""
 
 #: api/config.py:81
@@ -906,26 +909,26 @@ msgstr ""
 msgid "Send patrons to the lane with this ID."
 msgstr ""
 
-#: api/ekirjasto_authentication.py:63
+#: api/ekirjasto_authentication.py:65
 msgid "E-kirjasto API environment"
 msgstr ""
 
-#: api/ekirjasto_authentication.py:64
+#: api/ekirjasto_authentication.py:66
 msgid "Select what environment of E-kirjasto accounts should be used."
 msgstr ""
 
-#: api/ekirjasto_authentication.py:81
+#: api/ekirjasto_authentication.py:83
 msgid "Delegate token expire time in seconds"
 msgstr ""
 
-#: api/ekirjasto_authentication.py:82
+#: api/ekirjasto_authentication.py:84
 msgid ""
 "Expire time for a delegate token to authorize in behalf of a ekirjasto "
 "token. This should be less than the expire time for ekirjasto token, so "
 "it can be refreshed."
 msgstr ""
 
-#: api/enki.py:74 api/firstbook2.py:27 api/kansas_patron.py:20
+#: api/enki.py:74 api/kansas_patron.py:20
 msgid "URL"
 msgstr ""
 
@@ -933,36 +936,8 @@ msgstr ""
 msgid "Integrate an Enki collection."
 msgstr ""
 
-#: api/firstbook2.py:28
-msgid "The URL for the First Book authentication service."
-msgstr ""
-
-#: api/firstbook2.py:35
-msgid "Key"
-msgstr ""
-
-#: api/firstbook2.py:36
-msgid "The key for the First Book authentication service."
-msgstr ""
-
 #: api/millenium_patron.py:177
 msgid "III Millenium Patron API"
-msgstr ""
-
-#: api/novelist.py:42
-msgid "Novelist API"
-msgstr ""
-
-#: api/novelist.py:50
-msgid "Profile"
-msgstr ""
-
-#: api/nyt.py:63
-msgid "NYT Best Seller API"
-msgstr ""
-
-#: api/nyt.py:67
-msgid "API key"
 msgstr ""
 
 #: api/odl.py:85
@@ -1364,173 +1339,189 @@ msgstr ""
 msgid "Ekirjasto provider was not configured for the library"
 msgstr ""
 
-#: api/problem_details.py:264
-msgid "Invalid SAML bearer token."
+#: api/problem_details.py:265
+msgid "Ekirjasto remote method not supported."
 msgstr ""
 
-#: api/problem_details.py:265
-msgid "The provided SAML bearer token couldn't be verified."
+#: api/problem_details.py:266
+msgid "Method for a remote call not supported."
 msgstr ""
 
 #: api/problem_details.py:272
-msgid "Invalid delegate token for ekirjasto authentication provider."
+msgid "Invalid SAML bearer token."
 msgstr ""
 
 #: api/problem_details.py:273
+msgid "The provided SAML bearer token couldn't be verified."
+msgstr ""
+
+#: api/problem_details.py:280
+msgid "Invalid delegate token for ekirjasto authentication provider."
+msgstr ""
+
+#: api/problem_details.py:281
 msgid ""
 "The provided delegate token couldn't be verified for ekirjasto "
 "authentication provider or it is expired."
 msgstr ""
 
-#: api/problem_details.py:282
+#: api/problem_details.py:290
 msgid "Invalid ekirjasto token for ekirjasto API."
 msgstr ""
 
-#: api/problem_details.py:283
+#: api/problem_details.py:291
 msgid "The provided ekirjasto token couldn't be verified for ekirjasto API."
 msgstr ""
 
-#: api/problem_details.py:290
+#: api/problem_details.py:298
 msgid "Authentication with ekirjasto API failed."
 msgstr ""
 
-#: api/problem_details.py:291
+#: api/problem_details.py:299
 msgid "Authentication with ekirjasto API failed, for unknown reason."
 msgstr ""
 
-#: api/problem_details.py:297
+#: api/problem_details.py:306
+msgid "Call to ekirjasto API failed."
+msgstr ""
+
+#: api/problem_details.py:307
+msgid "Call to ekirjasto API failed, for unknown reason."
+msgstr ""
+
+#: api/problem_details.py:313
 msgid "Unsupported authentication mechanism."
 msgstr ""
 
-#: api/problem_details.py:298
+#: api/problem_details.py:314
 msgid "The specified authentication mechanism isn't supported."
 msgstr ""
 
-#: api/problem_details.py:304
+#: api/problem_details.py:320
 msgid "Invalid analytics event type."
 msgstr ""
 
-#: api/problem_details.py:305
+#: api/problem_details.py:321
 msgid "The analytics event must be a supported type."
 msgstr ""
 
-#: api/problem_details.py:311
+#: api/problem_details.py:327
 msgid "Invalid annotation motivation."
 msgstr ""
 
-#: api/problem_details.py:312
+#: api/problem_details.py:328
 msgid "The annotation must have a supported motivation."
 msgstr ""
 
-#: api/problem_details.py:318
+#: api/problem_details.py:334
 msgid "Invalid annotation target."
 msgstr ""
 
-#: api/problem_details.py:319
+#: api/problem_details.py:335
 msgid "The annotation target must be a work in your current loans."
 msgstr ""
 
-#: api/problem_details.py:325
+#: api/problem_details.py:341
 msgid "Invalid annotation format."
 msgstr ""
 
-#: api/problem_details.py:326
+#: api/problem_details.py:342
 msgid "The annotation could not be parsed as JSON-LD."
 msgstr ""
 
-#: api/problem_details.py:332
+#: api/problem_details.py:348
 msgid "No annotation."
 msgstr ""
 
-#: api/problem_details.py:333
+#: api/problem_details.py:349
 msgid "The annotation you requested does not exist."
 msgstr ""
 
-#: api/problem_details.py:339
+#: api/problem_details.py:355
 msgid "Library not found."
 msgstr ""
 
-#: api/problem_details.py:340
+#: api/problem_details.py:356
 msgid "No library with the requested name on this server."
 msgstr ""
 
-#: api/problem_details.py:346
+#: api/problem_details.py:362
 msgid "Wrong library"
 msgstr ""
 
-#: api/problem_details.py:347
+#: api/problem_details.py:363
 msgid "You are not a patron of the selected library."
 msgstr ""
 
-#: api/problem_details.py:353
+#: api/problem_details.py:369
 msgid "Invalid loan for ODL notification"
 msgstr ""
 
-#: api/problem_details.py:354
+#: api/problem_details.py:370
 msgid "The ODL notification is for a loan that's not from an ODL collection."
 msgstr ""
 
-#: api/problem_details.py:360
+#: api/problem_details.py:376
 msgid "Invalid registration"
 msgstr ""
 
-#: api/problem_details.py:361
+#: api/problem_details.py:377
 msgid "You did not submit enough information to register with the collection."
 msgstr ""
 
-#: api/problem_details.py:367
+#: api/problem_details.py:383
 msgid "Decryption error"
 msgstr ""
 
-#: api/problem_details.py:368
+#: api/problem_details.py:384
 msgid "Failed to decrypt a shared secret retrieved from another computer."
 msgstr ""
 
-#: api/problem_details.py:374
+#: api/problem_details.py:390
 msgid "Device token not found"
 msgstr ""
 
-#: api/problem_details.py:375
+#: api/problem_details.py:391
 msgid "Patron does not have a device registered with this token."
 msgstr ""
 
-#: api/problem_details.py:381
+#: api/problem_details.py:397
 msgid "Device token already exists"
 msgstr ""
 
-#: api/problem_details.py:382
+#: api/problem_details.py:398
 msgid "A device token with the same token already exists."
 msgstr ""
 
-#: api/problem_details.py:388
+#: api/problem_details.py:404
 msgid "Device token type invalid"
 msgstr ""
 
-#: api/problem_details.py:389
+#: api/problem_details.py:405
 msgid "The token type provided is not valid."
 msgstr ""
 
-#: api/problem_details.py:395
+#: api/problem_details.py:411
 msgid "Access token expired"
 msgstr ""
 
-#: api/problem_details.py:396
+#: api/problem_details.py:412
 msgid "The patron authentication access token has expired."
 msgstr ""
 
-#: api/problem_details.py:402
+#: api/problem_details.py:418
 msgid "Access token invalid"
 msgstr ""
 
-#: api/problem_details.py:403
+#: api/problem_details.py:419
 msgid "The patron authentication access token is invalid."
 msgstr ""
 
-#: api/problem_details.py:409
+#: api/problem_details.py:425
 msgid "Access token not possible"
 msgstr ""
 
-#: api/problem_details.py:410
+#: api/problem_details.py:426
 msgid ""
 "The patron authentication access token is not possible for this type of "
 "authentication."
@@ -1548,6 +1539,26 @@ msgstr ""
 msgid "Patron has been blocked."
 msgstr ""
 
+#~ msgid "The URL for the First Book authentication service."
+#~ msgstr ""
+
+#~ msgid "Key"
+#~ msgstr ""
+
+#~ msgid "The key for the First Book authentication service."
+#~ msgstr ""
+
+#~ msgid "Novelist API"
+#~ msgstr ""
+
+#~ msgid "Profile"
+#~ msgstr ""
+
+#~ msgid "NYT Best Seller API"
+#~ msgstr ""
+
+#~ msgid "API key"
+#~ msgstr ""
 # English translations for PROJECT.
 # Copyright (C) 2024 ORGANIZATION
 # This file is distributed under the same license as the PROJECT project.
@@ -1557,7 +1568,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2024-02-23 15:11+0200\n"
+"POT-Creation-Date: 2024-03-05 22:39+0200\n"
 "PO-Revision-Date: 2024-02-19 22:14+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -1664,7 +1675,7 @@ msgid ""
 "related errors."
 msgstr ""
 
-#: core/entrypoint.py:103 core/facets.py:97
+#: core/entrypoint.py:103 core/facets.py:116 core/facets.py:120
 msgid "All"
 msgstr ""
 
@@ -1676,151 +1687,151 @@ msgstr ""
 msgid "Audiobooks"
 msgstr ""
 
-#: core/external_search.py:108 core/opds_import.py:110
-msgid "URL"
-msgstr ""
-
-#: core/external_search.py:114
-msgid "Index prefix"
-msgstr ""
-
-#: core/external_search.py:117
-msgid ""
-"Any Search indexes needed for this application will be created with this "
-"unique prefix. In most cases, the default will work fine. You may need to"
-" change this if you have multiple application servers using a single "
-"Search server."
-msgstr ""
-
-#: core/external_search.py:123
-msgid "Test search term"
-msgstr ""
-
-#: core/external_search.py:125
-msgid "Self tests will use this value as the search term."
-msgstr ""
-
-#: core/external_search.py:2628
+#: core/external_search.py:2448
 #, python-format
 msgid "Invalid page key: %(key)s"
 msgstr ""
 
-#: core/facets.py:72
+#: core/facets.py:89
 msgid "Sort by"
 msgstr ""
 
-#: core/facets.py:73
+#: core/facets.py:90
 msgid "Availability"
 msgstr ""
 
-#: core/facets.py:74
+#: core/facets.py:91
 msgid "Collection"
 msgstr ""
 
-#: core/facets.py:75
+#: core/facets.py:92
 msgid "Distributor"
 msgstr ""
 
-#: core/facets.py:76
+#: core/facets.py:93
 msgid "Collection Name"
 msgstr ""
 
-#: core/facets.py:80
-msgid "Allow patrons to sort by"
-msgstr ""
-
-#: core/facets.py:81
-msgid "Allow patrons to filter availability to"
-msgstr ""
-
-#: core/facets.py:82
-msgid "Allow patrons to filter collection to"
-msgstr ""
-
-#: core/facets.py:83
-msgid "Allow patrons to filter by distributor"
-msgstr ""
-
-#: core/facets.py:84
-msgid "Allow patrons to filter by collection name"
-msgstr ""
-
-#: core/facets.py:90
-msgid "Title"
-msgstr ""
-
-#: core/facets.py:91
-msgid "Author"
-msgstr ""
-
-#: core/facets.py:92
-msgid "Last Update"
-msgstr ""
-
-#: core/facets.py:93
-msgid "Recently Added"
-msgstr ""
-
 #: core/facets.py:94
-msgid "Series Position"
-msgstr ""
-
-#: core/facets.py:95
-msgid "Work ID"
-msgstr ""
-
-#: core/facets.py:96
-msgid "Available now"
+msgid "Language"
 msgstr ""
 
 #: core/facets.py:98
-msgid "Yours to keep"
+msgid "Allow patrons to sort by"
 msgstr ""
 
 #: core/facets.py:99
-msgid "Everything"
+msgid "Allow patrons to filter availability to"
 msgstr ""
 
 #: core/facets.py:100
+msgid "Allow patrons to filter collection to"
+msgstr ""
+
+#: core/facets.py:101
+msgid "Allow patrons to filter by distributor"
+msgstr ""
+
+#: core/facets.py:102
+msgid "Allow patrons to filter by collection name"
+msgstr ""
+
+#: core/facets.py:105
+msgid "Allow patrons to filter by language"
+msgstr ""
+
+#: core/facets.py:109
+msgid "Title"
+msgstr ""
+
+#: core/facets.py:110
+msgid "Author"
+msgstr ""
+
+#: core/facets.py:111
+msgid "Last Update"
+msgstr ""
+
+#: core/facets.py:112
+msgid "Recently Added"
+msgstr ""
+
+#: core/facets.py:113
+msgid "Series Position"
+msgstr ""
+
+#: core/facets.py:114
+msgid "Work ID"
+msgstr ""
+
+#: core/facets.py:115
+msgid "Available now"
+msgstr ""
+
+#: core/facets.py:117
+msgid "Yours to keep"
+msgstr ""
+
+#: core/facets.py:118
+msgid "Everything"
+msgstr ""
+
+#: core/facets.py:119
 msgid "Popular Books"
 msgstr ""
 
-#: core/lane.py:380
+#: core/facets.py:121
+msgid "Finnish"
+msgstr ""
+
+#: core/facets.py:122
+msgid "Swedish"
+msgstr ""
+
+#: core/facets.py:123
+msgid "English"
+msgstr ""
+
+#: core/facets.py:124
+msgid "Others"
+msgstr ""
+
+#: core/lane.py:386
 #, python-format
 msgid "I don't know how to order a feed by '%(order)s'"
 msgstr ""
 
-#: core/lane.py:388
+#: core/lane.py:394
 #, python-format
 msgid "I don't understand the availability term '%(availability)s'"
 msgstr ""
 
-#: core/lane.py:400
+#: core/lane.py:406
 #, python-format
 msgid "I don't understand what '%(collection)s' refers to."
 msgstr ""
 
-#: core/lane.py:416
+#: core/lane.py:422
 #, python-format
 msgid "I don't understand which distributor '%(distributor)s' refers to."
 msgstr ""
 
-#: core/lane.py:432
+#: core/lane.py:438
 #, python-format
 msgid "I don't understand which collection '%(collection_name)s' refers to."
 msgstr ""
 
-#: core/lane.py:1216
+#: core/lane.py:1255
 #, python-format
 msgid "Invalid page size: %(size)s"
 msgstr ""
 
-#: core/lane.py:1234
+#: core/lane.py:1273
 #, python-format
 msgid "Invalid offset: %(offset)s"
 msgstr ""
 
-#: core/lane.py:1555
+#: core/lane.py:1594
 #, python-format
 msgid "All %(worklist)s"
 msgstr ""
@@ -1847,6 +1858,10 @@ msgstr ""
 
 #: core/opds2_import.py:326
 msgid "Import books from a publicly-accessible OPDS 2.0 feed."
+msgstr ""
+
+#: core/opds_import.py:110
+msgid "URL"
 msgstr ""
 
 #: core/opds_import.py:116
@@ -2015,563 +2030,563 @@ msgstr ""
 msgid "\"%s\" is not a writable setting."
 msgstr ""
 
-#: core/classifier/localized_names.py:4
+#: core/classifier/localized_names.py:7
 msgid "Adventure"
 msgstr ""
 
-#: core/classifier/localized_names.py:5
+#: core/classifier/localized_names.py:8
 msgid "Classics"
 msgstr ""
 
-#: core/classifier/localized_names.py:6
+#: core/classifier/localized_names.py:9
 msgid "Comics & Graphic Novels"
 msgstr ""
 
-#: core/classifier/localized_names.py:7
+#: core/classifier/localized_names.py:10
 msgid "Drama"
 msgstr ""
 
-#: core/classifier/localized_names.py:8
+#: core/classifier/localized_names.py:11
 msgid "Erotica"
 msgstr ""
 
-#: core/classifier/localized_names.py:9
+#: core/classifier/localized_names.py:12
 msgid "Fantasy"
 msgstr ""
 
-#: core/classifier/localized_names.py:10
+#: core/classifier/localized_names.py:13
 msgid "Epic Fantasy"
 msgstr ""
 
-#: core/classifier/localized_names.py:11
+#: core/classifier/localized_names.py:14
 msgid "Historical Fantasy"
 msgstr ""
 
-#: core/classifier/localized_names.py:12
+#: core/classifier/localized_names.py:15
 msgid "Urban Fantasy"
 msgstr ""
 
-#: core/classifier/localized_names.py:13
+#: core/classifier/localized_names.py:16
 msgid "Folklore"
 msgstr ""
 
-#: core/classifier/localized_names.py:14
+#: core/classifier/localized_names.py:17
 msgid "Historical Fiction"
 msgstr ""
 
-#: core/classifier/localized_names.py:15
+#: core/classifier/localized_names.py:18
 msgid "Horror"
 msgstr ""
 
-#: core/classifier/localized_names.py:16
+#: core/classifier/localized_names.py:19
 msgid "Gothic Horror"
 msgstr ""
 
-#: core/classifier/localized_names.py:17
+#: core/classifier/localized_names.py:20
 msgid "Ghost Stories"
 msgstr ""
 
-#: core/classifier/localized_names.py:18
+#: core/classifier/localized_names.py:21
 msgid "Vampires"
 msgstr ""
 
-#: core/classifier/localized_names.py:19
+#: core/classifier/localized_names.py:22
 msgid "Werewolves"
 msgstr ""
 
-#: core/classifier/localized_names.py:20
+#: core/classifier/localized_names.py:23
 msgid "Occult Horror"
 msgstr ""
 
-#: core/classifier/localized_names.py:21
+#: core/classifier/localized_names.py:24
 msgid "Humorous Fiction"
 msgstr ""
 
-#: core/classifier/localized_names.py:22
+#: core/classifier/localized_names.py:25
 msgid "Literary Fiction"
 msgstr ""
 
-#: core/classifier/localized_names.py:23
+#: core/classifier/localized_names.py:26
 msgid "LGBTQ Fiction"
 msgstr ""
 
-#: core/classifier/localized_names.py:24
+#: core/classifier/localized_names.py:27
 msgid "Mystery"
 msgstr ""
 
-#: core/classifier/localized_names.py:25
+#: core/classifier/localized_names.py:28
 msgid "Crime & Detective Stories"
 msgstr ""
 
-#: core/classifier/localized_names.py:26
+#: core/classifier/localized_names.py:29
 msgid "Hard-Boiled Mystery"
 msgstr ""
 
-#: core/classifier/localized_names.py:27
+#: core/classifier/localized_names.py:30
 msgid "Police Procedural"
 msgstr ""
 
-#: core/classifier/localized_names.py:28
+#: core/classifier/localized_names.py:31
 msgid "Cozy Mystery"
 msgstr ""
 
-#: core/classifier/localized_names.py:29
+#: core/classifier/localized_names.py:32
 msgid "Historical Mystery"
 msgstr ""
 
-#: core/classifier/localized_names.py:30
+#: core/classifier/localized_names.py:33
 msgid "Paranormal Mystery"
 msgstr ""
 
-#: core/classifier/localized_names.py:31
+#: core/classifier/localized_names.py:34
 msgid "Women Detectives"
 msgstr ""
 
-#: core/classifier/localized_names.py:32
+#: core/classifier/localized_names.py:35
 msgid "Poetry"
 msgstr ""
 
-#: core/classifier/localized_names.py:33
+#: core/classifier/localized_names.py:36
 msgid "Religious Fiction"
 msgstr ""
 
-#: core/classifier/localized_names.py:34
+#: core/classifier/localized_names.py:37
 msgid "Romance"
 msgstr ""
 
-#: core/classifier/localized_names.py:35
+#: core/classifier/localized_names.py:38
 msgid "Contemporary Romance"
 msgstr ""
 
-#: core/classifier/localized_names.py:36
+#: core/classifier/localized_names.py:39
 msgid "Gothic Romance"
 msgstr ""
 
-#: core/classifier/localized_names.py:37
+#: core/classifier/localized_names.py:40
 msgid "Historical Romance"
 msgstr ""
 
-#: core/classifier/localized_names.py:38
+#: core/classifier/localized_names.py:41
 msgid "Paranormal Romance"
 msgstr ""
 
-#: core/classifier/localized_names.py:39
+#: core/classifier/localized_names.py:42
 msgid "Western Romance"
 msgstr ""
 
-#: core/classifier/localized_names.py:40
+#: core/classifier/localized_names.py:43
 msgid "Romantic Suspense"
 msgstr ""
 
-#: core/classifier/localized_names.py:41
+#: core/classifier/localized_names.py:44
 msgid "Science Fiction"
 msgstr ""
 
-#: core/classifier/localized_names.py:42
+#: core/classifier/localized_names.py:45
 msgid "Dystopian SF"
 msgstr ""
 
-#: core/classifier/localized_names.py:43
+#: core/classifier/localized_names.py:46
 msgid "Space Opera"
 msgstr ""
 
-#: core/classifier/localized_names.py:44
+#: core/classifier/localized_names.py:47
 msgid "Cyberpunk"
 msgstr ""
 
-#: core/classifier/localized_names.py:45
+#: core/classifier/localized_names.py:48
 msgid "Military SF"
 msgstr ""
 
-#: core/classifier/localized_names.py:46
+#: core/classifier/localized_names.py:49
 msgid "Alternative History"
 msgstr ""
 
-#: core/classifier/localized_names.py:47
+#: core/classifier/localized_names.py:50
 msgid "Steampunk"
 msgstr ""
 
-#: core/classifier/localized_names.py:48
+#: core/classifier/localized_names.py:51
 msgid "Romantic SF"
 msgstr ""
 
-#: core/classifier/localized_names.py:49
+#: core/classifier/localized_names.py:52
 msgid "Media Tie-in SF"
 msgstr ""
 
-#: core/classifier/localized_names.py:50
+#: core/classifier/localized_names.py:53
 msgid "Short Stories"
 msgstr ""
 
-#: core/classifier/localized_names.py:51
+#: core/classifier/localized_names.py:54
 msgid "Suspense/Thriller"
 msgstr ""
 
-#: core/classifier/localized_names.py:52
+#: core/classifier/localized_names.py:55
 msgid "Historical Thriller"
 msgstr ""
 
-#: core/classifier/localized_names.py:53
+#: core/classifier/localized_names.py:56
 msgid "Espionage"
 msgstr ""
 
-#: core/classifier/localized_names.py:54
+#: core/classifier/localized_names.py:57
 msgid "Supernatural Thriller"
 msgstr ""
 
-#: core/classifier/localized_names.py:55
+#: core/classifier/localized_names.py:58
 msgid "Medical Thriller"
 msgstr ""
 
-#: core/classifier/localized_names.py:56
+#: core/classifier/localized_names.py:59
 msgid "Political Thriller"
 msgstr ""
 
-#: core/classifier/localized_names.py:57
+#: core/classifier/localized_names.py:60
 msgid "Psychological Thriller"
 msgstr ""
 
-#: core/classifier/localized_names.py:58
+#: core/classifier/localized_names.py:61
 msgid "Technothriller"
 msgstr ""
 
-#: core/classifier/localized_names.py:59
+#: core/classifier/localized_names.py:62
 msgid "Legal Thriller"
 msgstr ""
 
-#: core/classifier/localized_names.py:60
+#: core/classifier/localized_names.py:63
 msgid "Military Thriller"
 msgstr ""
 
-#: core/classifier/localized_names.py:61
+#: core/classifier/localized_names.py:64
 msgid "Urban Fiction"
 msgstr ""
 
-#: core/classifier/localized_names.py:62
+#: core/classifier/localized_names.py:65
 msgid "Westerns"
 msgstr ""
 
-#: core/classifier/localized_names.py:63
+#: core/classifier/localized_names.py:66
 msgid "Women's Fiction"
 msgstr ""
 
-#: core/classifier/localized_names.py:64
+#: core/classifier/localized_names.py:67
 msgid "Art & Design"
 msgstr ""
 
-#: core/classifier/localized_names.py:65
+#: core/classifier/localized_names.py:68
 msgid "Architecture"
 msgstr ""
 
-#: core/classifier/localized_names.py:66
+#: core/classifier/localized_names.py:69
 msgid "Art"
 msgstr ""
 
-#: core/classifier/localized_names.py:67
+#: core/classifier/localized_names.py:70
 msgid "Art Criticism & Theory"
 msgstr ""
 
-#: core/classifier/localized_names.py:68
+#: core/classifier/localized_names.py:71
 msgid "Art History"
 msgstr ""
 
-#: core/classifier/localized_names.py:69
+#: core/classifier/localized_names.py:72
 msgid "Design"
 msgstr ""
 
-#: core/classifier/localized_names.py:70
+#: core/classifier/localized_names.py:73
 msgid "Fashion"
 msgstr ""
 
-#: core/classifier/localized_names.py:71
+#: core/classifier/localized_names.py:74
 msgid "Photography"
 msgstr ""
 
-#: core/classifier/localized_names.py:72
+#: core/classifier/localized_names.py:75
 msgid "Biography & Memoir"
 msgstr ""
 
-#: core/classifier/localized_names.py:73
+#: core/classifier/localized_names.py:76
 msgid "Education"
 msgstr ""
 
-#: core/classifier/localized_names.py:74
+#: core/classifier/localized_names.py:77
 msgid "Personal Finance & Business"
 msgstr ""
 
-#: core/classifier/localized_names.py:75
+#: core/classifier/localized_names.py:78
 msgid "Business"
 msgstr ""
 
-#: core/classifier/localized_names.py:76
+#: core/classifier/localized_names.py:79
 msgid "Economics"
 msgstr ""
 
-#: core/classifier/localized_names.py:77
+#: core/classifier/localized_names.py:80
 msgid "Management & Leadership"
 msgstr ""
 
-#: core/classifier/localized_names.py:78
+#: core/classifier/localized_names.py:81
 msgid "Personal Finance & Investing"
 msgstr ""
 
-#: core/classifier/localized_names.py:79
+#: core/classifier/localized_names.py:82
 msgid "Real Estate"
 msgstr ""
 
-#: core/classifier/localized_names.py:80
+#: core/classifier/localized_names.py:83
 msgid "Parenting & Family"
 msgstr ""
 
-#: core/classifier/localized_names.py:81
+#: core/classifier/localized_names.py:84
 msgid "Family & Relationships"
 msgstr ""
 
-#: core/classifier/localized_names.py:82
+#: core/classifier/localized_names.py:85
 msgid "Parenting"
 msgstr ""
 
-#: core/classifier/localized_names.py:83
+#: core/classifier/localized_names.py:86
 msgid "Food & Health"
 msgstr ""
 
-#: core/classifier/localized_names.py:84
+#: core/classifier/localized_names.py:87
 msgid "Bartending & Cocktails"
 msgstr ""
 
-#: core/classifier/localized_names.py:85
+#: core/classifier/localized_names.py:88
 msgid "Cooking"
 msgstr ""
 
-#: core/classifier/localized_names.py:86
+#: core/classifier/localized_names.py:89
 msgid "Health & Diet"
 msgstr ""
 
-#: core/classifier/localized_names.py:87
+#: core/classifier/localized_names.py:90
 msgid "Vegetarian & Vegan"
 msgstr ""
 
-#: core/classifier/localized_names.py:88
+#: core/classifier/localized_names.py:91
 msgid "History"
 msgstr ""
 
-#: core/classifier/localized_names.py:89
+#: core/classifier/localized_names.py:92
 msgid "African History"
 msgstr ""
 
-#: core/classifier/localized_names.py:90
+#: core/classifier/localized_names.py:93
 msgid "Ancient History"
 msgstr ""
 
-#: core/classifier/localized_names.py:91
+#: core/classifier/localized_names.py:94
 msgid "Asian History"
 msgstr ""
 
-#: core/classifier/localized_names.py:92
+#: core/classifier/localized_names.py:95
 msgid "Civil War History"
 msgstr ""
 
-#: core/classifier/localized_names.py:93
+#: core/classifier/localized_names.py:96
 msgid "European History"
 msgstr ""
 
-#: core/classifier/localized_names.py:94
+#: core/classifier/localized_names.py:97
 msgid "Latin American History"
 msgstr ""
 
-#: core/classifier/localized_names.py:95
+#: core/classifier/localized_names.py:98
 msgid "Medieval History"
 msgstr ""
 
-#: core/classifier/localized_names.py:96
+#: core/classifier/localized_names.py:99
 msgid "Middle East History"
 msgstr ""
 
-#: core/classifier/localized_names.py:97
+#: core/classifier/localized_names.py:100
 msgid "Military History"
 msgstr ""
 
-#: core/classifier/localized_names.py:98
+#: core/classifier/localized_names.py:101
 msgid "Modern History"
 msgstr ""
 
-#: core/classifier/localized_names.py:99
+#: core/classifier/localized_names.py:102
 msgid "Renaissance & Early Modern History"
 msgstr ""
 
-#: core/classifier/localized_names.py:100
+#: core/classifier/localized_names.py:103
 msgid "United States History"
 msgstr ""
 
-#: core/classifier/localized_names.py:101
+#: core/classifier/localized_names.py:104
 msgid "World History"
 msgstr ""
 
-#: core/classifier/localized_names.py:102
+#: core/classifier/localized_names.py:105
 msgid "Hobbies & Home"
 msgstr ""
 
-#: core/classifier/localized_names.py:103
+#: core/classifier/localized_names.py:106
 msgid "Antiques & Collectibles"
 msgstr ""
 
-#: core/classifier/localized_names.py:104
+#: core/classifier/localized_names.py:107
 msgid "Crafts & Hobbies"
 msgstr ""
 
-#: core/classifier/localized_names.py:105
+#: core/classifier/localized_names.py:108
 msgid "Gardening"
 msgstr ""
 
-#: core/classifier/localized_names.py:106
+#: core/classifier/localized_names.py:109
 msgid "Games"
 msgstr ""
 
-#: core/classifier/localized_names.py:107
+#: core/classifier/localized_names.py:110
 msgid "House & Home"
 msgstr ""
 
-#: core/classifier/localized_names.py:108
+#: core/classifier/localized_names.py:111
 msgid "Pets"
 msgstr ""
 
-#: core/classifier/localized_names.py:109
+#: core/classifier/localized_names.py:112
 msgid "Humorous Nonfiction"
 msgstr ""
 
-#: core/classifier/localized_names.py:110
+#: core/classifier/localized_names.py:113
 msgid "Entertainment"
 msgstr ""
 
-#: core/classifier/localized_names.py:111
+#: core/classifier/localized_names.py:114
 msgid "Film & TV"
 msgstr ""
 
-#: core/classifier/localized_names.py:112
+#: core/classifier/localized_names.py:115
 msgid "Music"
 msgstr ""
 
-#: core/classifier/localized_names.py:113
+#: core/classifier/localized_names.py:116
 msgid "Performing Arts"
 msgstr ""
 
-#: core/classifier/localized_names.py:114
+#: core/classifier/localized_names.py:117
 msgid "Life Strategies"
 msgstr ""
 
-#: core/classifier/localized_names.py:115
+#: core/classifier/localized_names.py:118
 msgid "Literary Criticism"
 msgstr ""
 
-#: core/classifier/localized_names.py:116
+#: core/classifier/localized_names.py:119
 msgid "Periodicals"
 msgstr ""
 
-#: core/classifier/localized_names.py:117
+#: core/classifier/localized_names.py:120
 msgid "Philosophy"
 msgstr ""
 
-#: core/classifier/localized_names.py:118
+#: core/classifier/localized_names.py:121
 msgid "Political Science"
 msgstr ""
 
-#: core/classifier/localized_names.py:119
+#: core/classifier/localized_names.py:122
 msgid "Reference & Study Aids"
 msgstr ""
 
-#: core/classifier/localized_names.py:120
+#: core/classifier/localized_names.py:123
 msgid "Dictionaries"
 msgstr ""
 
-#: core/classifier/localized_names.py:121
+#: core/classifier/localized_names.py:124
 msgid "Foreign Language Study"
 msgstr ""
 
-#: core/classifier/localized_names.py:122
+#: core/classifier/localized_names.py:125
 msgid "Law"
 msgstr ""
 
-#: core/classifier/localized_names.py:123
+#: core/classifier/localized_names.py:126
 msgid "Study Aids"
 msgstr ""
 
-#: core/classifier/localized_names.py:124
+#: core/classifier/localized_names.py:127
 msgid "Religion & Spirituality"
 msgstr ""
 
-#: core/classifier/localized_names.py:125
+#: core/classifier/localized_names.py:128
 msgid "Body, Mind & Spirit"
 msgstr ""
 
-#: core/classifier/localized_names.py:126
+#: core/classifier/localized_names.py:129
 msgid "Buddhism"
 msgstr ""
 
-#: core/classifier/localized_names.py:127
+#: core/classifier/localized_names.py:130
 msgid "Christianity"
 msgstr ""
 
-#: core/classifier/localized_names.py:128
+#: core/classifier/localized_names.py:131
 msgid "Hinduism"
 msgstr ""
 
-#: core/classifier/localized_names.py:129
+#: core/classifier/localized_names.py:132
 msgid "Islam"
 msgstr ""
 
-#: core/classifier/localized_names.py:130
+#: core/classifier/localized_names.py:133
 msgid "Judaism"
 msgstr ""
 
-#: core/classifier/localized_names.py:131
+#: core/classifier/localized_names.py:134
 msgid "Science & Technology"
 msgstr ""
 
-#: core/classifier/localized_names.py:132
+#: core/classifier/localized_names.py:135
 msgid "Computers"
 msgstr ""
 
-#: core/classifier/localized_names.py:133
+#: core/classifier/localized_names.py:136
 msgid "Mathematics"
 msgstr ""
 
-#: core/classifier/localized_names.py:134
+#: core/classifier/localized_names.py:137
 msgid "Medical"
 msgstr ""
 
-#: core/classifier/localized_names.py:135
+#: core/classifier/localized_names.py:138
 msgid "Nature"
 msgstr ""
 
-#: core/classifier/localized_names.py:136
+#: core/classifier/localized_names.py:139
 msgid "Psychology"
 msgstr ""
 
-#: core/classifier/localized_names.py:137
+#: core/classifier/localized_names.py:140
 msgid "Science"
 msgstr ""
 
-#: core/classifier/localized_names.py:138
+#: core/classifier/localized_names.py:141
 msgid "Social Sciences"
 msgstr ""
 
-#: core/classifier/localized_names.py:139
+#: core/classifier/localized_names.py:142
 msgid "Technology"
 msgstr ""
 
-#: core/classifier/localized_names.py:140
+#: core/classifier/localized_names.py:143
 msgid "Self-Help"
 msgstr ""
 
-#: core/classifier/localized_names.py:141
+#: core/classifier/localized_names.py:144
 msgid "Sports"
 msgstr ""
 
-#: core/classifier/localized_names.py:142
+#: core/classifier/localized_names.py:145
 msgid "Travel"
 msgstr ""
 
-#: core/classifier/localized_names.py:143
+#: core/classifier/localized_names.py:146
 msgid "True Crime"
 msgstr ""
 
@@ -2614,3 +2629,22 @@ msgstr ""
 #, python-format
 msgid "The server made a request to %(service)s, and that request timed out."
 msgstr ""
+
+#~ msgid "Index prefix"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "Any Search indexes needed for this "
+#~ "application will be created with this"
+#~ " unique prefix. In most cases, the"
+#~ " default will work fine. You may "
+#~ "need to change this if you have"
+#~ " multiple application servers using a "
+#~ "single Search server."
+#~ msgstr ""
+
+#~ msgid "Test search term"
+#~ msgstr ""
+
+#~ msgid "Self tests will use this value as the search term."
+#~ msgstr ""
