@@ -45,7 +45,8 @@ class TestCirculationManager:
 
         # The authentication document cache has a default value for
         # max_age.
-        assert 3600 == manager.authentication_for_opds_documents.max_age
+        # Finland: cache is "hard" disabled. Check CirculationManager::load_settings for more info.
+        assert 0 == manager.authentication_for_opds_documents.max_age
 
         # Now let's create a brand new library, never before seen.
         library = circulation_fixture.db.library()
