@@ -1,0 +1,1105 @@
+# English translations for PROJECT.
+# Copyright (C) 2024 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2024.
+# 
+# Translators:
+# Marika Kaskinen, 2024
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2024-02-23 15:11+0200\n"
+"PO-Revision-Date: 2024-03-01 11:37+0000\n"
+"Last-Translator: Marika Kaskinen, 2024\n"
+"Language-Team: Finnish (https://app.transifex.com/national-library-of-finland/teams/183401/fi/)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.13.0\n"
+"Language: fi\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: core/config.py:95
+msgid "Debug"
+msgstr "Virheenkorjaus"
+
+#: core/config.py:96
+msgid "Info"
+msgstr "Tiedot"
+
+#: core/config.py:97
+msgid "Warn"
+msgstr "Varoitus"
+
+#: core/config.py:98
+msgid "Error"
+msgstr "Virhe"
+
+#: core/config.py:106
+msgid "Base url of the application"
+msgstr "Sovelluksen perus-url"
+
+#: core/config.py:112
+msgid "Log Level"
+msgstr "Lokitaso"
+
+#: core/config.py:119
+msgid "Application name"
+msgstr "Sovelluksen nimi"
+
+#: core/config.py:120
+msgid ""
+"Log messages originating from this application will be tagged with this "
+"name. If you run multiple instances, giving each one a different application"
+" name will help you determine which instance is having problems."
+msgstr ""
+"Tästä sovelluksesta peräisin olevat lokiviestit merkitään tällä nimellä. Jos"
+" suoritat useita esiintymiä, voit antaa kullekin eri sovelluksen nimen, "
+"jotta sinun on helpompi määrittää, missä esiintymässä on ongelmia."
+
+#: core/config.py:128
+msgid "Database Log Level"
+msgstr "Tietokantalokitaso"
+
+#: core/config.py:131
+msgid ""
+"Database logs are extremely verbose, so unless you're diagnosing a database-"
+"related problem, it's a good idea to set a higher log level for database "
+"messages."
+msgstr ""
+"Tietokantalokit ovat erittäin monisanaisia, joten ellei kyseessä ole "
+"tietokantaan liittyvän ongelman määrittäminen, tietokantaviesteille "
+"kannattaa asettaa korkeampi lokitaso."
+
+#: core/config.py:138
+msgid "Excluded audiobook sources"
+msgstr "Poissuljetut äänikirjalähteet"
+
+#: core/config.py:139
+msgid ""
+"Audiobooks from these data sources will be hidden from the collection, even "
+"if they would otherwise show up as available."
+msgstr ""
+"Näistä tietolähteistä peräisin olevat äänikirjat piilotetaan kokoelmasta, "
+"vaikka ne muuten näkyisivät saatavilla olevina."
+
+#: core/config.py:147
+msgid "Cleanup old measurement data"
+msgstr "Vanhojen mittaustietojen puhdistus"
+
+#: core/config.py:149
+msgid ""
+"If this settings is 'true' old book measurement data will be cleaned out of "
+"the database. Some sites may want to keep this data for later analysis."
+msgstr ""
+"Jos tämän asetuksen arvona on \"tosi\", kirjan vanhat mittaustiedot "
+"poistetaan tietokannasta. Jotkut sivustot saattavat haluta säilyttää nämä "
+"tiedot myöhempää analysointia varten."
+
+#: core/config.py:157
+msgid "Push notifications status"
+msgstr "Push-ilmoitusten tila"
+
+#: core/config.py:159
+msgid ""
+"If this settings is 'true' push notification jobs will run as scheduled, and"
+" attempt to notify patrons via mobile push notifications."
+msgstr ""
+"Jos tämän asetuksen arvona on \"tosi\", push-ilmoitustehtävät suoritetaan "
+"aikataulun mukaisesti, ja asiakkaille yritetään ilmoittaa mobiililaitteille "
+"tulevien push-ilmoitusten kautta."
+
+#: core/config.py:163
+msgid "True"
+msgstr "Tosi"
+
+#: core/config.py:164
+msgid "False"
+msgstr "Epätosi"
+
+#: core/connection_config.py:17
+msgid "Connection retry limit"
+msgstr "Yhteyden uudelleen yrittämisen raja"
+
+#: core/connection_config.py:18
+msgid ""
+"The maximum number of times to retry a request for certain connection-"
+"related errors."
+msgstr ""
+"Kuinka monta kertaa pyyntöä voi enintään yrittää uudelleen tietyissä "
+"yhteyteen liittyvissä virheissä."
+
+#: core/entrypoint.py:103 core/facets.py:97
+msgid "All"
+msgstr "Kaikki"
+
+#: core/entrypoint.py:140
+msgid "eBooks"
+msgstr "E-kirjat"
+
+#: core/entrypoint.py:149
+msgid "Audiobooks"
+msgstr "Äänikirjat"
+
+#: core/external_search.py:108 core/opds_import.py:110
+msgid "URL"
+msgstr "URL-osoite"
+
+#: core/external_search.py:114
+msgid "Index prefix"
+msgstr "Hakemiston etuliite"
+
+#: core/external_search.py:117
+msgid ""
+"Any Search indexes needed for this application will be created with this "
+"unique prefix. In most cases, the default will work fine. You may need to "
+"change this if you have multiple application servers using a single Search "
+"server."
+msgstr ""
+"Kaikki tämän sovelluksen tarvitsemat hakuindeksit luodaan tällä "
+"yksilöllisellä etuliitteellä. Useimmissa tapauksissa oletusarvo toimii "
+"hyvin. Tätä on ehkä muutettava, jos useat sovelluspalvelimet käyttävät yhtä "
+"hakupalvelinta."
+
+#: core/external_search.py:123
+msgid "Test search term"
+msgstr "Testin hakusana"
+
+#: core/external_search.py:125
+msgid "Self tests will use this value as the search term."
+msgstr "Itsetestit käyttävät tätä arvoa hakusanana."
+
+#: core/external_search.py:2628
+#, python-format
+msgid "Invalid page key: %(key)s"
+msgstr "Virheellinen sivuavain: %(key)s"
+
+#: core/facets.py:72
+msgid "Sort by"
+msgstr "Lajitteluperuste"
+
+#: core/facets.py:73
+msgid "Availability"
+msgstr "Saatavuus"
+
+#: core/facets.py:74
+msgid "Collection"
+msgstr "Kokoelma"
+
+#: core/facets.py:75
+msgid "Distributor"
+msgstr "Jakelija"
+
+#: core/facets.py:76
+msgid "Collection Name"
+msgstr "Kokoelman nimi"
+
+#: core/facets.py:80
+msgid "Allow patrons to sort by"
+msgstr "Salli asiakkaiden lajitella seuraavan mukaan"
+
+#: core/facets.py:81
+msgid "Allow patrons to filter availability to"
+msgstr "Salli asiakkaiden suodattaa saatavuus"
+
+#: core/facets.py:82
+msgid "Allow patrons to filter collection to"
+msgstr "Salli asiakkaiden suodattaa kokoelma"
+
+#: core/facets.py:83
+msgid "Allow patrons to filter by distributor"
+msgstr "Salli asiakkaiden suodattaa jakelijan mukaan"
+
+#: core/facets.py:84
+msgid "Allow patrons to filter by collection name"
+msgstr "Salli asiakkaiden suodattaa kokoelman nimen mukaan"
+
+#: core/facets.py:90
+msgid "Title"
+msgstr "Nimi"
+
+#: core/facets.py:91
+msgid "Author"
+msgstr "Tekijä"
+
+#: core/facets.py:92
+msgid "Last Update"
+msgstr "Viimeisin päivitys"
+
+#: core/facets.py:93
+msgid "Recently Added"
+msgstr "Äskettäin lisätty"
+
+#: core/facets.py:94
+msgid "Series Position"
+msgstr "Sarjan sijainti"
+
+#: core/facets.py:95
+msgid "Work ID"
+msgstr "Työn tunnus"
+
+#: core/facets.py:96
+msgid "Available now"
+msgstr "Saatavilla nyt"
+
+#: core/facets.py:98
+msgid "Yours to keep"
+msgstr "Voit pitää tämän"
+
+#: core/facets.py:99
+msgid "Everything"
+msgstr "Kaikki"
+
+#: core/facets.py:100
+msgid "Popular Books"
+msgstr "Suositut kirjat"
+
+#: core/lane.py:380
+#, python-format
+msgid "I don't know how to order a feed by '%(order)s'"
+msgstr "En tiedä, miten syöte järjestetään seuraavan mukaan: %(order)s"
+
+#: core/lane.py:388
+#, python-format
+msgid "I don't understand the availability term '%(availability)s'"
+msgstr "En ymmärrä saatavuustermiä %(availability)s"
+
+#: core/lane.py:400
+#, python-format
+msgid "I don't understand what '%(collection)s' refers to."
+msgstr "En ymmärrä, mitä %(collection)s tarkoittaa."
+
+#: core/lane.py:416
+#, python-format
+msgid "I don't understand which distributor '%(distributor)s' refers to."
+msgstr "En ymmärrä, mihin jakelijaan %(distributor)s viittaa."
+
+#: core/lane.py:432
+#, python-format
+msgid "I don't understand which collection '%(collection_name)s' refers to."
+msgstr "En ymmärrä, mihin kokoelmaan %(collection_name)s viittaa."
+
+#: core/lane.py:1216
+#, python-format
+msgid "Invalid page size: %(size)s"
+msgstr "Virheellinen sivukoko: %(size)s"
+
+#: core/lane.py:1234
+#, python-format
+msgid "Invalid offset: %(offset)s"
+msgstr "Virheellinen offset: %(offset)s"
+
+#: core/lane.py:1555
+#, python-format
+msgid "All %(worklist)s"
+msgstr "Kaikki %(worklist)s"
+
+#: core/opds2_import.py:194 core/opds_import.py:166
+msgid "Custom accept header"
+msgstr "Mukautettu hyväksymisen otsikko"
+
+#: core/opds2_import.py:195 core/opds_import.py:168
+msgid ""
+"Some servers expect an accept header to decide which file to send. You can "
+"use */* if the server doesn't expect anything."
+msgstr ""
+"Jotkin palvelimet olettavat, että hyväksymisen otsikko päättää, mikä "
+"tiedosto lähetetään. Voit käyttää merkkejä */*, jos palvelin ei oleta "
+"mitään."
+
+#: core/opds2_import.py:207
+msgid "List of identifiers that will be skipped"
+msgstr "Luettelo ohitettavista tunnisteista"
+
+#: core/opds2_import.py:208
+msgid ""
+"Circulation Manager will not be importing publications with identifiers "
+"having one of the selected types."
+msgstr ""
+"Lainauksen hallinta ei tuo julkaisuja, joiden tunnisteilla on jokin "
+"valituista tyypeistä."
+
+#: core/opds2_import.py:326
+msgid "Import books from a publicly-accessible OPDS 2.0 feed."
+msgstr "Tuo kirjoja julkisesti saatavilla olevasta OPDS 2.0 -syötteestä."
+
+#: core/opds_import.py:116
+msgid "Data source name"
+msgstr "Tietolähteen nimi"
+
+#: core/opds_import.py:122
+msgid "Default audience"
+msgstr "Oletusyleisö"
+
+#: core/opds_import.py:123
+msgid ""
+"If the vendor does not specify the target audience for their books, assume "
+"the books have this target audience."
+msgstr ""
+"Jos toimittaja ei määritä kirjojensa kohdeyleisöä, oleta, että kirjojen "
+"kohdeyleisö on tämä."
+
+#: core/opds_import.py:129
+msgid "No default audience"
+msgstr "Ei oletusyleisöä"
+
+#: core/opds_import.py:138
+msgid "Username"
+msgstr "Käyttäjänimi"
+
+#: core/opds_import.py:139
+msgid ""
+"If HTTP Basic authentication is required to access the OPDS feed (it usually"
+" isn't), enter the username here."
+msgstr ""
+"Jos HTTP Basic -tunnistus vaaditaan OPDS-syötteen käyttämiseksi (yleensä "
+"sitä ei vaadita), kirjoita käyttäjänimi tähän."
+
+#: core/opds_import.py:148
+msgid "Password"
+msgstr "Salasana"
+
+#: core/opds_import.py:149
+msgid ""
+"If HTTP Basic authentication is required to access the OPDS feed (it usually"
+" isn't), enter the password here."
+msgstr ""
+"Jos HTTP Basic -tunnistus vaaditaan OPDS-syötteen käyttämiseksi (yleensä "
+"sitä ei vaadita), kirjoita salasana tähän."
+
+#: core/opds_import.py:177
+msgid "Identifer"
+msgstr "Tunniste"
+
+#: core/opds_import.py:179
+msgid "Which book identifier to use as ID."
+msgstr "Mitä kirjan tunnistetta käytetään tunnuksena."
+
+#: core/opds_import.py:182
+msgid "(Default) Use <id>"
+msgstr "(Oletus) Käytä <id>"
+
+#: core/opds_import.py:183
+msgid "Use <dcterms:identifier> first, if not exist use <id>"
+msgstr "Käytä ensin <dcterms:identifier>, jos sitä ei ole, käytä <id>"
+
+#: core/opds_import.py:654
+msgid "Import books from a publicly-accessible OPDS feed."
+msgstr "Tuo kirjoja julkisesti saatavilla olevasta OPDS-syötteestä."
+
+#: core/problem_details.py:11
+msgid "Invalid input."
+msgstr "Virheellinen syöte."
+
+#: core/problem_details.py:12
+msgid "You provided invalid or unrecognized input."
+msgstr "Annoit virheellisen tai tunnistamattoman syötteen."
+
+#: core/problem_details.py:18
+msgid "Invalid credentials"
+msgstr "Virheelliset kirjautumistiedot"
+
+#: core/problem_details.py:19
+msgid "Valid credentials are required."
+msgstr "Kelvolliset kirjautumistiedot vaaditaan."
+
+#: core/problem_details.py:25
+msgid "Method not allowed"
+msgstr "Menetelmä ei ole sallittu"
+
+#: core/problem_details.py:26
+msgid "The HTTP method you used is not allowed on this resource."
+msgstr "Käyttämäsi HTTP-menetelmä ei ole sallittu tässä resurssissa."
+
+#: core/problem_details.py:32
+msgid "Unsupported media type"
+msgstr "Mediatyyppi, jota ei tueta"
+
+#: core/problem_details.py:33
+msgid "You submitted an unsupported media type."
+msgstr "Annoit mediatyypin, jota ei tueta."
+
+#: core/problem_details.py:39
+msgid "Payload too large"
+msgstr "Liian suuri kuormitus"
+
+#: core/problem_details.py:40
+msgid "You submitted a document that was too large."
+msgstr "Annoit liian suuren dokumentin."
+
+#: core/problem_details.py:46
+msgid "Internal server error."
+msgstr "Sisäinen palvelinvirhe."
+
+#: core/problem_details.py:47
+msgid "Internal server error"
+msgstr "Sisäinen palvelinvirhe"
+
+#: core/problem_details.py:56
+msgid "Invalid URN"
+msgstr "Virheellinen URN"
+
+#: core/problem_details.py:57
+msgid "Could not parse identifier."
+msgstr "Tunnistetta ei voitu jäsentää."
+
+#: core/problem_details.py:63
+msgid "Unrecognized data source."
+msgstr "Tunnistamaton tietolähde."
+
+#: core/problem_details.py:64
+msgid "I don't know anything about that data source."
+msgstr "En tiedä mitään kyseisestä tietolähteestä."
+
+#: core/problem_details.py:70
+msgid "Third-party service failed."
+msgstr "Kolmannen osapuolen palvelu epäonnistui."
+
+#: core/problem_details.py:71
+msgid "A third-party service has failed."
+msgstr "Kolmannen osapuolen palvelu on epäonnistunut."
+
+#: core/problem_details.py:77
+msgid "Invalid reset password token"
+msgstr "Virheellinen salasanan nollauksen tunnus"
+
+#: core/problem_details.py:78
+msgid "Provided reset password token is not valid."
+msgstr "Annettu salasanan nollauksen tunnus ei kelpaa."
+
+#: core/user_profile.py:41
+#, python-format
+msgid "Profile document is not a JSON object: %r."
+msgstr "Profiilidokumentti ei ole JSON-objekti: %r."
+
+#: core/user_profile.py:47
+#, python-format
+msgid "Could not convert profile document to JSON: %r."
+msgstr "Profiilidokumenttia ei voitu muuttaa JSON:ksi: %r."
+
+#: core/user_profile.py:62
+#, python-format
+msgid "Expected %s"
+msgstr "Odotettu %s"
+
+#: core/user_profile.py:67
+msgid "Submitted profile document was not valid JSON."
+msgstr "Annettu profiilidokumentti ei ollut kelvollinen JSON."
+
+#: core/user_profile.py:71
+msgid "Submitted profile document was not a JSON object."
+msgstr "Annettu profiilidokumentti ei ollut JSON-objekti."
+
+#: core/user_profile.py:83
+#, python-format
+msgid "\"%s\" is not a writable setting."
+msgstr "%s ei ole kirjoitettava asetus."
+
+#: core/classifier/localized_names.py:4
+msgid "Adventure"
+msgstr "Seikkailu"
+
+#: core/classifier/localized_names.py:5
+msgid "Classics"
+msgstr "Klassikot"
+
+#: core/classifier/localized_names.py:6
+msgid "Comics & Graphic Novels"
+msgstr "Sarjakuvalehdet ja -romaanit"
+
+#: core/classifier/localized_names.py:7
+msgid "Drama"
+msgstr "Draama"
+
+#: core/classifier/localized_names.py:8
+msgid "Erotica"
+msgstr "Erotiikka"
+
+#: core/classifier/localized_names.py:9
+msgid "Fantasy"
+msgstr "Fantasia"
+
+#: core/classifier/localized_names.py:10
+msgid "Epic Fantasy"
+msgstr "Eeppinen fantasia"
+
+#: core/classifier/localized_names.py:11
+msgid "Historical Fantasy"
+msgstr "Historiallinen fantasia"
+
+#: core/classifier/localized_names.py:12
+msgid "Urban Fantasy"
+msgstr "Urbaani fantasia"
+
+#: core/classifier/localized_names.py:13
+msgid "Folklore"
+msgstr "Kansanperinne"
+
+#: core/classifier/localized_names.py:14
+msgid "Historical Fiction"
+msgstr "Historiallinen fiktio"
+
+#: core/classifier/localized_names.py:15
+msgid "Horror"
+msgstr "Kauhu"
+
+#: core/classifier/localized_names.py:16
+msgid "Gothic Horror"
+msgstr "Goottilainen kauhu"
+
+#: core/classifier/localized_names.py:17
+msgid "Ghost Stories"
+msgstr "Kummitustarinat"
+
+#: core/classifier/localized_names.py:18
+msgid "Vampires"
+msgstr "Vampyyrit"
+
+#: core/classifier/localized_names.py:19
+msgid "Werewolves"
+msgstr "Ihmissudet"
+
+#: core/classifier/localized_names.py:20
+msgid "Occult Horror"
+msgstr "Yliluonnollinen kauhu"
+
+#: core/classifier/localized_names.py:21
+msgid "Humorous Fiction"
+msgstr "Humoristinen fiktio"
+
+#: core/classifier/localized_names.py:22
+msgid "Literary Fiction"
+msgstr "Kaunokirjallisuus"
+
+#: core/classifier/localized_names.py:23
+msgid "LGBTQ Fiction"
+msgstr "HLBTQ-fiktio"
+
+#: core/classifier/localized_names.py:24
+msgid "Mystery"
+msgstr "Dekkarit"
+
+#: core/classifier/localized_names.py:25
+msgid "Crime & Detective Stories"
+msgstr "Rikos- ja salapoliisiromaanit"
+
+#: core/classifier/localized_names.py:26
+msgid "Hard-Boiled Mystery"
+msgstr "Kovaksikeitetyt dekkarit"
+
+#: core/classifier/localized_names.py:27
+msgid "Police Procedural"
+msgstr "Poliisiromaanit"
+
+#: core/classifier/localized_names.py:28
+msgid "Cozy Mystery"
+msgstr "Hyvän mielen dekkarit"
+
+#: core/classifier/localized_names.py:29
+msgid "Historical Mystery"
+msgstr "Historialliset dekkarit"
+
+#: core/classifier/localized_names.py:30
+msgid "Paranormal Mystery"
+msgstr "Yliluonnolliset dekkarit"
+
+#: core/classifier/localized_names.py:31
+msgid "Women Detectives"
+msgstr "Naisetsivät"
+
+#: core/classifier/localized_names.py:32
+msgid "Poetry"
+msgstr "Runous"
+
+#: core/classifier/localized_names.py:33
+msgid "Religious Fiction"
+msgstr "Uskonnollinen fiktio"
+
+#: core/classifier/localized_names.py:34
+msgid "Romance"
+msgstr "Romantiikka"
+
+#: core/classifier/localized_names.py:35
+msgid "Contemporary Romance"
+msgstr "Nykyajan romantiikka"
+
+#: core/classifier/localized_names.py:36
+msgid "Gothic Romance"
+msgstr "Goottilainen romantiikka"
+
+#: core/classifier/localized_names.py:37
+msgid "Historical Romance"
+msgstr "Historiallinen romantiikka"
+
+#: core/classifier/localized_names.py:38
+msgid "Paranormal Romance"
+msgstr "Yliluonnollinen romantiikka"
+
+#: core/classifier/localized_names.py:39
+msgid "Western Romance"
+msgstr "Lännen romantiikka"
+
+#: core/classifier/localized_names.py:40
+msgid "Romantic Suspense"
+msgstr "Romanttinen jännitys"
+
+#: core/classifier/localized_names.py:41
+msgid "Science Fiction"
+msgstr "Science Fiction"
+
+#: core/classifier/localized_names.py:42
+msgid "Dystopian SF"
+msgstr "Dystooppinen scifi"
+
+#: core/classifier/localized_names.py:43
+msgid "Space Opera"
+msgstr "Avaruusooppera"
+
+#: core/classifier/localized_names.py:44
+msgid "Cyberpunk"
+msgstr "Kyberpunk"
+
+#: core/classifier/localized_names.py:45
+msgid "Military SF"
+msgstr "Sotilaallinen scifi"
+
+#: core/classifier/localized_names.py:46
+msgid "Alternative History"
+msgstr "Vaihtoehtoinen historia"
+
+#: core/classifier/localized_names.py:47
+msgid "Steampunk"
+msgstr "Steampunk"
+
+#: core/classifier/localized_names.py:48
+msgid "Romantic SF"
+msgstr "Romanttinen scifi"
+
+#: core/classifier/localized_names.py:49
+msgid "Media Tie-in SF"
+msgstr "TV:stä tuttu scifi"
+
+#: core/classifier/localized_names.py:50
+msgid "Short Stories"
+msgstr "Novellit"
+
+#: core/classifier/localized_names.py:51
+msgid "Suspense/Thriller"
+msgstr "Jännitys/trilleri"
+
+#: core/classifier/localized_names.py:52
+msgid "Historical Thriller"
+msgstr "Historialliset trillerit"
+
+#: core/classifier/localized_names.py:53
+msgid "Espionage"
+msgstr "Vakoilu"
+
+#: core/classifier/localized_names.py:54
+msgid "Supernatural Thriller"
+msgstr "Yliluonnolliset trillerit"
+
+#: core/classifier/localized_names.py:55
+msgid "Medical Thriller"
+msgstr "Lääketieteelliset trillerit"
+
+#: core/classifier/localized_names.py:56
+msgid "Political Thriller"
+msgstr "Poliittiset trillerit"
+
+#: core/classifier/localized_names.py:57
+msgid "Psychological Thriller"
+msgstr "Psykologiset trillerit"
+
+#: core/classifier/localized_names.py:58
+msgid "Technothriller"
+msgstr "Teknotrillerit"
+
+#: core/classifier/localized_names.py:59
+msgid "Legal Thriller"
+msgstr "Oikeudenkäyntitrillerit"
+
+#: core/classifier/localized_names.py:60
+msgid "Military Thriller"
+msgstr "Sotilaalliset trillerit"
+
+#: core/classifier/localized_names.py:61
+msgid "Urban Fiction"
+msgstr "Urbaani fiktio"
+
+#: core/classifier/localized_names.py:62
+msgid "Westerns"
+msgstr "Westernit"
+
+#: core/classifier/localized_names.py:63
+msgid "Women's Fiction"
+msgstr "Naisten fiktio"
+
+#: core/classifier/localized_names.py:64
+msgid "Art & Design"
+msgstr "Taide ja muotoilu"
+
+#: core/classifier/localized_names.py:65
+msgid "Architecture"
+msgstr "Arkkitehtuuri"
+
+#: core/classifier/localized_names.py:66
+msgid "Art"
+msgstr "Taide"
+
+#: core/classifier/localized_names.py:67
+msgid "Art Criticism & Theory"
+msgstr "Taidekritiikki ja taiteen teoria"
+
+#: core/classifier/localized_names.py:68
+msgid "Art History"
+msgstr "Taidehistoria"
+
+#: core/classifier/localized_names.py:69
+msgid "Design"
+msgstr "Muotoilu"
+
+#: core/classifier/localized_names.py:70
+msgid "Fashion"
+msgstr "Muoti"
+
+#: core/classifier/localized_names.py:71
+msgid "Photography"
+msgstr "Valokuvaus"
+
+#: core/classifier/localized_names.py:72
+msgid "Biography & Memoir"
+msgstr "Elämäkerrat ja muistelmat"
+
+#: core/classifier/localized_names.py:73
+msgid "Education"
+msgstr "Koulutus"
+
+#: core/classifier/localized_names.py:74
+msgid "Personal Finance & Business"
+msgstr "Henkilökohtainen talous ja liiketoiminta"
+
+#: core/classifier/localized_names.py:75
+msgid "Business"
+msgstr "Liiketoiminta"
+
+#: core/classifier/localized_names.py:76
+msgid "Economics"
+msgstr "Taloustiede"
+
+#: core/classifier/localized_names.py:77
+msgid "Management & Leadership"
+msgstr "Johtaminen ja johtajuus"
+
+#: core/classifier/localized_names.py:78
+msgid "Personal Finance & Investing"
+msgstr "Henkilökohtainen talous ja sijoittaminen"
+
+#: core/classifier/localized_names.py:79
+msgid "Real Estate"
+msgstr "Kiinteistöt"
+
+#: core/classifier/localized_names.py:80
+msgid "Parenting & Family"
+msgstr "Vanhemmuus ja perhe"
+
+#: core/classifier/localized_names.py:81
+msgid "Family & Relationships"
+msgstr "Perhe ja ihmissuhteet"
+
+#: core/classifier/localized_names.py:82
+msgid "Parenting"
+msgstr "Vanhemmuus"
+
+#: core/classifier/localized_names.py:83
+msgid "Food & Health"
+msgstr "Ruoka ja terveys"
+
+#: core/classifier/localized_names.py:84
+msgid "Bartending & Cocktails"
+msgstr "Baarimestari ja cocktailit"
+
+#: core/classifier/localized_names.py:85
+msgid "Cooking"
+msgstr "Ruoanlaitto"
+
+#: core/classifier/localized_names.py:86
+msgid "Health & Diet"
+msgstr "Terveys ja ruokavaliot"
+
+#: core/classifier/localized_names.py:87
+msgid "Vegetarian & Vegan"
+msgstr "Kasvissyönti ja veganismi"
+
+#: core/classifier/localized_names.py:88
+msgid "History"
+msgstr "Historia"
+
+#: core/classifier/localized_names.py:89
+msgid "African History"
+msgstr "Afrikan historia"
+
+#: core/classifier/localized_names.py:90
+msgid "Ancient History"
+msgstr "Muinaishistoria"
+
+#: core/classifier/localized_names.py:91
+msgid "Asian History"
+msgstr "Aasian historia"
+
+#: core/classifier/localized_names.py:92
+msgid "Civil War History"
+msgstr "Sisällissodan historia"
+
+#: core/classifier/localized_names.py:93
+msgid "European History"
+msgstr "Euroopan historia"
+
+#: core/classifier/localized_names.py:94
+msgid "Latin American History"
+msgstr "Latinalaisen Amerikan historia"
+
+#: core/classifier/localized_names.py:95
+msgid "Medieval History"
+msgstr "Keskiajan historia"
+
+#: core/classifier/localized_names.py:96
+msgid "Middle East History"
+msgstr "Lähi-idän historia"
+
+#: core/classifier/localized_names.py:97
+msgid "Military History"
+msgstr "Sotahistoria"
+
+#: core/classifier/localized_names.py:98
+msgid "Modern History"
+msgstr "Uuden ajan historia"
+
+#: core/classifier/localized_names.py:99
+msgid "Renaissance & Early Modern History"
+msgstr "Renessanssi ja uuden ajan alun historia"
+
+#: core/classifier/localized_names.py:100
+msgid "United States History"
+msgstr "Yhdysvaltojen historia"
+
+#: core/classifier/localized_names.py:101
+msgid "World History"
+msgstr "Maailmanhistoria"
+
+#: core/classifier/localized_names.py:102
+msgid "Hobbies & Home"
+msgstr "Harrastukset ja koti"
+
+#: core/classifier/localized_names.py:103
+msgid "Antiques & Collectibles"
+msgstr "Antiikki ja keräilyesineet"
+
+#: core/classifier/localized_names.py:104
+msgid "Crafts & Hobbies"
+msgstr "Käsityöt ja harrastukset"
+
+#: core/classifier/localized_names.py:105
+msgid "Gardening"
+msgstr "Puutarhanhoito"
+
+#: core/classifier/localized_names.py:106
+msgid "Games"
+msgstr "Pelit"
+
+#: core/classifier/localized_names.py:107
+msgid "House & Home"
+msgstr "Talo ja koti"
+
+#: core/classifier/localized_names.py:108
+msgid "Pets"
+msgstr "Lemmikkieläimet"
+
+#: core/classifier/localized_names.py:109
+msgid "Humorous Nonfiction"
+msgstr "Humoristinen tietokirjallisuus"
+
+#: core/classifier/localized_names.py:110
+msgid "Entertainment"
+msgstr "Viihde"
+
+#: core/classifier/localized_names.py:111
+msgid "Film & TV"
+msgstr "Elokuvat ja televisio"
+
+#: core/classifier/localized_names.py:112
+msgid "Music"
+msgstr "Musiikki"
+
+#: core/classifier/localized_names.py:113
+msgid "Performing Arts"
+msgstr "Esittävät taiteet"
+
+#: core/classifier/localized_names.py:114
+msgid "Life Strategies"
+msgstr "Elämänstrategiat"
+
+#: core/classifier/localized_names.py:115
+msgid "Literary Criticism"
+msgstr "Kirjallisuuskritiikki"
+
+#: core/classifier/localized_names.py:116
+msgid "Periodicals"
+msgstr "Aikakauslehdet"
+
+#: core/classifier/localized_names.py:117
+msgid "Philosophy"
+msgstr "Filosofia"
+
+#: core/classifier/localized_names.py:118
+msgid "Political Science"
+msgstr "Valtiotiede"
+
+#: core/classifier/localized_names.py:119
+msgid "Reference & Study Aids"
+msgstr "Tietokirjat ja opintoapu"
+
+#: core/classifier/localized_names.py:120
+msgid "Dictionaries"
+msgstr "Sanakirjat"
+
+#: core/classifier/localized_names.py:121
+msgid "Foreign Language Study"
+msgstr "Vieraiden kielten opiskelu"
+
+#: core/classifier/localized_names.py:122
+msgid "Law"
+msgstr "Laki"
+
+#: core/classifier/localized_names.py:123
+msgid "Study Aids"
+msgstr "Opintoapu"
+
+#: core/classifier/localized_names.py:124
+msgid "Religion & Spirituality"
+msgstr "Uskonto ja hengellisyys"
+
+#: core/classifier/localized_names.py:125
+msgid "Body, Mind & Spirit"
+msgstr "Keho, mieli ja henki"
+
+#: core/classifier/localized_names.py:126
+msgid "Buddhism"
+msgstr "Buddhalaisuus"
+
+#: core/classifier/localized_names.py:127
+msgid "Christianity"
+msgstr "Kristinusko"
+
+#: core/classifier/localized_names.py:128
+msgid "Hinduism"
+msgstr "Hindulaisuus"
+
+#: core/classifier/localized_names.py:129
+msgid "Islam"
+msgstr "Islam"
+
+#: core/classifier/localized_names.py:130
+msgid "Judaism"
+msgstr "Juutalaisuus"
+
+#: core/classifier/localized_names.py:131
+msgid "Science & Technology"
+msgstr "Tiede ja teknologia"
+
+#: core/classifier/localized_names.py:132
+msgid "Computers"
+msgstr "Tietokoneet"
+
+#: core/classifier/localized_names.py:133
+msgid "Mathematics"
+msgstr "Matematiikka"
+
+#: core/classifier/localized_names.py:134
+msgid "Medical"
+msgstr "Lääketiede"
+
+#: core/classifier/localized_names.py:135
+msgid "Nature"
+msgstr "Luonto"
+
+#: core/classifier/localized_names.py:136
+msgid "Psychology"
+msgstr "Psykologia"
+
+#: core/classifier/localized_names.py:137
+msgid "Science"
+msgstr "Tiede"
+
+#: core/classifier/localized_names.py:138
+msgid "Social Sciences"
+msgstr "Yhteiskuntatieteet"
+
+#: core/classifier/localized_names.py:139
+msgid "Technology"
+msgstr "Teknologia"
+
+#: core/classifier/localized_names.py:140
+msgid "Self-Help"
+msgstr "Oma-apu"
+
+#: core/classifier/localized_names.py:141
+msgid "Sports"
+msgstr "Urheilu"
+
+#: core/classifier/localized_names.py:142
+msgid "Travel"
+msgstr "Matkailu"
+
+#: core/classifier/localized_names.py:143
+msgid "True Crime"
+msgstr "True Crime"
+
+#: core/util/http.py:27
+msgid "Failure contacting external service"
+msgstr "Yhteydenotto ulkoiseen palveluun epäonnistui"
+
+#: core/util/http.py:28
+#, python-format
+msgid ""
+"The server tried to access %(service)s but the third-party service "
+"experienced an error."
+msgstr ""
+"Palvelin yritti käyttää palvelua %(service)s, mutta kolmannen osapuolen "
+"palvelussa tapahtui virhe."
+
+#: core/util/http.py:75
+msgid "Bad response"
+msgstr "Väärä vastaus"
+
+#: core/util/http.py:76
+#, python-format
+msgid ""
+"The server made a request to %(service)s, and got an unexpected or invalid "
+"response."
+msgstr ""
+"Palvelin teki pyynnön palveluun %(service)s ja sai odottamattoman tai "
+"virheellisen vastauksen."
+
+#: core/util/http.py:148
+msgid "Network failure contacting third-party service"
+msgstr "Verkkovirhe yhteydenotossa kolmannen osapuolen palveluun"
+
+#: core/util/http.py:149
+#, python-format
+msgid "The server experienced a network error while contacting %(service)s."
+msgstr ""
+"Palvelimella tapahtui verkkovirhe, kun se otti yhteyttä palveluun "
+"%(service)s."
+
+#: core/util/http.py:158
+msgid "Timeout"
+msgstr "Aikakatkaisu"
+
+#: core/util/http.py:159
+#, python-format
+msgid "The server made a request to %(service)s, and that request timed out."
+msgstr ""
+"Palvelin teki pyynnön palveluun %(service)s, ja pyyntö aikakatkaistiin."

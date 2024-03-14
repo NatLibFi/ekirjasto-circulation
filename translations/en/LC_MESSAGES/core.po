@@ -1,13 +1,17 @@
-# This file was generated from core-es.xlsx
+# English translations for PROJECT.
+# Copyright (C) 2024 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2024.
+#
 msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2024-03-05 22:39+0200\n"
-"PO-Revision-Date: 2016-06-14 13:24-0400\n"
+"PO-Revision-Date: 2024-02-19 22:14+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language: es\n"
-"Language-Team: es <LL@li.org>\n"
+"Language: en\n"
+"Language-Team: en <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
@@ -123,9 +127,9 @@ msgid "Audiobooks"
 msgstr ""
 
 #: core/external_search.py:2448
-#, fuzzy, python-format
+#, python-format
 msgid "Invalid page key: %(key)s"
-msgstr "Tamaño de página inválido: %(size)s"
+msgstr ""
 
 #: core/facets.py:89
 msgid "Sort by"
@@ -232,39 +236,39 @@ msgid "Others"
 msgstr ""
 
 #: core/lane.py:386
-#, fuzzy, python-format
+#, python-format
 msgid "I don't know how to order a feed by '%(order)s'"
-msgstr "No sé cómo pedir un suministro por '%(order)s"
+msgstr ""
 
 #: core/lane.py:394
-#, fuzzy, python-format
+#, python-format
 msgid "I don't understand the availability term '%(availability)s'"
-msgstr "No entiendo el término de disponibilidad '%(availability)s"
+msgstr ""
 
 #: core/lane.py:406
-#, fuzzy, python-format
+#, python-format
 msgid "I don't understand what '%(collection)s' refers to."
-msgstr "No entiendo a qué colección '%(collection)s' se refiere."
+msgstr ""
 
 #: core/lane.py:422
-#, fuzzy, python-format
+#, python-format
 msgid "I don't understand which distributor '%(distributor)s' refers to."
-msgstr "No entiendo a qué colección '%(collection)s' se refiere."
+msgstr ""
 
 #: core/lane.py:438
-#, fuzzy, python-format
+#, python-format
 msgid "I don't understand which collection '%(collection_name)s' refers to."
-msgstr "No entiendo a qué colección '%(collection)s' se refiere."
+msgstr ""
 
 #: core/lane.py:1255
 #, python-format
 msgid "Invalid page size: %(size)s"
-msgstr "Tamaño de página inválido: %(size)s"
+msgstr ""
 
 #: core/lane.py:1273
 #, python-format
 msgid "Invalid offset: %(offset)s"
-msgstr "Desplazamiento inválido: %(offset)s"
+msgstr ""
 
 #: core/lane.py:1594
 #, python-format
@@ -359,19 +363,19 @@ msgstr ""
 
 #: core/problem_details.py:11
 msgid "Invalid input."
-msgstr "Entrada inválida"
+msgstr ""
 
 #: core/problem_details.py:12
 msgid "You provided invalid or unrecognized input."
-msgstr "Usted ha proporcionado una entrada inválida o desconocida."
+msgstr ""
 
 #: core/problem_details.py:18
 msgid "Invalid credentials"
-msgstr "Credenciales inválidos"
+msgstr ""
 
 #: core/problem_details.py:19
 msgid "Valid credentials are required."
-msgstr "Credenciales válidos requeridos"
+msgstr ""
 
 #: core/problem_details.py:25
 msgid "Method not allowed"
@@ -399,35 +403,35 @@ msgstr ""
 
 #: core/problem_details.py:46
 msgid "Internal server error."
-msgstr "Error de servidor interno."
+msgstr ""
 
 #: core/problem_details.py:47
 msgid "Internal server error"
-msgstr "Error de servidor interno."
+msgstr ""
 
 #: core/problem_details.py:56
 msgid "Invalid URN"
-msgstr "URN Inválido"
+msgstr ""
 
 #: core/problem_details.py:57
 msgid "Could not parse identifier."
-msgstr "No se pudo analizar el identificador"
+msgstr ""
 
 #: core/problem_details.py:63
 msgid "Unrecognized data source."
-msgstr "Fuente de datos desconocida"
+msgstr ""
 
 #: core/problem_details.py:64
 msgid "I don't know anything about that data source."
-msgstr "No sé nada acerca de esa fuente de datos."
+msgstr ""
 
 #: core/problem_details.py:70
 msgid "Third-party service failed."
-msgstr "Servicio de terceros ha fallado"
+msgstr ""
 
 #: core/problem_details.py:71
 msgid "A third-party service has failed."
-msgstr "Un servicio de terceros ha fallado"
+msgstr ""
 
 #: core/problem_details.py:77
 msgid "Invalid reset password token"
@@ -1027,7 +1031,7 @@ msgstr ""
 
 #: core/util/http.py:27
 msgid "Failure contacting external service"
-msgstr "Error al ponerse en contacto con el servidor externo."
+msgstr ""
 
 #: core/util/http.py:28
 #, python-format
@@ -1035,12 +1039,10 @@ msgid ""
 "The server tried to access %(service)s but the third-party service "
 "experienced an error."
 msgstr ""
-"El servidor ha intentado acceder a %(service)s , pero el servicio de "
-"terceros ha experimentado un error."
 
 #: core/util/http.py:75
 msgid "Bad response"
-msgstr "Mala respuesta"
+msgstr ""
 
 #: core/util/http.py:76
 #, python-format
@@ -1048,46 +1050,24 @@ msgid ""
 "The server made a request to %(service)s, and got an unexpected or "
 "invalid response."
 msgstr ""
-"El servidor hizo una petición al servicio %(service)s, y consiguió una "
-"respuesta inesperada o inválida."
 
 #: core/util/http.py:148
 msgid "Network failure contacting third-party service"
-msgstr "Fallo en la red al contactar el servicio de terceros."
+msgstr ""
 
 #: core/util/http.py:149
 #, python-format
 msgid "The server experienced a network error while contacting %(service)s."
-msgstr "El servidor sufrío un error de red mientras contactaba %(service)s."
+msgstr ""
 
 #: core/util/http.py:158
 msgid "Timeout"
 msgstr ""
-"El servidor no respondió. Por favor, verifique su conexión o intente de "
-"nuevo más tarde."
 
 #: core/util/http.py:159
 #, python-format
 msgid "The server made a request to %(service)s, and that request timed out."
-msgstr "El servidor hizo una petición al servicio (%) s, y esa solicitud expiró."
-
-#~ msgid "An internal error occured"
-#~ msgstr "Ha ocurrido un error interno."
-
-#~ msgid "No license pool specified"
-#~ msgstr "No hay una agrupación de licencias específica"
-
-#~ msgid "Invalid problem detail document"
-#~ msgstr "Detalle documento problema inválido"
-
-#~ msgid "No problem type specified."
-#~ msgstr "Tipo de problema no especificado."
-
-#~ msgid "Unrecognized problem type: %(type)s"
-#~ msgstr "Tipo de problema no reconocido: %(type)s"
-
-#~ msgid "Success"
-#~ msgstr "éxito"
+msgstr ""
 
 #~ msgid "Index prefix"
 #~ msgstr ""

@@ -1,0 +1,2650 @@
+# Swedish translations for PROJECT.
+# Copyright (C) 2024 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2024.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2024-03-05 22:39+0200\n"
+"PO-Revision-Date: 2024-02-19 22:17+0200\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: sv\n"
+"Language-Team: sv <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.13.0\n"
+
+#: api/admin/announcement_list_validator.py:35
+#, python-format
+msgid "Invalid announcement list format: %(announcements)r"
+msgstr ""
+
+#: api/admin/announcement_list_validator.py:50
+#, python-format
+msgid "Too many announcements: maximum is %(maximum)d"
+msgstr ""
+
+#: api/admin/announcement_list_validator.py:62
+#, python-format
+msgid "Duplicate announcement ID: %s"
+msgstr ""
+
+#: api/admin/announcement_list_validator.py:71
+#, python-format
+msgid "Invalid announcement format: %(announcement)r"
+msgstr ""
+
+#: api/admin/announcement_list_validator.py:85
+#, python-format
+msgid "Invalid announcement ID: %(id)s"
+msgstr ""
+
+#: api/admin/announcement_list_validator.py:95
+#, python-format
+msgid "Missing required field: %(field)s"
+msgstr ""
+
+#: api/admin/announcement_list_validator.py:141
+#, python-format
+msgid "Value too short (%(length)d versus %(limit)d characters): %(value)s"
+msgstr ""
+
+#: api/admin/announcement_list_validator.py:153
+#, python-format
+msgid "Value too long (%(length)d versus %(limit)d characters): %(value)s"
+msgstr ""
+
+#: api/admin/announcement_list_validator.py:188
+#, python-format
+msgid "Value for %(field)s is not a date: %(date)s"
+msgstr ""
+
+#: api/admin/announcement_list_validator.py:201
+#, python-format
+msgid "Value for %(field)s must be no earlier than %(minimum)s"
+msgstr ""
+
+#: api/admin/problem_details.py:9
+msgid "Admin auth not configured"
+msgstr ""
+
+#: api/admin/problem_details.py:10
+msgid "This circulation manager has not been configured to authenticate admins."
+msgstr ""
+
+#: api/admin/problem_details.py:16
+msgid "Admin auth mechanism not configured"
+msgstr ""
+
+#: api/admin/problem_details.py:17
+msgid ""
+"This circulation manager has not been configured to authenticate admins "
+"with the mechanism you used"
+msgstr ""
+
+#: api/admin/problem_details.py:25
+msgid "Invalid admin credentials"
+msgstr ""
+
+#: api/admin/problem_details.py:26
+msgid "Valid library staff credentials are required."
+msgstr ""
+
+#: api/admin/problem_details.py:32
+msgid "Admin not authorized"
+msgstr ""
+
+#: api/admin/problem_details.py:33
+msgid "Your admin account is not authorized to make this request."
+msgstr ""
+
+#: api/admin/problem_details.py:39
+msgid "Invalid CSRF token"
+msgstr ""
+
+#: api/admin/problem_details.py:40
+msgid "There was an error saving your changes."
+msgstr ""
+
+#: api/admin/problem_details.py:46
+msgid "Invalid edit"
+msgstr ""
+
+#: api/admin/problem_details.py:47
+msgid "There was a problem with the edited metadata."
+msgstr ""
+
+#: api/admin/problem_details.py:53
+msgid "Metadata refresh pending."
+msgstr ""
+
+#: api/admin/problem_details.py:54
+msgid "The Metadata Wrangler is looking for new data. Check back later."
+msgstr ""
+
+#: api/admin/problem_details.py:60 api/admin/problem_details.py:61
+msgid "Metadata could not be refreshed."
+msgstr ""
+
+#: api/admin/problem_details.py:67
+msgid "Genre not found."
+msgstr ""
+
+#: api/admin/problem_details.py:68
+msgid "One of the submitted genres does not exist."
+msgstr ""
+
+#: api/admin/problem_details.py:74
+msgid "Incompatible genre."
+msgstr ""
+
+#: api/admin/problem_details.py:75
+msgid "The genre is incompatible with the fiction status of the work."
+msgstr ""
+
+#: api/admin/problem_details.py:81
+msgid "Erotica is for Adults Only."
+msgstr ""
+
+#: api/admin/problem_details.py:82
+msgid "The Erotica genre is incompatible with the submitted Audience."
+msgstr ""
+
+#: api/admin/problem_details.py:88
+msgid "Invalid series position."
+msgstr ""
+
+#: api/admin/problem_details.py:89
+msgid "The series position must be a number or blank."
+msgstr ""
+
+#: api/admin/problem_details.py:95
+msgid "Invalid date format."
+msgstr ""
+
+#: api/admin/problem_details.py:96
+msgid "A date must be in the format YYYY-MM-DD."
+msgstr ""
+
+#: api/admin/problem_details.py:102
+msgid "Unknown language."
+msgstr ""
+
+#: api/admin/problem_details.py:103
+msgid "The submitted language is not one of the known languages."
+msgstr ""
+
+#: api/admin/problem_details.py:109
+msgid "Unknown location."
+msgstr ""
+
+#: api/admin/problem_details.py:110
+msgid "The submitted geographic location cannot be found."
+msgstr ""
+
+#: api/admin/problem_details.py:116
+msgid "Unknown role."
+msgstr ""
+
+#: api/admin/problem_details.py:117
+msgid "One of the submitted roles is not one of the known roles."
+msgstr ""
+
+#: api/admin/problem_details.py:123
+msgid "Unknown medium."
+msgstr ""
+
+#: api/admin/problem_details.py:124
+msgid "The submitted medium is not one of the known media types."
+msgstr ""
+
+#: api/admin/problem_details.py:130
+msgid "Invalid rating."
+msgstr ""
+
+#: api/admin/problem_details.py:131
+msgid "The rating must be a number in the rating scale."
+msgstr ""
+
+#: api/admin/problem_details.py:137
+msgid "Invalid image"
+msgstr ""
+
+#: api/admin/problem_details.py:138
+msgid "The submitted image is invalid."
+msgstr ""
+
+#: api/admin/problem_details.py:144
+msgid "Library short name already in use"
+msgstr ""
+
+#: api/admin/problem_details.py:145
+msgid ""
+"The library short name must be unique, and there's already a library with"
+" the specified short name."
+msgstr ""
+
+#: api/admin/problem_details.py:153
+msgid "Missing collection."
+msgstr ""
+
+#: api/admin/problem_details.py:154
+msgid "The specified collection does not exist."
+msgstr ""
+
+#: api/admin/problem_details.py:160
+msgid "Missing analytics name."
+msgstr ""
+
+#: api/admin/problem_details.py:161
+msgid "You must identify the analytics service by its name."
+msgstr ""
+
+#: api/admin/problem_details.py:167
+msgid "Cannot delete collection with children"
+msgstr ""
+
+#: api/admin/problem_details.py:168
+msgid ""
+"The collection is the parent of at least one other collection, so it "
+"can't be deleted."
+msgstr ""
+
+#: api/admin/problem_details.py:176
+msgid "No protocol for new service"
+msgstr ""
+
+#: api/admin/problem_details.py:177
+msgid ""
+"The specified service doesn't exist. You can create it, but you must "
+"specify a protocol."
+msgstr ""
+
+#: api/admin/problem_details.py:185
+msgid "Unknown protocol"
+msgstr ""
+
+#: api/admin/problem_details.py:186
+msgid "The protocol is not one of the known protocols."
+msgstr ""
+
+#: api/admin/problem_details.py:192
+msgid "Cannot change protocol"
+msgstr ""
+
+#: api/admin/problem_details.py:193
+msgid "A protocol can't be changed once it has been set."
+msgstr ""
+
+#: api/admin/problem_details.py:199
+msgid "Missing service name."
+msgstr ""
+
+#: api/admin/problem_details.py:200
+msgid "You must identify the service by its name."
+msgstr ""
+
+#: api/admin/problem_details.py:206
+msgid "Protocol does not support parents"
+msgstr ""
+
+#: api/admin/problem_details.py:207
+msgid "You attempted to add a parent but the protocol does not support parents."
+msgstr ""
+
+#: api/admin/problem_details.py:215
+msgid "Protocol does not support settings"
+msgstr ""
+
+#: api/admin/problem_details.py:216
+msgid ""
+"You attempted to update settings for a protocol that does not support "
+"settings."
+msgstr ""
+
+#: api/admin/problem_details.py:224
+msgid "Missing parent"
+msgstr ""
+
+#: api/admin/problem_details.py:225
+msgid "You attempted to add a parent that does not exist."
+msgstr ""
+
+#: api/admin/problem_details.py:231
+msgid "No such library"
+msgstr ""
+
+#: api/admin/problem_details.py:232
+msgid "A library in your request does not exist."
+msgstr ""
+
+#: api/admin/problem_details.py:238
+msgid "Incomplete configuration"
+msgstr ""
+
+#: api/admin/problem_details.py:239
+msgid "The configuration is missing a required field."
+msgstr ""
+
+#: api/admin/problem_details.py:245
+msgid "Duplicate integration"
+msgstr ""
+
+#: api/admin/problem_details.py:246
+msgid "A given site can only support one integration of this type."
+msgstr ""
+
+#: api/admin/problem_details.py:252
+msgid "Integration name already in use"
+msgstr ""
+
+#: api/admin/problem_details.py:253
+msgid ""
+"The integration name must be unique, and there's already an integration "
+"with the specified name."
+msgstr ""
+
+#: api/admin/problem_details.py:261
+msgid "Integration URL already in use"
+msgstr ""
+
+#: api/admin/problem_details.py:262
+msgid "There's already an integration of this type for this URL."
+msgstr ""
+
+#: api/admin/problem_details.py:268
+msgid "Incompatible use of integration"
+msgstr ""
+
+#: api/admin/problem_details.py:269
+msgid ""
+"You tried to use an integration in a way incompatible with the goal of "
+"that integration"
+msgstr ""
+
+#: api/admin/problem_details.py:277
+msgid "Missing integration"
+msgstr ""
+
+#: api/admin/problem_details.py:278
+msgid "The specified integration does not exist."
+msgstr ""
+
+#: api/admin/problem_details.py:284
+msgid "Missing pgcrypto database extension"
+msgstr ""
+
+#: api/admin/problem_details.py:285
+msgid ""
+"You tried to store a password for an individual admin, but the database "
+"does not have the pgcrypto extension installed."
+msgstr ""
+
+#: api/admin/problem_details.py:293
+msgid "Missing admin"
+msgstr ""
+
+#: api/admin/problem_details.py:294
+msgid "The specified admin does not exist."
+msgstr ""
+
+#: api/admin/problem_details.py:300
+msgid "Missing service"
+msgstr ""
+
+#: api/admin/problem_details.py:301
+msgid "The specified service does not exist."
+msgstr ""
+
+#: api/admin/problem_details.py:307
+msgid "Invalid configuration option"
+msgstr ""
+
+#: api/admin/problem_details.py:308
+msgid "The configuration has an invalid value."
+msgstr ""
+
+#: api/admin/problem_details.py:314
+msgid "Invalid email format"
+msgstr ""
+
+#: api/admin/problem_details.py:315
+msgid "You must enter a valid email address."
+msgstr ""
+
+#: api/admin/problem_details.py:321
+msgid "Invalid URL format"
+msgstr ""
+
+#: api/admin/problem_details.py:322
+msgid "You must enter a valid URL."
+msgstr ""
+
+#: api/admin/problem_details.py:328
+msgid "Invalid number format"
+msgstr ""
+
+#: api/admin/problem_details.py:329
+msgid "You must enter a number."
+msgstr ""
+
+#: api/admin/problem_details.py:335
+msgid "Invalid external type regular expression"
+msgstr ""
+
+#: api/admin/problem_details.py:336
+msgid "The specified external type regular expression does not compile."
+msgstr ""
+
+#: api/admin/problem_details.py:342
+msgid "Invalid library identifier restriction regular expression"
+msgstr ""
+
+#: api/admin/problem_details.py:343
+msgid ""
+"The specified library identifier restriction regular expression does not "
+"compile."
+msgstr ""
+
+#: api/admin/problem_details.py:351
+msgid "Multiple basic authentication services"
+msgstr ""
+
+#: api/admin/problem_details.py:352
+msgid ""
+"Each library can only have one patron authentication service using basic "
+"auth."
+msgstr ""
+
+#: api/admin/problem_details.py:360
+msgid "No such patron"
+msgstr ""
+
+#: api/admin/problem_details.py:361
+msgid ""
+"The specified patron doesn't exist, or is associated with a different "
+"library."
+msgstr ""
+
+#: api/admin/problem_details.py:369
+msgid "Missing sitewide setting key"
+msgstr ""
+
+#: api/admin/problem_details.py:370
+msgid "A key is required to change a sitewide setting."
+msgstr ""
+
+#: api/admin/problem_details.py:376
+msgid "Missing sitewide setting value"
+msgstr ""
+
+#: api/admin/problem_details.py:377
+msgid "A value is required to change a sitewide setting."
+msgstr ""
+
+#: api/admin/problem_details.py:383
+msgid "Multiple sitewide services"
+msgstr ""
+
+#: api/admin/problem_details.py:384
+msgid ""
+"You tried to create a new sitewide service, but a sitewide service of the"
+" same type is already configured."
+msgstr ""
+
+#: api/admin/problem_details.py:392
+msgid "Multiple services for library"
+msgstr ""
+
+#: api/admin/problem_details.py:393
+msgid "Each library can only have one service of this type."
+msgstr ""
+
+#: api/admin/problem_details.py:399
+msgid "Missing custom list"
+msgstr ""
+
+#: api/admin/problem_details.py:400
+msgid "The specified custom list doesn't exist."
+msgstr ""
+
+#: api/admin/problem_details.py:406
+msgid "Cannot change library for custom list"
+msgstr ""
+
+#: api/admin/problem_details.py:407
+msgid "A custom list's associated library cannot be changed once it is set.."
+msgstr ""
+
+#: api/admin/problem_details.py:413
+msgid "Custom list name already in use"
+msgstr ""
+
+#: api/admin/problem_details.py:414
+msgid "The library already has a custom list with that name."
+msgstr ""
+
+#: api/admin/problem_details.py:420
+msgid "An auto update custom list cannot have entries"
+msgstr ""
+
+#: api/admin/problem_details.py:421
+msgid "Entries are automatically managed for auto update custom lists"
+msgstr ""
+
+#: api/admin/problem_details.py:427
+msgid "Collection not associated with library"
+msgstr ""
+
+#: api/admin/problem_details.py:428
+msgid ""
+"You can't add a collection to a list unless it is associated with the "
+"list's library."
+msgstr ""
+
+#: api/admin/problem_details.py:436
+msgid "Missing lane"
+msgstr ""
+
+#: api/admin/problem_details.py:437
+msgid ""
+"The specified lane doesn't exist, or is associated with a different "
+"library."
+msgstr ""
+
+#: api/admin/problem_details.py:445
+msgid "Cannot edit default lane"
+msgstr ""
+
+#: api/admin/problem_details.py:446
+msgid "You can't change one of the default auto-generated lanes."
+msgstr ""
+
+#: api/admin/problem_details.py:452
+msgid "No display name for lane"
+msgstr ""
+
+#: api/admin/problem_details.py:453
+msgid "A custom lane must have a name."
+msgstr ""
+
+#: api/admin/problem_details.py:459
+msgid "No custom lists for lane"
+msgstr ""
+
+#: api/admin/problem_details.py:460
+msgid "A custom lane must have at least one associated list."
+msgstr ""
+
+#: api/admin/problem_details.py:466
+msgid "Lane with parent and display name already exists"
+msgstr ""
+
+#: api/admin/problem_details.py:467
+msgid ""
+"You cannot create a lane with the same parent and display name as an "
+"existing lane."
+msgstr ""
+
+#: api/admin/problem_details.py:475
+msgid "Cannot show lane with hidden parent"
+msgstr ""
+
+#: api/admin/problem_details.py:476
+msgid "You can only make a lane visible if its parent is already visible."
+msgstr ""
+
+#: api/admin/problem_details.py:482
+msgid "The collection does not support registration"
+msgstr ""
+
+#: api/admin/problem_details.py:483
+msgid "The collection does not support registration."
+msgstr ""
+
+#: api/admin/problem_details.py:489 api/admin/problem_details.py:490
+msgid "Failed to run self tests."
+msgstr ""
+
+#: api/admin/problem_details.py:496
+msgid "Missing identifier"
+msgstr ""
+
+#: api/admin/problem_details.py:497
+msgid "No identifier was used."
+msgstr ""
+
+#: api/admin/problem_details.py:503
+msgid "Source collection missing"
+msgstr ""
+
+#: api/admin/problem_details.py:504
+msgid "A source collection is not present in the library."
+msgstr ""
+
+#: api/admin/problem_details.py:510
+msgid "Entry not valid for library"
+msgstr ""
+
+#: api/admin/problem_details.py:511
+msgid ""
+"An entry in the customlist was not valid for the library being shared "
+"with."
+msgstr ""
+
+#: api/admin/problem_details.py:519
+msgid "Cannot delete the Custom List share"
+msgstr ""
+
+#: api/admin/problem_details.py:520
+msgid "Unable to delete the shared status of the given list"
+msgstr ""
+
+#: api/admin/validator.py:61
+#, python-format
+msgid "\"%(email)s\" is not a valid email address."
+msgstr ""
+
+#: api/admin/validator.py:86
+#, python-format
+msgid "\"%(url)s\" is not a valid URL."
+msgstr ""
+
+#: api/admin/validator.py:118
+#, python-format
+msgid "\"%(number)s\" is not a number."
+msgstr ""
+
+#: api/admin/validator.py:125
+#, python-format
+msgid "%(field)s must be greater than %(min)s."
+msgstr ""
+
+#: api/admin/validator.py:133
+#, python-format
+msgid "%(field)s cannot be greater than %(max)s."
+msgstr ""
+# Swedish translations for PROJECT.
+# Copyright (C) 2024 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2024.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2024-03-05 22:39+0200\n"
+"PO-Revision-Date: 2024-02-19 22:17+0200\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: sv\n"
+"Language-Team: sv <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.13.0\n"
+
+#: api/authenticator.py:324
+msgid ""
+"SAML providers are configured, but secret for signing bearer tokens is "
+"not."
+msgstr ""
+
+#: api/authenticator.py:563
+msgid "No SAML providers are configured."
+msgstr ""
+
+#: api/authenticator.py:572
+#, python-format
+msgid " The known providers are: %s"
+msgstr ""
+
+#: api/authenticator.py:756
+msgid "Library"
+msgstr ""
+
+#: api/axis.py:99
+msgid "Username"
+msgstr ""
+
+#: api/axis.py:102
+msgid "Password"
+msgstr ""
+
+#: api/axis.py:106 api/bibliotheca.py:101 api/enki.py:81 api/overdrive.py:134
+#: api/overdrive.py:195
+msgid "Library ID"
+msgstr ""
+
+#: api/axis.py:113
+msgid "Server"
+msgstr ""
+
+#: api/axis.py:120
+msgid "Verify SSL Certificate"
+msgstr ""
+
+#: api/axis.py:121
+msgid ""
+"This should always be True in production, it may need to be set to False "
+"to use theAxis 360 QA Environment."
+msgstr ""
+
+#: api/axis.py:127
+msgid "True"
+msgstr ""
+
+#: api/axis.py:128
+msgid "False"
+msgstr ""
+
+#: api/bibliotheca.py:89
+msgid "Account ID"
+msgstr ""
+
+#: api/bibliotheca.py:95
+msgid "Account Key"
+msgstr ""
+
+#: api/bibliotheca.py:110 api/enki.py:85
+msgid "Show/Hide Titles with No Available Loans"
+msgstr ""
+
+#: api/bibliotheca.py:112 api/enki.py:87
+msgid "Titles with no available loans will not be displayed in the Catalog view."
+msgstr ""
+
+#: api/circulation.py:507
+msgid "Ebook Loan Duration (in Days)"
+msgstr ""
+
+#: api/circulation.py:509
+msgid ""
+"When a patron uses SimplyE to borrow an ebook from this collection, "
+"SimplyE will ask for a loan that lasts this number of days. This must be "
+"equal to or less than the maximum loan duration negotiated with the "
+"distributor."
+msgstr ""
+
+#: api/circulation.py:522
+msgid "Default Loan Period (in Days)"
+msgstr ""
+
+#: api/circulation.py:524
+msgid ""
+"Until it hears otherwise from the distributor, this server will assume "
+"that any given loan for this library from this collection will last this "
+"number of days. This number is usually a negotiated value between the "
+"library and the distributor. This only affects estimates&mdash;it cannot "
+"affect the actual length of loans."
+msgstr ""
+
+#: api/circulation.py:554
+#, python-format
+msgid ""
+"Could not map delivery mechanism %(mechanism_name)s to internal delivery "
+"mechanism!"
+msgstr ""
+
+#: api/circulation.py:1066
+msgid "You cannot renew a loan if other patrons have the work on hold."
+msgstr ""
+
+#: api/circulation.py:1338
+msgid "Cannot find your active loan for this work."
+msgstr ""
+
+#: api/circulation.py:1345
+#, python-format
+msgid ""
+"You already fulfilled this loan as %(loan_delivery_mechanism)s, you can't"
+" also do it as %(requested_delivery_mechanism)s"
+msgstr ""
+
+#: api/circulation_exceptions.py:41
+#, python-format
+msgid "Integration error communicating with %(service_name)s"
+msgstr ""
+
+#: api/circulation_manager.py:157
+msgid "Lane does not exist"
+msgstr ""
+
+#: api/circulation_manager.py:375
+msgid "All Books"
+msgstr ""
+
+#: api/config.py:81
+msgid "Internal signing secret for OAuth and SAML bearer tokens"
+msgstr ""
+
+#: api/config.py:86
+msgid "Internal secret key for admin interface cookies"
+msgstr ""
+
+#: api/config.py:91
+msgid "Hostnames for web application access"
+msgstr ""
+
+#: api/config.py:93
+msgid ""
+"Only web applications from these hosts can access this circulation "
+"manager. This can be a single hostname (http://catalog.library.org) or a "
+"pipe-separated list of hostnames "
+"(http://catalog.library.org|https://beta.library.org). You must include "
+"the scheme part of the URI (http:// or https://). You can also set this "
+"to '*' to allow access from any host, but you must not do this in a "
+"production environment -- only during development."
+msgstr ""
+
+#: api/config.py:99
+msgid "Cache time for static images and JS and CSS files (in seconds)"
+msgstr ""
+
+#: api/config.py:107
+msgid "Cache time for authentication documents (in seconds)"
+msgstr ""
+
+#: api/config.py:114
+msgid "Custom Terms of Service link"
+msgstr ""
+
+#: api/config.py:117
+msgid ""
+"If your inclusion in the SimplyE mobile app is governed by terms other "
+"than the default, put the URL to those terms in this link so that "
+"librarians will have access to them. This URL will be used for all "
+"libraries on this circulation manager."
+msgstr ""
+
+#: api/config.py:123
+msgid "Custom Terms of Service link text"
+msgstr ""
+
+#: api/config.py:126
+msgid ""
+"Custom text for the Terms of Service link in the footer of these "
+"administrative interface pages. This is primarily useful if you're not "
+"connecting this circulation manager to the SimplyE mobile app. This text "
+"will be used for all libraries on this circulation manager."
+msgstr ""
+
+#: api/config.py:135
+msgid "Scheduled announcements"
+msgstr ""
+
+#: api/config.py:136
+msgid "Announcements will be displayed to authenticated patrons."
+msgstr ""
+
+#: api/custom_index.py:87
+msgid "I'm Under 13"
+msgstr ""
+
+#: api/custom_index.py:88
+msgid "Read children's books"
+msgstr ""
+
+#: api/custom_index.py:89
+msgid "I'm 13 or Older"
+msgstr ""
+
+#: api/custom_index.py:90
+msgid "See the full collection"
+msgstr ""
+
+#: api/custom_index.py:98 api/custom_patron_catalog.py:171
+msgid "ID of lane for patrons who are 13 or older"
+msgstr ""
+
+#: api/custom_index.py:102 api/custom_patron_catalog.py:175
+msgid "ID of lane for patrons who are under 13"
+msgstr ""
+
+#: api/custom_patron_catalog.py:122
+msgid "Send patrons to the lane with this ID."
+msgstr ""
+
+#: api/ekirjasto_authentication.py:65
+msgid "E-kirjasto API environment"
+msgstr ""
+
+#: api/ekirjasto_authentication.py:66
+msgid "Select what environment of E-kirjasto accounts should be used."
+msgstr ""
+
+#: api/ekirjasto_authentication.py:83
+msgid "Delegate token expire time in seconds"
+msgstr ""
+
+#: api/ekirjasto_authentication.py:84
+msgid ""
+"Expire time for a delegate token to authorize in behalf of a ekirjasto "
+"token. This should be less than the expire time for ekirjasto token, so "
+"it can be refreshed."
+msgstr ""
+
+#: api/enki.py:74 api/kansas_patron.py:20
+msgid "URL"
+msgstr ""
+
+#: api/enki.py:105
+msgid "Integrate an Enki collection."
+msgstr ""
+
+#: api/millenium_patron.py:177
+msgid "III Millenium Patron API"
+msgstr ""
+
+#: api/odl.py:85
+msgid "ODL feed URL"
+msgstr ""
+
+#: api/odl.py:92
+msgid "Library's API username"
+msgstr ""
+
+#: api/odl.py:100
+msgid "Library's API password"
+msgstr ""
+
+#: api/odl.py:108
+msgid "Default Reservation Period (in Days)"
+msgstr ""
+
+#: api/odl.py:109
+msgid ""
+"The number of days a patron has to check out a book after a hold becomes "
+"available."
+msgstr ""
+
+#: api/odl.py:120
+msgid "Passphrase hint"
+msgstr ""
+
+#: api/odl.py:121
+msgid "Hint displayed to the user when opening an LCP protected publication."
+msgstr ""
+
+#: api/odl.py:132
+msgid "Passphrase hint URL"
+msgstr ""
+
+#: api/odl.py:133
+msgid "Hint URL available to the user when opening an LCP protected publication."
+msgstr ""
+
+#: api/odl.py:144
+msgid "Passphrase encryption algorithm"
+msgstr ""
+
+#: api/odl.py:145
+msgid "Algorithm used for encrypting the passphrase."
+msgstr ""
+
+#: api/odl2.py:46
+msgid "Skipped license formats"
+msgstr ""
+
+#: api/odl2.py:47
+msgid ""
+"List of license formats that will NOT be imported into Circulation "
+"Manager."
+msgstr ""
+
+#: api/odl2.py:59
+msgid "Loan limit per patron"
+msgstr ""
+
+#: api/odl2.py:60
+msgid ""
+"The maximum number of books a patron can have loaned out at any given "
+"time."
+msgstr ""
+
+#: api/odl2.py:72
+msgid "Hold limit per patron"
+msgstr ""
+
+#: api/odl2.py:73
+msgid "The maximum number of books a patron can have on hold at any given time."
+msgstr ""
+
+#: api/opds_for_distributors.py:52
+msgid "Library's username or access key"
+msgstr ""
+
+#: api/opds_for_distributors.py:59
+msgid "Library's password or secret key"
+msgstr ""
+
+#: api/overdrive.py:142
+msgid "Website ID"
+msgstr ""
+
+#: api/overdrive.py:150
+msgid "Client Key"
+msgstr ""
+
+#: api/overdrive.py:158
+msgid "Client Secret"
+msgstr ""
+
+#: api/overdrive.py:168
+msgid "Server family"
+msgstr ""
+
+#: api/overdrive.py:174
+msgid "Testing"
+msgstr ""
+
+#: api/overdrive.py:184
+msgid "ILS Name"
+msgstr ""
+
+#: api/overdrive.py:185
+msgid ""
+"When multiple libraries share an Overdrive account, Overdrive uses a "
+"setting called 'ILS Name' to determine which ILS to check when validating"
+" a given patron."
+msgstr ""
+
+#: api/problem_details.py:9
+msgid "Third-party service failed."
+msgstr ""
+
+#: api/problem_details.py:10
+msgid ""
+"The library could not complete your request because a third-party service"
+" has failed."
+msgstr ""
+
+#: api/problem_details.py:18
+msgid "Feed should be been pre-cached."
+msgstr ""
+
+#: api/problem_details.py:19
+msgid ""
+"This feed should have been pre-cached. It's too expensive to generate "
+"dynamically."
+msgstr ""
+
+#: api/problem_details.py:27
+msgid "Invalid credentials"
+msgstr ""
+
+#: api/problem_details.py:28
+msgid "A valid library card barcode number and PIN are required."
+msgstr ""
+
+#: api/problem_details.py:34
+msgid "Expired credentials."
+msgstr ""
+
+#: api/problem_details.py:35
+msgid "Your library card has expired. You need to renew it."
+msgstr ""
+
+#: api/problem_details.py:41
+msgid "Suspended credentials."
+msgstr ""
+
+#: api/problem_details.py:42
+msgid "Your library card has been suspended. Contact your branch library."
+msgstr ""
+
+#: api/problem_details.py:48
+msgid "No licenses."
+msgstr ""
+
+#: api/problem_details.py:49
+msgid "The library currently has no licenses for this book."
+msgstr ""
+
+#: api/problem_details.py:55
+msgid "No available license."
+msgstr ""
+
+#: api/problem_details.py:56
+msgid "All licenses for this book are loaned out."
+msgstr ""
+
+#: api/problem_details.py:62
+msgid "No acceptable format."
+msgstr ""
+
+#: api/problem_details.py:63
+msgid "Could not deliver this book in an acceptable format."
+msgstr ""
+
+#: api/problem_details.py:69
+msgid "Already checked out"
+msgstr ""
+
+#: api/problem_details.py:70
+msgid "You have already checked out this book."
+msgstr ""
+
+#: api/problem_details.py:73
+msgid ""
+"You have reached your loan limit. You cannot borrow anything further "
+"until you return something."
+msgstr ""
+
+#: api/problem_details.py:76
+#, python-format
+msgid ""
+"You have reached your loan limit of %(limit)d. You cannot borrow anything"
+" further until you return something."
+msgstr ""
+
+#: api/problem_details.py:82
+msgid "Loan limit reached."
+msgstr ""
+
+#: api/problem_details.py:86
+msgid ""
+"You have reached your hold limit. You cannot place another item on hold "
+"until you borrow something or remove a hold."
+msgstr ""
+
+#: api/problem_details.py:89
+#, python-format
+msgid ""
+"You have reached your hold limit of %(limit)d. You cannot place another "
+"item on hold until you borrow something or remove a hold."
+msgstr ""
+
+#: api/problem_details.py:95
+msgid "Limit reached."
+msgstr ""
+
+#: api/problem_details.py:102
+msgid "Outstanding fines."
+msgstr ""
+
+#: api/problem_details.py:103
+msgid "You must pay your outstanding fines before you can borrow more books."
+msgstr ""
+
+#: api/problem_details.py:109
+msgid "Could not issue loan."
+msgstr ""
+
+#: api/problem_details.py:110
+msgid "Could not issue loan (reason unknown)."
+msgstr ""
+
+#: api/problem_details.py:116
+msgid "Could not place hold."
+msgstr ""
+
+#: api/problem_details.py:117
+msgid "Could not place hold (reason unknown)."
+msgstr ""
+
+#: api/problem_details.py:123
+msgid "Could not renew loan."
+msgstr ""
+
+#: api/problem_details.py:124
+msgid "Could not renew loan (reason unknown)."
+msgstr ""
+
+#: api/problem_details.py:130
+msgid "No longer in collection."
+msgstr ""
+
+#: api/problem_details.py:131
+msgid "This book was recently removed from the collection."
+msgstr ""
+
+#: api/problem_details.py:137
+msgid "No active loan."
+msgstr ""
+
+#: api/problem_details.py:138
+msgid "You can't do this without first borrowing this book."
+msgstr ""
+
+#: api/problem_details.py:144
+msgid "No active hold."
+msgstr ""
+
+#: api/problem_details.py:145
+msgid "You can't do this without first putting this book on hold."
+msgstr ""
+
+#: api/problem_details.py:151
+msgid "No active loan or hold."
+msgstr ""
+
+#: api/problem_details.py:152
+msgid "You can't do this without first borrowing this book or putting it on hold."
+msgstr ""
+
+#: api/problem_details.py:158
+msgid "Loan not found."
+msgstr ""
+
+#: api/problem_details.py:159
+msgid "You don't have a loan with the provided id."
+msgstr ""
+
+#: api/problem_details.py:165
+msgid "Hold not found."
+msgstr ""
+
+#: api/problem_details.py:166
+msgid "You don't have a hold with the provided id."
+msgstr ""
+
+#: api/problem_details.py:172
+msgid "Could not mirror local state to remote."
+msgstr ""
+
+#: api/problem_details.py:173
+msgid ""
+"Could not convince a third party to accept the change you made. It's "
+"likely to show up again soon."
+msgstr ""
+
+#: api/problem_details.py:181
+msgid "No such lane."
+msgstr ""
+
+#: api/problem_details.py:182
+msgid "You asked for a nonexistent lane."
+msgstr ""
+
+#: api/problem_details.py:188
+msgid "No such list."
+msgstr ""
+
+#: api/problem_details.py:189
+msgid "You asked for a nonexistent list."
+msgstr ""
+
+#: api/problem_details.py:195
+msgid "Cannot delete list."
+msgstr ""
+
+#: api/problem_details.py:196
+msgid "It is not possible to delete a shared list."
+msgstr ""
+
+#: api/problem_details.py:202
+msgid "No such collection."
+msgstr ""
+
+#: api/problem_details.py:203
+msgid "You asked for a nonexistent collection."
+msgstr ""
+
+#: api/problem_details.py:209
+msgid "Forbidden by policy."
+msgstr ""
+
+#: api/problem_details.py:210
+msgid "Library policy prevents us from carrying out your request."
+msgstr ""
+
+#: api/problem_details.py:214
+msgid "Library policy considers this title inappropriate for your patron type."
+msgstr ""
+
+#: api/problem_details.py:221 api/problem_details.py:222
+msgid "Could not fulfill loan."
+msgstr ""
+
+#: api/problem_details.py:228
+msgid "Delivery mechanism conflict."
+msgstr ""
+
+#: api/problem_details.py:229
+msgid ""
+"The delivery mechanism for this book has been locked in and can't be "
+"changed."
+msgstr ""
+
+#: api/problem_details.py:235
+msgid "Unsupported delivery mechanism."
+msgstr ""
+
+#: api/problem_details.py:236
+msgid "You selected a delivery mechanism that's not supported by this book."
+msgstr ""
+
+#: api/problem_details.py:242 api/problem_details.py:243
+msgid "Could not release hold."
+msgstr ""
+
+#: api/problem_details.py:249
+msgid "Unknown SAML provider."
+msgstr ""
+
+#: api/problem_details.py:250
+msgid "The specified SAML provider name isn't one of the known providers."
+msgstr ""
+
+#: api/problem_details.py:257
+msgid "Ekirjasto provider not configured."
+msgstr ""
+
+#: api/problem_details.py:258
+msgid "Ekirjasto provider was not configured for the library"
+msgstr ""
+
+#: api/problem_details.py:265
+msgid "Ekirjasto remote method not supported."
+msgstr ""
+
+#: api/problem_details.py:266
+msgid "Method for a remote call not supported."
+msgstr ""
+
+#: api/problem_details.py:272
+msgid "Invalid SAML bearer token."
+msgstr ""
+
+#: api/problem_details.py:273
+msgid "The provided SAML bearer token couldn't be verified."
+msgstr ""
+
+#: api/problem_details.py:280
+msgid "Invalid delegate token for ekirjasto authentication provider."
+msgstr ""
+
+#: api/problem_details.py:281
+msgid ""
+"The provided delegate token couldn't be verified for ekirjasto "
+"authentication provider or it is expired."
+msgstr ""
+
+#: api/problem_details.py:290
+msgid "Invalid ekirjasto token for ekirjasto API."
+msgstr ""
+
+#: api/problem_details.py:291
+msgid "The provided ekirjasto token couldn't be verified for ekirjasto API."
+msgstr ""
+
+#: api/problem_details.py:298
+msgid "Authentication with ekirjasto API failed."
+msgstr ""
+
+#: api/problem_details.py:299
+msgid "Authentication with ekirjasto API failed, for unknown reason."
+msgstr ""
+
+#: api/problem_details.py:306
+msgid "Call to ekirjasto API failed."
+msgstr ""
+
+#: api/problem_details.py:307
+msgid "Call to ekirjasto API failed, for unknown reason."
+msgstr ""
+
+#: api/problem_details.py:313
+msgid "Unsupported authentication mechanism."
+msgstr ""
+
+#: api/problem_details.py:314
+msgid "The specified authentication mechanism isn't supported."
+msgstr ""
+
+#: api/problem_details.py:320
+msgid "Invalid analytics event type."
+msgstr ""
+
+#: api/problem_details.py:321
+msgid "The analytics event must be a supported type."
+msgstr ""
+
+#: api/problem_details.py:327
+msgid "Invalid annotation motivation."
+msgstr ""
+
+#: api/problem_details.py:328
+msgid "The annotation must have a supported motivation."
+msgstr ""
+
+#: api/problem_details.py:334
+msgid "Invalid annotation target."
+msgstr ""
+
+#: api/problem_details.py:335
+msgid "The annotation target must be a work in your current loans."
+msgstr ""
+
+#: api/problem_details.py:341
+msgid "Invalid annotation format."
+msgstr ""
+
+#: api/problem_details.py:342
+msgid "The annotation could not be parsed as JSON-LD."
+msgstr ""
+
+#: api/problem_details.py:348
+msgid "No annotation."
+msgstr ""
+
+#: api/problem_details.py:349
+msgid "The annotation you requested does not exist."
+msgstr ""
+
+#: api/problem_details.py:355
+msgid "Library not found."
+msgstr ""
+
+#: api/problem_details.py:356
+msgid "No library with the requested name on this server."
+msgstr ""
+
+#: api/problem_details.py:362
+msgid "Wrong library"
+msgstr ""
+
+#: api/problem_details.py:363
+msgid "You are not a patron of the selected library."
+msgstr ""
+
+#: api/problem_details.py:369
+msgid "Invalid loan for ODL notification"
+msgstr ""
+
+#: api/problem_details.py:370
+msgid "The ODL notification is for a loan that's not from an ODL collection."
+msgstr ""
+
+#: api/problem_details.py:376
+msgid "Invalid registration"
+msgstr ""
+
+#: api/problem_details.py:377
+msgid "You did not submit enough information to register with the collection."
+msgstr ""
+
+#: api/problem_details.py:383
+msgid "Decryption error"
+msgstr ""
+
+#: api/problem_details.py:384
+msgid "Failed to decrypt a shared secret retrieved from another computer."
+msgstr ""
+
+#: api/problem_details.py:390
+msgid "Device token not found"
+msgstr ""
+
+#: api/problem_details.py:391
+msgid "Patron does not have a device registered with this token."
+msgstr ""
+
+#: api/problem_details.py:397
+msgid "Device token already exists"
+msgstr ""
+
+#: api/problem_details.py:398
+msgid "A device token with the same token already exists."
+msgstr ""
+
+#: api/problem_details.py:404
+msgid "Device token type invalid"
+msgstr ""
+
+#: api/problem_details.py:405
+msgid "The token type provided is not valid."
+msgstr ""
+
+#: api/problem_details.py:411
+msgid "Access token expired"
+msgstr ""
+
+#: api/problem_details.py:412
+msgid "The patron authentication access token has expired."
+msgstr ""
+
+#: api/problem_details.py:418
+msgid "Access token invalid"
+msgstr ""
+
+#: api/problem_details.py:419
+msgid "The patron authentication access token is invalid."
+msgstr ""
+
+#: api/problem_details.py:425
+msgid "Access token not possible"
+msgstr ""
+
+#: api/problem_details.py:426
+msgid ""
+"The patron authentication access token is not possible for this type of "
+"authentication."
+msgstr ""
+
+#: api/sirsidynix_authentication_provider.py:32
+msgid "Patron has not yet been approved"
+msgstr ""
+
+#: api/sirsidynix_authentication_provider.py:33
+msgid "Patron membership has expired"
+msgstr ""
+
+#: api/sirsidynix_authentication_provider.py:34
+msgid "Patron has been blocked."
+msgstr ""
+
+#~ msgid "The URL for the First Book authentication service."
+#~ msgstr ""
+
+#~ msgid "Key"
+#~ msgstr ""
+
+#~ msgid "The key for the First Book authentication service."
+#~ msgstr ""
+
+#~ msgid "Novelist API"
+#~ msgstr ""
+
+#~ msgid "Profile"
+#~ msgstr ""
+
+#~ msgid "NYT Best Seller API"
+#~ msgstr ""
+
+#~ msgid "API key"
+#~ msgstr ""
+# Swedish translations for PROJECT.
+# Copyright (C) 2024 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2024.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2024-03-05 22:39+0200\n"
+"PO-Revision-Date: 2024-02-19 22:17+0200\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: sv\n"
+"Language-Team: sv <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.13.0\n"
+
+#: core/config.py:95
+msgid "Debug"
+msgstr ""
+
+#: core/config.py:96
+msgid "Info"
+msgstr ""
+
+#: core/config.py:97
+msgid "Warn"
+msgstr ""
+
+#: core/config.py:98
+msgid "Error"
+msgstr ""
+
+#: core/config.py:106
+msgid "Base url of the application"
+msgstr ""
+
+#: core/config.py:112
+msgid "Log Level"
+msgstr ""
+
+#: core/config.py:119
+msgid "Application name"
+msgstr ""
+
+#: core/config.py:120
+msgid ""
+"Log messages originating from this application will be tagged with this "
+"name. If you run multiple instances, giving each one a different "
+"application name will help you determine which instance is having "
+"problems."
+msgstr ""
+
+#: core/config.py:128
+msgid "Database Log Level"
+msgstr ""
+
+#: core/config.py:131
+msgid ""
+"Database logs are extremely verbose, so unless you're diagnosing a "
+"database-related problem, it's a good idea to set a higher log level for "
+"database messages."
+msgstr ""
+
+#: core/config.py:138
+msgid "Excluded audiobook sources"
+msgstr ""
+
+#: core/config.py:139
+msgid ""
+"Audiobooks from these data sources will be hidden from the collection, "
+"even if they would otherwise show up as available."
+msgstr ""
+
+#: core/config.py:147
+msgid "Cleanup old measurement data"
+msgstr ""
+
+#: core/config.py:149
+msgid ""
+"If this settings is 'true' old book measurement data will be cleaned out "
+"of the database. Some sites may want to keep this data for later "
+"analysis."
+msgstr ""
+
+#: core/config.py:157
+msgid "Push notifications status"
+msgstr ""
+
+#: core/config.py:159
+msgid ""
+"If this settings is 'true' push notification jobs will run as scheduled, "
+"and attempt to notify patrons via mobile push notifications."
+msgstr ""
+
+#: core/config.py:163
+msgid "True"
+msgstr ""
+
+#: core/config.py:164
+msgid "False"
+msgstr ""
+
+#: core/connection_config.py:17
+msgid "Connection retry limit"
+msgstr ""
+
+#: core/connection_config.py:18
+msgid ""
+"The maximum number of times to retry a request for certain connection-"
+"related errors."
+msgstr ""
+
+#: core/entrypoint.py:103 core/facets.py:116 core/facets.py:120
+msgid "All"
+msgstr ""
+
+#: core/entrypoint.py:140
+msgid "eBooks"
+msgstr ""
+
+#: core/entrypoint.py:149
+msgid "Audiobooks"
+msgstr ""
+
+#: core/external_search.py:2448
+#, python-format
+msgid "Invalid page key: %(key)s"
+msgstr ""
+
+#: core/facets.py:89
+msgid "Sort by"
+msgstr ""
+
+#: core/facets.py:90
+msgid "Availability"
+msgstr ""
+
+#: core/facets.py:91
+msgid "Collection"
+msgstr ""
+
+#: core/facets.py:92
+msgid "Distributor"
+msgstr ""
+
+#: core/facets.py:93
+msgid "Collection Name"
+msgstr ""
+
+#: core/facets.py:94
+msgid "Language"
+msgstr ""
+
+#: core/facets.py:98
+msgid "Allow patrons to sort by"
+msgstr ""
+
+#: core/facets.py:99
+msgid "Allow patrons to filter availability to"
+msgstr ""
+
+#: core/facets.py:100
+msgid "Allow patrons to filter collection to"
+msgstr ""
+
+#: core/facets.py:101
+msgid "Allow patrons to filter by distributor"
+msgstr ""
+
+#: core/facets.py:102
+msgid "Allow patrons to filter by collection name"
+msgstr ""
+
+#: core/facets.py:105
+msgid "Allow patrons to filter by language"
+msgstr ""
+
+#: core/facets.py:109
+msgid "Title"
+msgstr ""
+
+#: core/facets.py:110
+msgid "Author"
+msgstr ""
+
+#: core/facets.py:111
+msgid "Last Update"
+msgstr ""
+
+#: core/facets.py:112
+msgid "Recently Added"
+msgstr ""
+
+#: core/facets.py:113
+msgid "Series Position"
+msgstr ""
+
+#: core/facets.py:114
+msgid "Work ID"
+msgstr ""
+
+#: core/facets.py:115
+msgid "Available now"
+msgstr ""
+
+#: core/facets.py:117
+msgid "Yours to keep"
+msgstr ""
+
+#: core/facets.py:118
+msgid "Everything"
+msgstr ""
+
+#: core/facets.py:119
+msgid "Popular Books"
+msgstr ""
+
+#: core/facets.py:121
+msgid "Finnish"
+msgstr ""
+
+#: core/facets.py:122
+msgid "Swedish"
+msgstr ""
+
+#: core/facets.py:123
+msgid "English"
+msgstr ""
+
+#: core/facets.py:124
+msgid "Others"
+msgstr ""
+
+#: core/lane.py:386
+#, python-format
+msgid "I don't know how to order a feed by '%(order)s'"
+msgstr ""
+
+#: core/lane.py:394
+#, python-format
+msgid "I don't understand the availability term '%(availability)s'"
+msgstr ""
+
+#: core/lane.py:406
+#, python-format
+msgid "I don't understand what '%(collection)s' refers to."
+msgstr ""
+
+#: core/lane.py:422
+#, python-format
+msgid "I don't understand which distributor '%(distributor)s' refers to."
+msgstr ""
+
+#: core/lane.py:438
+#, python-format
+msgid "I don't understand which collection '%(collection_name)s' refers to."
+msgstr ""
+
+#: core/lane.py:1255
+#, python-format
+msgid "Invalid page size: %(size)s"
+msgstr ""
+
+#: core/lane.py:1273
+#, python-format
+msgid "Invalid offset: %(offset)s"
+msgstr ""
+
+#: core/lane.py:1594
+#, python-format
+msgid "All %(worklist)s"
+msgstr ""
+
+#: core/opds2_import.py:194 core/opds_import.py:166
+msgid "Custom accept header"
+msgstr ""
+
+#: core/opds2_import.py:195 core/opds_import.py:168
+msgid ""
+"Some servers expect an accept header to decide which file to send. You "
+"can use */* if the server doesn't expect anything."
+msgstr ""
+
+#: core/opds2_import.py:207
+msgid "List of identifiers that will be skipped"
+msgstr ""
+
+#: core/opds2_import.py:208
+msgid ""
+"Circulation Manager will not be importing publications with identifiers "
+"having one of the selected types."
+msgstr ""
+
+#: core/opds2_import.py:326
+msgid "Import books from a publicly-accessible OPDS 2.0 feed."
+msgstr ""
+
+#: core/opds_import.py:110
+msgid "URL"
+msgstr ""
+
+#: core/opds_import.py:116
+msgid "Data source name"
+msgstr ""
+
+#: core/opds_import.py:122
+msgid "Default audience"
+msgstr ""
+
+#: core/opds_import.py:123
+msgid ""
+"If the vendor does not specify the target audience for their books, "
+"assume the books have this target audience."
+msgstr ""
+
+#: core/opds_import.py:129
+msgid "No default audience"
+msgstr ""
+
+#: core/opds_import.py:138
+msgid "Username"
+msgstr ""
+
+#: core/opds_import.py:139
+msgid ""
+"If HTTP Basic authentication is required to access the OPDS feed (it "
+"usually isn't), enter the username here."
+msgstr ""
+
+#: core/opds_import.py:148
+msgid "Password"
+msgstr ""
+
+#: core/opds_import.py:149
+msgid ""
+"If HTTP Basic authentication is required to access the OPDS feed (it "
+"usually isn't), enter the password here."
+msgstr ""
+
+#: core/opds_import.py:177
+msgid "Identifer"
+msgstr ""
+
+#: core/opds_import.py:179
+msgid "Which book identifier to use as ID."
+msgstr ""
+
+#: core/opds_import.py:182
+msgid "(Default) Use <id>"
+msgstr ""
+
+#: core/opds_import.py:183
+msgid "Use <dcterms:identifier> first, if not exist use <id>"
+msgstr ""
+
+#: core/opds_import.py:654
+msgid "Import books from a publicly-accessible OPDS feed."
+msgstr ""
+
+#: core/problem_details.py:11
+msgid "Invalid input."
+msgstr ""
+
+#: core/problem_details.py:12
+msgid "You provided invalid or unrecognized input."
+msgstr ""
+
+#: core/problem_details.py:18
+msgid "Invalid credentials"
+msgstr ""
+
+#: core/problem_details.py:19
+msgid "Valid credentials are required."
+msgstr ""
+
+#: core/problem_details.py:25
+msgid "Method not allowed"
+msgstr ""
+
+#: core/problem_details.py:26
+msgid "The HTTP method you used is not allowed on this resource."
+msgstr ""
+
+#: core/problem_details.py:32
+msgid "Unsupported media type"
+msgstr ""
+
+#: core/problem_details.py:33
+msgid "You submitted an unsupported media type."
+msgstr ""
+
+#: core/problem_details.py:39
+msgid "Payload too large"
+msgstr ""
+
+#: core/problem_details.py:40
+msgid "You submitted a document that was too large."
+msgstr ""
+
+#: core/problem_details.py:46
+msgid "Internal server error."
+msgstr ""
+
+#: core/problem_details.py:47
+msgid "Internal server error"
+msgstr ""
+
+#: core/problem_details.py:56
+msgid "Invalid URN"
+msgstr ""
+
+#: core/problem_details.py:57
+msgid "Could not parse identifier."
+msgstr ""
+
+#: core/problem_details.py:63
+msgid "Unrecognized data source."
+msgstr ""
+
+#: core/problem_details.py:64
+msgid "I don't know anything about that data source."
+msgstr ""
+
+#: core/problem_details.py:70
+msgid "Third-party service failed."
+msgstr ""
+
+#: core/problem_details.py:71
+msgid "A third-party service has failed."
+msgstr ""
+
+#: core/problem_details.py:77
+msgid "Invalid reset password token"
+msgstr ""
+
+#: core/problem_details.py:78
+msgid "Provided reset password token is not valid."
+msgstr ""
+
+#: core/user_profile.py:41
+#, python-format
+msgid "Profile document is not a JSON object: %r."
+msgstr ""
+
+#: core/user_profile.py:47
+#, python-format
+msgid "Could not convert profile document to JSON: %r."
+msgstr ""
+
+#: core/user_profile.py:62
+#, python-format
+msgid "Expected %s"
+msgstr ""
+
+#: core/user_profile.py:67
+msgid "Submitted profile document was not valid JSON."
+msgstr ""
+
+#: core/user_profile.py:71
+msgid "Submitted profile document was not a JSON object."
+msgstr ""
+
+#: core/user_profile.py:83
+#, python-format
+msgid "\"%s\" is not a writable setting."
+msgstr ""
+
+#: core/classifier/localized_names.py:7
+msgid "Adventure"
+msgstr ""
+
+#: core/classifier/localized_names.py:8
+msgid "Classics"
+msgstr ""
+
+#: core/classifier/localized_names.py:9
+msgid "Comics & Graphic Novels"
+msgstr ""
+
+#: core/classifier/localized_names.py:10
+msgid "Drama"
+msgstr ""
+
+#: core/classifier/localized_names.py:11
+msgid "Erotica"
+msgstr ""
+
+#: core/classifier/localized_names.py:12
+msgid "Fantasy"
+msgstr ""
+
+#: core/classifier/localized_names.py:13
+msgid "Epic Fantasy"
+msgstr ""
+
+#: core/classifier/localized_names.py:14
+msgid "Historical Fantasy"
+msgstr ""
+
+#: core/classifier/localized_names.py:15
+msgid "Urban Fantasy"
+msgstr ""
+
+#: core/classifier/localized_names.py:16
+msgid "Folklore"
+msgstr ""
+
+#: core/classifier/localized_names.py:17
+msgid "Historical Fiction"
+msgstr ""
+
+#: core/classifier/localized_names.py:18
+msgid "Horror"
+msgstr ""
+
+#: core/classifier/localized_names.py:19
+msgid "Gothic Horror"
+msgstr ""
+
+#: core/classifier/localized_names.py:20
+msgid "Ghost Stories"
+msgstr ""
+
+#: core/classifier/localized_names.py:21
+msgid "Vampires"
+msgstr ""
+
+#: core/classifier/localized_names.py:22
+msgid "Werewolves"
+msgstr ""
+
+#: core/classifier/localized_names.py:23
+msgid "Occult Horror"
+msgstr ""
+
+#: core/classifier/localized_names.py:24
+msgid "Humorous Fiction"
+msgstr ""
+
+#: core/classifier/localized_names.py:25
+msgid "Literary Fiction"
+msgstr ""
+
+#: core/classifier/localized_names.py:26
+msgid "LGBTQ Fiction"
+msgstr ""
+
+#: core/classifier/localized_names.py:27
+msgid "Mystery"
+msgstr ""
+
+#: core/classifier/localized_names.py:28
+msgid "Crime & Detective Stories"
+msgstr ""
+
+#: core/classifier/localized_names.py:29
+msgid "Hard-Boiled Mystery"
+msgstr ""
+
+#: core/classifier/localized_names.py:30
+msgid "Police Procedural"
+msgstr ""
+
+#: core/classifier/localized_names.py:31
+msgid "Cozy Mystery"
+msgstr ""
+
+#: core/classifier/localized_names.py:32
+msgid "Historical Mystery"
+msgstr ""
+
+#: core/classifier/localized_names.py:33
+msgid "Paranormal Mystery"
+msgstr ""
+
+#: core/classifier/localized_names.py:34
+msgid "Women Detectives"
+msgstr ""
+
+#: core/classifier/localized_names.py:35
+msgid "Poetry"
+msgstr ""
+
+#: core/classifier/localized_names.py:36
+msgid "Religious Fiction"
+msgstr ""
+
+#: core/classifier/localized_names.py:37
+msgid "Romance"
+msgstr ""
+
+#: core/classifier/localized_names.py:38
+msgid "Contemporary Romance"
+msgstr ""
+
+#: core/classifier/localized_names.py:39
+msgid "Gothic Romance"
+msgstr ""
+
+#: core/classifier/localized_names.py:40
+msgid "Historical Romance"
+msgstr ""
+
+#: core/classifier/localized_names.py:41
+msgid "Paranormal Romance"
+msgstr ""
+
+#: core/classifier/localized_names.py:42
+msgid "Western Romance"
+msgstr ""
+
+#: core/classifier/localized_names.py:43
+msgid "Romantic Suspense"
+msgstr ""
+
+#: core/classifier/localized_names.py:44
+msgid "Science Fiction"
+msgstr ""
+
+#: core/classifier/localized_names.py:45
+msgid "Dystopian SF"
+msgstr ""
+
+#: core/classifier/localized_names.py:46
+msgid "Space Opera"
+msgstr ""
+
+#: core/classifier/localized_names.py:47
+msgid "Cyberpunk"
+msgstr ""
+
+#: core/classifier/localized_names.py:48
+msgid "Military SF"
+msgstr ""
+
+#: core/classifier/localized_names.py:49
+msgid "Alternative History"
+msgstr ""
+
+#: core/classifier/localized_names.py:50
+msgid "Steampunk"
+msgstr ""
+
+#: core/classifier/localized_names.py:51
+msgid "Romantic SF"
+msgstr ""
+
+#: core/classifier/localized_names.py:52
+msgid "Media Tie-in SF"
+msgstr ""
+
+#: core/classifier/localized_names.py:53
+msgid "Short Stories"
+msgstr ""
+
+#: core/classifier/localized_names.py:54
+msgid "Suspense/Thriller"
+msgstr ""
+
+#: core/classifier/localized_names.py:55
+msgid "Historical Thriller"
+msgstr ""
+
+#: core/classifier/localized_names.py:56
+msgid "Espionage"
+msgstr ""
+
+#: core/classifier/localized_names.py:57
+msgid "Supernatural Thriller"
+msgstr ""
+
+#: core/classifier/localized_names.py:58
+msgid "Medical Thriller"
+msgstr ""
+
+#: core/classifier/localized_names.py:59
+msgid "Political Thriller"
+msgstr ""
+
+#: core/classifier/localized_names.py:60
+msgid "Psychological Thriller"
+msgstr ""
+
+#: core/classifier/localized_names.py:61
+msgid "Technothriller"
+msgstr ""
+
+#: core/classifier/localized_names.py:62
+msgid "Legal Thriller"
+msgstr ""
+
+#: core/classifier/localized_names.py:63
+msgid "Military Thriller"
+msgstr ""
+
+#: core/classifier/localized_names.py:64
+msgid "Urban Fiction"
+msgstr ""
+
+#: core/classifier/localized_names.py:65
+msgid "Westerns"
+msgstr ""
+
+#: core/classifier/localized_names.py:66
+msgid "Women's Fiction"
+msgstr ""
+
+#: core/classifier/localized_names.py:67
+msgid "Art & Design"
+msgstr ""
+
+#: core/classifier/localized_names.py:68
+msgid "Architecture"
+msgstr ""
+
+#: core/classifier/localized_names.py:69
+msgid "Art"
+msgstr ""
+
+#: core/classifier/localized_names.py:70
+msgid "Art Criticism & Theory"
+msgstr ""
+
+#: core/classifier/localized_names.py:71
+msgid "Art History"
+msgstr ""
+
+#: core/classifier/localized_names.py:72
+msgid "Design"
+msgstr ""
+
+#: core/classifier/localized_names.py:73
+msgid "Fashion"
+msgstr ""
+
+#: core/classifier/localized_names.py:74
+msgid "Photography"
+msgstr ""
+
+#: core/classifier/localized_names.py:75
+msgid "Biography & Memoir"
+msgstr ""
+
+#: core/classifier/localized_names.py:76
+msgid "Education"
+msgstr ""
+
+#: core/classifier/localized_names.py:77
+msgid "Personal Finance & Business"
+msgstr ""
+
+#: core/classifier/localized_names.py:78
+msgid "Business"
+msgstr ""
+
+#: core/classifier/localized_names.py:79
+msgid "Economics"
+msgstr ""
+
+#: core/classifier/localized_names.py:80
+msgid "Management & Leadership"
+msgstr ""
+
+#: core/classifier/localized_names.py:81
+msgid "Personal Finance & Investing"
+msgstr ""
+
+#: core/classifier/localized_names.py:82
+msgid "Real Estate"
+msgstr ""
+
+#: core/classifier/localized_names.py:83
+msgid "Parenting & Family"
+msgstr ""
+
+#: core/classifier/localized_names.py:84
+msgid "Family & Relationships"
+msgstr ""
+
+#: core/classifier/localized_names.py:85
+msgid "Parenting"
+msgstr ""
+
+#: core/classifier/localized_names.py:86
+msgid "Food & Health"
+msgstr ""
+
+#: core/classifier/localized_names.py:87
+msgid "Bartending & Cocktails"
+msgstr ""
+
+#: core/classifier/localized_names.py:88
+msgid "Cooking"
+msgstr ""
+
+#: core/classifier/localized_names.py:89
+msgid "Health & Diet"
+msgstr ""
+
+#: core/classifier/localized_names.py:90
+msgid "Vegetarian & Vegan"
+msgstr ""
+
+#: core/classifier/localized_names.py:91
+msgid "History"
+msgstr ""
+
+#: core/classifier/localized_names.py:92
+msgid "African History"
+msgstr ""
+
+#: core/classifier/localized_names.py:93
+msgid "Ancient History"
+msgstr ""
+
+#: core/classifier/localized_names.py:94
+msgid "Asian History"
+msgstr ""
+
+#: core/classifier/localized_names.py:95
+msgid "Civil War History"
+msgstr ""
+
+#: core/classifier/localized_names.py:96
+msgid "European History"
+msgstr ""
+
+#: core/classifier/localized_names.py:97
+msgid "Latin American History"
+msgstr ""
+
+#: core/classifier/localized_names.py:98
+msgid "Medieval History"
+msgstr ""
+
+#: core/classifier/localized_names.py:99
+msgid "Middle East History"
+msgstr ""
+
+#: core/classifier/localized_names.py:100
+msgid "Military History"
+msgstr ""
+
+#: core/classifier/localized_names.py:101
+msgid "Modern History"
+msgstr ""
+
+#: core/classifier/localized_names.py:102
+msgid "Renaissance & Early Modern History"
+msgstr ""
+
+#: core/classifier/localized_names.py:103
+msgid "United States History"
+msgstr ""
+
+#: core/classifier/localized_names.py:104
+msgid "World History"
+msgstr ""
+
+#: core/classifier/localized_names.py:105
+msgid "Hobbies & Home"
+msgstr ""
+
+#: core/classifier/localized_names.py:106
+msgid "Antiques & Collectibles"
+msgstr ""
+
+#: core/classifier/localized_names.py:107
+msgid "Crafts & Hobbies"
+msgstr ""
+
+#: core/classifier/localized_names.py:108
+msgid "Gardening"
+msgstr ""
+
+#: core/classifier/localized_names.py:109
+msgid "Games"
+msgstr ""
+
+#: core/classifier/localized_names.py:110
+msgid "House & Home"
+msgstr ""
+
+#: core/classifier/localized_names.py:111
+msgid "Pets"
+msgstr ""
+
+#: core/classifier/localized_names.py:112
+msgid "Humorous Nonfiction"
+msgstr ""
+
+#: core/classifier/localized_names.py:113
+msgid "Entertainment"
+msgstr ""
+
+#: core/classifier/localized_names.py:114
+msgid "Film & TV"
+msgstr ""
+
+#: core/classifier/localized_names.py:115
+msgid "Music"
+msgstr ""
+
+#: core/classifier/localized_names.py:116
+msgid "Performing Arts"
+msgstr ""
+
+#: core/classifier/localized_names.py:117
+msgid "Life Strategies"
+msgstr ""
+
+#: core/classifier/localized_names.py:118
+msgid "Literary Criticism"
+msgstr ""
+
+#: core/classifier/localized_names.py:119
+msgid "Periodicals"
+msgstr ""
+
+#: core/classifier/localized_names.py:120
+msgid "Philosophy"
+msgstr ""
+
+#: core/classifier/localized_names.py:121
+msgid "Political Science"
+msgstr ""
+
+#: core/classifier/localized_names.py:122
+msgid "Reference & Study Aids"
+msgstr ""
+
+#: core/classifier/localized_names.py:123
+msgid "Dictionaries"
+msgstr ""
+
+#: core/classifier/localized_names.py:124
+msgid "Foreign Language Study"
+msgstr ""
+
+#: core/classifier/localized_names.py:125
+msgid "Law"
+msgstr ""
+
+#: core/classifier/localized_names.py:126
+msgid "Study Aids"
+msgstr ""
+
+#: core/classifier/localized_names.py:127
+msgid "Religion & Spirituality"
+msgstr ""
+
+#: core/classifier/localized_names.py:128
+msgid "Body, Mind & Spirit"
+msgstr ""
+
+#: core/classifier/localized_names.py:129
+msgid "Buddhism"
+msgstr ""
+
+#: core/classifier/localized_names.py:130
+msgid "Christianity"
+msgstr ""
+
+#: core/classifier/localized_names.py:131
+msgid "Hinduism"
+msgstr ""
+
+#: core/classifier/localized_names.py:132
+msgid "Islam"
+msgstr ""
+
+#: core/classifier/localized_names.py:133
+msgid "Judaism"
+msgstr ""
+
+#: core/classifier/localized_names.py:134
+msgid "Science & Technology"
+msgstr ""
+
+#: core/classifier/localized_names.py:135
+msgid "Computers"
+msgstr ""
+
+#: core/classifier/localized_names.py:136
+msgid "Mathematics"
+msgstr ""
+
+#: core/classifier/localized_names.py:137
+msgid "Medical"
+msgstr ""
+
+#: core/classifier/localized_names.py:138
+msgid "Nature"
+msgstr ""
+
+#: core/classifier/localized_names.py:139
+msgid "Psychology"
+msgstr ""
+
+#: core/classifier/localized_names.py:140
+msgid "Science"
+msgstr ""
+
+#: core/classifier/localized_names.py:141
+msgid "Social Sciences"
+msgstr ""
+
+#: core/classifier/localized_names.py:142
+msgid "Technology"
+msgstr ""
+
+#: core/classifier/localized_names.py:143
+msgid "Self-Help"
+msgstr ""
+
+#: core/classifier/localized_names.py:144
+msgid "Sports"
+msgstr ""
+
+#: core/classifier/localized_names.py:145
+msgid "Travel"
+msgstr ""
+
+#: core/classifier/localized_names.py:146
+msgid "True Crime"
+msgstr ""
+
+#: core/util/http.py:27
+msgid "Failure contacting external service"
+msgstr ""
+
+#: core/util/http.py:28
+#, python-format
+msgid ""
+"The server tried to access %(service)s but the third-party service "
+"experienced an error."
+msgstr ""
+
+#: core/util/http.py:75
+msgid "Bad response"
+msgstr ""
+
+#: core/util/http.py:76
+#, python-format
+msgid ""
+"The server made a request to %(service)s, and got an unexpected or "
+"invalid response."
+msgstr ""
+
+#: core/util/http.py:148
+msgid "Network failure contacting third-party service"
+msgstr ""
+
+#: core/util/http.py:149
+#, python-format
+msgid "The server experienced a network error while contacting %(service)s."
+msgstr ""
+
+#: core/util/http.py:158
+msgid "Timeout"
+msgstr ""
+
+#: core/util/http.py:159
+#, python-format
+msgid "The server made a request to %(service)s, and that request timed out."
+msgstr ""
+
+#~ msgid "Index prefix"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "Any Search indexes needed for this "
+#~ "application will be created with this"
+#~ " unique prefix. In most cases, the"
+#~ " default will work fine. You may "
+#~ "need to change this if you have"
+#~ " multiple application servers using a "
+#~ "single Search server."
+#~ msgstr ""
+
+#~ msgid "Test search term"
+#~ msgstr ""
+
+#~ msgid "Self tests will use this value as the search term."
+#~ msgstr ""

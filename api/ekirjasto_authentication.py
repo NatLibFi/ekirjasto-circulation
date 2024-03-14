@@ -7,6 +7,7 @@ from base64 import b64decode, b64encode
 from enum import Enum
 from typing import Any
 
+import flask_babel
 import jwt
 import requests
 from cryptography.fernet import Fernet, InvalidToken
@@ -193,7 +194,7 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
                 {"rel": "api", "href": self._ekirjasto_api_url},
                 {
                     "rel": "tunnistus_start",
-                    "href": f"{self._ekirjasto_api_url}/v1/auth/tunnistus/start?locale=fi",
+                    "href": f"{self._ekirjasto_api_url}/v1/auth/tunnistus/start?locale={flask_babel.get_locale()}",
                 },
                 {
                     "rel": "tunnistus_finish",
