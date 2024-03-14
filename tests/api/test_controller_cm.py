@@ -113,7 +113,8 @@ class TestCirculationManager:
 
         # The authentication document cache has been rebuilt with a
         # new max_age.
-        assert 60 == manager.authentication_for_opds_documents.max_age
+        # Finland: cache is "hard" disabled. Check CirculationManager::load_settings for more info.
+        assert 0 == manager.authentication_for_opds_documents.max_age
 
         # Controllers that don't depend on site configuration
         # have not been reloaded.
