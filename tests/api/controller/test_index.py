@@ -150,16 +150,17 @@ class TestIndexController:
             assert library_name == doc["title"]
 
         # Verify that the authentication document cache is working.
-        circulation_fixture.manager.authentication_for_opds_documents[
-            library_name
-        ] = "Cached value"
-        with circulation_fixture.request_context_with_library(
-            "/", headers=dict(Authorization=circulation_fixture.invalid_auth)
-        ):
-            response = (
-                circulation_fixture.manager.index_controller.authentication_document()
-            )
-            assert response.get_data(as_text=True) == "Cached value"
+        # Finland: cache is "hard" disabled. Check CirculationManager::load_settings for more info.
+        # circulation_fixture.manager.authentication_for_opds_documents[
+        #     library_name
+        # ] = "Cached value"
+        # with circulation_fixture.request_context_with_library(
+        #     "/", headers=dict(Authorization=circulation_fixture.invalid_auth)
+        # ):
+        #     response = (
+        #         circulation_fixture.manager.index_controller.authentication_document()
+        #     )
+        #     assert response.get_data(as_text=True) == "Cached value"
 
         # Verify what happens when the cache is disabled.
         circulation_fixture.manager.authentication_for_opds_documents.max_age = 0
