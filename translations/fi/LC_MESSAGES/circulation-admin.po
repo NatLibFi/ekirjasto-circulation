@@ -7,664 +7,696 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2024-03-05 22:39+0200\n"
-"PO-Revision-Date: 2024-02-19 22:17+0200\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language: fi\n"
-"Language-Team: fi <LL@li.org>\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"POT-Creation-Date: 2024-02-19 22:26+0200\n"
+"PO-Revision-Date: 2024-03-01 11:34+0000\n"
+"Language-Team: Finnish (https://app.transifex.com/national-library-of-finland/teams/183401/fi/)\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=utf-8\n"
+"Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.13.0\n"
+"Language: fi\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: api/admin/announcement_list_validator.py:35
 #, python-format
 msgid "Invalid announcement list format: %(announcements)r"
-msgstr ""
+msgstr "Virheellinen ilmoitusluettelon muoto: %(announcements)r"
 
 #: api/admin/announcement_list_validator.py:50
 #, python-format
 msgid "Too many announcements: maximum is %(maximum)d"
-msgstr ""
+msgstr "Liian monta ilmoitusta: enimmäismäärä on %(maximum)d"
 
 #: api/admin/announcement_list_validator.py:62
 #, python-format
 msgid "Duplicate announcement ID: %s"
-msgstr ""
+msgstr "Kaksi ilmoitustunnusta: %s"
 
 #: api/admin/announcement_list_validator.py:71
 #, python-format
 msgid "Invalid announcement format: %(announcement)r"
-msgstr ""
+msgstr "Virheellinen ilmoitusmuoto: %(announcement)r"
 
 #: api/admin/announcement_list_validator.py:85
 #, python-format
 msgid "Invalid announcement ID: %(id)s"
-msgstr ""
+msgstr "Virheellinen ilmoitustunnus: %(id)s"
 
 #: api/admin/announcement_list_validator.py:95
 #, python-format
 msgid "Missing required field: %(field)s"
-msgstr ""
+msgstr "Pakollinen kenttä puuttuu: %(field)s"
 
 #: api/admin/announcement_list_validator.py:141
 #, python-format
 msgid "Value too short (%(length)d versus %(limit)d characters): %(value)s"
-msgstr ""
+msgstr "Liian lyhyt arvo (%(length)d vs. %(limit)d merkkiä): %(value)s"
 
 #: api/admin/announcement_list_validator.py:153
 #, python-format
 msgid "Value too long (%(length)d versus %(limit)d characters): %(value)s"
-msgstr ""
+msgstr "Liian pitkä arvo (%(length)d vs. %(limit)d merkkiä): %(value)s"
 
 #: api/admin/announcement_list_validator.py:188
 #, python-format
 msgid "Value for %(field)s is not a date: %(date)s"
-msgstr ""
+msgstr "Kentän %(field)s arvo ei ole päivämäärä: %(date)s"
 
 #: api/admin/announcement_list_validator.py:201
 #, python-format
 msgid "Value for %(field)s must be no earlier than %(minimum)s"
-msgstr ""
+msgstr "Kentän %(field)s arvo saa olla aikaisintaan %(minimum)s"
 
 #: api/admin/problem_details.py:9
 msgid "Admin auth not configured"
-msgstr ""
+msgstr "Ylläpitäjän todennusta ei ole määritetty"
 
 #: api/admin/problem_details.py:10
-msgid "This circulation manager has not been configured to authenticate admins."
-msgstr ""
+msgid ""
+"This circulation manager has not been configured to authenticate admins."
+msgstr "Tätä lainauksen hallintaa ei ole määritetty todentamaan ylläpitäjiä."
 
 #: api/admin/problem_details.py:16
 msgid "Admin auth mechanism not configured"
-msgstr ""
+msgstr "Ylläpitäjän todennusmekanismia ei ole määritetty"
 
 #: api/admin/problem_details.py:17
 msgid ""
-"This circulation manager has not been configured to authenticate admins "
-"with the mechanism you used"
+"This circulation manager has not been configured to authenticate admins with"
+" the mechanism you used"
 msgstr ""
+"Tätä lainauksen hallintaa ei ole määritetty todentamaan ylläpitäjiä "
+"käyttämälläsi mekanismilla"
 
 #: api/admin/problem_details.py:25
 msgid "Invalid admin credentials"
-msgstr ""
+msgstr "Virheelliset ylläpitäjän kirjautumistiedot"
 
 #: api/admin/problem_details.py:26
 msgid "Valid library staff credentials are required."
-msgstr ""
+msgstr "Kelvolliset kirjastohenkilökunnan kirjautumistiedot vaaditaan."
 
 #: api/admin/problem_details.py:32
 msgid "Admin not authorized"
-msgstr ""
+msgstr "Ylläpitäjää ei ole valtuutettu"
 
 #: api/admin/problem_details.py:33
 msgid "Your admin account is not authorized to make this request."
-msgstr ""
+msgstr "Ylläpitäjätililläsi ei ole oikeutta tehdä tätä pyyntöä."
 
 #: api/admin/problem_details.py:39
 msgid "Invalid CSRF token"
-msgstr ""
+msgstr "Virheellinen CSRF-tunnus"
 
 #: api/admin/problem_details.py:40
 msgid "There was an error saving your changes."
-msgstr ""
+msgstr "Muutostesi tallentamisessa tapahtui virhe."
 
 #: api/admin/problem_details.py:46
 msgid "Invalid edit"
-msgstr ""
+msgstr "Virheellinen muokkaus"
 
 #: api/admin/problem_details.py:47
 msgid "There was a problem with the edited metadata."
-msgstr ""
+msgstr "Muokatuissa metatiedoissa oli ongelma."
 
 #: api/admin/problem_details.py:53
 msgid "Metadata refresh pending."
-msgstr ""
+msgstr "Metatietojen päivitys odottaa."
 
 #: api/admin/problem_details.py:54
 msgid "The Metadata Wrangler is looking for new data. Check back later."
-msgstr ""
+msgstr "Metadata Wrangler etsii uusia tietoja. Palaa myöhemmin takaisin."
 
 #: api/admin/problem_details.py:60 api/admin/problem_details.py:61
 msgid "Metadata could not be refreshed."
-msgstr ""
+msgstr "Metatietoja ei voitu päivittää."
 
 #: api/admin/problem_details.py:67
 msgid "Genre not found."
-msgstr ""
+msgstr "Genreä ei löytynyt."
 
 #: api/admin/problem_details.py:68
 msgid "One of the submitted genres does not exist."
-msgstr ""
+msgstr "Yhtä annetuista genreistä ei ole olemassa."
 
 #: api/admin/problem_details.py:74
 msgid "Incompatible genre."
-msgstr ""
+msgstr "Yhteensopimaton genre."
 
 #: api/admin/problem_details.py:75
 msgid "The genre is incompatible with the fiction status of the work."
-msgstr ""
+msgstr "Genre ei sovi yhteen teoksen fiktiivisen tilan kanssa."
 
 #: api/admin/problem_details.py:81
 msgid "Erotica is for Adults Only."
-msgstr ""
+msgstr "Erotiikka on tarkoitettu vain aikuisille."
 
 #: api/admin/problem_details.py:82
 msgid "The Erotica genre is incompatible with the submitted Audience."
-msgstr ""
+msgstr "Erotiikka-genre ei sovi yhteen annetun yleisön kanssa."
 
 #: api/admin/problem_details.py:88
 msgid "Invalid series position."
-msgstr ""
+msgstr "Virheellinen sarjan sijainti."
 
 #: api/admin/problem_details.py:89
 msgid "The series position must be a number or blank."
-msgstr ""
+msgstr "Sarjan sijainnin on oltava numero tai tyhjä."
 
 #: api/admin/problem_details.py:95
 msgid "Invalid date format."
-msgstr ""
+msgstr "Virheellinen päivämäärämuoto."
 
 #: api/admin/problem_details.py:96
 msgid "A date must be in the format YYYY-MM-DD."
-msgstr ""
+msgstr "Päivämäärän on oltava muodossa VVVV-KK-PP."
 
 #: api/admin/problem_details.py:102
 msgid "Unknown language."
-msgstr ""
+msgstr "Tuntematon kieli."
 
 #: api/admin/problem_details.py:103
 msgid "The submitted language is not one of the known languages."
-msgstr ""
+msgstr "Annettu kieli ei ole mikään tunnetuista kielistä."
 
 #: api/admin/problem_details.py:109
 msgid "Unknown location."
-msgstr ""
+msgstr "Tuntematon sijainti."
 
 #: api/admin/problem_details.py:110
 msgid "The submitted geographic location cannot be found."
-msgstr ""
+msgstr "Annettua maantieteellistä sijaintia ei löydy."
 
 #: api/admin/problem_details.py:116
 msgid "Unknown role."
-msgstr ""
+msgstr "Tuntematon rooli."
 
 #: api/admin/problem_details.py:117
 msgid "One of the submitted roles is not one of the known roles."
-msgstr ""
+msgstr "Yksi annetuista rooleista ei kuulu tunnettuihin rooleihin."
 
 #: api/admin/problem_details.py:123
 msgid "Unknown medium."
-msgstr ""
+msgstr "Tuntematon media."
 
 #: api/admin/problem_details.py:124
 msgid "The submitted medium is not one of the known media types."
-msgstr ""
+msgstr "Annettu media ei kuulu tunnettuihin mediatyyppeihin."
 
 #: api/admin/problem_details.py:130
 msgid "Invalid rating."
-msgstr ""
+msgstr "Virheellinen arviointi."
 
 #: api/admin/problem_details.py:131
 msgid "The rating must be a number in the rating scale."
-msgstr ""
+msgstr "Arvioinnin on oltava arviointiasteikon numero."
 
 #: api/admin/problem_details.py:137
 msgid "Invalid image"
-msgstr ""
+msgstr "Virheellinen kuva"
 
 #: api/admin/problem_details.py:138
 msgid "The submitted image is invalid."
-msgstr ""
+msgstr "Annettu kuva on virheellinen."
 
 #: api/admin/problem_details.py:144
 msgid "Library short name already in use"
-msgstr ""
+msgstr "Kirjaston lyhyt nimi on jo käytössä"
 
 #: api/admin/problem_details.py:145
 msgid ""
-"The library short name must be unique, and there's already a library with"
-" the specified short name."
+"The library short name must be unique, and there's already a library with "
+"the specified short name."
 msgstr ""
+"Kirjaston lyhyen nimen on oltava yksilöllinen, ja kyseisellä lyhyellä "
+"nimellä löytyy jo kirjasto."
 
 #: api/admin/problem_details.py:153
 msgid "Missing collection."
-msgstr ""
+msgstr "Kokoelma puuttuu."
 
 #: api/admin/problem_details.py:154
 msgid "The specified collection does not exist."
-msgstr ""
+msgstr "Määritettyä kokoelmaa ei ole."
 
 #: api/admin/problem_details.py:160
 msgid "Missing analytics name."
-msgstr ""
+msgstr "Analytiikan nimi puuttuu."
 
 #: api/admin/problem_details.py:161
 msgid "You must identify the analytics service by its name."
-msgstr ""
+msgstr "Analytiikkapalvelu on yksilöitävä nimellä."
 
 #: api/admin/problem_details.py:167
 msgid "Cannot delete collection with children"
-msgstr ""
+msgstr "Emokokoelmaa ei voi poistaa"
 
 #: api/admin/problem_details.py:168
 msgid ""
-"The collection is the parent of at least one other collection, so it "
-"can't be deleted."
+"The collection is the parent of at least one other collection, so it can't "
+"be deleted."
 msgstr ""
+"Kokoelma on vähintään yhden kokoelman emokokoelma, joten sitä ei voi "
+"poistaa."
 
 #: api/admin/problem_details.py:176
 msgid "No protocol for new service"
-msgstr ""
+msgstr "Uudella palvelulla ei ole protokollaa"
 
 #: api/admin/problem_details.py:177
 msgid ""
-"The specified service doesn't exist. You can create it, but you must "
-"specify a protocol."
+"The specified service doesn't exist. You can create it, but you must specify"
+" a protocol."
 msgstr ""
+"Määritettyä palvelua ei ole. Voit luoda sen, mutta sinun on määritettävä "
+"protokolla."
 
 #: api/admin/problem_details.py:185
 msgid "Unknown protocol"
-msgstr ""
+msgstr "Tuntematon protokolla"
 
 #: api/admin/problem_details.py:186
 msgid "The protocol is not one of the known protocols."
-msgstr ""
+msgstr "Protokolla ei kuulu tunnettuihin protokolliin."
 
 #: api/admin/problem_details.py:192
 msgid "Cannot change protocol"
-msgstr ""
+msgstr "Protokollaa ei voi vaihtaa"
 
 #: api/admin/problem_details.py:193
 msgid "A protocol can't be changed once it has been set."
-msgstr ""
+msgstr "Protokollaa ei voi vaihtaa sen määrittämisen jälkeen."
 
 #: api/admin/problem_details.py:199
 msgid "Missing service name."
-msgstr ""
+msgstr "Palvelun nimi puuttuu."
 
 #: api/admin/problem_details.py:200
 msgid "You must identify the service by its name."
-msgstr ""
+msgstr "Palvelu on yksilöitävä nimellä."
 
 #: api/admin/problem_details.py:206
 msgid "Protocol does not support parents"
-msgstr ""
+msgstr "Protokolla ei tue emoprotokollia"
 
 #: api/admin/problem_details.py:207
-msgid "You attempted to add a parent but the protocol does not support parents."
-msgstr ""
+msgid ""
+"You attempted to add a parent but the protocol does not support parents."
+msgstr "Yritit lisätä emoprotokollan, mutta protokolla ei tue sitä."
 
 #: api/admin/problem_details.py:215
 msgid "Protocol does not support settings"
-msgstr ""
+msgstr "Protokolla ei tue asetuksia"
 
 #: api/admin/problem_details.py:216
 msgid ""
 "You attempted to update settings for a protocol that does not support "
 "settings."
 msgstr ""
+"Yritit päivittää sellaisen protokollan asetuksia, joka ei tue asetuksia."
 
 #: api/admin/problem_details.py:224
 msgid "Missing parent"
-msgstr ""
+msgstr "Emo puuttuu"
 
 #: api/admin/problem_details.py:225
 msgid "You attempted to add a parent that does not exist."
-msgstr ""
+msgstr "Yritit lisätä emon, jota ei ole."
 
 #: api/admin/problem_details.py:231
 msgid "No such library"
-msgstr ""
+msgstr "Tällaista kirjastoa ei ole"
 
 #: api/admin/problem_details.py:232
 msgid "A library in your request does not exist."
-msgstr ""
+msgstr "Pyyntösi kirjastoa ei ole."
 
 #: api/admin/problem_details.py:238
 msgid "Incomplete configuration"
-msgstr ""
+msgstr "Vaillinainen kokoonpano"
 
 #: api/admin/problem_details.py:239
 msgid "The configuration is missing a required field."
-msgstr ""
+msgstr "Kokoonpanosta puuttuu pakollinen kenttä."
 
 #: api/admin/problem_details.py:245
 msgid "Duplicate integration"
-msgstr ""
+msgstr "Kaksi integraatiota"
 
 #: api/admin/problem_details.py:246
 msgid "A given site can only support one integration of this type."
-msgstr ""
+msgstr "Sivusto tukee vain yhtä tämäntyyppistä integraatiota."
 
 #: api/admin/problem_details.py:252
 msgid "Integration name already in use"
-msgstr ""
+msgstr "Integraation nimi on jo käytössä"
 
 #: api/admin/problem_details.py:253
 msgid ""
-"The integration name must be unique, and there's already an integration "
-"with the specified name."
+"The integration name must be unique, and there's already an integration with"
+" the specified name."
 msgstr ""
+"Integraation nimen on oltava yksilöllinen, ja kyseisellä nimellä löytyy jo "
+"integraatio."
 
 #: api/admin/problem_details.py:261
 msgid "Integration URL already in use"
-msgstr ""
+msgstr "Integraation URL-osoite on jo käytössä"
 
 #: api/admin/problem_details.py:262
 msgid "There's already an integration of this type for this URL."
-msgstr ""
+msgstr "Tällä URL-osoitteella on jo tämäntyyppinen integraatio."
 
 #: api/admin/problem_details.py:268
 msgid "Incompatible use of integration"
-msgstr ""
+msgstr "Integraation yhteensopimaton käyttö"
 
 #: api/admin/problem_details.py:269
 msgid ""
-"You tried to use an integration in a way incompatible with the goal of "
-"that integration"
+"You tried to use an integration in a way incompatible with the goal of that "
+"integration"
 msgstr ""
+"Yritit käyttää integraatiota tavalla, joka ei ole yhteensopiva integraation "
+"tavoitteen kanssa"
 
 #: api/admin/problem_details.py:277
 msgid "Missing integration"
-msgstr ""
+msgstr "Integraatio puuttuu"
 
 #: api/admin/problem_details.py:278
 msgid "The specified integration does not exist."
-msgstr ""
+msgstr "Määritettyä integraatiota ei ole."
 
 #: api/admin/problem_details.py:284
 msgid "Missing pgcrypto database extension"
-msgstr ""
+msgstr "Tietokannan pgcrypto-laajennus puuttuu"
 
 #: api/admin/problem_details.py:285
 msgid ""
-"You tried to store a password for an individual admin, but the database "
-"does not have the pgcrypto extension installed."
+"You tried to store a password for an individual admin, but the database does"
+" not have the pgcrypto extension installed."
 msgstr ""
+"Yritit tallentaa salasanan yksittäiselle ylläpitäjälle, mutta tietokantaan "
+"ei ole asennettu pgcrypto-laajennusta."
 
 #: api/admin/problem_details.py:293
 msgid "Missing admin"
-msgstr ""
+msgstr "Ylläpitäjä puuttuu"
 
 #: api/admin/problem_details.py:294
 msgid "The specified admin does not exist."
-msgstr ""
+msgstr "Määritettyä ylläpitäjää ei ole."
 
 #: api/admin/problem_details.py:300
 msgid "Missing service"
-msgstr ""
+msgstr "Palvelu puuttuu"
 
 #: api/admin/problem_details.py:301
 msgid "The specified service does not exist."
-msgstr ""
+msgstr "Määritettyä palvelua ei ole."
 
 #: api/admin/problem_details.py:307
 msgid "Invalid configuration option"
-msgstr ""
+msgstr "Virheellinen kokoonpanoasetus"
 
 #: api/admin/problem_details.py:308
 msgid "The configuration has an invalid value."
-msgstr ""
+msgstr "Kokoonpanossa on virheellinen arvo."
 
 #: api/admin/problem_details.py:314
 msgid "Invalid email format"
-msgstr ""
+msgstr "Virheellinen sähköpostimuoto"
 
 #: api/admin/problem_details.py:315
 msgid "You must enter a valid email address."
-msgstr ""
+msgstr "Sinun on annettava kelvollinen sähköpostiosoite."
 
 #: api/admin/problem_details.py:321
 msgid "Invalid URL format"
-msgstr ""
+msgstr "Virheellinen URL-muoto"
 
 #: api/admin/problem_details.py:322
 msgid "You must enter a valid URL."
-msgstr ""
+msgstr "Sinun on annettava kelvollinen URL-osoite."
 
 #: api/admin/problem_details.py:328
 msgid "Invalid number format"
-msgstr ""
+msgstr "Virheellinen numeromuoto"
 
 #: api/admin/problem_details.py:329
 msgid "You must enter a number."
-msgstr ""
+msgstr "Sinun on annettava numero."
 
 #: api/admin/problem_details.py:335
 msgid "Invalid external type regular expression"
-msgstr ""
+msgstr "Virheellinen ulkoisen tyypin säännöllinen lauseke"
 
 #: api/admin/problem_details.py:336
 msgid "The specified external type regular expression does not compile."
-msgstr ""
+msgstr "Määritetty ulkoisen tyypin säännöllinen lauseke ei toimi oikein."
 
 #: api/admin/problem_details.py:342
 msgid "Invalid library identifier restriction regular expression"
-msgstr ""
+msgstr "Virheellinen kirjaston tunnisteen rajoituksen säännöllinen lauseke"
 
 #: api/admin/problem_details.py:343
 msgid ""
 "The specified library identifier restriction regular expression does not "
 "compile."
 msgstr ""
+"Määritetty kirjaston tunnisteen rajoituksen säännöllinen lauseke ei toimi "
+"oikein."
 
 #: api/admin/problem_details.py:351
 msgid "Multiple basic authentication services"
-msgstr ""
+msgstr "Useita perustodennuspalveluita"
 
 #: api/admin/problem_details.py:352
 msgid ""
 "Each library can only have one patron authentication service using basic "
 "auth."
 msgstr ""
+"Jokaisella kirjastolla voi olla vain yksi perustodennusta käyttävä "
+"asiakastodennuspalvelu."
 
 #: api/admin/problem_details.py:360
 msgid "No such patron"
-msgstr ""
+msgstr "Tällaista asiakasta ei ole"
 
 #: api/admin/problem_details.py:361
 msgid ""
 "The specified patron doesn't exist, or is associated with a different "
 "library."
-msgstr ""
+msgstr "Määritettyä asiakasta ei ole tai se on yhdistetty toiseen kirjastoon."
 
 #: api/admin/problem_details.py:369
 msgid "Missing sitewide setting key"
-msgstr ""
+msgstr "Sivustonlaajuisen asetuksen avain puuttuu"
 
 #: api/admin/problem_details.py:370
 msgid "A key is required to change a sitewide setting."
-msgstr ""
+msgstr "Sivustonlaajuisen asetuksen muuttaminen edellyttää avainta."
 
 #: api/admin/problem_details.py:376
 msgid "Missing sitewide setting value"
-msgstr ""
+msgstr "Sivustonlaajuisen asetuksen arvo puuttuu"
 
 #: api/admin/problem_details.py:377
 msgid "A value is required to change a sitewide setting."
-msgstr ""
+msgstr "Sivustonlaajuisen asetuksen muuttaminen edellyttää arvoa."
 
 #: api/admin/problem_details.py:383
 msgid "Multiple sitewide services"
-msgstr ""
+msgstr "Useita sivustonlaajuisia palveluja"
 
 #: api/admin/problem_details.py:384
 msgid ""
-"You tried to create a new sitewide service, but a sitewide service of the"
-" same type is already configured."
+"You tried to create a new sitewide service, but a sitewide service of the "
+"same type is already configured."
 msgstr ""
+"Yritit luoda uuden sivustonlaajuisen palvelun, mutta samantyyppinen "
+"sivustonlaajuinen palvelu on jo määritetty."
 
 #: api/admin/problem_details.py:392
 msgid "Multiple services for library"
-msgstr ""
+msgstr "Kirjastolla useita palveluja"
 
 #: api/admin/problem_details.py:393
 msgid "Each library can only have one service of this type."
-msgstr ""
+msgstr "Jokaisella kirjastolla voi olla vain yksi tämäntyyppinen palvelu."
 
 #: api/admin/problem_details.py:399
 msgid "Missing custom list"
-msgstr ""
+msgstr "Mukautettu luettelo puuttuu"
 
 #: api/admin/problem_details.py:400
 msgid "The specified custom list doesn't exist."
-msgstr ""
+msgstr "Määritettyä mukautettua luetteloa ei ole."
 
 #: api/admin/problem_details.py:406
 msgid "Cannot change library for custom list"
-msgstr ""
+msgstr "Mukautetun luettelon kirjastoa ei voi muuttaa"
 
 #: api/admin/problem_details.py:407
 msgid "A custom list's associated library cannot be changed once it is set.."
 msgstr ""
+"Mukautettuun luetteloon liitettyä kirjastoa ei voi muuttaa sen määrittämisen"
+" jälkeen."
 
 #: api/admin/problem_details.py:413
 msgid "Custom list name already in use"
-msgstr ""
+msgstr "Mukautetun luettelon nimi on jo käytössä"
 
 #: api/admin/problem_details.py:414
 msgid "The library already has a custom list with that name."
-msgstr ""
+msgstr "Kirjastossa on jo tämänniminen mukautettu luettelo."
 
 #: api/admin/problem_details.py:420
 msgid "An auto update custom list cannot have entries"
 msgstr ""
+"Automaattisesti päivittyvässä mukautetussa luettelossa ei voi olla "
+"merkintöjä"
 
 #: api/admin/problem_details.py:421
 msgid "Entries are automatically managed for auto update custom lists"
 msgstr ""
+"Automaattisesti päivittyvien mukautettujen luetteloiden merkintöjä "
+"hallinnoidaan automaattisesti"
 
 #: api/admin/problem_details.py:427
 msgid "Collection not associated with library"
-msgstr ""
+msgstr "Kokoelmaa ei ole liitetty kirjastoon"
 
 #: api/admin/problem_details.py:428
 msgid ""
-"You can't add a collection to a list unless it is associated with the "
-"list's library."
+"You can't add a collection to a list unless it is associated with the list's"
+" library."
 msgstr ""
+"Et voi lisätä kokoelmaa luetteloon, ellei sitä ole liitetty luettelon "
+"kirjastoon."
 
 #: api/admin/problem_details.py:436
 msgid "Missing lane"
-msgstr ""
+msgstr "Kaista puuttuu"
 
 #: api/admin/problem_details.py:437
 msgid ""
-"The specified lane doesn't exist, or is associated with a different "
-"library."
-msgstr ""
+"The specified lane doesn't exist, or is associated with a different library."
+msgstr "Määritettyä kaistaa ei ole tai se on yhdistetty toiseen kirjastoon."
 
 #: api/admin/problem_details.py:445
 msgid "Cannot edit default lane"
-msgstr ""
+msgstr "Oletuskaistaa ei voi muokata"
 
 #: api/admin/problem_details.py:446
 msgid "You can't change one of the default auto-generated lanes."
-msgstr ""
+msgstr "Et voi muuttaa yhtä automaattisesti luoduista oletuskaistoista."
 
 #: api/admin/problem_details.py:452
 msgid "No display name for lane"
-msgstr ""
+msgstr "Kaistalla ei ole näyttönimeä"
 
 #: api/admin/problem_details.py:453
 msgid "A custom lane must have a name."
-msgstr ""
+msgstr "Mukautetulla kaistalla on oltava nimi."
 
 #: api/admin/problem_details.py:459
 msgid "No custom lists for lane"
-msgstr ""
+msgstr "Kaistalla ei ole mukautettuja luetteloita"
 
 #: api/admin/problem_details.py:460
 msgid "A custom lane must have at least one associated list."
 msgstr ""
+"Mukautetulla kaistalla on oltava vähintään yksi siihen liitetty luettelo."
 
 #: api/admin/problem_details.py:466
 msgid "Lane with parent and display name already exists"
-msgstr ""
+msgstr "Kaista, jolla on sama emo- ja näyttönimi, on jo olemassa"
 
 #: api/admin/problem_details.py:467
 msgid ""
 "You cannot create a lane with the same parent and display name as an "
 "existing lane."
 msgstr ""
+"Et voi luoda kaistaa, jolla on sama emo- ja näyttönimi kuin olemassa "
+"olevalla kaistalla."
 
 #: api/admin/problem_details.py:475
 msgid "Cannot show lane with hidden parent"
-msgstr ""
+msgstr "Kaistaa ei voi näyttää, jos emo on piilotettu"
 
 #: api/admin/problem_details.py:476
 msgid "You can only make a lane visible if its parent is already visible."
-msgstr ""
+msgstr "Voit tehdä kaistan näkyväksi vain, jos sen emo on jo näkyvä."
 
 #: api/admin/problem_details.py:482
 msgid "The collection does not support registration"
-msgstr ""
+msgstr "Kokoelma ei tue rekisteröintiä"
 
 #: api/admin/problem_details.py:483
 msgid "The collection does not support registration."
-msgstr ""
+msgstr "Kokoelma ei tue rekisteröintiä."
 
 #: api/admin/problem_details.py:489 api/admin/problem_details.py:490
 msgid "Failed to run self tests."
-msgstr ""
+msgstr "Itsetestien suorittaminen epäonnistui."
 
 #: api/admin/problem_details.py:496
 msgid "Missing identifier"
-msgstr ""
+msgstr "Tunniste puuttuu"
 
 #: api/admin/problem_details.py:497
 msgid "No identifier was used."
-msgstr ""
+msgstr "Tunnistetta ei käytetty."
 
 #: api/admin/problem_details.py:503
 msgid "Source collection missing"
-msgstr ""
+msgstr "Lähdekokoelma puuttuu"
 
 #: api/admin/problem_details.py:504
 msgid "A source collection is not present in the library."
-msgstr ""
+msgstr "Kirjastossa ei ole lähdekokoelmaa."
 
 #: api/admin/problem_details.py:510
 msgid "Entry not valid for library"
-msgstr ""
+msgstr "Merkintä ei ole voimassa kirjastossa"
 
 #: api/admin/problem_details.py:511
 msgid ""
-"An entry in the customlist was not valid for the library being shared "
-"with."
+"An entry in the customlist was not valid for the library being shared with."
 msgstr ""
+"Mukautetun luettelon merkintä ei ollut voimassa jaettavassa kirjastossa."
 
 #: api/admin/problem_details.py:519
 msgid "Cannot delete the Custom List share"
-msgstr ""
+msgstr "Mukautetun luettelon jakamista ei voi poistaa"
 
 #: api/admin/problem_details.py:520
 msgid "Unable to delete the shared status of the given list"
-msgstr ""
+msgstr "Luettelon jaettua tilaa ei voi poistaa"
 
 #: api/admin/validator.py:61
 #, python-format
 msgid "\"%(email)s\" is not a valid email address."
-msgstr ""
+msgstr "%(email)s ei ole kelvollinen sähköpostiosoite."
 
 #: api/admin/validator.py:86
 #, python-format
 msgid "\"%(url)s\" is not a valid URL."
-msgstr ""
+msgstr "%(url)s ei ole kelvollinen URL-osoite."
 
 #: api/admin/validator.py:118
 #, python-format
 msgid "\"%(number)s\" is not a number."
-msgstr ""
+msgstr "%(number)s ei ole numero."
 
 #: api/admin/validator.py:125
 #, python-format
 msgid "%(field)s must be greater than %(min)s."
-msgstr ""
+msgstr "%(field)s on oltava suurempi kuin %(min)s."
 
 #: api/admin/validator.py:133
 #, python-format
 msgid "%(field)s cannot be greater than %(max)s."
-msgstr ""
+msgstr "%(field)s ei voi olla suurempi kuin %(max)s."
