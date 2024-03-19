@@ -9,15 +9,15 @@
 This is the E-kirjasto fork of the [The Palace Project](https://thepalaceproject.org) Palace Manager (which is a fork of
 [Library Simplified](http://www.librarysimplified.org/) Circulation Manager).
 
-<!-- ## Installation
+## Installation
 
 Docker images created from this code will be available at:
 
-- [circ-webapp](https://github.com/NatLibFi/circulation/pkgs/container/ekirjasto-circ-webapp)
-- [circ-scripts](https://github.com/NatLibFi/circulation/pkgs/container/ekirjasto-circ-scripts)
-- [circ-exec](https://github.com/NatLibFi/circulation/pkgs/container/ekirjasto-circ-exec)
+- [ekirjasto-circ-webapp](https://github.com/NatLibFi/circulation/pkgs/container/ekirjasto-circ-webapp)
+- [ekirjasto-circ-scripts](https://github.com/NatLibFi/circulation/pkgs/container/ekirjasto-circ-scripts)
+- [ekirjasto-circ-exec](https://github.com/NatLibFi/circulation/pkgs/container/ekirjasto-circ-exec)
 
-Docker images are the preferred way to deploy this code in a production environment. -->
+Docker images are the preferred way to deploy this code in a production environment.
 
 ## Git Branch Workflow
 
