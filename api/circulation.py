@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime
 import logging
+import math
 import sys
 import time
 from abc import ABC, abstractmethod
@@ -840,6 +841,7 @@ class CirculationAPI:
         licensepool: LicensePool | None,
         name: str,
         include_neighborhood: bool = False,
+        duration: int | None = None,  # Finland
     ) -> None:
         """Collect an analytics event.
 
@@ -889,7 +891,7 @@ class CirculationAPI:
             neighborhood = getattr(request_patron, "neighborhood", None)
 
         self.analytics.collect_event(
-            library, licensepool, name, neighborhood=neighborhood
+            library, licensepool, name, neighborhood=neighborhood, duration=duration
         )
 
     # Finland
@@ -1389,6 +1391,19 @@ class CirculationAPI:
             license_pool=licensepool,
             on_multiple="interchangeable",
         )
+
+        # Finland: Calculate the duration of the loan.
+        duration = None
+        if loan is not None and loan.start is not None:
+            try:
+                time_difference = utc_now() - loan.start
+                duration = math.floor(time_difference.total_seconds())
+
+            except Exception as e:
+                self.log.warn(
+                    f"Could not calculate duration of loan with start time #{loan.start}."
+                )
+
         if loan is not None:
             api = self.api_for_license_pool(licensepool)
             if api is None:
@@ -1412,7 +1427,9 @@ class CirculationAPI:
             # Send out an analytics event to record the fact that
             # a loan was revoked through the circulation
             # manager.
-            self._collect_event(patron, licensepool, CirculationEvent.CM_CHECKIN)
+            self._collect_event(
+                patron, licensepool, CirculationEvent.CM_CHECKIN, False, duration
+            )
 
         # Any other CannotReturn exception will be propagated upwards
         # at this point.
