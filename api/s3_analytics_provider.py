@@ -29,6 +29,7 @@ class S3AnalyticsProvider(LocalAnalyticsProvider):
         old_value,
         new_value,
         neighborhood: str | None = None,
+        duration: int | None = None,  # Finland
     ) -> dict:
         """Create a Python dict containing required information about the event.
 
@@ -76,6 +77,7 @@ class S3AnalyticsProvider(LocalAnalyticsProvider):
             "old_value": old_value,
             "new_value": new_value,
             "delta": delta,
+            "duration": duration,
             "location": neighborhood,
             "license_pool_id": license_pool.id if license_pool else None,
             "publisher": edition.publisher if edition else None,
@@ -136,6 +138,7 @@ class S3AnalyticsProvider(LocalAnalyticsProvider):
         time,
         old_value=None,
         new_value=None,
+        duration=None,  # Finland
         **kwargs,
     ):
         """Log the event using the appropriate for the specific provider's mechanism.
@@ -169,7 +172,14 @@ class S3AnalyticsProvider(LocalAnalyticsProvider):
             raise ValueError("Either library or license_pool must be provided.")
 
         event = self._create_event_object(
-            library, license_pool, event_type, time, old_value, new_value
+            library,
+            license_pool,
+            event_type,
+            time,
+            old_value,
+            new_value,
+            None,
+            duration,
         )
         content = json.dumps(
             event,

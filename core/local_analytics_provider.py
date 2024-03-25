@@ -13,6 +13,7 @@ class LocalAnalyticsProvider(LoggerMixin):
         time,
         old_value=None,
         new_value=None,
+        duration: int | None = None,
         **kwargs
     ):
         if not library and not license_pool:
@@ -29,5 +30,6 @@ class LocalAnalyticsProvider(LoggerMixin):
             old_value,
             new_value,
             start=time,
+            duration=duration,
             library=library,
         )

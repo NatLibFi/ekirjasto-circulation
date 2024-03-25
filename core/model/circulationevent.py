@@ -32,6 +32,7 @@ class CirculationEvent(Base):
     old_value = Column(Integer)
     delta = Column(Integer)
     new_value = Column(Integer)
+    duration = Column(Integer)  # Finland, duration of the event in seconds
 
     # The Library associated with the event, if it happened in the
     # context of a particular Library and we know which one.
@@ -122,6 +123,7 @@ class CirculationEvent(Base):
         end=None,
         library=None,
         location=None,
+        duration: int | None = None,
     ):
         """Log a CirculationEvent to the database, assuming it
         hasn't already been recorded.
@@ -147,6 +149,7 @@ class CirculationEvent(Base):
                 delta=delta,
                 end=end,
                 location=location,
+                duration=duration,
             ),
         )
         if was_new:
