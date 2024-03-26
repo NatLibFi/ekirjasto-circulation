@@ -359,7 +359,6 @@ Run the application with:
 poetry run python app.py
 ```
 
-psear
 Check that there is now a web server listening on port `6500`:
 
 ```sh
