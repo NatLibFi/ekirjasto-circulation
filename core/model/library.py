@@ -218,6 +218,34 @@ class Library(Base, HasSessionCache):
         return library
 
     @classmethod
+    def lookup_by_municipality(
+        cls, _db: Session, municipality_code: str | None
+    ) -> Library | None:
+        """Look up a library by municipality code."""
+
+        if not municipality_code:
+            return cls.default(_db)
+
+        contains_municipality = cls.settings_dict["municipalities"].contains(
+            [municipality_code]
+        )
+        libraries: list[Library] = (
+            _db.query(Library).filter(contains_municipality).all()
+        )
+
+        if not libraries:
+            logging.warn("No library defined for municipality %s", municipality_code)
+            return cls.default(_db)
+
+        if len(libraries) > 1:
+            logging.warn(
+                "Multiple libraries configured for municipality code %s.",
+                municipality_code,
+            )
+
+        return libraries[0]
+
+    @classmethod
     def default(cls, _db: Session) -> Library | None:
         """Find the default Library."""
         # If for some reason there are multiple default libraries in

@@ -555,6 +555,21 @@ class LibrarySettings(BaseSettings):
         ),
         alias="http://librarysimplified.org/terms/rel/patron-password-reset",
     )
+    # Finland
+    municipalities: list[str] | None = FormField(
+        None,
+        form=LibraryConfFormItem(
+            label="The municipalities belonging to this consortium",
+            type=ConfigurationFormItemType.LIST,
+            format="municipality-code",
+            description="Each value should be a valid "
+            '<a href="https://koodistopalvelu.kanta.fi/codeserver/pages/classification-view-page.xhtml?classificationKey=362&versionKey=440" target="_blank">'
+            "municipality code</a>.",
+            category="Municipalities",
+            level=Level.ALL_ACCESS,
+        ),
+        alias="municipalities",
+    )
     large_collection_languages: list[str] | None = FormField(
         None,
         form=LibraryConfFormItem(
@@ -656,6 +671,16 @@ class LibrarySettings(BaseSettings):
                     "target='_blank'>here</a>."
                 )
             )
+        return value
+
+    @validator(
+        "municipalities",
+    )
+    def validate_municipalities(
+        cls, value: list[str] | None, field: ModelField
+    ) -> list[str] | None:
+        """Verify that municipality IDs are valid."""
+        # TODO: implement validation
         return value
 
     @validator(

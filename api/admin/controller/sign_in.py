@@ -6,6 +6,7 @@ from urllib.parse import urlsplit
 import flask
 from flask import Response, redirect, url_for
 from flask_babel import lazy_gettext as _
+from sqlalchemy.orm import Session
 from werkzeug import Response as WerkzeugResponse
 
 from api.admin.config import Configuration as AdminClientConfig
@@ -34,6 +35,7 @@ from api.admin.template_styles import (
 from api.problem_details import EKIRJASTO_REMOTE_AUTHENTICATION_FAILED
 from core.model import get_one, get_one_or_create
 from core.model.admin import Admin, AdminCredential, AdminRole
+from core.model.library import Library
 from core.util.problem_detail import ProblemDetail
 
 
@@ -94,7 +96,9 @@ class SignInController(AdminController):
         if isinstance(user_info, ProblemDetail):
             return user_info
 
-        circulation_role = self._to_circulation_role(user_info.role)
+        circulation_role = self._to_circulation_role(
+            self._db, user_info.role, user_info.municipality
+        )
         if not circulation_role:
             return self.error_response(ADMIN_NOT_AUTHORIZED)
 
@@ -131,12 +135,13 @@ class SignInController(AdminController):
         return admin
 
     @staticmethod
-    def _update_roles_if_changed(admin: Admin, new_role: str):
+    def _update_roles_if_changed(admin: Admin, new_role: tuple[str, Library | None]):
         existing_roles = [(role.role, role.library) for role in admin.roles]
-        if [(new_role, None)] != existing_roles:
+        if [new_role] != existing_roles:
             for role in admin.roles:
                 admin.remove_role(role.role, role.library)
-            admin.add_role(new_role)
+            name, library = new_role
+            admin.add_role(name, library)
 
     @staticmethod
     def _setup_admin_flask_session(
@@ -156,17 +161,23 @@ class SignInController(AdminController):
         flask.session.permanent = True
 
     @staticmethod
-    def _to_circulation_role(ekirjasto_role: str) -> str | None:
+    def _to_circulation_role(
+        db: Session, ekirjasto_role: str, municipality: str
+    ) -> tuple[str, Library | None] | None:
         if ekirjasto_role == "orgadmin":
-            return AdminRole.SYSTEM_ADMIN
-        elif ekirjasto_role == "admin":
-            return AdminRole.SITEWIDE_LIBRARY_MANAGER
-        elif ekirjasto_role == "librarian":
-            return AdminRole.SITEWIDE_LIBRARIAN
-        else:
-            # other possible values are "sysadmin", "registrant" and "customer",
-            # these are not allowed as circulation admins
-            return None
+            return AdminRole.SYSTEM_ADMIN, None
+
+        library = Library.lookup_by_municipality(db, municipality)
+
+        if ekirjasto_role == "admin":
+            return AdminRole.LIBRARY_MANAGER, library
+
+        if ekirjasto_role == "librarian":
+            return AdminRole.LIBRARIAN, library
+
+        # other possible values are "sysadmin", "registrant" and "customer",
+        # these are not allowed as circulation admins
+        return None
 
     def sign_in(self):
         """Redirects admin if they're signed in, or shows the sign in page."""
