@@ -87,6 +87,14 @@ sudo apt install libxmlsec1 libxmlsec1-dev
 [installed](https://github.com/pyenv/pyenv-installer) using the command `curl https://pyenv.run | bash`. You can then
 install the version of Python you want to work with.
 
+Check if you already have pyenv-virtualenv as a plugin with your pyenv:
+
+```sh
+ls $PYENV_ROOT/plugins/pyenv-virtualenv/
+```
+
+If you have it installed already you can skip the next part.
+
 It is recommended that [pyenv-virtualenv](https://github.com/pyenv/pyenv-virtualenv) be used to allow `pyenv`
 to manage _virtual environments_ in a manner that can be used by the [poetry](#poetry) tool. The `pyenv-virtualenv`
 plugin can be installed by cloning the relevant repository into the `plugins` subdirectory of your `$PYENV_ROOT`:
