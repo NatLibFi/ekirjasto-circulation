@@ -190,7 +190,9 @@ class TestRunSelfTestsScript:
 
         # The default library is the only one with a collection;
         # test_collection() was called on that collection.
-        [(collection, api_map)] = script.tested
+        # Finland: The difference from upstream is that the other
+        # library will also include the collection from default library.
+        [(collection, api_map), (collection, api_map)] = script.tested
         assert [collection] == library1.collections
 
         # The API lookup map passed into test_collection() is based on
@@ -209,9 +211,9 @@ class TestRunSelfTestsScript:
         script = MockScript2(db.session, out)
         script.do_run()
         assert (
-            out.getvalue()
-            == "Testing %s\n  Exception while running self-test: 'blah'\nTesting %s\n"
+            "Testing %s\n  Exception while running self-test: 'blah'\nTesting %s\n"
             % (library1.name, library2.name)
+            in out.getvalue()
         )
 
     def test_test_collection(self, db: DatabaseTransactionFixture):

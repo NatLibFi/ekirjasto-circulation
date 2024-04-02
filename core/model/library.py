@@ -17,6 +17,7 @@ from sqlalchemy import (
     Table,
     Unicode,
     UniqueConstraint,
+    or_,
     select,
 )
 from sqlalchemy.dialects.postgresql import JSONB
@@ -183,15 +184,24 @@ class Library(Base, HasSessionCache):
             IntegrationLibraryConfiguration,
         )
 
+        # Finland, logic changed as compared to upstream:
+        # Include collections defined for default library for all other libraries.
         _db = Session.object_session(self)
+        default_library = self.default(_db)
+        if not default_library:
+            return []
         return _db.scalars(
             select(Collection)
             .join(IntegrationConfiguration)
             .join(IntegrationLibraryConfiguration)
             .where(
                 IntegrationConfiguration.goal == Goals.LICENSE_GOAL,
-                IntegrationLibraryConfiguration.library_id == self.id,
+                or_(
+                    IntegrationLibraryConfiguration.library_id == self.id,
+                    IntegrationLibraryConfiguration.library_id == default_library.id,
+                ),
             )
+            .distinct(Collection.id)
         ).all()
 
     # Cache of the libraries loaded settings object

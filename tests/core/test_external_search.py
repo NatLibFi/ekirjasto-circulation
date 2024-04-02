@@ -3623,14 +3623,21 @@ class TestFilter:
         for_default_library.append_child(for_other_library)
 
         # Its filter uses the collection from the second library.
+        # Finland: Also the collection from default library is included
         filter = Filter.from_worklist(session, for_other_library, None)
-        assert [collection2.id] == filter.collection_ids
+        assert [
+            transaction.default_collection().id,
+            collection2.id,
+        ] == filter.collection_ids
 
         # If for whatever reason, collection_ids on the child is not set,
         # all collections associated with the WorkList's library will be used.
         for_other_library.collection_ids = None
         filter = Filter.from_worklist(session, for_other_library, None)
-        assert [collection2.id] == filter.collection_ids
+        assert [
+            transaction.default_collection().id,
+            collection2.id,
+        ] == filter.collection_ids
 
         # If no library is associated with a WorkList, we assume that
         # holds are allowed. (Usually this is controleld by a library

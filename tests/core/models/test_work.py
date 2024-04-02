@@ -1702,6 +1702,11 @@ class TestWork:
         self, db: DatabaseTransactionFixture
     ):
         """2 libraries, 2 collections, and 2 pools, always select the right pool in a scoped request"""
+
+        # Finland: Create and ignore a default library, because collections for default library
+        # are applied to all libraries.
+        _ = db.default_library()
+
         l1 = db.library()
         l2 = db.library()
         c1 = db.collection()
