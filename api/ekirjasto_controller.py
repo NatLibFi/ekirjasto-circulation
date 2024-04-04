@@ -200,7 +200,7 @@ class EkirjastoController:
         response_code = 201 if is_patron_new else 200
         return Response(response_json, response_code, mimetype="application/json")
 
-    def get_decrypted_ekirjasto_token(self, request, _db):
+    def get_decrypted_ekirjasto_token(self, request):
         """Call E-kirjasto API's passkey register endpoints on behalf of the user."""
         if self.is_configured != True:
             return EKIRJASTO_PROVIDER_NOT_CONFIGURED
@@ -215,10 +215,10 @@ class EkirjastoController:
             return delegate_token
         elif delegate_token == None:
             return INVALID_EKIRJASTO_DELEGATE_TOKEN
-        
+
         return Response(json.dumps({"token": ekirjasto_token}), 200, mimetype="application/json")
 
-    def call_remote_endpoint(self, remote_path, request, _db):
+    def call_remote_endpoint(self, remote_path, request):
         """Call E-kirjasto API's passkey register endpoints on behalf of the user."""
         if self.is_configured != True:
             return EKIRJASTO_PROVIDER_NOT_CONFIGURED

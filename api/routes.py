@@ -14,7 +14,6 @@ from core.app_server import compressible, returns_problem_detail
 from core.model import HasSessionCache
 from core.util.problem_detail import ProblemDetail
 
-
 @app.after_request
 def print_cache(response):
     if hasattr(app, "_db") and HasSessionCache.CACHE_ATTRIBUTE in app._db.info:
@@ -213,6 +212,16 @@ def library_dir_route(path, *args, **kwargs):
 
     return decorator
 
+def disable_cache(f):
+    """Decorator to disable cache."""
+    @wraps(f)
+    def decorator(*args, **kwargs):
+        response = f(*args, **kwargs)
+        if isinstance(response, ProblemDetail):
+            response = make_response(response.response)
+        response.headers['Cache-Control'] = "no-store, max-age=0"
+        return response
+    return decorator
 
 @library_route("/", strict_slashes=False)
 @has_library
@@ -594,8 +603,9 @@ def ekirjasto_authenticate():
 @library_route("/ekirjasto_token", methods=["GET"])
 @has_library
 @returns_problem_detail
+@disable_cache
 def ekirjasto_token():
-    return app.manager.ekirjasto_controller.get_decrypted_ekirjasto_token(request, app.manager._db)
+    return app.manager.ekirjasto_controller.get_decrypted_ekirjasto_token(request)
 
 
 # Finland
@@ -603,9 +613,10 @@ def ekirjasto_token():
 @library_route("/ekirjasto/passkey/register/start", methods=["POST"])
 @has_library
 @returns_problem_detail
+@disable_cache
 def ekirjasto_passkey_register_start():
     return app.manager.ekirjasto_controller.call_remote_endpoint(
-        "/v1/auth/passkey/register/start", request, app.manager._db
+        "/v1/auth/passkey/register/start", request
     )
 
 
@@ -616,7 +627,7 @@ def ekirjasto_passkey_register_start():
 @returns_problem_detail
 def ekirjasto_passkey_register_finish():
     return app.manager.ekirjasto_controller.call_remote_endpoint(
-        "/v1/auth/passkey/register/finish", request, app.manager._db
+        "/v1/auth/passkey/register/finish", request
     )
 
 
