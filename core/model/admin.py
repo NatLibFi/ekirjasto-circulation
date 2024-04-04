@@ -9,6 +9,7 @@ from flask_babel import lazy_gettext as _
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from sqlalchemy import (
     Column,
+    DateTime,
     ForeignKey,
     Index,
     Integer,
@@ -346,6 +347,7 @@ class AdminCredential(Base):
 
     id = Column(Integer, primary_key=True)
     external_id = Column(Unicode, nullable=False)
+    last_signed_in = Column(DateTime, nullable=False, server_default=func.now())
 
     admin_id = Column(
         Integer, ForeignKey("admins.id", ondelete="CASCADE"), index=True, nullable=False
