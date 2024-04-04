@@ -216,7 +216,9 @@ class EkirjastoController:
         elif delegate_token == None:
             return INVALID_EKIRJASTO_DELEGATE_TOKEN
 
-        return Response(json.dumps({"token": ekirjasto_token}), 200, mimetype="application/json")
+        return Response(
+            json.dumps({"token": ekirjasto_token}), 200, mimetype="application/json"
+        )
 
     def call_remote_endpoint(self, remote_path, request):
         """Call E-kirjasto API's passkey register endpoints on behalf of the user."""

@@ -14,6 +14,7 @@ from core.app_server import compressible, returns_problem_detail
 from core.model import HasSessionCache
 from core.util.problem_detail import ProblemDetail
 
+
 @app.after_request
 def print_cache(response):
     if hasattr(app, "_db") and HasSessionCache.CACHE_ATTRIBUTE in app._db.info:
@@ -212,16 +213,20 @@ def library_dir_route(path, *args, **kwargs):
 
     return decorator
 
+
 def disable_cache(f):
     """Decorator to disable cache."""
+
     @wraps(f)
     def decorator(*args, **kwargs):
         response = f(*args, **kwargs)
         if isinstance(response, ProblemDetail):
             response = make_response(response.response)
-        response.headers['Cache-Control'] = "no-store, max-age=0"
+        response.headers["Cache-Control"] = "no-store, max-age=0"
         return response
+
     return decorator
+
 
 @library_route("/", strict_slashes=False)
 @has_library
