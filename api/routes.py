@@ -591,6 +591,15 @@ def ekirjasto_authenticate():
 
 # Finland
 # Authenticate with the ekirjasto token.
+@library_route("/ekirjasto_token", methods=["GET"])
+@has_library
+@returns_problem_detail
+def ekirjasto_token():
+    return app.manager.ekirjasto_controller.get_decrypted_ekirjasto_token(request, app.manager._db)
+
+
+# Finland
+# Authenticate with the ekirjasto token.
 @library_route("/ekirjasto/passkey/register/start", methods=["POST"])
 @has_library
 @returns_problem_detail

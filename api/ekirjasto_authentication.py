@@ -191,6 +191,10 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
                     "rel": "authenticate",
                     "href": self._create_circulation_url("ekirjasto_authenticate", _db),
                 },
+                {
+                    "rel": "ekirjasto_token",
+                    "href": self._create_circulation_url("ekirjasto_token", _db),
+                },
                 {"rel": "api", "href": self._ekirjasto_api_url},
                 {
                     "rel": "tunnistus_start",
