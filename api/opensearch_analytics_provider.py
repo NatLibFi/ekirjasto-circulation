@@ -51,6 +51,7 @@ class OpenSearchAnalyticsProvider(LocalAnalyticsProvider):
         "licenses_available",
         "licenses_reserved",
         "patrons_in_hold_queue",
+        "duration",
     )
 
     # Fields that get indexed as booleans
@@ -83,7 +84,18 @@ class OpenSearchAnalyticsProvider(LocalAnalyticsProvider):
 
         index_name = new_index
         if self.indices.exists(index_name):
-            pass
+            # A light-weight ad-hoc migration for putting the new duration field to mappings.
+            # This can soon be removed.
+            index = self.indices.get(index_name)
+            duration_mapping = (
+                index.get(index_name)
+                .get("mappings", {})
+                .get("properties", {})
+                .get("duration")
+            )
+            if not duration_mapping:
+                body = {"properties": {"duration": {"type": "float"}}}
+                self.indices.put_mapping(index=index_name, body=body)
 
         else:
             properties = {}
@@ -96,9 +108,7 @@ class OpenSearchAnalyticsProvider(LocalAnalyticsProvider):
             for field in self.NUMERIC_FIELDS:
                 properties[field] = {"type": "float"}
 
-            body = {
-                "mappings": {"properties": properties}
-            }  # TODO: add settings if necessary
+            body = {"mappings": {"properties": properties}}
             self.indices.create(index=index_name, body=body)
 
     # Copied from s3_analytics_provider.py (with minor edits)
@@ -111,6 +121,7 @@ class OpenSearchAnalyticsProvider(LocalAnalyticsProvider):
         old_value,
         new_value,
         neighborhood: str | None = None,
+        duration: int | None = None,
     ) -> dict:
         """Create a Python dict containing required information about the event.
 
@@ -127,6 +138,8 @@ class OpenSearchAnalyticsProvider(LocalAnalyticsProvider):
         :param new_value: New value of the metric changed by the event
 
         :param neighborhood: Geographic location of the event
+
+        :duration: Duration of the event in seconds
 
         :return: Python dict containing required information about the event
         """
@@ -158,6 +171,7 @@ class OpenSearchAnalyticsProvider(LocalAnalyticsProvider):
             "old_value": old_value,
             "new_value": new_value,
             "delta": delta,
+            "duration": duration,
             "location": neighborhood,
             "license_pool_id": license_pool.id if license_pool else None,
             "publisher": edition.publisher if edition else None,
@@ -234,6 +248,7 @@ class OpenSearchAnalyticsProvider(LocalAnalyticsProvider):
         time,
         old_value=None,
         new_value=None,
+        duration: int | None = None,
         **kwargs,
     ):
         """Log the event using the appropriate for the specific provider's mechanism.
@@ -261,19 +276,23 @@ class OpenSearchAnalyticsProvider(LocalAnalyticsProvider):
 
         :param new_value: New value of the metric changed by the event
         :type new_value: Any
+
+        :param duration: Duration of the event in seconds
+        :type duration: int
         """
 
         if not library and not license_pool:
             raise ValueError("Either library or license_pool must be provided.")
 
-        neighborhood = None
-
-        # TODO: Check if we can use locations like in local_analytics
-        # if self.location_source == self.LOCATION_SOURCE_NEIGHBORHOOD:
-        #     neighborhood = kwargs.pop("neighborhood", None)
-
         event = self._create_event_object(
-            library, license_pool, event_type, time, old_value, new_value, neighborhood
+            library,
+            license_pool,
+            event_type,
+            time,
+            old_value,
+            new_value,
+            None,
+            duration,
         )
 
         self.index(

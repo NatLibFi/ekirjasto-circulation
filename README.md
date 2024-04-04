@@ -9,15 +9,15 @@
 This is the E-kirjasto fork of the [The Palace Project](https://thepalaceproject.org) Palace Manager (which is a fork of
 [Library Simplified](http://www.librarysimplified.org/) Circulation Manager).
 
-<!-- ## Installation
+## Installation
 
 Docker images created from this code will be available at:
 
-- [circ-webapp](https://github.com/NatLibFi/circulation/pkgs/container/ekirjasto-circ-webapp)
-- [circ-scripts](https://github.com/NatLibFi/circulation/pkgs/container/ekirjasto-circ-scripts)
-- [circ-exec](https://github.com/NatLibFi/circulation/pkgs/container/ekirjasto-circ-exec)
+- [ekirjasto-circ-webapp](https://github.com/NatLibFi/circulation/pkgs/container/ekirjasto-circ-webapp)
+- [ekirjasto-circ-scripts](https://github.com/NatLibFi/circulation/pkgs/container/ekirjasto-circ-scripts)
+- [ekirjasto-circ-exec](https://github.com/NatLibFi/circulation/pkgs/container/ekirjasto-circ-exec)
 
-Docker images are the preferred way to deploy this code in a production environment. -->
+Docker images are the preferred way to deploy this code in a production environment.
 
 ## Git Branch Workflow
 
@@ -86,6 +86,14 @@ sudo apt install libxmlsec1 libxmlsec1-dev
 [pyenv](https://github.com/pyenv/pyenv) pyenv lets you easily switch between multiple versions of Python. It can be
 [installed](https://github.com/pyenv/pyenv-installer) using the command `curl https://pyenv.run | bash`. You can then
 install the version of Python you want to work with.
+
+Check if you already have pyenv-virtualenv as a plugin with your pyenv:
+
+```sh
+ls $PYENV_ROOT/plugins/pyenv-virtualenv/
+```
+
+If you have it installed already you can skip the next part.
 
 It is recommended that [pyenv-virtualenv](https://github.com/pyenv/pyenv-virtualenv) be used to allow `pyenv`
 to manage _virtual environments_ in a manner that can be used by the [poetry](#poetry) tool. The `pyenv-virtualenv`
@@ -351,7 +359,6 @@ Run the application with:
 poetry run python app.py
 ```
 
-psear
 Check that there is now a web server listening on port `6500`:
 
 ```sh

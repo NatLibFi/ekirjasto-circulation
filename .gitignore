@@ -1,3 +1,7 @@
+# Pyenv
+
+.python-version
+
 # Editors
 .vscode/
 .idea/
