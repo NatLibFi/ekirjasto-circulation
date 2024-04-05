@@ -19,7 +19,7 @@ class OperationalMode(str, Enum):
 class Configuration(LoggerMixin):
     APP_NAME = "E-kirjasto Collection Manager"
     PACKAGE_NAME = "@natlibfi/ekirjasto-circulation-admin"
-    PACKAGE_VERSION = "0.3.0"
+    PACKAGE_VERSION = "0.4.0"
 
     STATIC_ASSETS = {
         "admin_js": "circulation-admin.js",
