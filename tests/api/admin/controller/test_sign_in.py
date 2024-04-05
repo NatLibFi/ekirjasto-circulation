@@ -307,14 +307,16 @@ class TestSignInController:
         for role in initial_roles:
             admin.add_role(AdminRole.SYSTEM_ADMIN, library=None)
 
-        SignInController._update_roles_if_changed(admin, AdminRole.SYSTEM_ADMIN)
+        SignInController._update_roles_if_changed(
+            admin, [(AdminRole.SYSTEM_ADMIN, None)]
+        )
         sign_in_fixture.ctrl.db.session.refresh(admin)
         assert initial_roles == [(role.role, role.library) for role in admin.roles]
 
         admin.add_role(role=AdminRole.LIBRARY_MANAGER, library=None)
         admin.add_role(role=AdminRole.LIBRARIAN, library=None)
         SignInController._update_roles_if_changed(
-            admin, new_role=AdminRole.SYSTEM_ADMIN
+            admin, new_roles=[(AdminRole.SYSTEM_ADMIN, None)]
         )
         sign_in_fixture.ctrl.db.session.refresh(admin)
         assert initial_roles == [(role.role, role.library) for role in admin.roles]

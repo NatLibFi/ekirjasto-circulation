@@ -352,6 +352,10 @@ class TestCollectionSettings:
         flask_app_fixture: FlaskAppFixture,
         db: DatabaseTransactionFixture,
     ):
+        # Finland: the logic has been changed so that collections from default
+        # library are available for all libraries
+
+        # Default library
         l1 = db.library(
             name="Library 1",
             short_name="L1",
@@ -383,7 +387,7 @@ class TestCollectionSettings:
                     ("overdrive_client_key", "username"),
                     ("overdrive_client_secret", "password"),
                     ("overdrive_website_id", "1234"),
-                ]
+                ],
             )
             response = controller.process_collections()
             assert isinstance(response, Response)
@@ -391,7 +395,9 @@ class TestCollectionSettings:
 
         # The collection was created and configured properly.
         collection = Collection.by_name(db.session, name="New Collection")
+
         assert isinstance(collection, Collection)
+
         assert collection.integration_configuration.id == int(response.get_data())
         assert "New Collection" == collection.name
         assert (
@@ -412,9 +418,10 @@ class TestCollectionSettings:
         )
 
         # Two libraries now have access to the collection.
+        # Finland: because l1 is the default library, l3 will have the collection as well
         assert [collection] == l1.collections
         assert [collection] == l2.collections
-        assert [] == l3.collections
+        assert [collection] == l3.collections
 
         # Additional settings were set on the collection.
         assert (
@@ -466,7 +473,8 @@ class TestCollectionSettings:
         assert "website_id" not in child.integration_configuration.settings_dict
 
         # One library has access to the collection.
-        assert [child] == l3.collections
+        # Finland: l3 will also have the collection from default library
+        assert [collection, child] == l3.collections
         assert isinstance(l3.id, int)
         l3_settings = child.integration_configuration.for_library(l3.id)
         assert l3_settings is not None

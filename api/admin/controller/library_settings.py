@@ -83,6 +83,7 @@ class LibrarySettingsController(AdminPermissionsControllerMixin):
                     name=library.name,
                     short_name=library.short_name,
                     settings=settings,
+                    is_default=library.is_default,
                 )
             ]
         return Response(

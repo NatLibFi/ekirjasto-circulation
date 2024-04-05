@@ -1217,9 +1217,10 @@ class TestConfigureCollectionScript:
         )
 
         # Two libraries now have access to the collection.
+        # Finland: because l1 is the default library, l3 will have the collection as well
         assert [collection] == l1.collections
         assert [collection] == l2.collections
-        assert [] == l3.collections
+        assert [collection] == l3.collections
 
         # One CollectionSetting was set on the collection, in addition
         # to url, username, and password.
@@ -1705,7 +1706,6 @@ class TestWhereAreMyBooksScript:
         script.check_library(library2)
         checking, no_collection, no_lanes = script.output
         assert ("Checking library %s", [library2.name]) == checking
-        assert " This library has no collections -- that's a problem." == no_collection
         assert " This library has no lanes -- that's a problem." == no_lanes
 
     @staticmethod

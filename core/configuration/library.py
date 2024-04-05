@@ -131,6 +131,77 @@ class LibrarySettings(BaseSettings):
             level=Level.SYS_ADMIN_ONLY,
         ),
     )
+    # Finland
+    kirkanta_consortium_slug: str | None = FormField(
+        None,
+        form=LibraryConfFormItem(
+            label="Synchronize consortium data form Kirkanta",
+            description="If selected, the list of municipalities is updated automatically from Kirkanta. "
+            "Has no effect if configured for the default library.",
+            category="Kirkanta Synchronization",
+            type=ConfigurationFormItemType.SELECT,
+            # The keys here should match the Kirkanta consortium slug
+            # See https://api.kirjastot.fi/v4/consortium?limit=9999
+            options={
+                "disabled": "None (don't sync)",
+                "kirkkonummi": "Kirkkonummi",
+                "fredrika": "Fredrikabiblioteken",
+                "siilinjarvikoha": "Siilinjärvi",
+                "ratamo-kirjastot": "RATAMO-kirjastot",
+                "keski-kirjastot": "Keski-kirjastot",
+                "sotkamo": "Sotkamo",
+                "kyyti": "Kyyti",
+                "joki-kirjastot": "Joki-kirjastot",
+                "blanka": "Blanka",
+                "lapin-kirjasto": "Lapin kirjasto",
+                "toki": "TOKI-kirjastot",
+                "leppavirta": "Leppävirta",
+                "loisto": "Loisto",
+                "rutakko": "Rutakko-kirjastot",
+                "lumme": "Lumme-kirjastot",
+                "tritonia-2": "Tritonia",
+                "helle": "Helle-kirjastot",
+                "satakirjastot": "Satakirjastot",
+                "anders": "Anders",
+                "somero": "Somero",
+                "sulkava2": "Sulkava",
+                "kirkes-kirjastot": "Kirkes-kirjastot",
+                "vaara-kirjastot": "Vaara-kirjastot",
+                "lukki-kirjastot": "Lukki-kirjastot",
+                "heili": "Heili-kirjastot",
+                "kuopionkirjasto": "Kuopion kaupunginkirjasto",
+                "piki": "PIKI-kirjastot",
+                "louna-kirjastot": "Louna-kirjastot",
+                "stepkoulutus-kirjastot": "STEP-koulutus, kirjastot",
+                "eepos": "Eepos-kirjastot",
+                "vaasa": "Vaasa",
+                "lastu": "Lastu",
+                "kansallisgalleria-kirjasto": "Kansallisgalleria / Kirjasto",
+                "outi": "OUTI-kirjastot",
+                "helmet": "Helmet",
+                "vaski-kirjastot": "Vaski-kirjastot",
+                "kainet": "Kainet-kirjastot",
+                "vanamo": "Vanamo",
+            },
+            level=Level.SYS_ADMIN_ONLY,
+        ),
+        alias="kirkanta_consortium_slug",
+    )
+    # Finland
+    municipalities: list[str] | None = FormField(
+        None,
+        form=LibraryConfFormItem(
+            label="The municipalities belonging to this consortium",
+            type=ConfigurationFormItemType.LIST,
+            format="municipality-code",
+            description="Each value should be a valid "
+            '<a href="https://koodistopalvelu.kanta.fi/codeserver/pages/classification-view-page.xhtml?classificationKey=362&versionKey=440" target="_blank">'
+            "municipality code</a>.",
+            category="Kirkanta Synchronization",
+            level=Level.ALL_ACCESS,
+        ),
+        alias="municipalities",
+    )
     allow_holds: bool = FormField(
         True,
         form=LibraryConfFormItem(
@@ -656,6 +727,16 @@ class LibrarySettings(BaseSettings):
                     "target='_blank'>here</a>."
                 )
             )
+        return value
+
+    @validator(
+        "municipalities",
+    )
+    def validate_municipalities(
+        cls, value: list[str] | None, field: ModelField
+    ) -> list[str] | None:
+        """Verify that municipality IDs are valid."""
+        # TODO: implement validation
         return value
 
     @validator(

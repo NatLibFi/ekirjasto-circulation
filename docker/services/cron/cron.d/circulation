@@ -116,3 +116,8 @@ HOME=/var/www/circulation
 # Update the status of the different Authentication Providers
 #
 */5 * * * * root core/bin/run update_integration_statuses >> /var/log/cron.log 2>&1
+
+# Finland, synchronize library municipalities from Kirkanta and Koodistopalvelu
+# Run once every two hours
+#
+0 */2 * * * root core/bin/run ekirjasto_consortium_monitor >> /var/log/cron.log 2>&1

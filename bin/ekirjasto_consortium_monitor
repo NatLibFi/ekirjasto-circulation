@@ -1,0 +1,16 @@
+#!/usr/bin/env python
+"""Update the circulation manager with latest consortium and municipality data
+from Kirkanta and Koodistopalvelu."""
+import os
+import sys
+
+bin_dir = os.path.split(__file__)[0]
+package_dir = os.path.join(bin_dir, "..")
+sys.path.append(os.path.abspath(package_dir))
+
+from api.ekirjasto_consortium import EkirjastoConsortiumMonitor
+from core.scripts import RunMonitorScript
+
+RunMonitorScript(
+    EkirjastoConsortiumMonitor,
+).run()
