@@ -113,7 +113,7 @@ class SignInController(AdminController):
             self._db.rollback()
             return EKIRJASTO_REMOTE_AUTHENTICATION_FAILED
 
-        self._setup_admin_flask_session(admin, auth, ekirjasto_token)
+        self._setup_admin_flask_session(admin, user_info, auth, ekirjasto_token)
 
         redirect_uri = flask.request.args.get("redirect_uri", "/admin/web")
         return SanitizedRedirections.redirect(redirect_uri)
@@ -143,12 +143,16 @@ class SignInController(AdminController):
     @staticmethod
     def _setup_admin_flask_session(
         admin: Admin,
+        user_info: EkirjastoUserInfo,
         auth: EkirjastoAdminAuthenticationProvider,
         ekirjasto_token: str,
     ):
         # Set up the admin's flask session.
         flask.session["admin_email"] = admin.email
         flask.session["auth_type"] = auth.NAME
+
+        if user_info.given_name:
+            flask.session["admin_given_name"] = user_info.given_name
 
         # This one is extra compared to password auth provider
         flask.session["ekirjasto_token"] = ekirjasto_token
@@ -235,6 +239,7 @@ class SignInController(AdminController):
         # Clear out the admin's flask session.
         flask.session.pop("admin_email", None)
         flask.session.pop("auth_type", None)
+        flask.session.pop("admin_given_name", None)
 
         # Finland, revoke ekirjasto session
         self._try_revoke_ekirjasto_session()

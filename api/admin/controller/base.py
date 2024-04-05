@@ -71,6 +71,9 @@ class AdminController:
         flask.request.admin = None
         return INVALID_ADMIN_CREDENTIALS
 
+    def admin_given_name_from_request(self) -> str | None:
+        return flask.session.get("admin_given_name")
+
     def authenticated_admin(self, admin_details):
         """Creates or updates an admin with the given details"""
 
