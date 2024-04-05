@@ -96,10 +96,10 @@ class SignInController(AdminController):
         if isinstance(user_info, ProblemDetail):
             return user_info
 
-        circulation_role = self._to_circulation_role(
-            self._db, user_info.role, user_info.municipality
+        circulation_roles = self._to_circulation_roles(
+            self._db, user_info.role, user_info.municipalities
         )
-        if not circulation_role:
+        if not circulation_roles:
             return self.error_response(ADMIN_NOT_AUTHORIZED)
 
         try:
@@ -109,7 +109,7 @@ class SignInController(AdminController):
             else:
                 admin = self._create_admin_with_external_credentials(user_info)
 
-            self._update_roles_if_changed(admin, circulation_role)
+            self._update_roles_if_changed(admin, circulation_roles)
         except Exception as e:
             logging.exception("Internal error during signup")
             self._db.rollback()
@@ -135,13 +135,15 @@ class SignInController(AdminController):
         return admin
 
     @staticmethod
-    def _update_roles_if_changed(admin: Admin, new_role: tuple[str, Library | None]):
+    def _update_roles_if_changed(
+        admin: Admin, new_roles: list[tuple[str, Library | None]]
+    ):
         existing_roles = [(role.role, role.library) for role in admin.roles]
-        if [new_role] != existing_roles:
+        if new_roles != existing_roles:
             for role in admin.roles:
                 admin.remove_role(role.role, role.library)
-            name, library = new_role
-            admin.add_role(name, library)
+            for name, library in new_roles:
+                admin.add_role(name, library)
 
     @staticmethod
     def _setup_admin_flask_session(
@@ -161,23 +163,27 @@ class SignInController(AdminController):
         flask.session.permanent = True
 
     @staticmethod
-    def _to_circulation_role(
-        db: Session, ekirjasto_role: str, municipality: str
-    ) -> tuple[str, Library | None] | None:
+    def _to_circulation_roles(
+        db: Session, ekirjasto_role: str, municipalities: list[str]
+    ) -> list[tuple[str, Library | None]]:
         if ekirjasto_role == "orgadmin":
-            return AdminRole.SYSTEM_ADMIN, None
+            return [(AdminRole.SYSTEM_ADMIN, None)]
 
-        library = Library.lookup_by_municipality(db, municipality)
+        libraries = {
+            library
+            for municipality_code in municipalities
+            if (library := Library.lookup_by_municipality(db, municipality_code))
+        }
 
         if ekirjasto_role == "admin":
-            return AdminRole.LIBRARY_MANAGER, library
+            return [(AdminRole.LIBRARY_MANAGER, library) for library in libraries]
 
         if ekirjasto_role == "librarian":
-            return AdminRole.LIBRARIAN, library
+            return [(AdminRole.LIBRARIAN, library) for library in libraries]
 
         # other possible values are "sysadmin", "registrant" and "customer",
         # these are not allowed as circulation admins
-        return None
+        return []
 
     def sign_in(self):
         """Redirects admin if they're signed in, or shows the sign in page."""
