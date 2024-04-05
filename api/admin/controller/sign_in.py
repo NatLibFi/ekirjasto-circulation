@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timezone
 from urllib.parse import urlsplit
 
 import flask
@@ -101,6 +102,7 @@ class SignInController(AdminController):
         try:
             credentials = get_one(self._db, AdminCredential, external_id=user_info.sub)
             if credentials:
+                credentials.last_signed_in = datetime.now(timezone.utc)
                 admin = credentials.admin
             else:
                 admin = self._create_admin_with_external_credentials(user_info)
