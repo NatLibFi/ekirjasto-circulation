@@ -604,7 +604,7 @@ def ekirjasto_authenticate():
 
 
 # Finland
-# Authenticate with the ekirjasto token.
+# Get decrypted ekirjasto token from the circulation token.
 @library_route("/ekirjasto_token", methods=["GET"])
 @has_library
 @returns_problem_detail
@@ -614,7 +614,7 @@ def ekirjasto_token():
 
 
 # Finland
-# Authenticate with the ekirjasto token.
+# Call E-kirjasto API's /passkey/register/start endpoint.
 @library_route("/ekirjasto/passkey/register/start", methods=["POST"])
 @has_library
 @returns_problem_detail
@@ -626,7 +626,7 @@ def ekirjasto_passkey_register_start():
 
 
 # Finland
-# Authenticate with the ekirjasto token.
+# Call E-kirjasto API's /passkey/register/finish endpoint.
 @library_route("/ekirjasto/passkey/register/finish", methods=["POST"])
 @has_library
 @returns_problem_detail
