@@ -45,6 +45,7 @@ from core.integration.settings import (
     FormField,
 )
 from core.model import ConfigurationSetting, Credential, DataSource, Patron, get_one
+from core.model.library import Library
 from core.util.datetime_helpers import from_timestamp, utc_now
 from core.util.log import elapsed_time_logging
 from core.util.problem_detail import ProblemDetail
@@ -678,9 +679,16 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
                 _db, self.library_id, analytics=self.analytics
             )
             new_patron.last_external_sync = utc_now()
+            self._update_patron_library(_db, new_patron)
             return new_patron, is_new
 
+        if isinstance(auth_result, Patron):
+            self._update_patron_library(_db, auth_result)
         return auth_result, is_new
+
+    def _update_patron_library(self, _db: Session, patron: Patron):
+        """Assigns the patron to a library based on municipality"""
+        patron.library = Library.lookup_by_municipality(_db, patron.cached_neighborhood)
 
     def authenticated_patron(
         self, _db: Session, authorization: dict | str

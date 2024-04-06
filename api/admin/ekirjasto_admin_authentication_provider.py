@@ -25,7 +25,10 @@ class EkirjastoUserInfo(BaseModel):
     role: str
     sub: str
     sid: str
+    # Municipality of residence, used to link patrons to a consortium
     municipality: str
+    # Municipalities the admin/librarian is allowed to manage. For admins and librarians only.
+    municipalities: list[str] = []
     verified: bool = False
     passkeys: list[dict] = []
 

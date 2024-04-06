@@ -17,6 +17,7 @@ from sqlalchemy import (
     Table,
     Unicode,
     UniqueConstraint,
+    or_,
     select,
 )
 from sqlalchemy.dialects.postgresql import JSONB
@@ -183,15 +184,24 @@ class Library(Base, HasSessionCache):
             IntegrationLibraryConfiguration,
         )
 
+        # Finland, logic changed as compared to upstream:
+        # Include collections defined for default library for all other libraries.
         _db = Session.object_session(self)
+        default_library = self.default(_db)
+        if not default_library:
+            return []
         return _db.scalars(
             select(Collection)
             .join(IntegrationConfiguration)
             .join(IntegrationLibraryConfiguration)
             .where(
                 IntegrationConfiguration.goal == Goals.LICENSE_GOAL,
-                IntegrationLibraryConfiguration.library_id == self.id,
+                or_(
+                    IntegrationLibraryConfiguration.library_id == self.id,
+                    IntegrationLibraryConfiguration.library_id == default_library.id,
+                ),
             )
+            .distinct(Collection.id)
         ).all()
 
     # Cache of the libraries loaded settings object
@@ -216,6 +226,34 @@ class Library(Base, HasSessionCache):
 
         library, is_new = cls.by_cache_key(_db, short_name, _lookup)
         return library
+
+    @classmethod
+    def lookup_by_municipality(
+        cls, _db: Session, municipality_code: str | None
+    ) -> Library | None:
+        """Look up a library by municipality code."""
+
+        if not municipality_code:
+            return cls.default(_db)
+
+        contains_municipality = cls.settings_dict["municipalities"].contains(
+            [municipality_code]
+        )
+        libraries: list[Library] = (
+            _db.query(Library).filter(contains_municipality).all()
+        )
+
+        if not libraries:
+            logging.warn("No library defined for municipality %s", municipality_code)
+            return cls.default(_db)
+
+        if len(libraries) > 1:
+            logging.warn(
+                "Multiple libraries configured for municipality code %s.",
+                municipality_code,
+            )
+
+        return libraries[0]
 
     @classmethod
     def default(cls, _db: Session) -> Library | None:

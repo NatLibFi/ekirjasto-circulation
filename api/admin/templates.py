@@ -17,6 +17,7 @@ admin = """
         showCircEventsDownload: {{ "true" if show_circ_events_download else "false" }},
         settingUp: {{ "true" if setting_up else "false" }},
         email: "{{ email }}",
+        givenName: "{{ given_name }}",
         roles: [{% for role in roles %}{"role": "{{role.role}}"{% if role.library %}, "library": "{{role.library.short_name}}"{% endif %} },{% endfor %}],
         authType: "{{ auth_type }}",
         featureFlags: {

@@ -88,6 +88,10 @@ class ViewController(AdminController):
         # We always have local_analytics
         show_circ_events_download = True
 
+        # Externally authenticated admins don't have email.
+        # Pass user's first name to be shown instead of email.
+        given_name = self.admin_given_name_from_request() or ""
+
         response = Response(
             flask.render_template_string(
                 admin_template,
@@ -98,6 +102,7 @@ class ViewController(AdminController):
                 show_circ_events_download=show_circ_events_download,
                 setting_up=setting_up,
                 email=email,
+                given_name=given_name,
                 roles=roles,
                 auth_type=auth_type,
                 admin_js=admin_js,

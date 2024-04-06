@@ -30,6 +30,7 @@ from core.model import (
     get_one,
     get_one_or_create,
 )
+from core.model.admin import Admin, AdminCredential
 from core.model.configuration import ConfigurationSetting
 from core.service.container import container_instance
 from core.util.datetime_helpers import utc_now
@@ -1072,3 +1073,20 @@ class PatronNeighborhoodScrubber(ScrubberMonitor):
 
 
 ReaperMonitor.REGISTRY.append(PatronNeighborhoodScrubber)
+
+
+class EkirjastoInactiveAdminReaperMonitor(ReaperMonitor):
+    """Reaper for cleaning up inactive externally authenticated admins"""
+
+    MODEL_CLASS = AdminCredential
+    TIMESTAMP_FIELD = "last_signed_in"
+    MAX_AGE = datetime.timedelta(days=180)
+
+    def delete(self, row: AdminCredential):
+        self._db.delete(row.admin)
+
+    def query(self):
+        return self._db.query(AdminCredential).join(Admin).filter(self.where_clause)
+
+
+ReaperMonitor.REGISTRY.append(EkirjastoInactiveAdminReaperMonitor)
