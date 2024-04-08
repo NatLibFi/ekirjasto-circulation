@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2024-03-05 22:39+0200\n"
+"POT-Creation-Date: 2024-04-08 08:44+0300\n"
 "PO-Revision-Date: 2024-02-19 22:15+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -668,3 +668,4 @@ msgstr ""
 #, python-format
 msgid "%(field)s cannot be greater than %(max)s."
 msgstr ""
+

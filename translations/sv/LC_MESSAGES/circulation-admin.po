@@ -7,15 +7,17 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2024-02-19 22:26+0200\n"
+"POT-Creation-Date: 2024-04-08 08:44+0300\n"
 "PO-Revision-Date: 2024-03-01 11:34+0000\n"
-"Language-Team: Swedish (https://app.transifex.com/national-library-of-finland/teams/183401/sv/)\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: sv\n"
+"Language-Team: Swedish (https://app.transifex.com/national-library-of-"
+"finland/teams/183401/sv/)\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.13.0\n"
-"Language: sv\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: api/admin/announcement_list_validator.py:35
 #, python-format
@@ -72,21 +74,19 @@ msgid "Admin auth not configured"
 msgstr "Administratörens autentisering har inte konfigurerats"
 
 #: api/admin/problem_details.py:10
-msgid ""
-"This circulation manager has not been configured to authenticate admins."
+msgid "This circulation manager has not been configured to authenticate admins."
 msgstr ""
 "Denna utlåningshanterare har inte konfigurerats för att autentisera "
 "administratörer."
 
 #: api/admin/problem_details.py:16
 msgid "Admin auth mechanism not configured"
-msgstr ""
-"Mekanismen för autentisering av administratörer har inte konfigurerats"
+msgstr "Mekanismen för autentisering av administratörer har inte konfigurerats"
 
 #: api/admin/problem_details.py:17
 msgid ""
-"This circulation manager has not been configured to authenticate admins with"
-" the mechanism you used"
+"This circulation manager has not been configured to authenticate admins "
+"with the mechanism you used"
 msgstr ""
 "Denna utlåningshanterare har inte konfigurerats för att autentisera "
 "administratörer med mekanismen du använde"
@@ -229,11 +229,11 @@ msgstr "Bibliotekets kortnamn används redan"
 
 #: api/admin/problem_details.py:145
 msgid ""
-"The library short name must be unique, and there's already a library with "
-"the specified short name."
+"The library short name must be unique, and there's already a library with"
+" the specified short name."
 msgstr ""
-"Bibliotekets kortnamn ska var unikt. Det finns redan ett bibliotek med detta"
-" kortnamn."
+"Bibliotekets kortnamn ska var unikt. Det finns redan ett bibliotek med "
+"detta kortnamn."
 
 #: api/admin/problem_details.py:153
 msgid "Missing collection."
@@ -257,8 +257,8 @@ msgstr "Det går inte att radera en samling med barn"
 
 #: api/admin/problem_details.py:168
 msgid ""
-"The collection is the parent of at least one other collection, so it can't "
-"be deleted."
+"The collection is the parent of at least one other collection, so it "
+"can't be deleted."
 msgstr ""
 "Samlingen är förälder till minst en annan samling och kan därför inte "
 "raderas."
@@ -269,10 +269,11 @@ msgstr "Protokoll saknas för ny tjänst"
 
 #: api/admin/problem_details.py:177
 msgid ""
-"The specified service doesn't exist. You can create it, but you must specify"
-" a protocol."
+"The specified service doesn't exist. You can create it, but you must "
+"specify a protocol."
 msgstr ""
-"Denna tjänst finns inte. Du kan skapa den, men du måste ange ett protokoll."
+"Denna tjänst finns inte. Du kan skapa den, men du måste ange ett "
+"protokoll."
 
 #: api/admin/problem_details.py:185
 msgid "Unknown protocol"
@@ -303,10 +304,8 @@ msgid "Protocol does not support parents"
 msgstr "Protokollet stöder inte föräldrar"
 
 #: api/admin/problem_details.py:207
-msgid ""
-"You attempted to add a parent but the protocol does not support parents."
-msgstr ""
-"Du försökte lägga till en förälder men protokollet stöder inte föräldrar."
+msgid "You attempted to add a parent but the protocol does not support parents."
+msgstr "Du försökte lägga till en förälder men protokollet stöder inte föräldrar."
 
 #: api/admin/problem_details.py:215
 msgid "Protocol does not support settings"
@@ -358,11 +357,11 @@ msgstr "Integrationens namn används redan"
 
 #: api/admin/problem_details.py:253
 msgid ""
-"The integration name must be unique, and there's already an integration with"
-" the specified name."
+"The integration name must be unique, and there's already an integration "
+"with the specified name."
 msgstr ""
-"Integrationens namn ska vara unikt. Det finns redan en integration med detta"
-" namn."
+"Integrationens namn ska vara unikt. Det finns redan en integration med "
+"detta namn."
 
 #: api/admin/problem_details.py:261
 msgid "Integration URL already in use"
@@ -378,8 +377,8 @@ msgstr "Integrationen används på ett inkompatibelt sätt"
 
 #: api/admin/problem_details.py:269
 msgid ""
-"You tried to use an integration in a way incompatible with the goal of that "
-"integration"
+"You tried to use an integration in a way incompatible with the goal of "
+"that integration"
 msgstr ""
 "Du försökte använda en integration på ett sätt som är inkompatibelt med "
 "integrationens syfte"
@@ -398,11 +397,11 @@ msgstr "Databastillägget pgcrypto saknas"
 
 #: api/admin/problem_details.py:285
 msgid ""
-"You tried to store a password for an individual admin, but the database does"
-" not have the pgcrypto extension installed."
+"You tried to store a password for an individual admin, but the database "
+"does not have the pgcrypto extension installed."
 msgstr ""
-"Du försökte spara ett lösenord för en enskild administratör, men det finns "
-"inget pgcrypto-tillägg installerat för databasen."
+"Du försökte spara ett lösenord för en enskild administratör, men det "
+"finns inget pgcrypto-tillägg installerat för databasen."
 
 #: api/admin/problem_details.py:293
 msgid "Missing admin"
@@ -469,8 +468,8 @@ msgid ""
 "The specified library identifier restriction regular expression does not "
 "compile."
 msgstr ""
-"Detta reguljära uttryck för begränsning av biblioteksidentifieraren går inte"
-" att kompilera."
+"Detta reguljära uttryck för begränsning av biblioteksidentifieraren går "
+"inte att kompilera."
 
 #: api/admin/problem_details.py:351
 msgid "Multiple basic authentication services"
@@ -500,8 +499,7 @@ msgstr "Inställningsnyckel för webbplatsen saknas"
 
 #: api/admin/problem_details.py:370
 msgid "A key is required to change a sitewide setting."
-msgstr ""
-"Det behövs en nyckel för att ändra en inställning för hela webbplatsen."
+msgstr "Det behövs en nyckel för att ändra en inställning för hela webbplatsen."
 
 #: api/admin/problem_details.py:376
 msgid "Missing sitewide setting value"
@@ -509,8 +507,7 @@ msgstr "Inställningsvärde för hela webbplatsen saknas"
 
 #: api/admin/problem_details.py:377
 msgid "A value is required to change a sitewide setting."
-msgstr ""
-"Det behövs ett värde för att ändra en inställning för hela webbplatsen."
+msgstr "Det behövs ett värde för att ändra en inställning för hela webbplatsen."
 
 #: api/admin/problem_details.py:383
 msgid "Multiple sitewide services"
@@ -518,11 +515,11 @@ msgstr "Flera likadana tjänster för hela webbplatsen"
 
 #: api/admin/problem_details.py:384
 msgid ""
-"You tried to create a new sitewide service, but a sitewide service of the "
-"same type is already configured."
+"You tried to create a new sitewide service, but a sitewide service of the"
+" same type is already configured."
 msgstr ""
-"Du försökte skapa en ny tjänst för hela webbplatsen, men en tjänst för hela "
-"webbplatsen av samma typ har redan konfigurerats."
+"Du försökte skapa en ny tjänst för hela webbplatsen, men en tjänst för "
+"hela webbplatsen av samma typ har redan konfigurerats."
 
 #: api/admin/problem_details.py:392
 msgid "Multiple services for library"
@@ -565,7 +562,8 @@ msgstr "En anpassad lista med automatisk uppdatering kan inte ha poster"
 #: api/admin/problem_details.py:421
 msgid "Entries are automatically managed for auto update custom lists"
 msgstr ""
-"Poster hanteras automatiskt för anpassade listor med automatisk uppdatering"
+"Poster hanteras automatiskt för anpassade listor med automatisk "
+"uppdatering"
 
 #: api/admin/problem_details.py:427
 msgid "Collection not associated with library"
@@ -573,8 +571,8 @@ msgstr "Samlingen är inte associerad med ett bibliotek"
 
 #: api/admin/problem_details.py:428
 msgid ""
-"You can't add a collection to a list unless it is associated with the list's"
-" library."
+"You can't add a collection to a list unless it is associated with the "
+"list's library."
 msgstr ""
 "Du kan inte lägga till en samling till en lista såvida den inte är "
 "associerad med listans bibliotek."
@@ -585,7 +583,8 @@ msgstr "Band saknas"
 
 #: api/admin/problem_details.py:437
 msgid ""
-"The specified lane doesn't exist, or is associated with a different library."
+"The specified lane doesn't exist, or is associated with a different "
+"library."
 msgstr "Detta band finns inte eller är associerat med ett annat bibliotek."
 
 #: api/admin/problem_details.py:445
@@ -666,7 +665,8 @@ msgstr "Posten är ogiltig för biblioteket"
 
 #: api/admin/problem_details.py:511
 msgid ""
-"An entry in the customlist was not valid for the library being shared with."
+"An entry in the customlist was not valid for the library being shared "
+"with."
 msgstr ""
 "En post i den anpassade listan var ogiltig för biblioteket som det delas "
 "med."
@@ -703,3 +703,4 @@ msgstr "%(field)s måste vara större än %(min)s."
 #, python-format
 msgid "%(field)s cannot be greater than %(max)s."
 msgstr "%(field)s får inte vara större än %(max)s."
+

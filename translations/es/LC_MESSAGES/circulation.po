@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2024-03-05 22:39+0200\n"
+"POT-Creation-Date: 2024-04-08 08:44+0300\n"
 "PO-Revision-Date: 2016-06-14 13:24-0400\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -85,11 +85,11 @@ msgstr ""
 msgid "Titles with no available loans will not be displayed in the Catalog view."
 msgstr ""
 
-#: api/circulation.py:507
+#: api/circulation.py:508
 msgid "Ebook Loan Duration (in Days)"
 msgstr ""
 
-#: api/circulation.py:509
+#: api/circulation.py:510
 msgid ""
 "When a patron uses SimplyE to borrow an ebook from this collection, "
 "SimplyE will ask for a loan that lasts this number of days. This must be "
@@ -97,11 +97,11 @@ msgid ""
 "distributor."
 msgstr ""
 
-#: api/circulation.py:522
+#: api/circulation.py:523
 msgid "Default Loan Period (in Days)"
 msgstr ""
 
-#: api/circulation.py:524
+#: api/circulation.py:525
 msgid ""
 "Until it hears otherwise from the distributor, this server will assume "
 "that any given loan for this library from this collection will last this "
@@ -110,7 +110,7 @@ msgid ""
 "affect the actual length of loans."
 msgstr ""
 
-#: api/circulation.py:554
+#: api/circulation.py:555
 #, fuzzy, python-format
 msgid ""
 "Could not map delivery mechanism %(mechanism_name)s to internal delivery "
@@ -119,17 +119,17 @@ msgstr ""
 "No se pudo asignar el mecanismo simplificado de entrega "
 "%(mechanism_name)s al mecanismo de distribución interna!"
 
-#: api/circulation.py:1066
+#: api/circulation.py:1068
 msgid "You cannot renew a loan if other patrons have the work on hold."
 msgstr ""
 "No se puede renovar un préstamo si otros usuarios tienen el trabajo en "
 "espera."
 
-#: api/circulation.py:1338
+#: api/circulation.py:1340
 msgid "Cannot find your active loan for this work."
 msgstr "No puede encontrar su préstamo activo para este trabajo."
 
-#: api/circulation.py:1345
+#: api/circulation.py:1347
 #, python-format
 msgid ""
 "You already fulfilled this loan as %(loan_delivery_mechanism)s, you can't"
@@ -143,11 +143,11 @@ msgstr ""
 msgid "Integration error communicating with %(service_name)s"
 msgstr "Error de integración en la comunicación con %(service_name)s"
 
-#: api/circulation_manager.py:157
+#: api/circulation_manager.py:158
 msgid "Lane does not exist"
 msgstr ""
 
-#: api/circulation_manager.py:375
+#: api/circulation_manager.py:378
 msgid "All Books"
 msgstr ""
 
@@ -242,19 +242,19 @@ msgstr ""
 msgid "Send patrons to the lane with this ID."
 msgstr ""
 
-#: api/ekirjasto_authentication.py:65
+#: api/ekirjasto_authentication.py:69
 msgid "E-kirjasto API environment"
 msgstr ""
 
-#: api/ekirjasto_authentication.py:66
+#: api/ekirjasto_authentication.py:70
 msgid "Select what environment of E-kirjasto accounts should be used."
 msgstr ""
 
-#: api/ekirjasto_authentication.py:83
+#: api/ekirjasto_authentication.py:87
 msgid "Delegate token expire time in seconds"
 msgstr ""
 
-#: api/ekirjasto_authentication.py:84
+#: api/ekirjasto_authentication.py:88
 msgid ""
 "Expire time for a delegate token to authorize in behalf of a ekirjasto "
 "token. This should be less than the expire time for ekirjasto token, so "
@@ -1020,3 +1020,4 @@ msgstr ""
 
 #~ msgid "API key"
 #~ msgstr ""
+

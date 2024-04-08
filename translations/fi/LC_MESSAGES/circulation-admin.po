@@ -7,15 +7,17 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2024-02-19 22:26+0200\n"
+"POT-Creation-Date: 2024-04-08 08:44+0300\n"
 "PO-Revision-Date: 2024-03-01 11:34+0000\n"
-"Language-Team: Finnish (https://app.transifex.com/national-library-of-finland/teams/183401/fi/)\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: fi\n"
+"Language-Team: Finnish (https://app.transifex.com/national-library-of-"
+"finland/teams/183401/fi/)\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.13.0\n"
-"Language: fi\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: api/admin/announcement_list_validator.py:35
 #, python-format
@@ -72,8 +74,7 @@ msgid "Admin auth not configured"
 msgstr "Ylläpitäjän todennusta ei ole määritetty"
 
 #: api/admin/problem_details.py:10
-msgid ""
-"This circulation manager has not been configured to authenticate admins."
+msgid "This circulation manager has not been configured to authenticate admins."
 msgstr "Tätä lainauksen hallintaa ei ole määritetty todentamaan ylläpitäjiä."
 
 #: api/admin/problem_details.py:16
@@ -82,8 +83,8 @@ msgstr "Ylläpitäjän todennusmekanismia ei ole määritetty"
 
 #: api/admin/problem_details.py:17
 msgid ""
-"This circulation manager has not been configured to authenticate admins with"
-" the mechanism you used"
+"This circulation manager has not been configured to authenticate admins "
+"with the mechanism you used"
 msgstr ""
 "Tätä lainauksen hallintaa ei ole määritetty todentamaan ylläpitäjiä "
 "käyttämälläsi mekanismilla"
@@ -226,8 +227,8 @@ msgstr "Kirjaston lyhyt nimi on jo käytössä"
 
 #: api/admin/problem_details.py:145
 msgid ""
-"The library short name must be unique, and there's already a library with "
-"the specified short name."
+"The library short name must be unique, and there's already a library with"
+" the specified short name."
 msgstr ""
 "Kirjaston lyhyen nimen on oltava yksilöllinen, ja kyseisellä lyhyellä "
 "nimellä löytyy jo kirjasto."
@@ -254,8 +255,8 @@ msgstr "Emokokoelmaa ei voi poistaa"
 
 #: api/admin/problem_details.py:168
 msgid ""
-"The collection is the parent of at least one other collection, so it can't "
-"be deleted."
+"The collection is the parent of at least one other collection, so it "
+"can't be deleted."
 msgstr ""
 "Kokoelma on vähintään yhden kokoelman emokokoelma, joten sitä ei voi "
 "poistaa."
@@ -266,8 +267,8 @@ msgstr "Uudella palvelulla ei ole protokollaa"
 
 #: api/admin/problem_details.py:177
 msgid ""
-"The specified service doesn't exist. You can create it, but you must specify"
-" a protocol."
+"The specified service doesn't exist. You can create it, but you must "
+"specify a protocol."
 msgstr ""
 "Määritettyä palvelua ei ole. Voit luoda sen, mutta sinun on määritettävä "
 "protokolla."
@@ -301,8 +302,7 @@ msgid "Protocol does not support parents"
 msgstr "Protokolla ei tue emoprotokollia"
 
 #: api/admin/problem_details.py:207
-msgid ""
-"You attempted to add a parent but the protocol does not support parents."
+msgid "You attempted to add a parent but the protocol does not support parents."
 msgstr "Yritit lisätä emoprotokollan, mutta protokolla ei tue sitä."
 
 #: api/admin/problem_details.py:215
@@ -313,8 +313,7 @@ msgstr "Protokolla ei tue asetuksia"
 msgid ""
 "You attempted to update settings for a protocol that does not support "
 "settings."
-msgstr ""
-"Yritit päivittää sellaisen protokollan asetuksia, joka ei tue asetuksia."
+msgstr "Yritit päivittää sellaisen protokollan asetuksia, joka ei tue asetuksia."
 
 #: api/admin/problem_details.py:224
 msgid "Missing parent"
@@ -354,11 +353,11 @@ msgstr "Integraation nimi on jo käytössä"
 
 #: api/admin/problem_details.py:253
 msgid ""
-"The integration name must be unique, and there's already an integration with"
-" the specified name."
+"The integration name must be unique, and there's already an integration "
+"with the specified name."
 msgstr ""
-"Integraation nimen on oltava yksilöllinen, ja kyseisellä nimellä löytyy jo "
-"integraatio."
+"Integraation nimen on oltava yksilöllinen, ja kyseisellä nimellä löytyy "
+"jo integraatio."
 
 #: api/admin/problem_details.py:261
 msgid "Integration URL already in use"
@@ -374,11 +373,11 @@ msgstr "Integraation yhteensopimaton käyttö"
 
 #: api/admin/problem_details.py:269
 msgid ""
-"You tried to use an integration in a way incompatible with the goal of that "
-"integration"
+"You tried to use an integration in a way incompatible with the goal of "
+"that integration"
 msgstr ""
-"Yritit käyttää integraatiota tavalla, joka ei ole yhteensopiva integraation "
-"tavoitteen kanssa"
+"Yritit käyttää integraatiota tavalla, joka ei ole yhteensopiva "
+"integraation tavoitteen kanssa"
 
 #: api/admin/problem_details.py:277
 msgid "Missing integration"
@@ -394,11 +393,11 @@ msgstr "Tietokannan pgcrypto-laajennus puuttuu"
 
 #: api/admin/problem_details.py:285
 msgid ""
-"You tried to store a password for an individual admin, but the database does"
-" not have the pgcrypto extension installed."
+"You tried to store a password for an individual admin, but the database "
+"does not have the pgcrypto extension installed."
 msgstr ""
-"Yritit tallentaa salasanan yksittäiselle ylläpitäjälle, mutta tietokantaan "
-"ei ole asennettu pgcrypto-laajennusta."
+"Yritit tallentaa salasanan yksittäiselle ylläpitäjälle, mutta "
+"tietokantaan ei ole asennettu pgcrypto-laajennusta."
 
 #: api/admin/problem_details.py:293
 msgid "Missing admin"
@@ -465,8 +464,8 @@ msgid ""
 "The specified library identifier restriction regular expression does not "
 "compile."
 msgstr ""
-"Määritetty kirjaston tunnisteen rajoituksen säännöllinen lauseke ei toimi "
-"oikein."
+"Määritetty kirjaston tunnisteen rajoituksen säännöllinen lauseke ei toimi"
+" oikein."
 
 #: api/admin/problem_details.py:351
 msgid "Multiple basic authentication services"
@@ -512,8 +511,8 @@ msgstr "Useita sivustonlaajuisia palveluja"
 
 #: api/admin/problem_details.py:384
 msgid ""
-"You tried to create a new sitewide service, but a sitewide service of the "
-"same type is already configured."
+"You tried to create a new sitewide service, but a sitewide service of the"
+" same type is already configured."
 msgstr ""
 "Yritit luoda uuden sivustonlaajuisen palvelun, mutta samantyyppinen "
 "sivustonlaajuinen palvelu on jo määritetty."
@@ -541,8 +540,8 @@ msgstr "Mukautetun luettelon kirjastoa ei voi muuttaa"
 #: api/admin/problem_details.py:407
 msgid "A custom list's associated library cannot be changed once it is set.."
 msgstr ""
-"Mukautettuun luetteloon liitettyä kirjastoa ei voi muuttaa sen määrittämisen"
-" jälkeen."
+"Mukautettuun luetteloon liitettyä kirjastoa ei voi muuttaa sen "
+"määrittämisen jälkeen."
 
 #: api/admin/problem_details.py:413
 msgid "Custom list name already in use"
@@ -570,8 +569,8 @@ msgstr "Kokoelmaa ei ole liitetty kirjastoon"
 
 #: api/admin/problem_details.py:428
 msgid ""
-"You can't add a collection to a list unless it is associated with the list's"
-" library."
+"You can't add a collection to a list unless it is associated with the "
+"list's library."
 msgstr ""
 "Et voi lisätä kokoelmaa luetteloon, ellei sitä ole liitetty luettelon "
 "kirjastoon."
@@ -582,7 +581,8 @@ msgstr "Kaista puuttuu"
 
 #: api/admin/problem_details.py:437
 msgid ""
-"The specified lane doesn't exist, or is associated with a different library."
+"The specified lane doesn't exist, or is associated with a different "
+"library."
 msgstr "Määritettyä kaistaa ei ole tai se on yhdistetty toiseen kirjastoon."
 
 #: api/admin/problem_details.py:445
@@ -607,8 +607,7 @@ msgstr "Kaistalla ei ole mukautettuja luetteloita"
 
 #: api/admin/problem_details.py:460
 msgid "A custom lane must have at least one associated list."
-msgstr ""
-"Mukautetulla kaistalla on oltava vähintään yksi siihen liitetty luettelo."
+msgstr "Mukautetulla kaistalla on oltava vähintään yksi siihen liitetty luettelo."
 
 #: api/admin/problem_details.py:466
 msgid "Lane with parent and display name already exists"
@@ -664,9 +663,9 @@ msgstr "Merkintä ei ole voimassa kirjastossa"
 
 #: api/admin/problem_details.py:511
 msgid ""
-"An entry in the customlist was not valid for the library being shared with."
-msgstr ""
-"Mukautetun luettelon merkintä ei ollut voimassa jaettavassa kirjastossa."
+"An entry in the customlist was not valid for the library being shared "
+"with."
+msgstr "Mukautetun luettelon merkintä ei ollut voimassa jaettavassa kirjastossa."
 
 #: api/admin/problem_details.py:519
 msgid "Cannot delete the Custom List share"
@@ -700,3 +699,4 @@ msgstr "%(field)s on oltava suurempi kuin %(min)s."
 #, python-format
 msgid "%(field)s cannot be greater than %(max)s."
 msgstr "%(field)s ei voi olla suurempi kuin %(max)s."
+
