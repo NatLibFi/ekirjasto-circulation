@@ -597,6 +597,21 @@ isort configuration is stored in our [tox.ini](tox.ini) which isort automaticall
 We lint using [autoflake](https://pypi.org/project/autoflake/) to flag and remove any unused import statement. If an
 unused import is needed for some reason it can be ignored with a `#noqa` comment in the code.
 
+## Internationalization (i18n, l10n, flask-pybabel, managing translations)
+
+When adding new translations (with `gettext()` or alias `_()`), make sure to
+update the translation files with:
+
+```bash
+bin/util/collect_translations
+```
+
+Here's what the script does:
+
+1) Collects and generates translations from source files with a custom script.
+2) Creates new translation templates (`*.pot`) with `pybabel extract`
+3) Updates existing translation files (`*.po`) with `pybabel update`
+
 ## Continuous Integration
 
 This project runs all the unit tests through Github Actions for new pull requests and when merging into the default
