@@ -10,6 +10,7 @@ from core.configuration.library import LibrarySettings
 from core.metadata_layer import TimestampData
 from core.model.library import Library
 from core.monitor import Monitor
+from core.util.cache import memoize
 
 
 class KirkantaConsortium(BaseModel):
@@ -95,7 +96,11 @@ class EkirjastoConsortiumMonitor(Monitor):
     _KIRKANTA_JUNK_CITIES: list[str] = ["Äävekaupunki"]
 
     # Manually managed list of Kirkanta city names don't match with Koodistopalvelu
-    KIRKANTA_CITY_NAME_ALIASES: dict[str, str] = {"Pedersöre": "Pedersören kunta"}
+    _KIRKANTA_CITY_NAME_ALIASES: dict[str, str] = {"Pedersöre": "Pedersören kunta"}
+
+    def __init__(self, _db, collection=None, library: Library | None = None):
+        super().__init__(_db, collection)
+        self.library = library
 
     def run_once(self, progress):
         kirkanta_consortiums = self._fetch_kirkanta_consortiums()
@@ -114,8 +119,7 @@ class EkirjastoConsortiumMonitor(Monitor):
             f"will be assigned to the default library."
         )
 
-        libraries = self._db.query(Library).all()
-
+        libraries = [self.library] if self.library else self._db.query(Library).all()
         for library in libraries:
             self._synchronize_library(
                 library, kirkanta_consortiums, kirkanta_cities, koodisto_concept_codes
@@ -127,26 +131,26 @@ class EkirjastoConsortiumMonitor(Monitor):
                 f"The following Kirkanta city names were "
                 f"not found in Koodistopalvelu: {missing_cities}. "
                 f"Please add the missing city names manually to "
-                f"KIRKANTA_CITY_NAME_ALIASES."
+                f"_KIRKANTA_CITY_NAME_ALIASES."
             )
         return TimestampData(
             achievements=f"Kirkanta synchronization done!",
         )
 
     def _fetch_kirkanta_cities(self) -> list[KirkantaCity]:
-        return self._get(
+        return EkirjastoConsortiumMonitor._get(
             KirkantaCities, f"{self._KIRKANTA_API_URL}/city", {"limit": 9999}
         ).items
 
     def _fetch_kirkanta_consortiums(self) -> list[KirkantaConsortium]:
-        return self._get(
+        return EkirjastoConsortiumMonitor._get(
             KirkantaConsortiums,
             f"{self._KIRKANTA_API_URL}/consortium",
             {"status": "ACTIVE", "limit": 9999},
         ).items
 
     def _fetch_koodisto_concept_codes(self, page: int = 1) -> list[KoodistoConceptCode]:
-        response: KoodistoConceptCodes = self._get(
+        response: KoodistoConceptCodes = EkirjastoConsortiumMonitor._get(
             KoodistoConceptCodes,
             f"{self._KOODISTO_API_URL}/classifications/{self._KOODISTO_CLASSIFICATION_ID}/conceptcodes",
             {"pageSize": self._KOODISTO_MAX_ALLOWED_PAGESIZE, "page": page},
@@ -252,7 +256,7 @@ class EkirjastoConsortiumMonitor(Monitor):
         if missing_names:
             logging.warning(
                 "The following Kirkanta city names are not found in Koodistopalvelu: %s. "
-                "Please add the missing city name manually to KIRKANTA_CITY_NAME_ALIASES.",
+                "Please add the missing city name manually to _KIRKANTA_CITY_NAME_ALIASES.",
                 str(missing_names),
             )
             return missing_names
@@ -270,7 +274,7 @@ class EkirjastoConsortiumMonitor(Monitor):
             if koodisto_city_name == kirkanta_city.name:
                 return code
 
-            alias: str | None = self.KIRKANTA_CITY_NAME_ALIASES.get(
+            alias: str | None = self._KIRKANTA_CITY_NAME_ALIASES.get(
                 kirkanta_city.name,
             )
             if alias and koodisto_city_name == alias:
@@ -280,7 +284,9 @@ class EkirjastoConsortiumMonitor(Monitor):
 
     R = TypeVar("R", bound=BaseModel)
 
-    def _get(self, response_type: type[R], url: str, params=None) -> R:
+    @memoize(ttls=3600)
+    @staticmethod
+    def _get(response_type: type[R], url: str, params=None) -> R:
         """Perform HTTP GET request and parse the response into a pydantic model of type R"""
         try:
             response = requests.get(url, params)

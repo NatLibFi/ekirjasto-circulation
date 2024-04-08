@@ -18,6 +18,7 @@ from api.admin.form_data import ProcessFormData
 from api.admin.problem_details import *
 from api.circulation_manager import CirculationManager
 from api.config import Configuration
+from api.ekirjasto_consortium import EkirjastoConsortiumMonitor
 from api.lanes import create_default_lanes
 from core.configuration.library import LibrarySettings
 from core.model import (
@@ -31,6 +32,7 @@ from core.model import (
 from core.model.announcements import SETTING_NAME as ANNOUNCEMENT_SETTING_NAME
 from core.model.announcements import Announcement
 from core.model.library import LibraryLogo
+from core.scripts import RunMonitorScript
 from core.util.problem_detail import ProblemDetail, ProblemError
 
 
@@ -158,6 +160,11 @@ class LibrarySettingsController(AdminPermissionsControllerMixin):
 
         # Trigger a site configuration change
         site_configuration_has_changed(self._db)
+
+        # Finland, update municipality list if consortium is defined
+        consortium = library.settings.kirkanta_consortium_slug
+        if consortium and consortium != "disabled":
+            RunMonitorScript(EkirjastoConsortiumMonitor, library=library).run()
 
         if is_new:
             # Now that the configuration settings are in place, create
