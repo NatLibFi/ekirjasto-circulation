@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2024-03-05 22:39+0200\n"
+"POT-Creation-Date: 2024-04-08 08:44+0300\n"
 "PO-Revision-Date: 2016-06-14 13:24-0400\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -110,15 +110,15 @@ msgid ""
 "related errors."
 msgstr ""
 
-#: core/entrypoint.py:103 core/facets.py:116 core/facets.py:120
+#: core/entrypoint.py:107 core/facets.py:116 core/facets.py:120
 msgid "All"
 msgstr ""
 
-#: core/entrypoint.py:140
+#: core/entrypoint.py:144
 msgid "eBooks"
 msgstr ""
 
-#: core/entrypoint.py:149
+#: core/entrypoint.py:153
 msgid "Audiobooks"
 msgstr ""
 
@@ -1107,3 +1107,4 @@ msgstr "El servidor hizo una petici√≥n al servicio (%) s, y esa solicitud expir√
 
 #~ msgid "Self tests will use this value as the search term."
 #~ msgstr ""
+
