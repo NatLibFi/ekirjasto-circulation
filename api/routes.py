@@ -214,6 +214,20 @@ def library_dir_route(path, *args, **kwargs):
     return decorator
 
 
+def disable_cache(f):
+    """Decorator to disable cache."""
+
+    @wraps(f)
+    def decorator(*args, **kwargs):
+        response = f(*args, **kwargs)
+        if isinstance(response, ProblemDetail):
+            response = make_response(response.response)
+        response.headers["Cache-Control"] = "no-store, max-age=0"
+        return response
+
+    return decorator
+
+
 @library_route("/", strict_slashes=False)
 @has_library
 @allows_patron_web
@@ -590,24 +604,35 @@ def ekirjasto_authenticate():
 
 
 # Finland
-# Authenticate with the ekirjasto token.
+# Get decrypted ekirjasto token from the circulation token.
+@library_route("/ekirjasto_token", methods=["GET"])
+@has_library
+@returns_problem_detail
+@disable_cache
+def ekirjasto_token():
+    return app.manager.ekirjasto_controller.get_decrypted_ekirjasto_token(request)
+
+
+# Finland
+# Call E-kirjasto API's /passkey/register/start endpoint.
 @library_route("/ekirjasto/passkey/register/start", methods=["POST"])
 @has_library
 @returns_problem_detail
+@disable_cache
 def ekirjasto_passkey_register_start():
     return app.manager.ekirjasto_controller.call_remote_endpoint(
-        "/v1/auth/passkey/register/start", request, app.manager._db
+        "/v1/auth/passkey/register/start", request
     )
 
 
 # Finland
-# Authenticate with the ekirjasto token.
+# Call E-kirjasto API's /passkey/register/finish endpoint.
 @library_route("/ekirjasto/passkey/register/finish", methods=["POST"])
 @has_library
 @returns_problem_detail
 def ekirjasto_passkey_register_finish():
     return app.manager.ekirjasto_controller.call_remote_endpoint(
-        "/v1/auth/passkey/register/finish", request, app.manager._db
+        "/v1/auth/passkey/register/finish", request
     )
 
 
