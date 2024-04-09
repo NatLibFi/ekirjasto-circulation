@@ -117,6 +117,7 @@ class FacetConstants:
         AVAILABLE_OPEN_ACCESS: _("Yours to keep"),
         COLLECTION_FULL: _("Everything"),
         COLLECTION_FEATURED: _("Popular Books"),
+        COLLECTION_NAME_ALL: _("All"),
         LANGUAGE_ALL: _("All"),
         LANGUAGE_FINNISH: _("Finnish"),
         LANGUAGE_SWEDISH: _("Swedish"),

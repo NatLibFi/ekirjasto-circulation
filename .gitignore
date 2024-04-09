@@ -51,6 +51,7 @@ coverage.json
 
 # Translations
 *.mo
+messages.po
 
 # Mr Developer
 .mr.developer.cfg

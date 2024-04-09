@@ -239,20 +239,20 @@ msgstr "Populära böcker"
 
 #: core/facets.py:121
 msgid "Finnish"
-msgstr ""
+msgstr "finska"
 
 #: core/facets.py:122
 msgid "Swedish"
-msgstr ""
+msgstr "svenska"
 
 #: core/facets.py:123
 msgid "English"
-msgstr ""
+msgstr "engelska"
 
 #: core/facets.py:124
 #, fuzzy
 msgid "Others"
-msgstr "Datorer"
+msgstr "Andra"
 
 #: core/lane.py:386
 #, python-format
