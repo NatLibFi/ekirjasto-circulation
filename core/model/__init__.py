@@ -515,6 +515,7 @@ from api.saml.metadata.federations.model import (
     SAMLFederation,
 )
 from core.model.admin import Admin, AdminRole
+from core.model.apitokens import ApiToken
 from core.model.circulationevent import CirculationEvent
 from core.model.classification import Classification, Genre, Subject
 from core.model.collection import (
