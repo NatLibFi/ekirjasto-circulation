@@ -172,7 +172,7 @@ msgstr "Kokoelman nimi"
 
 #: core/facets.py:94
 msgid "Language"
-msgstr ""
+msgstr "Kieli"
 
 #: core/facets.py:98
 msgid "Allow patrons to sort by"
@@ -241,20 +241,19 @@ msgstr "Suositut kirjat"
 
 #: core/facets.py:121
 msgid "Finnish"
-msgstr ""
+msgstr "suomi"
 
 #: core/facets.py:122
 msgid "Swedish"
-msgstr ""
+msgstr "ruotsi"
 
 #: core/facets.py:123
 msgid "English"
-msgstr ""
+msgstr "englanti"
 
 #: core/facets.py:124
-#, fuzzy
 msgid "Others"
-msgstr "Tietokoneet"
+msgstr "Muut"
 
 #: core/lane.py:386
 #, python-format
