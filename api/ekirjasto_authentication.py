@@ -648,9 +648,7 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
             # Permanent ID is the most reliable way of identifying
             # a patron, since this is supposed to be an internal
             # ID that never changes.
-            lookup = dict(
-                external_identifier=patrondata.permanent_id, library_id=self.library_id
-            )
+            lookup = dict(external_identifier=patrondata.permanent_id)
 
             patron = get_one(_db, Patron, **lookup)
 
@@ -672,23 +670,38 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
         ):
             auth_result = self.authenticate_and_update_patron(_db, ekirjasto_token)
 
+        if auth_result is None or isinstance(auth_result, ProblemDetail):
+            return auth_result, False
+
+        patron_library = Library.lookup_by_municipality(
+            _db, auth_result.cached_neighborhood
+        )
+
+        if not patron_library:
+            raise InternalServerError(
+                "Could not determine library for municipality. No libraries created in the system yet?"
+            )
+
         if isinstance(auth_result, PatronData):
             # We didn't find the patron, but authentication to external truth was
             # successful, so we create a new patron with the information we have.
+
+            # E-kirjasto users are not tied to a library
             new_patron, is_new = auth_result.get_or_create_patron(
-                _db, self.library_id, analytics=self.analytics
+                _db,
+                library_id=None,
+                analytics=self.analytics,
+                create_method_kwargs=dict(library_id=patron_library.id),
             )
             new_patron.last_external_sync = utc_now()
-            self._update_patron_library(_db, new_patron)
             return new_patron, is_new
 
-        if isinstance(auth_result, Patron):
-            self._update_patron_library(_db, auth_result)
-        return auth_result, is_new
+        # Update patron library if changed. In practice this means that patron
+        # has moved to another kimppa
+        if patron_library.id != auth_result.library.id:
+            auth_result.library = patron_library
 
-    def _update_patron_library(self, _db: Session, patron: Patron):
-        """Assigns the patron to a library based on municipality"""
-        patron.library = Library.lookup_by_municipality(_db, patron.cached_neighborhood)
+        return auth_result, is_new
 
     def authenticated_patron(
         self, _db: Session, authorization: dict | str
