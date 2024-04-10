@@ -404,7 +404,9 @@ class PatronData:
             value = None
         setattr(patron, field_name, value)
 
-    def get_or_create_patron(self, _db, library_id, analytics=None):
+    def get_or_create_patron(
+        self, _db, library_id, analytics=None, create_method_kwargs=None
+    ):
         """Create a Patron with this information.
 
         TODO: I'm concerned in the general case with race
@@ -449,7 +451,9 @@ class PatronData:
             )
         search_by["library_id"] = library_id
         __transaction = _db.begin_nested()
-        patron, is_new = get_one_or_create(_db, Patron, **search_by)
+        patron, is_new = get_one_or_create(
+            _db, Patron, **search_by, create_method_kwargs=create_method_kwargs
+        )
 
         if is_new and analytics:
             # Send out an analytics event to record the fact
