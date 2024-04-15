@@ -54,7 +54,7 @@ from core.util.problem_detail import ProblemDetail
 class EkirjastoEnvironment(Enum):
     FAKE = "http://localhost"
     DEVELOPMENT = "https://e-kirjasto.loikka.dev"
-    PRODUCTION = "https://tunnus.e-kirjasto.fi"
+    PRODUCTION = "https://tunnistus.e-kirjasto.fi"
 
 
 class EkirjastoAuthAPISettings(AuthProviderSettings):
