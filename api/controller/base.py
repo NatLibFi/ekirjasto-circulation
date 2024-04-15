@@ -120,4 +120,16 @@ class BaseCirculationManagerController(LoggerMixin):
         if not library:
             return LIBRARY_NOT_FOUND
         flask.request.library = library
+
+        # Finland: For authenticated patrons, override the library defined in the request
+        # and use the library assigned to that patron.
+        #
+        # This is a bit sketchy as the authentication requires library to be set already.
+        # So in practice the library in the URL path is used for authentication, but after
+        # that the request is performed with the patron's assigned library.
+        patron = self.manager.index_controller.authenticated_patron_from_request()
+        if isinstance(patron, Patron):
+            library = patron.library
+            flask.request.library = patron.library
+
         return library
