@@ -13,6 +13,7 @@ class LocalAnalyticsProvider(LoggerMixin):
         time,
         old_value=None,
         new_value=None,
+        neighborhood: str | None = None,
         duration: int | None = None,
         **kwargs
     ):
@@ -30,6 +31,7 @@ class LocalAnalyticsProvider(LoggerMixin):
             old_value,
             new_value,
             start=time,
+            location=neighborhood,
             duration=duration,
             library=library,
         )

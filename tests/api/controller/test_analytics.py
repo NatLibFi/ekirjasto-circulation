@@ -33,7 +33,7 @@ class TestAnalyticsController:
             assert INVALID_ANALYTICS_EVENT_TYPE.uri == response.uri
 
         patron = db.patron()
-        patron.neighborhood = "Mars Grid 4810579"
+        patron.cached_neighborhood = "Mars Grid 4810579"
         with analytics_fixture.request_context_with_library("/"):
             flask.request.patron = patron  # type: ignore
             response = analytics_fixture.manager.analytics_controller.track_event(
@@ -51,6 +51,6 @@ class TestAnalyticsController:
             )
             assert circulation_event is not None
             assert (
-                circulation_event.location == None
-            )  # We no longer use the location source
+                circulation_event.location == "Mars Grid 4810579"
+            )  # Finland: We store municipality codes to events
             db.session.delete(circulation_event)

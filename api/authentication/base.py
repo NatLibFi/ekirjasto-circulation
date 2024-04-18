@@ -458,7 +458,12 @@ class PatronData:
         if is_new and analytics:
             # Send out an analytics event to record the fact
             # that a new patron was created.
-            analytics.collect_event(patron.library, None, CirculationEvent.NEW_PATRON)
+            analytics.collect_event(
+                patron.library,
+                None,
+                CirculationEvent.NEW_PATRON,
+                include_neighborhood=True,
+            )
 
         # This makes sure the Patron is brought into sync with the
         # other fields of this PatronData object, regardless of

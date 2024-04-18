@@ -888,7 +888,9 @@ class CirculationAPI:
             and request_patron
             and request_patron == patron
         ):
-            neighborhood = getattr(request_patron, "neighborhood", None)
+            neighborhood = getattr(request_patron, "neighborhood", None) or getattr(
+                request_patron, "cached_neighborhood", None
+            )  # Finland: add cached_neighborhood option
 
         self.analytics.collect_event(
             library, licensepool, name, neighborhood=neighborhood, duration=duration
@@ -1174,7 +1176,12 @@ class CirculationAPI:
             # Send out an analytics event to record the fact that
             # a hold was initiated through the circulation
             # manager.
-            self._collect_event(patron, licensepool, CirculationEvent.CM_HOLD_PLACE)
+            self._collect_event(
+                patron,
+                licensepool,
+                CirculationEvent.CM_HOLD_PLACE,
+                include_neighborhood=True,
+            )
 
         if existing_loan:
             self._db.delete(existing_loan)
@@ -1428,7 +1435,11 @@ class CirculationAPI:
             # a loan was revoked through the circulation
             # manager.
             self._collect_event(
-                patron, licensepool, CirculationEvent.CM_CHECKIN, False, duration
+                patron,
+                licensepool,
+                CirculationEvent.CM_CHECKIN,
+                include_neighborhood=True,
+                duration=duration,
             )
 
         # Any other CannotReturn exception will be propagated upwards
@@ -1470,6 +1481,7 @@ class CirculationAPI:
                 patron,
                 licensepool,
                 CirculationEvent.CM_HOLD_RELEASE,
+                include_neighborhood=True,
             )
 
         return True
