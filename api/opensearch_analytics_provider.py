@@ -248,6 +248,7 @@ class OpenSearchAnalyticsProvider(LocalAnalyticsProvider):
         time,
         old_value=None,
         new_value=None,
+        neighborhood: str | None = None,
         duration: int | None = None,
         **kwargs,
     ):
@@ -277,6 +278,9 @@ class OpenSearchAnalyticsProvider(LocalAnalyticsProvider):
         :param new_value: New value of the metric changed by the event
         :type new_value: Any
 
+        :param neighborhood: Geographic location of the event (most often municipality code)
+        :type neighborhood: str
+
         :param duration: Duration of the event in seconds
         :type duration: int
         """
@@ -291,7 +295,7 @@ class OpenSearchAnalyticsProvider(LocalAnalyticsProvider):
             time,
             old_value,
             new_value,
-            None,
+            neighborhood,
             duration,
         )
 

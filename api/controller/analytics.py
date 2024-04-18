@@ -22,7 +22,9 @@ class AnalyticsController(CirculationManagerController):
             patron = getattr(flask.request, "patron", None)
             neighborhood = None
             if patron:
-                neighborhood = getattr(patron, "neighborhood", None)
+                neighborhood = getattr(patron, "neighborhood", None) or getattr(
+                    patron, "cached_neighborhood", None
+                )  # Finland: add cached_neighborhood option
             pools = self.load_licensepools(library, identifier_type, identifier)
             if isinstance(pools, ProblemDetail):
                 return pools
