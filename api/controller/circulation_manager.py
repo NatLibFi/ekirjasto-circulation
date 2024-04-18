@@ -6,7 +6,7 @@ import flask
 import pytz
 from flask import Response
 from flask_babel import lazy_gettext as _
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session, eagerload
 
 from api.controller.base import BaseCirculationManagerController
@@ -30,6 +30,7 @@ from core.model import (
     Loan,
     get_one,
 )
+from core.model.library import Library
 from core.problem_details import INVALID_INPUT
 from core.util.problem_detail import ProblemDetail
 
@@ -209,7 +210,12 @@ class CirculationManagerController(BaseCirculationManagerController):
                 .where(
                     Identifier.type == identifier_type,
                     Identifier.identifier == identifier,
-                    IntegrationLibraryConfiguration.library_id == library.id,
+                    or_(
+                        IntegrationLibraryConfiguration.library_id == library.id,
+                        # Finland, collections from default library also included
+                        IntegrationLibraryConfiguration.library_id
+                        == Library.default(_db).id,
+                    ),
                 )
             )
             .unique()
