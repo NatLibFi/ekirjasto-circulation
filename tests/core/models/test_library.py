@@ -178,7 +178,7 @@ Configuration settings:
 -----------------------
 website='http://library.com'
 allow_holds='True'
-enabled_entry_points='['Book']'
+enabled_entry_points='['All', 'Book', 'Audio']'
 featured_lane_size='15'
 minimum_featured_quality='0.65'
 facets_enabled_order='['author', 'title', 'added']'
