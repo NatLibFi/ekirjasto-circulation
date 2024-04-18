@@ -1,4 +1,5 @@
 from flask_babel import lazy_gettext as _
+from flask_babel import lazy_pgettext
 
 
 class FacetConstants:
@@ -118,11 +119,11 @@ class FacetConstants:
         COLLECTION_FULL: _("Everything"),
         COLLECTION_FEATURED: _("Popular Books"),
         COLLECTION_NAME_ALL: _("All"),
-        LANGUAGE_ALL: _("All"),
-        LANGUAGE_FINNISH: _("Finnish"),
-        LANGUAGE_SWEDISH: _("Swedish"),
-        LANGUAGE_ENGLISH: _("English"),
-        LANGUAGE_OTHERS: _("Others"),
+        LANGUAGE_ALL: lazy_pgettext("language", "All"),
+        LANGUAGE_FINNISH: lazy_pgettext("language", "Finnish"),
+        LANGUAGE_SWEDISH: lazy_pgettext("language", "Swedish"),
+        LANGUAGE_ENGLISH: lazy_pgettext("language", "English"),
+        LANGUAGE_OTHERS: lazy_pgettext("language", "Others"),
     }
 
     # For titles generated based on some runtime value

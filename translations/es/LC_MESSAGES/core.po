@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2024-04-08 08:44+0300\n"
+"POT-Creation-Date: 2024-04-18 13:04+0300\n"
 "PO-Revision-Date: 2016-06-14 13:24-0400\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -110,7 +110,7 @@ msgid ""
 "related errors."
 msgstr ""
 
-#: core/entrypoint.py:107 core/facets.py:116 core/facets.py:120
+#: core/entrypoint.py:107 core/facets.py:117 core/facets.py:121
 msgid "All"
 msgstr ""
 
@@ -127,107 +127,116 @@ msgstr ""
 msgid "Invalid page key: %(key)s"
 msgstr "Tamaño de página inválido: %(size)s"
 
-#: core/facets.py:89
+#: core/facets.py:90
 msgid "Sort by"
 msgstr ""
 
-#: core/facets.py:90
+#: core/facets.py:91
 msgid "Availability"
 msgstr ""
 
-#: core/facets.py:91
+#: core/facets.py:92
 msgid "Collection"
 msgstr ""
 
-#: core/facets.py:92
+#: core/facets.py:93
 msgid "Distributor"
 msgstr ""
 
-#: core/facets.py:93
+#: core/facets.py:94
 msgid "Collection Name"
 msgstr ""
 
-#: core/facets.py:94
+#: core/facets.py:95
 msgid "Language"
 msgstr ""
 
-#: core/facets.py:98
+#: core/facets.py:99
 msgid "Allow patrons to sort by"
 msgstr ""
 
-#: core/facets.py:99
+#: core/facets.py:100
 msgid "Allow patrons to filter availability to"
 msgstr ""
 
-#: core/facets.py:100
+#: core/facets.py:101
 msgid "Allow patrons to filter collection to"
 msgstr ""
 
-#: core/facets.py:101
+#: core/facets.py:102
 msgid "Allow patrons to filter by distributor"
 msgstr ""
 
-#: core/facets.py:102
+#: core/facets.py:103
 msgid "Allow patrons to filter by collection name"
 msgstr ""
 
-#: core/facets.py:105
+#: core/facets.py:106
 msgid "Allow patrons to filter by language"
 msgstr ""
 
-#: core/facets.py:109
+#: core/facets.py:110
 msgid "Title"
 msgstr ""
 
-#: core/facets.py:110
+#: core/facets.py:111
 msgid "Author"
 msgstr ""
 
-#: core/facets.py:111
+#: core/facets.py:112
 msgid "Last Update"
 msgstr ""
 
-#: core/facets.py:112
+#: core/facets.py:113
 msgid "Recently Added"
 msgstr ""
 
-#: core/facets.py:113
+#: core/facets.py:114
 msgid "Series Position"
 msgstr ""
 
-#: core/facets.py:114
+#: core/facets.py:115
 msgid "Work ID"
 msgstr ""
 
-#: core/facets.py:115
+#: core/facets.py:116
 msgid "Available now"
 msgstr ""
 
-#: core/facets.py:117
+#: core/facets.py:118
 msgid "Yours to keep"
 msgstr ""
 
-#: core/facets.py:118
+#: core/facets.py:119
 msgid "Everything"
 msgstr ""
 
-#: core/facets.py:119
+#: core/facets.py:120
 msgid "Popular Books"
 msgstr ""
 
-#: core/facets.py:121
-msgid "Finnish"
-msgstr ""
-
 #: core/facets.py:122
-msgid "Swedish"
+msgctxt "language"
+msgid "All"
 msgstr ""
 
 #: core/facets.py:123
-msgid "English"
+msgctxt "language"
+msgid "Finnish"
 msgstr ""
 
 #: core/facets.py:124
+msgctxt "language"
+msgid "Swedish"
+msgstr ""
+
+#: core/facets.py:125
+msgctxt "language"
+msgid "English"
+msgstr ""
+
+#: core/facets.py:126
+msgctxt "language"
 msgid "Others"
 msgstr ""
 
@@ -1106,5 +1115,25 @@ msgstr "El servidor hizo una petición al servicio (%) s, y esa solicitud expir�
 #~ msgstr ""
 
 #~ msgid "Self tests will use this value as the search term."
+#~ msgstr ""
+
+#~ msgctxt "language"
+#~ msgid "Finnish"
+#~ msgstr ""
+
+#~ msgctxt "language"
+#~ msgid "Swedish"
+#~ msgstr ""
+
+#~ msgctxt "language"
+#~ msgid "English"
+#~ msgstr ""
+
+#~ msgctxt "language"
+#~ msgid "Others"
+#~ msgstr ""
+
+#~ msgctxt "language"
+#~ msgid "All"
 #~ msgstr ""
 

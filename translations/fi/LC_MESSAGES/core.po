@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2024-04-08 08:44+0300\n"
+"POT-Creation-Date: 2024-04-18 13:04+0300\n"
 "PO-Revision-Date: 2024-03-01 11:37+0000\n"
 "Last-Translator: Marika Kaskinen, 2024\n"
 "Language: fi\n"
@@ -133,7 +133,7 @@ msgstr ""
 "Kuinka monta kertaa pyyntöä voi enintään yrittää uudelleen tietyissä "
 "yhteyteen liittyvissä virheissä."
 
-#: core/entrypoint.py:107 core/facets.py:116 core/facets.py:120
+#: core/entrypoint.py:107 core/facets.py:117 core/facets.py:121
 msgid "All"
 msgstr "Kaikki"
 
@@ -150,110 +150,120 @@ msgstr "Äänikirjat"
 msgid "Invalid page key: %(key)s"
 msgstr "Virheellinen sivuavain: %(key)s"
 
-#: core/facets.py:89
+#: core/facets.py:90
 msgid "Sort by"
 msgstr "Lajitteluperuste"
 
-#: core/facets.py:90
+#: core/facets.py:91
 msgid "Availability"
 msgstr "Saatavuus"
 
-#: core/facets.py:91
+#: core/facets.py:92
 msgid "Collection"
 msgstr "Kokoelma"
 
-#: core/facets.py:92
+#: core/facets.py:93
 msgid "Distributor"
 msgstr "Jakelija"
 
-#: core/facets.py:93
+#: core/facets.py:94
 msgid "Collection Name"
 msgstr "Kokoelman nimi"
 
-#: core/facets.py:94
+#: core/facets.py:95
 msgid "Language"
 msgstr "Kieli"
 
-#: core/facets.py:98
+#: core/facets.py:99
 msgid "Allow patrons to sort by"
 msgstr "Salli asiakkaiden lajitella seuraavan mukaan"
 
-#: core/facets.py:99
+#: core/facets.py:100
 msgid "Allow patrons to filter availability to"
 msgstr "Salli asiakkaiden suodattaa saatavuus"
 
-#: core/facets.py:100
+#: core/facets.py:101
 msgid "Allow patrons to filter collection to"
 msgstr "Salli asiakkaiden suodattaa kokoelma"
 
-#: core/facets.py:101
+#: core/facets.py:102
 msgid "Allow patrons to filter by distributor"
 msgstr "Salli asiakkaiden suodattaa jakelijan mukaan"
 
-#: core/facets.py:102
+#: core/facets.py:103
 msgid "Allow patrons to filter by collection name"
 msgstr "Salli asiakkaiden suodattaa kokoelman nimen mukaan"
 
-#: core/facets.py:105
+#: core/facets.py:106
 #, fuzzy
 msgid "Allow patrons to filter by language"
 msgstr "Salli asiakkaiden suodattaa jakelijan mukaan"
 
-#: core/facets.py:109
+#: core/facets.py:110
 msgid "Title"
 msgstr "Nimi"
 
-#: core/facets.py:110
+#: core/facets.py:111
 msgid "Author"
 msgstr "Tekijä"
 
-#: core/facets.py:111
+#: core/facets.py:112
 msgid "Last Update"
 msgstr "Viimeisin päivitys"
 
-#: core/facets.py:112
+#: core/facets.py:113
 msgid "Recently Added"
 msgstr "Äskettäin lisätty"
 
-#: core/facets.py:113
+#: core/facets.py:114
 msgid "Series Position"
 msgstr "Sarjan sijainti"
 
-#: core/facets.py:114
+#: core/facets.py:115
 msgid "Work ID"
 msgstr "Työn tunnus"
 
-#: core/facets.py:115
+#: core/facets.py:116
 msgid "Available now"
 msgstr "Saatavilla nyt"
 
-#: core/facets.py:117
+#: core/facets.py:118
 msgid "Yours to keep"
 msgstr "Voit pitää tämän"
 
-#: core/facets.py:118
+#: core/facets.py:119
 msgid "Everything"
 msgstr "Kaikki"
 
-#: core/facets.py:119
+#: core/facets.py:120
 msgid "Popular Books"
 msgstr "Suositut kirjat"
 
-#: core/facets.py:121
+#: core/facets.py:122
+#, fuzzy
+msgctxt "language"
+msgid "All"
+msgstr "kaikki"
+
+#: core/facets.py:123
+msgctxt "language"
 msgid "Finnish"
 msgstr "suomi"
 
-#: core/facets.py:122
+#: core/facets.py:124
+msgctxt "language"
 msgid "Swedish"
 msgstr "ruotsi"
 
-#: core/facets.py:123
+#: core/facets.py:125
+msgctxt "language"
 msgid "English"
 msgstr "englanti"
 
-#: core/facets.py:124
+#: core/facets.py:126
+msgctxt "language"
 msgid "Others"
-msgstr "Muut"
+msgstr "muut"
 
 #: core/lane.py:386
 #, python-format
@@ -1105,29 +1115,4 @@ msgstr "Aikakatkaisu"
 #, python-format
 msgid "The server made a request to %(service)s, and that request timed out."
 msgstr "Palvelin teki pyynnön palveluun %(service)s, ja pyyntö aikakatkaistiin."
-
-#~ msgid "Index prefix"
-#~ msgstr "Hakemiston etuliite"
-
-#~ msgid ""
-#~ "Any Search indexes needed for this "
-#~ "application will be created with this"
-#~ " unique prefix. In most cases, the"
-#~ " default will work fine. You may "
-#~ "need to change this if you have"
-#~ " multiple application servers using a "
-#~ "single Search server."
-#~ msgstr ""
-#~ "Kaikki tämän sovelluksen tarvitsemat "
-#~ "hakuindeksit luodaan tällä yksilöllisellä "
-#~ "etuliitteellä. Useimmissa tapauksissa oletusarvo "
-#~ "toimii hyvin. Tätä on ehkä muutettava,"
-#~ " jos useat sovelluspalvelimet käyttävät "
-#~ "yhtä hakupalvelinta."
-
-#~ msgid "Test search term"
-#~ msgstr "Testin hakusana"
-
-#~ msgid "Self tests will use this value as the search term."
-#~ msgstr "Itsetestit käyttävät tätä arvoa hakusanana."
 

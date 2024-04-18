@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2024-04-08 08:44+0300\n"
+"POT-Creation-Date: 2024-04-18 13:04+0300\n"
 "PO-Revision-Date: 2024-03-01 11:37+0000\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: sv\n"
@@ -131,7 +131,7 @@ msgstr ""
 "Det maximala antalet gånger du kan försöka begära vissa "
 "anslutningsrelaterade fel på nytt."
 
-#: core/entrypoint.py:107 core/facets.py:116 core/facets.py:120
+#: core/entrypoint.py:107 core/facets.py:117 core/facets.py:121
 msgid "All"
 msgstr "Alla"
 
@@ -148,111 +148,120 @@ msgstr "Ljudböcker"
 msgid "Invalid page key: %(key)s"
 msgstr "Ogiltig sidnyckel: %(key)s"
 
-#: core/facets.py:89
+#: core/facets.py:90
 msgid "Sort by"
 msgstr "Sortera efter"
 
-#: core/facets.py:90
+#: core/facets.py:91
 msgid "Availability"
 msgstr "Tillgänglighet"
 
-#: core/facets.py:91
+#: core/facets.py:92
 msgid "Collection"
 msgstr "Samling"
 
-#: core/facets.py:92
+#: core/facets.py:93
 msgid "Distributor"
 msgstr "Distributör"
 
-#: core/facets.py:93
+#: core/facets.py:94
 msgid "Collection Name"
 msgstr "Samlingens namn"
 
-#: core/facets.py:94
+#: core/facets.py:95
 msgid "Language"
-msgstr ""
+msgstr "Språk"
 
-#: core/facets.py:98
+#: core/facets.py:99
 msgid "Allow patrons to sort by"
 msgstr "Tillåt kunder sortera efter"
 
-#: core/facets.py:99
+#: core/facets.py:100
 msgid "Allow patrons to filter availability to"
 msgstr "Tillåt kunder sortera tillgängligheten"
 
-#: core/facets.py:100
+#: core/facets.py:101
 msgid "Allow patrons to filter collection to"
 msgstr "Tillåt kunder sortera samlingen"
 
-#: core/facets.py:101
+#: core/facets.py:102
 msgid "Allow patrons to filter by distributor"
 msgstr "Tillåt kunder sortera efter distributör"
 
-#: core/facets.py:102
+#: core/facets.py:103
 msgid "Allow patrons to filter by collection name"
 msgstr "Tillåt kunder sortera efter samlingens namn"
 
-#: core/facets.py:105
+#: core/facets.py:106
 #, fuzzy
 msgid "Allow patrons to filter by language"
 msgstr "Tillåt kunder sortera efter distributör"
 
-#: core/facets.py:109
+#: core/facets.py:110
 msgid "Title"
 msgstr "Titel"
 
-#: core/facets.py:110
+#: core/facets.py:111
 msgid "Author"
 msgstr "Författare"
 
-#: core/facets.py:111
+#: core/facets.py:112
 msgid "Last Update"
 msgstr "Senaste uppdatering"
 
-#: core/facets.py:112
+#: core/facets.py:113
 msgid "Recently Added"
 msgstr "Nyligen tillagd"
 
-#: core/facets.py:113
+#: core/facets.py:114
 msgid "Series Position"
 msgstr "Seriens position"
 
-#: core/facets.py:114
+#: core/facets.py:115
 msgid "Work ID"
 msgstr "Jobbets ID"
 
-#: core/facets.py:115
+#: core/facets.py:116
 msgid "Available now"
 msgstr "Tillgänglig nu"
 
-#: core/facets.py:117
+#: core/facets.py:118
 msgid "Yours to keep"
 msgstr "Du kan behålla den"
 
-#: core/facets.py:118
+#: core/facets.py:119
 msgid "Everything"
 msgstr "Allt"
 
-#: core/facets.py:119
+#: core/facets.py:120
 msgid "Popular Books"
 msgstr "Populära böcker"
 
-#: core/facets.py:121
+#: core/facets.py:122
+msgctxt "language"
+msgid "All"
+msgstr "alla"
+
+#: core/facets.py:123
+msgctxt "language"
 msgid "Finnish"
 msgstr "finska"
 
-#: core/facets.py:122
+#: core/facets.py:124
+msgctxt "language"
 msgid "Swedish"
 msgstr "svenska"
 
-#: core/facets.py:123
+#: core/facets.py:125
+msgctxt "language"
 msgid "English"
 msgstr "engelska"
 
-#: core/facets.py:124
+#: core/facets.py:126
 #, fuzzy
+msgctxt "language"
 msgid "Others"
-msgstr "Andra"
+msgstr "andra"
 
 #: core/lane.py:386
 #, python-format
@@ -1103,29 +1112,4 @@ msgid "The server made a request to %(service)s, and that request timed out."
 msgstr ""
 "Servern skickade en begäran till %(service)s och tidsgränsen för begäran "
 "överskreds."
-
-#~ msgid "Index prefix"
-#~ msgstr "Katalogens prefix"
-
-#~ msgid ""
-#~ "Any Search indexes needed for this "
-#~ "application will be created with this"
-#~ " unique prefix. In most cases, the"
-#~ " default will work fine. You may "
-#~ "need to change this if you have"
-#~ " multiple application servers using a "
-#~ "single Search server."
-#~ msgstr ""
-#~ "Alla sökkataloger som denna app behöver"
-#~ " skapas med detta unika prefix. I "
-#~ "de flesta fallen fungerar standard "
-#~ "värdet bra. Detta måste kanske ändras"
-#~ " om flera appservrar använder en "
-#~ "sökserver."
-
-#~ msgid "Test search term"
-#~ msgstr "Testets sökord"
-
-#~ msgid "Self tests will use this value as the search term."
-#~ msgstr "Självtestet kommer att använda detta värde som sökord."
 
