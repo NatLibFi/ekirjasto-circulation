@@ -69,7 +69,7 @@ class EkirjastoController:
             or authorization.token is None
             or len(authorization.token) == 0
         ):
-            return INVALID_EKIRJASTO_DELEGATE_TOKEN, None, None, None
+            return EKIRJASTO_REMOTE_AUTHENTICATION_FAILED, None, None, None
 
         token = authorization.token
 
@@ -99,9 +99,6 @@ class EkirjastoController:
             # with the remote ekirjasto API. We don't do anything further validation
             # for it as it is valdiated with successful authentication.
             ekirjasto_token = token
-
-        if delegate_token == None:
-            return INVALID_EKIRJASTO_DELEGATE_TOKEN, None, None, None
 
         return delegate_token, ekirjasto_token, delegate_sub, delegate_expired
 
@@ -216,6 +213,8 @@ class EkirjastoController:
         ) = self.get_tokens(request.authorization, validate_expire=True)
         if isinstance(delegate_token, ProblemDetail):
             return delegate_token
+        elif delegate_token == None:
+            return INVALID_EKIRJASTO_DELEGATE_TOKEN
 
         return Response(
             json.dumps({"token": ekirjasto_token}), 200, mimetype="application/json"
@@ -234,6 +233,8 @@ class EkirjastoController:
         ) = self.get_tokens(request.authorization)
         if isinstance(delegate_token, ProblemDetail):
             return delegate_token
+        elif delegate_token == None:
+            return INVALID_EKIRJASTO_DELEGATE_TOKEN
 
         (
             response_json,
