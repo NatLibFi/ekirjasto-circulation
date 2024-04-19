@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2024-04-08 08:44+0300\n"
+"POT-Creation-Date: 2024-04-19 08:36+0300\n"
 "PO-Revision-Date: 2024-03-01 11:36+0000\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: sv\n"
@@ -136,15 +136,15 @@ msgstr ""
 "Leveransmekanismen %(mechanism_name)s kunde inte fastställas som intern "
 "leveransmekanism!"
 
-#: api/circulation.py:1068
+#: api/circulation.py:1070
 msgid "You cannot renew a loan if other patrons have the work on hold."
 msgstr "Du kan inte förnya lånet om en annan kund har reserverat verket."
 
-#: api/circulation.py:1340
+#: api/circulation.py:1347
 msgid "Cannot find your active loan for this work."
 msgstr "Det går inte att hitta ditt aktiva lån för detta verk."
 
-#: api/circulation.py:1347
+#: api/circulation.py:1354
 #, python-format
 msgid ""
 "You already fulfilled this loan as %(loan_delivery_mechanism)s, you can't"
@@ -940,3 +940,4 @@ msgstr "Kundens medlemskap har löpt ut"
 #: api/sirsidynix_authentication_provider.py:34
 msgid "Patron has been blocked."
 msgstr "Kunden har blockerats."
+

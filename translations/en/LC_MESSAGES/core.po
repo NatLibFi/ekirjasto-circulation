@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2024-04-08 08:44+0300\n"
+"POT-Creation-Date: 2024-04-19 08:36+0300\n"
 "PO-Revision-Date: 2024-02-19 22:14+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -115,6 +115,7 @@ msgid ""
 msgstr ""
 
 #: core/entrypoint.py:107 core/facets.py:116 core/facets.py:120
+#: core/facets.py:121
 msgid "All"
 msgstr ""
 
@@ -219,19 +220,19 @@ msgstr ""
 msgid "Popular Books"
 msgstr ""
 
-#: core/facets.py:121
+#: core/facets.py:122
 msgid "Finnish"
 msgstr ""
 
-#: core/facets.py:122
+#: core/facets.py:123
 msgid "Swedish"
 msgstr ""
 
-#: core/facets.py:123
+#: core/facets.py:124
 msgid "English"
 msgstr ""
 
-#: core/facets.py:124
+#: core/facets.py:125
 msgid "Others"
 msgstr ""
 
@@ -1068,3 +1069,4 @@ msgstr ""
 #, python-format
 msgid "The server made a request to %(service)s, and that request timed out."
 msgstr ""
+

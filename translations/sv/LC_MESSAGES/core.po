@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2024-04-08 08:44+0300\n"
+"POT-Creation-Date: 2024-04-19 08:36+0300\n"
 "PO-Revision-Date: 2024-03-01 11:37+0000\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: sv\n"
@@ -132,6 +132,7 @@ msgstr ""
 "anslutningsrelaterade fel på nytt."
 
 #: core/entrypoint.py:107 core/facets.py:116 core/facets.py:120
+#: core/facets.py:121
 msgid "All"
 msgstr "Alla"
 
@@ -237,19 +238,19 @@ msgstr "Allt"
 msgid "Popular Books"
 msgstr "Populära böcker"
 
-#: core/facets.py:121
+#: core/facets.py:122
 msgid "Finnish"
 msgstr "finska"
 
-#: core/facets.py:122
+#: core/facets.py:123
 msgid "Swedish"
 msgstr "svenska"
 
-#: core/facets.py:123
+#: core/facets.py:124
 msgid "English"
 msgstr "engelska"
 
-#: core/facets.py:124
+#: core/facets.py:125
 #, fuzzy
 msgid "Others"
 msgstr "Andra"
@@ -1103,3 +1104,4 @@ msgid "The server made a request to %(service)s, and that request timed out."
 msgstr ""
 "Servern skickade en begäran till %(service)s och tidsgränsen för begäran "
 "överskreds."
+

@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2024-04-08 08:44+0300\n"
+"POT-Creation-Date: 2024-04-19 08:36+0300\n"
 "PO-Revision-Date: 2016-06-14 13:24-0400\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -119,17 +119,17 @@ msgstr ""
 "No se pudo asignar el mecanismo simplificado de entrega "
 "%(mechanism_name)s al mecanismo de distribución interna!"
 
-#: api/circulation.py:1068
+#: api/circulation.py:1070
 msgid "You cannot renew a loan if other patrons have the work on hold."
 msgstr ""
 "No se puede renovar un préstamo si otros usuarios tienen el trabajo en "
 "espera."
 
-#: api/circulation.py:1340
+#: api/circulation.py:1347
 msgid "Cannot find your active loan for this work."
 msgstr "No puede encontrar su préstamo activo para este trabajo."
 
-#: api/circulation.py:1347
+#: api/circulation.py:1354
 #, python-format
 msgid ""
 "You already fulfilled this loan as %(loan_delivery_mechanism)s, you can't"
@@ -913,3 +913,4 @@ msgstr ""
 #: api/sirsidynix_authentication_provider.py:34
 msgid "Patron has been blocked."
 msgstr ""
+

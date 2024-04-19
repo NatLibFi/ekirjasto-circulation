@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2024-04-08 08:44+0300\n"
+"POT-Creation-Date: 2024-04-19 08:36+0300\n"
 "PO-Revision-Date: 2024-02-19 22:15+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -120,15 +120,15 @@ msgid ""
 "mechanism!"
 msgstr ""
 
-#: api/circulation.py:1068
+#: api/circulation.py:1070
 msgid "You cannot renew a loan if other patrons have the work on hold."
 msgstr ""
 
-#: api/circulation.py:1340
+#: api/circulation.py:1347
 msgid "Cannot find your active loan for this work."
 msgstr ""
 
-#: api/circulation.py:1347
+#: api/circulation.py:1354
 #, python-format
 msgid ""
 "You already fulfilled this loan as %(loan_delivery_mechanism)s, you can't"
@@ -868,3 +868,4 @@ msgstr ""
 #: api/sirsidynix_authentication_provider.py:34
 msgid "Patron has been blocked."
 msgstr ""
+
