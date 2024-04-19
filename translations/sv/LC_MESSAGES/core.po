@@ -171,7 +171,7 @@ msgstr "Samlingens namn"
 
 #: core/facets.py:94
 msgid "Language"
-msgstr ""
+msgstr "Språk"
 
 #: core/facets.py:98
 msgid "Allow patrons to sort by"
