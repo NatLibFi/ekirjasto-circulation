@@ -108,7 +108,7 @@ class EverythingEntryPoint(EntryPoint):
     URI = "http://schema.org/CreativeWork"
 
 
-EntryPoint.register(EverythingEntryPoint, "All")
+EntryPoint.register(EverythingEntryPoint, "All", default_enabled=True)
 
 
 class MediumEntryPoint(EntryPoint):
@@ -154,4 +154,4 @@ class AudiobooksEntryPoint(MediumEntryPoint):
     URI = "http://bib.schema.org/Audiobook"
 
 
-EntryPoint.register(AudiobooksEntryPoint, "Audiobooks")
+EntryPoint.register(AudiobooksEntryPoint, "Audiobooks", default_enabled=True)
