@@ -703,4 +703,3 @@ msgstr "%(field)s måste vara större än %(min)s."
 #, python-format
 msgid "%(field)s cannot be greater than %(max)s."
 msgstr "%(field)s får inte vara större än %(max)s."
-

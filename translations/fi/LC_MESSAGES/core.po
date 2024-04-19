@@ -1105,29 +1105,3 @@ msgstr "Aikakatkaisu"
 #, python-format
 msgid "The server made a request to %(service)s, and that request timed out."
 msgstr "Palvelin teki pyynnön palveluun %(service)s, ja pyyntö aikakatkaistiin."
-
-#~ msgid "Index prefix"
-#~ msgstr "Hakemiston etuliite"
-
-#~ msgid ""
-#~ "Any Search indexes needed for this "
-#~ "application will be created with this"
-#~ " unique prefix. In most cases, the"
-#~ " default will work fine. You may "
-#~ "need to change this if you have"
-#~ " multiple application servers using a "
-#~ "single Search server."
-#~ msgstr ""
-#~ "Kaikki tämän sovelluksen tarvitsemat "
-#~ "hakuindeksit luodaan tällä yksilöllisellä "
-#~ "etuliitteellä. Useimmissa tapauksissa oletusarvo "
-#~ "toimii hyvin. Tätä on ehkä muutettava,"
-#~ " jos useat sovelluspalvelimet käyttävät "
-#~ "yhtä hakupalvelinta."
-
-#~ msgid "Test search term"
-#~ msgstr "Testin hakusana"
-
-#~ msgid "Self tests will use this value as the search term."
-#~ msgstr "Itsetestit käyttävät tätä arvoa hakusanana."
-

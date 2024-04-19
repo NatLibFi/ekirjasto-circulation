@@ -1068,23 +1068,3 @@ msgstr ""
 #, python-format
 msgid "The server made a request to %(service)s, and that request timed out."
 msgstr ""
-
-#~ msgid "Index prefix"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Any Search indexes needed for this "
-#~ "application will be created with this"
-#~ " unique prefix. In most cases, the"
-#~ " default will work fine. You may "
-#~ "need to change this if you have"
-#~ " multiple application servers using a "
-#~ "single Search server."
-#~ msgstr ""
-
-#~ msgid "Test search term"
-#~ msgstr ""
-
-#~ msgid "Self tests will use this value as the search term."
-#~ msgstr ""
-

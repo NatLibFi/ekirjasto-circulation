@@ -943,25 +943,3 @@ msgstr "Asiakkaan jäsenyys on päättynyt"
 #: api/sirsidynix_authentication_provider.py:34
 msgid "Patron has been blocked."
 msgstr "Asiakas on estetty."
-
-#~ msgid "The URL for the First Book authentication service."
-#~ msgstr "First Bookin todennuspalvelun URL-osoite."
-
-#~ msgid "Key"
-#~ msgstr "Avain"
-
-#~ msgid "The key for the First Book authentication service."
-#~ msgstr "First Bookin todennuspalvelun avain."
-
-#~ msgid "Novelist API"
-#~ msgstr "Novelist API"
-
-#~ msgid "Profile"
-#~ msgstr "Profiili"
-
-#~ msgid "NYT Best Seller API"
-#~ msgstr "NYT Best Seller API"
-
-#~ msgid "API key"
-#~ msgstr "API-avain"
-

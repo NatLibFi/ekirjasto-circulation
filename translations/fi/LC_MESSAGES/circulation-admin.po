@@ -699,4 +699,3 @@ msgstr "%(field)s on oltava suurempi kuin %(min)s."
 #, python-format
 msgid "%(field)s cannot be greater than %(max)s."
 msgstr "%(field)s ei voi olla suurempi kuin %(max)s."
-

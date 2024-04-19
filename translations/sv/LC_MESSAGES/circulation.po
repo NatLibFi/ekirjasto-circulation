@@ -940,25 +940,3 @@ msgstr "Kundens medlemskap har löpt ut"
 #: api/sirsidynix_authentication_provider.py:34
 msgid "Patron has been blocked."
 msgstr "Kunden har blockerats."
-
-#~ msgid "The URL for the First Book authentication service."
-#~ msgstr "URL för autentiseringstjänsten First Book."
-
-#~ msgid "Key"
-#~ msgstr "Nyckel"
-
-#~ msgid "The key for the First Book authentication service."
-#~ msgstr "Nyckeln för autentiseringstjänsten First Book."
-
-#~ msgid "Novelist API"
-#~ msgstr "Novelist API"
-
-#~ msgid "Profile"
-#~ msgstr "Profil"
-
-#~ msgid "NYT Best Seller API"
-#~ msgstr "NYT Best Seller API"
-
-#~ msgid "API key"
-#~ msgstr "API-nyckel"
-
