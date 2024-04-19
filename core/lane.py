@@ -1388,11 +1388,13 @@ class WorkList:
         """
         # Load all of this Library's visible top-level Lane objects
         # from the database.
+        # Finland, also include lanes from the default library
         top_level_lanes = (
             _db.query(Lane)
-            .filter(Lane.library == library)
             .filter(Lane.parent == None)
             .filter(Lane._visible == True)
+            .join(Lane.library)
+            .filter(or_(Library.id == library.id, Library._is_default == True))
             .order_by(Lane.priority)
             .all()
         )
@@ -1745,8 +1747,10 @@ class WorkList:
             # is no active patron, every lane is accessible.
             return True
 
+        # Finland, logic changed to allow access to default library lanes
         _db = Session.object_session(patron)
-        if patron.library != self.get_library(_db):
+        library = self.get_library(_db)
+        if not library.is_default and patron.library != library:
             # You can't access a WorkList from another library.
             return False
 
@@ -1774,7 +1778,6 @@ class WorkList:
                     # Books of this type would not be appropriate to show to
                     # this patron, so the lane itself is not accessible.
                     return False
-
         return True
 
     def overview_facets(self, _db, facets):

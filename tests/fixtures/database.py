@@ -166,6 +166,7 @@ class DatabaseTransactionFixture:
     def _make_default_library(self) -> Library:
         """Ensure that the default library exists in the given database."""
         library = self.library("default", "default")
+        library.is_default = True
         collection = self.collection(
             "Default Collection",
             protocol=ExternalIntegration.OPDS_IMPORT,

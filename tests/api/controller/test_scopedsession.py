@@ -35,6 +35,7 @@ class ScopedHolder:
 
     def make_default_libraries(self, session: Session):
         libraries = []
+
         for i in range(2):
             name = self.fresh_id() + " (library for scoped session)"
             library, ignore = create(

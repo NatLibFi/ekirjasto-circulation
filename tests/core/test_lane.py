@@ -1988,17 +1988,14 @@ class TestWorkList:
         assert [lane1, lane2] == wl.children
         assert Edition.FULFILLABLE_MEDIA == wl.media
 
-        # The other library only has one top-level lane, so we use that lane.
-        l = WorkList.top_level_for_library(db.session, other_library)
-        assert other_library_lane == l
-
         # This library has no lanes configured at all.
+        # Finland, it will inherit lanes from default_library
         no_config_library = db.library(
             name="No configuration Library", short_name="No config"
         )
         wl = WorkList.top_level_for_library(db.session, no_config_library)
         assert isinstance(wl, TopLevelWorkList)
-        assert [] == wl.children
+        assert [lane1, lane2] == wl.children
         assert Edition.FULFILLABLE_MEDIA == wl.media
 
     def test_audience_key(self, db: DatabaseTransactionFixture):
@@ -2120,8 +2117,11 @@ class TestWorkList:
         # Test the circumstances under which a Patron may or may not access a
         # WorkList.
 
+        db.default_library()
+        library = db.library()
+
         wl = WorkList()
-        wl.initialize(db.default_library())
+        wl.initialize(library)
 
         # A WorkList is always accessible to unauthenticated users.
         m = wl.accessible_to
@@ -2134,11 +2134,11 @@ class TestWorkList:
 
         # A WorkList is always accessible to patrons with no root lane
         # set.
-        patron = db.patron()
+        patron = db.patron(library=library)
         assert True == m(patron)
 
         # Give the patron a root lane.
-        lane = db.lane()
+        lane = db.lane(library=library)
         lane.root_for_patron_type = ["1"]
         patron.external_type = "1"
 

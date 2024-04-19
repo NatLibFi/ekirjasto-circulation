@@ -47,12 +47,10 @@ class TestLibrary:
         l1 = db.default_library()
         l2 = db.library()
 
-        # None of them are the default according to the database.
-        assert False == l1.is_default
+        assert True == l1.is_default
         assert False == l2.is_default
 
-        # If we call Library.default, the library with the lowest database
-        # ID is made the default.
+        # If we call Library.default, the library stays as default
         assert l1 == Library.default(db.session)
         assert True == l1.is_default
         assert False == l2.is_default
