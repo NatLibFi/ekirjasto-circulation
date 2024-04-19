@@ -69,7 +69,7 @@ class EkirjastoController:
             or authorization.token is None
             or len(authorization.token) == 0
         ):
-            return EKIRJASTO_REMOTE_AUTHENTICATION_FAILED, None, None, None
+            return INVALID_EKIRJASTO_DELEGATE_TOKEN, None, None, None
 
         token = authorization.token
 
