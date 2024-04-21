@@ -56,6 +56,7 @@ class EkirjastoEnvironment(Enum):
     DEVELOPMENT = "https://e-kirjasto.loikka.dev"
     PRODUCTION = "https://tunnistus.e-kirjasto.fi"
 
+
 class MagazineEnvironment(Enum):
     DEVELOPMENT = "https://e-kirjasto-playground.epaper.fi/"
     PRODUCTION = "https://e-kirjasto.ewl.epress.fi/"
@@ -84,7 +85,7 @@ class EkirjastoAuthAPISettings(AuthProviderSettings):
             weight=10,
         ),
     )
-    
+
     magazine_service: MagazineEnvironment = FormField(
         MagazineEnvironment.DEVELOPMENT,
         form=ConfigurationFormItem(
@@ -150,7 +151,7 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
         self._ekirjasto_api_url = self.ekirjasto_environment.value
         if self.ekirjasto_environment == EkirjastoEnvironment.FAKE:
             self._ekirjasto_api_url = EkirjastoEnvironment.DEVELOPMENT.value
-        
+
         self._magazine_service_url = self.magazine_service.value
 
     @property
