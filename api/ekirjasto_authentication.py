@@ -56,6 +56,10 @@ class EkirjastoEnvironment(Enum):
     DEVELOPMENT = "https://e-kirjasto.loikka.dev"
     PRODUCTION = "https://tunnistus.e-kirjasto.fi"
 
+class MagazineEnvironment(Enum):
+    DEVELOPMENT = "https://e-kirjasto-playground.epaper.fi/"
+    PRODUCTION = "https://e-kirjasto.ewl.epress.fi/"
+
 
 class EkirjastoAuthAPISettings(AuthProviderSettings):
     """Settings for the EkirjastoAuthenticationAPI."""
@@ -75,6 +79,23 @@ class EkirjastoAuthAPISettings(AuthProviderSettings):
                 EkirjastoEnvironment.FAKE: "Fake",
                 EkirjastoEnvironment.DEVELOPMENT: "Development",
                 EkirjastoEnvironment.PRODUCTION: "Production",
+            },
+            required=True,
+            weight=10,
+        ),
+    )
+    
+    magazine_service: MagazineEnvironment = FormField(
+        MagazineEnvironment.DEVELOPMENT,
+        form=ConfigurationFormItem(
+            label=_("E-magazines environment"),
+            description=_(
+                "Select what environment of e-magazines service should be used."
+            ),
+            type=ConfigurationFormItemType.SELECT,
+            options={
+                MagazineEnvironment.DEVELOPMENT: "Development",
+                MagazineEnvironment.PRODUCTION: "Production",
             },
             required=True,
             weight=10,
@@ -114,6 +135,7 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
         )
 
         self.ekirjasto_environment = settings.ekirjasto_environment
+        self.magazine_service = settings.magazine_service
         self.delegate_expire_timemestamp = settings.delegate_expire_time
 
         self.delegate_token_signing_secret: str | None = None
@@ -128,6 +150,8 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
         self._ekirjasto_api_url = self.ekirjasto_environment.value
         if self.ekirjasto_environment == EkirjastoEnvironment.FAKE:
             self._ekirjasto_api_url = EkirjastoEnvironment.DEVELOPMENT.value
+        
+        self._magazine_service_url = self.magazine_service.value
 
     @property
     def flow_type(self) -> str:
@@ -196,6 +220,7 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
                     "rel": "ekirjasto_token",
                     "href": self._create_circulation_url("ekirjasto_token", _db),
                 },
+                {"rel": "magazine_service", "href": self._magazine_service_url},
                 {"rel": "api", "href": self._ekirjasto_api_url},
                 {
                     "rel": "tunnistus_start",
