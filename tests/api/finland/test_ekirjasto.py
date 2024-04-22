@@ -250,14 +250,14 @@ class TestEkirjastoAuthentication:
             )
 
             assert (
-                doc["links"][7]["rel"] == "passkey_register_start"
-                and doc["links"][7]["href"]
+                doc["links"][8]["rel"] == "passkey_register_start"
+                and doc["links"][8]["href"]
                 == "http://localhost/test-library/ekirjasto/passkey/register/start?provider=E-kirjasto+provider+for+circulation+manager"
             )
 
             assert (
-                doc["links"][8]["rel"] == "passkey_register_finish"
-                and doc["links"][8]["href"]
+                doc["links"][9]["rel"] == "passkey_register_finish"
+                and doc["links"][9]["href"]
                 == "http://localhost/test-library/ekirjasto/passkey/register/finish?provider=E-kirjasto+provider+for+circulation+manager"
             )
 
