@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2024-04-08 08:44+0300\n"
+"POT-Creation-Date: 2024-04-19 08:36+0300\n"
 "PO-Revision-Date: 2016-06-14 13:24-0400\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -111,6 +111,7 @@ msgid ""
 msgstr ""
 
 #: core/entrypoint.py:107 core/facets.py:116 core/facets.py:120
+#: core/facets.py:121
 msgid "All"
 msgstr ""
 
@@ -215,19 +216,19 @@ msgstr ""
 msgid "Popular Books"
 msgstr ""
 
-#: core/facets.py:121
+#: core/facets.py:122
 msgid "Finnish"
 msgstr ""
 
-#: core/facets.py:122
+#: core/facets.py:123
 msgid "Swedish"
 msgstr ""
 
-#: core/facets.py:123
+#: core/facets.py:124
 msgid "English"
 msgstr ""
 
-#: core/facets.py:124
+#: core/facets.py:125
 msgid "Others"
 msgstr ""
 
@@ -1070,41 +1071,4 @@ msgstr ""
 #, python-format
 msgid "The server made a request to %(service)s, and that request timed out."
 msgstr "El servidor hizo una petición al servicio (%) s, y esa solicitud expiró."
-
-#~ msgid "An internal error occured"
-#~ msgstr "Ha ocurrido un error interno."
-
-#~ msgid "No license pool specified"
-#~ msgstr "No hay una agrupación de licencias específica"
-
-#~ msgid "Invalid problem detail document"
-#~ msgstr "Detalle documento problema inválido"
-
-#~ msgid "No problem type specified."
-#~ msgstr "Tipo de problema no especificado."
-
-#~ msgid "Unrecognized problem type: %(type)s"
-#~ msgstr "Tipo de problema no reconocido: %(type)s"
-
-#~ msgid "Success"
-#~ msgstr "éxito"
-
-#~ msgid "Index prefix"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Any Search indexes needed for this "
-#~ "application will be created with this"
-#~ " unique prefix. In most cases, the"
-#~ " default will work fine. You may "
-#~ "need to change this if you have"
-#~ " multiple application servers using a "
-#~ "single Search server."
-#~ msgstr ""
-
-#~ msgid "Test search term"
-#~ msgstr ""
-
-#~ msgid "Self tests will use this value as the search term."
-#~ msgstr ""
 

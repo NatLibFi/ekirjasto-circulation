@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2024-04-08 08:44+0300\n"
+"POT-Creation-Date: 2024-04-19 08:36+0300\n"
 "PO-Revision-Date: 2024-03-01 11:37+0000\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: sv\n"
@@ -132,6 +132,7 @@ msgstr ""
 "anslutningsrelaterade fel på nytt."
 
 #: core/entrypoint.py:107 core/facets.py:116 core/facets.py:120
+#: core/facets.py:121
 msgid "All"
 msgstr "Alla"
 
@@ -170,7 +171,7 @@ msgstr "Samlingens namn"
 
 #: core/facets.py:94
 msgid "Language"
-msgstr ""
+msgstr "Språk"
 
 #: core/facets.py:98
 msgid "Allow patrons to sort by"
@@ -237,19 +238,19 @@ msgstr "Allt"
 msgid "Popular Books"
 msgstr "Populära böcker"
 
-#: core/facets.py:121
+#: core/facets.py:122
 msgid "Finnish"
 msgstr "finska"
 
-#: core/facets.py:122
+#: core/facets.py:123
 msgid "Swedish"
 msgstr "svenska"
 
-#: core/facets.py:123
+#: core/facets.py:124
 msgid "English"
 msgstr "engelska"
 
-#: core/facets.py:124
+#: core/facets.py:125
 #, fuzzy
 msgid "Others"
 msgstr "Andra"
@@ -1103,29 +1104,4 @@ msgid "The server made a request to %(service)s, and that request timed out."
 msgstr ""
 "Servern skickade en begäran till %(service)s och tidsgränsen för begäran "
 "överskreds."
-
-#~ msgid "Index prefix"
-#~ msgstr "Katalogens prefix"
-
-#~ msgid ""
-#~ "Any Search indexes needed for this "
-#~ "application will be created with this"
-#~ " unique prefix. In most cases, the"
-#~ " default will work fine. You may "
-#~ "need to change this if you have"
-#~ " multiple application servers using a "
-#~ "single Search server."
-#~ msgstr ""
-#~ "Alla sökkataloger som denna app behöver"
-#~ " skapas med detta unika prefix. I "
-#~ "de flesta fallen fungerar standard "
-#~ "värdet bra. Detta måste kanske ändras"
-#~ " om flera appservrar använder en "
-#~ "sökserver."
-
-#~ msgid "Test search term"
-#~ msgstr "Testets sökord"
-
-#~ msgid "Self tests will use this value as the search term."
-#~ msgstr "Självtestet kommer att använda detta värde som sökord."
 
