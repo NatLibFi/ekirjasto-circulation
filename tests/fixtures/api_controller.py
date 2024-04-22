@@ -189,12 +189,13 @@ class ControllerFixture:
         self.manager.d_top_level_lane = self.manager.top_level_lanes[self.library.id]  # type: ignore
         self.controller = CirculationManagerController(self.manager)
 
-        # Set a convenient default lane.
-        [self.english_adult_fiction] = [
-            x
-            for x in self.library.lanes
-            if x.display_name == "Fiction" and x.languages == ["eng"]
-        ]
+        if self.db.default_library().lanes:
+            # Set a convenient default lane.
+            [self.english_adult_fiction] = [
+                x
+                for x in self.db.default_library().lanes
+                if x.display_name == "Fiction" and x.languages == ["eng"]
+            ]
 
         return self.manager
 

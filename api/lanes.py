@@ -101,11 +101,16 @@ def create_default_lanes(_db, library):
     be an extremely destructive method. All new Lanes will be visible
     and all Lanes based on CustomLists (but not the CustomLists
     themselves) will be destroyed.
-
     """
     # Delete existing lanes.
     for lane in _db.query(Lane).filter(Lane.library_id == library.id):
         _db.delete(lane)
+
+    # Finland: Lanes from default library are shown for all other
+    # libraries. For other libraries this reset just means deleting
+    # all custom lanes.
+    if not library.is_default:
+        return
 
     top_level_lanes = []
 

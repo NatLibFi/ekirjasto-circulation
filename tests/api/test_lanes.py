@@ -265,6 +265,7 @@ class TestLaneCreation:
         settings.small_collection_languages = ["spa", "chi"]
         settings.tiny_collection_languages = ["ger", "fre", "ita"]
         library = library_fixture.library(settings=settings)
+        library.is_default = True
 
         create_default_lanes(db.session, library)
         lanes = (
@@ -309,6 +310,7 @@ class TestLaneCreation:
         settings = library_fixture.mock_settings()
         settings.large_collection_languages = ["eng", "fre"]
         library = library_fixture.library(settings=settings)
+        library.is_default = True
 
         session = db.session
         create_default_lanes(session, library)
@@ -485,16 +487,10 @@ class TestWorkBasedLane:
         assert True == lane.accessible_to(patron)
         work.age_appropriate_for_patron.assert_called_once_with(patron)
 
-        # The WorkList rules are still enforced -- for instance, a
-        # patron from library B can't access any kind of WorkList from
-        # library A.
+        # The WorkList in default library should be accessible by
+        # patron from another library.
         other_library_patron = db.patron(library=db.library())
-        assert False == lane.accessible_to(other_library_patron)
-
-        # age_appropriate_for_patron was never called with the new
-        # patron -- the WorkList rules answered the question before we
-        # got to that point.
-        work.age_appropriate_for_patron.assert_called_once_with(patron)
+        assert True == lane.accessible_to(other_library_patron)
 
 
 class RelatedBooksFixture:

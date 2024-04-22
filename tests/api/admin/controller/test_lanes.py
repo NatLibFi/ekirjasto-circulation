@@ -547,9 +547,16 @@ class TestLanesController:
             )
             # tests/test_lanes.py tests the default lane creation, but make sure some
             # lanes were created.
-            assert (
-                0
-                < alm_fixture.ctrl.db.session.query(Lane)
+            # assert (
+            #     0
+            #     < alm_fixture.ctrl.db.session.query(Lane)
+            #     .filter(Lane.library == library)
+            #     .count()
+            # )
+
+            # Finland: no lanes created for non-default library
+            assert 0 == (
+                alm_fixture.ctrl.db.session.query(Lane)
                 .filter(Lane.library == library)
                 .count()
             )

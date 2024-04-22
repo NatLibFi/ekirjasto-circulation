@@ -147,9 +147,7 @@ class CirculationManagerController(BaseCirculationManagerController):
                 pass
 
             if isinstance(lane_identifier, int):
-                lane = get_one(
-                    self._db, Lane, id=lane_identifier, library_id=library_id
-                )
+                lane = get_one(self._db, Lane, id=lane_identifier)
 
         if lane and not lane.accessible_to(self.request_patron):
             # The authenticated patron cannot access the lane they

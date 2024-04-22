@@ -135,6 +135,8 @@ class LibrarySettingsController(AdminPermissionsControllerMixin):
             # Everyone can modify an existing library, but only a system admin can create a new one.
             self.require_system_admin()
             library, is_new = self.create_library(short_name)
+            # Initialize default library if not set already
+            Library.default(self._db)
 
         library.name = name
         library.short_name = short_name

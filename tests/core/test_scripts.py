@@ -2131,9 +2131,7 @@ class TestUpdateCustomListSizeScript:
 class TestDeleteInvisibleLanesScript:
     def test_do_run(self, db: DatabaseTransactionFixture):
         """Test that invisible lanes and their visible children are deleted."""
-        # create a library
-        short_name = "TESTLIB"
-        l1 = db.library("test library", short_name=short_name)
+        l1 = db.default_library()
         # with a set of default lanes
         create_default_lanes(db.session, l1)
 
@@ -2154,7 +2152,7 @@ class TestDeleteInvisibleLanesScript:
         assert first_child_id is not None
 
         # run script and verify that it had no effect:
-        DeleteInvisibleLanesScript(_db=db.session).do_run([short_name])
+        DeleteInvisibleLanesScript(_db=db.session).do_run([l1.short_name])
         top_level_fiction_lane: Lane = (
             db.session.query(Lane)
             .filter(Lane.library == l1)
@@ -2169,7 +2167,7 @@ class TestDeleteInvisibleLanesScript:
         top_level_fiction_lane.visible = False
 
         # and now run script.
-        DeleteInvisibleLanesScript(_db=db.session).do_run([short_name])
+        DeleteInvisibleLanesScript(_db=db.session).do_run([l1.short_name])
 
         # verify the lane has now been deleted.
         deleted_lane = (
