@@ -137,6 +137,27 @@ class EkirjastoConsortiumMonitor(Monitor):
             achievements=f"Kirkanta synchronization done!",
         )
 
+    @classmethod
+    @memoize(ttls=86400)  # 24h
+    def get_municipality_code_name_map(cls):
+        """Returns a dict of finnish municipality codes mapped to municipality names
+        from data fetched from Koodistopalvelu. Memoized for 24h.
+        """
+        concept_codes = cls._fetch_koodisto_concept_codes(cls)
+
+        code_name_map: dict[str, str] = {}
+        for code in concept_codes:
+            try:
+                long_name = code.findAttribute("LongName")
+                (municipality_code, municipality_name) = long_name.split(" ", 1)
+                code_name_map[municipality_code] = municipality_name
+            except AttributeError:
+                pass
+            except IndexError:
+                pass
+
+        return code_name_map
+
     def _fetch_kirkanta_cities(self) -> list[KirkantaCity]:
         return EkirjastoConsortiumMonitor._get(
             KirkantaCities, f"{self._KIRKANTA_API_URL}/city", {"limit": 9999}

@@ -20,6 +20,7 @@ from api.admin.model.quicksight import (
 from api.admin.templates import admin_sign_in_again as sign_in_again_template
 from api.app import api_spec, app
 from api.controller.static_file import StaticFileController
+from api.ekirjasto_consortium import EkirjastoConsortiumMonitor
 from api.routes import allows_library, has_library, library_route
 from core.app_server import ensure_pydantic_after_problem_detail, returns_problem_detail
 from core.util.problem_detail import ProblemDetail, ProblemDetailModel, ProblemError
@@ -386,6 +387,15 @@ def get_quicksight_names():
 
 
 # Finland
+@library_route("/admin/municipalities")
+@returns_json_or_response_or_problem_detail
+@requires_admin
+def municipality_code_name_map():
+    """Returns finnish municipality code-name mapping."""
+    codes = EkirjastoConsortiumMonitor.get_municipality_code_name_map()
+    return codes
+
+
 @library_route("/admin/events/terms")
 @returns_json_or_response_or_problem_detail
 @has_library
