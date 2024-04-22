@@ -224,7 +224,11 @@ class LanesController(CirculationManagerController, AdminPermissionsControllerMi
             for index, lane_data in enumerate(lanes):
                 lane_id = lane_data.get("id")
                 lane = self._db.query(Lane).filter(Lane.id == lane_id).one()
-                lane.priority = index
+                # Finland, lower priority for default library lanes.
+                # Lower number means higher priority.
+                lane.priority = (
+                    index + 1000 if flask.request.library.is_default else index
+                )
                 update_lane_order(lane_data.get("sublanes", []))
 
         update_lane_order(submitted_lanes)
