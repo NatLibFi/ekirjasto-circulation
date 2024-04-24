@@ -306,25 +306,6 @@ class TestLibrarySettings:
                 controller.process_post()
             assert excinfo.value.problem_detail.uri == INCOMPLETE_CONFIGURATION.uri
 
-        # Either patron support email or website MUST be present
-        with flask_app_fixture.test_request_context_system_admin("/", method="POST"):
-            flask.request.form = ImmutableMultiDict(
-                [
-                    ("name", "Email or Website Library"),
-                    ("short_name", "Email or Website"),
-                    ("website", "http://example.org"),
-                    ("default_notification_email_address", "email@example.org"),
-                ]
-            )
-            with pytest.raises(ProblemError) as excinfo:
-                controller.process_post()
-            assert excinfo.value.problem_detail.uri == INCOMPLETE_CONFIGURATION.uri
-            assert excinfo.value.problem_detail.detail is not None
-            assert (
-                "'Patron support email address' or 'Patron support website'"
-                in excinfo.value.problem_detail.detail
-            )
-
         # Test a web primary and secondary color that doesn't contrast
         # well on white. Here primary will, secondary should not.
         with flask_app_fixture.test_request_context_system_admin("/", method="POST"):

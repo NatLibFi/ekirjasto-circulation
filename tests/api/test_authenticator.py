@@ -1087,8 +1087,8 @@ class TestLibraryAuthenticator:
         library_settings.color_scheme = "plaid"
 
         # Set the colors a web client should use.
-        library_settings.web_primary_color = "#012345"
-        library_settings.web_secondary_color = "#abcdef"
+        library_settings.web_primary_color = "#000001"
+        library_settings.web_secondary_color = "#000002"
 
         # Configure the various ways a patron can get help.
         library_settings.help_email = "help@library.org"  # type: ignore[assignment]
@@ -1165,8 +1165,8 @@ class TestLibraryAuthenticator:
 
             # The mobile color scheme and web colors are correctly reported.
             assert "plaid" == doc["color_scheme"]
-            assert "#012345" == doc["web_color_scheme"]["primary"]
-            assert "#abcdef" == doc["web_color_scheme"]["secondary"]
+            assert "#000001" == doc["web_color_scheme"]["primary"]
+            assert "#000002" == doc["web_color_scheme"]["secondary"]
 
             # We also need to test that the links got pulled in
             # from the configuration.

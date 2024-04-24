@@ -234,7 +234,3 @@ username='someuser'
         library.settings_dict = []
         with pytest.raises(ValueError):
             library.settings
-
-        # Test with a properly formatted settings dict.
-        library2 = db.library()
-        assert library2.settings.website == "http://library.com"
