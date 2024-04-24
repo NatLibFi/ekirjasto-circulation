@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2024-04-19 08:36+0300\n"
+"POT-Creation-Date: 2024-04-24 23:41+0300\n"
 "PO-Revision-Date: 2024-03-01 11:36+0000\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: sv\n"
@@ -272,19 +272,29 @@ msgstr "Bandets ID för kunder som är under 13 år"
 msgid "Send patrons to the lane with this ID."
 msgstr "Skicka kunder till bandet med denna ID."
 
-#: api/ekirjasto_authentication.py:69
+#: api/ekirjasto_authentication.py:74
 msgid "E-kirjasto API environment"
 msgstr "E-bibliotekets API-miljö"
 
-#: api/ekirjasto_authentication.py:70
+#: api/ekirjasto_authentication.py:75
 msgid "Select what environment of E-kirjasto accounts should be used."
 msgstr "Välj  vilken miljö i e-biblioteket konton ska använda."
 
-#: api/ekirjasto_authentication.py:87
+#: api/ekirjasto_authentication.py:92
+#, fuzzy
+msgid "E-magazines environment"
+msgstr "E-bibliotekets API-miljö"
+
+#: api/ekirjasto_authentication.py:93
+#, fuzzy
+msgid "Select what environment of e-magazines service should be used."
+msgstr "Välj  vilken miljö i e-biblioteket konton ska använda."
+
+#: api/ekirjasto_authentication.py:109
 msgid "Delegate token expire time in seconds"
 msgstr "Förfallotid för fullmaktstoken i sekunder"
 
-#: api/ekirjasto_authentication.py:88
+#: api/ekirjasto_authentication.py:110
 msgid ""
 "Expire time for a delegate token to authorize in behalf of a ekirjasto "
 "token. This should be less than the expire time for ekirjasto token, so "

@@ -11,6 +11,7 @@ from typing import Any
 
 from dependency_injector.wiring import Provide, inject
 from flask import url_for
+from flask_babel import lazy_gettext as _
 from sqlalchemy.orm import Session
 
 from api.adobe_vendor_id import AuthdataUtility
@@ -951,6 +952,10 @@ class LibraryAnnotator(CirculationManagerAnnotator):
             entry.work, entry.license_pool, entry.identifier
         )
         if group_uri:
+            # Finland
+            # Attempt to translate the group title.
+            group_title = _(group_title)
+            
             entry.computed.other_links.append(
                 Link(href=group_uri, rel=OPDSFeed.GROUP_REL, title=str(group_title))
             )

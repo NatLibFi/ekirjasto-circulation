@@ -1593,7 +1593,7 @@ class WorkList:
         """The display name to use when referring to the set of all books in
         this WorkList, as opposed to the WorkList itself.
         """
-        return _("All %(worklist)s", worklist=self.display_name)
+        return _("All %(worklist)s", worklist=_(self.display_name))
 
     @property
     def visible_children(self):
