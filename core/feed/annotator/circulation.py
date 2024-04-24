@@ -955,7 +955,7 @@ class LibraryAnnotator(CirculationManagerAnnotator):
             # Finland
             # Attempt to translate the group title.
             group_title = _(group_title)
-            
+
             entry.computed.other_links.append(
                 Link(href=group_uri, rel=OPDSFeed.GROUP_REL, title=str(group_title))
             )

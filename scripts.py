@@ -493,7 +493,7 @@ class CollectTranslationsScript(Script):
         library.settings_dict["website"] = "https://google.com"
         library.is_default = True
         create_default_lanes(self._db, library)
-        
+
         lanes = (
             self._db.query(Lane)
             .filter(Lane.library == library)
@@ -510,7 +510,9 @@ class CollectTranslationsScript(Script):
             lanes_added = []
             for lane in lanes:
                 if not lane.display_name in lanes_added:
-                    file.write(f'    "{lane.display_name}": _("{lane.display_name}"),\n')
+                    file.write(
+                        f'    "{lane.display_name}": _("{lane.display_name}"),\n'
+                    )
                     lanes_added.append(lane.display_name)
             file.write("}\n")
         self._db.delete(library)
@@ -519,10 +521,37 @@ class CollectTranslationsScript(Script):
         self._collect_genres()
         self._collect_lanes()
 
-        subprocess.run(['./bin/util/generate_translation_template'], check = True)
-        subprocess.run(['pybabel', 'update', '-i', 'core.pot', '-d', 'translations', '-D', 'core'], check = True)
-        subprocess.run(['pybabel', 'update', '-i', 'circulation.pot', '-d', 'translations', '-D', 'circulation'], check = True)
-        subprocess.run(['pybabel', 'update', '-i', 'circulation-admin.pot', '-d', 'translations', '-D', 'circulation-admin'], check = True)
+        subprocess.run(["./bin/util/generate_translation_template"], check=True)
+        subprocess.run(
+            ["pybabel", "update", "-i", "core.pot", "-d", "translations", "-D", "core"],
+            check=True,
+        )
+        subprocess.run(
+            [
+                "pybabel",
+                "update",
+                "-i",
+                "circulation.pot",
+                "-d",
+                "translations",
+                "-D",
+                "circulation",
+            ],
+            check=True,
+        )
+        subprocess.run(
+            [
+                "pybabel",
+                "update",
+                "-i",
+                "circulation-admin.pot",
+                "-d",
+                "translations",
+                "-D",
+                "circulation-admin",
+            ],
+            check=True,
+        )
 
 
 class CompileTranslationsScript(Script):
