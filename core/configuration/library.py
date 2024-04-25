@@ -17,12 +17,7 @@ from pydantic import (
 from pydantic.fields import ModelField
 from sqlalchemy.orm import Session
 
-from api.admin.problem_details import (
-    INCOMPLETE_CONFIGURATION,
-    INVALID_CONFIGURATION_OPTION,
-    UNKNOWN_LANGUAGE,
-)
-from core.config import Configuration
+from api.admin.problem_details import INVALID_CONFIGURATION_OPTION, UNKNOWN_LANGUAGE
 from core.entrypoint import EntryPoint
 from core.facets import FacetConstants
 from core.integration.settings import (
@@ -58,6 +53,8 @@ class LibraryConfFormItem(ConfigurationFormItem):
     read_only: bool | None = None
     skip: bool | None = None
     paired: str | None = None
+    default_library_only: bool | None = False
+    non_default_library_only: bool | None = False
 
     def to_dict(
         self, db: Session, key: str, required: bool = False, default: Any = None
@@ -72,6 +69,12 @@ class LibraryConfFormItem(ConfigurationFormItem):
             item["skip"] = self.skip
         if self.paired is not None:
             item["paired"] = self.paired
+
+        # Finland, hiding settings for default or other libraries
+        if self.default_library_only is not None:
+            item["defaultLibraryOnly"] = self.default_library_only
+        if self.non_default_library_only is not None:
+            item["nonDefaultLibraryOnly"] = self.non_default_library_only
 
         if (
             "default" in item
@@ -136,10 +139,10 @@ class LibrarySettings(BaseSettings):
         None,
         form=LibraryConfFormItem(
             label="Consortium",
-            description="If selected, the municipalities are kept automatically "
-            "in sync with Kirkanta. Has no effect if set for the default library.",
+            description="If selected, the municipalities are kept automatically in sync with Kirkanta.",
             category="Kirkanta Synchronization",
             type=ConfigurationFormItemType.SELECT,
+            non_default_library_only=True,
             # The keys here should match the Kirkanta consortium slug
             # See https://api.kirjastot.fi/v4/consortium?limit=9999
             options={
@@ -193,6 +196,7 @@ class LibrarySettings(BaseSettings):
         form=LibraryConfFormItem(
             label="The municipalities belonging to this consortium",
             type=ConfigurationFormItemType.LIST,
+            non_default_library_only=True,
             description="Each value should be a valid "
             '<a href="https://koodistopalvelu.kanta.fi/codeserver/pages/classification-view-page.xhtml?classificationKey=362&versionKey=440" target="_blank">'
             "municipality code</a>. This list is populated automatically if the consortium is selected.",
@@ -212,6 +216,7 @@ class LibrarySettings(BaseSettings):
             },
             category="Loans, Holds, & Fines",
             level=Level.SYS_ADMIN_ONLY,
+            default_library_only=True,
         ),
     )
     enabled_entry_points: list[str] = FormField(
@@ -232,6 +237,7 @@ class LibrarySettings(BaseSettings):
             format="narrow",
             read_only=True,
             level=Level.SYS_ADMIN_ONLY,
+            default_library_only=True,
         ),
     )
     featured_lane_size: PositiveInt = FormField(
@@ -240,15 +246,17 @@ class LibrarySettings(BaseSettings):
             label="Maximum number of books in the 'featured' lanes",
             category="Lanes & Filters",
             level=Level.ALL_ACCESS,
+            default_library_only=True,
         ),
     )
     minimum_featured_quality: PercentFloat = FormField(
-        Configuration.DEFAULT_MINIMUM_FEATURED_QUALITY,
+        0.65,
         form=LibraryConfFormItem(
             label="Minimum quality for books that show up in 'featured' lanes",
             description="Between 0 and 1.",
             category="Lanes & Filters",
             level=Level.ALL_ACCESS,
+            default_library_only=True,
         ),
     )
     facets_enabled_order: list[str] = FormField(
@@ -263,6 +271,7 @@ class LibrarySettings(BaseSettings):
             category="Lanes & Filters",
             paired="facets_default_order",
             level=Level.SYS_ADMIN_OR_MANAGER,
+            default_library_only=True,
         ),
     )
     facets_default_order: str = FormField(
@@ -276,6 +285,7 @@ class LibrarySettings(BaseSettings):
             },
             category="Lanes & Filters",
             skip=True,
+            default_library_only=True,
         ),
     )
     facets_enabled_available: list[str] = FormField(
@@ -292,6 +302,7 @@ class LibrarySettings(BaseSettings):
             category="Lanes & Filters",
             paired="facets_default_available",
             level=Level.SYS_ADMIN_OR_MANAGER,
+            default_library_only=True,
         ),
     )
     facets_default_available: str = FormField(
@@ -305,6 +316,7 @@ class LibrarySettings(BaseSettings):
             },
             category="Lanes & Filters",
             skip=True,
+            default_library_only=True,
         ),
     )
     facets_enabled_collection: list[str] = FormField(
@@ -321,6 +333,7 @@ class LibrarySettings(BaseSettings):
             category="Lanes & Filters",
             paired="facets_default_collection",
             level=Level.SYS_ADMIN_OR_MANAGER,
+            default_library_only=True,
         ),
     )
     facets_default_collection: str = FormField(
@@ -334,6 +347,7 @@ class LibrarySettings(BaseSettings):
             },
             category="Lanes & Filters",
             skip=True,
+            default_library_only=True,
         ),
     )
     # Finland
@@ -349,6 +363,7 @@ class LibrarySettings(BaseSettings):
             category="Lanes & Filters",
             paired="facets_default_language",
             level=Level.SYS_ADMIN_OR_MANAGER,
+            default_library_only=True,
         ),
     )
     facets_default_language: str = FormField(
@@ -362,6 +377,7 @@ class LibrarySettings(BaseSettings):
             },
             category="Lanes & Filters",
             skip=True,
+            default_library_only=True,
         ),
     )
     library_description: str | None = FormField(
@@ -432,6 +448,7 @@ class LibrarySettings(BaseSettings):
             "<br/>The default address will work, but for greater security, set up your own address that "
             "trashes all incoming email.",
             level=Level.SYS_ADMIN_OR_MANAGER,
+            default_library_only=True,
         ),
     )
     color_scheme: str = FormField(
@@ -462,6 +479,7 @@ class LibrarySettings(BaseSettings):
             },
             category="Client Interface Customization",
             level=Level.SYS_ADMIN_OR_MANAGER,
+            default_library_only=True,
         ),
     )
     web_primary_color: str = FormField(
@@ -473,6 +491,7 @@ class LibrarySettings(BaseSettings):
             category="Client Interface Customization",
             type=ConfigurationFormItemType.COLOR,
             level=Level.SYS_ADMIN_OR_MANAGER,
+            default_library_only=True,
         ),
         alias="web-primary-color",
     )
@@ -485,6 +504,7 @@ class LibrarySettings(BaseSettings):
             category="Client Interface Customization",
             type=ConfigurationFormItemType.COLOR,
             level=Level.SYS_ADMIN_OR_MANAGER,
+            default_library_only=True,
         ),
         alias="web-secondary-color",
     )
@@ -495,6 +515,7 @@ class LibrarySettings(BaseSettings):
             description="Give web applications a CSS file to customize the catalog display.",
             category="Client Interface Customization",
             level=Level.SYS_ADMIN_ONLY,
+            default_library_only=True,
         ),
         alias="web-css-file",
     )
@@ -507,6 +528,7 @@ class LibrarySettings(BaseSettings):
             category="Client Interface Customization",
             type=ConfigurationFormItemType.LIST,
             level=Level.SYS_ADMIN_OR_MANAGER,
+            default_library_only=True,
         ),
         alias="web-header-links",
     )
@@ -518,6 +540,7 @@ class LibrarySettings(BaseSettings):
             category="Client Interface Customization",
             type=ConfigurationFormItemType.LIST,
             level=Level.SYS_ADMIN_OR_MANAGER,
+            default_library_only=True,
         ),
         alias="web-header-labels",
     )
@@ -636,6 +659,7 @@ class LibrarySettings(BaseSettings):
             "ISO-639-2</a> language code.",
             category="Languages",
             level=Level.ALL_ACCESS,
+            default_library_only=True,
         ),
         alias="large_collections",
     )
@@ -650,6 +674,7 @@ class LibrarySettings(BaseSettings):
             "ISO-639-2</a> language code.",
             category="Languages",
             level=Level.ALL_ACCESS,
+            default_library_only=True,
         ),
         alias="small_collections",
     )
@@ -664,24 +689,10 @@ class LibrarySettings(BaseSettings):
             "ISO-639-2</a> language code.",
             category="Languages",
             level=Level.ALL_ACCESS,
+            default_library_only=True,
         ),
         alias="tiny_collections",
     )
-
-    @root_validator
-    def validate_require_help_email_or_website(
-        cls, values: dict[str, Any]
-    ) -> dict[str, Any]:
-        if not values.get("help_email") and not values.get("help_web"):
-            help_email_label = cls.get_form_field_label("help_email")
-            help_website_label = cls.get_form_field_label("help_web")
-            raise SettingsValidationError(
-                problem_detail=INCOMPLETE_CONFIGURATION.detailed(
-                    f"You must provide either '{help_email_label}' or '{help_website_label}'."
-                )
-            )
-
-        return values
 
     @root_validator
     def validate_header_links(cls, values: dict[str, Any]) -> dict[str, Any]:
@@ -776,3 +787,11 @@ class LibrarySettings(BaseSettings):
                     languages.append(validated_language)
             return languages
         return value
+
+    def merge_with(self, other_instance: LibrarySettings) -> LibrarySettings:
+        """Where there is no value for an attribute, use value from the other instance"""
+        merged_attrs = self.__dict__.copy()
+        for key, value in other_instance.__dict__.items():
+            if value is not None and getattr(self, key, None) is None:
+                merged_attrs[key] = value
+        return LibrarySettings(**merged_attrs)

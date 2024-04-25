@@ -334,7 +334,18 @@ class Library(Base, HasSessionCache):
                 )
             settings = integration_settings_load(LibrarySettings, self)
             self._settings = settings
-        return settings
+
+        # Finland, use default library settings as defaults
+
+        # This is the default, don't need to merge anything
+        if self.is_default:
+            return settings
+
+        default_library: Library | None = self.default(Session.object_session(self))
+        if not default_library:
+            return settings
+
+        return settings.merge_with(default_library.settings)
 
     def update_settings(self, new_settings: LibrarySettings) -> None:
         """Update the settings for this integration"""
