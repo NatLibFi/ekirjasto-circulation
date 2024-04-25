@@ -7,10 +7,10 @@ from core.search.document import (
     LONG,
     SearchMappingDocument,
     SearchMappingFieldType,
-    icu_collation_keyword,
     keyword,
     nested,
     sort_author_keyword,
+    sort_title_keyword,
 )
 from core.search.revision import SearchSchemaRevision
 
@@ -208,8 +208,9 @@ return champion;
         # Here's a special filter used only by that analyzer. It
         # duplicates the filter used by the icu_collation_keyword data
         # type.
-        self._filters["en_sortable_filter"] = dict(
-            type="icu_collation", language="en", country="US"
+        # Finland: change language to fi to correclty handle scandinavian letters
+        self._filters["sortable_filter"] = dict(
+            type="icu_collation", language="fi", country="FI"
         )
 
         # Here's the analyzer used by the 'sort_author' property.
@@ -221,8 +222,14 @@ return champion;
         # fields can't specify char_filter.
         self._analyzers["en_sort_author_analyzer"] = dict(
             tokenizer="keyword",
-            filter=["en_sortable_filter"],
+            filter=["sortable_filter"],
             char_filter=self.AUTHOR_CHAR_FILTER_NAMES,
+        )
+
+        # Finland
+        self._analyzers["sort_title_analyzer"] = dict(
+            tokenizer="keyword",
+            filter=["sortable_filter"],
         )
 
         self._fields: dict[str, SearchMappingFieldType] = {
@@ -235,7 +242,7 @@ return champion;
             "publisher": FILTERABLE_TEXT,
             "imprint": FILTERABLE_TEXT,
             "presentation_ready": BOOLEAN,
-            "sort_title": icu_collation_keyword(),
+            "sort_title": sort_title_keyword(),
             "sort_author": sort_author_keyword(),
             "series_position": INTEGER,
             "work_id": INTEGER,

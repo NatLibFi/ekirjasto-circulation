@@ -107,6 +107,14 @@ def sort_author_keyword() -> SearchMappingFieldTypeParameterized:
     return t
 
 
+# Finland: added for correct sorting on scandinavian letters in titles
+def sort_title_keyword() -> SearchMappingFieldTypeParameterized:
+    t = SearchMappingFieldTypeParameterized("text")
+    t.parameters["analyzer"] = "sort_title_analyzer"
+    t.parameters["fielddata"] = "true"
+    return t
+
+
 class SearchMappingFieldTypeObject(SearchMappingFieldType):
     """See: https://opensearch.org/docs/latest/field-types/supported-field-types/object/"""
 
