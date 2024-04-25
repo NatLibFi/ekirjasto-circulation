@@ -288,9 +288,9 @@ class TestLaneCreation:
         } == {x.display_name for x in lanes}
 
         [english_fiction_lane] = [x for x in lanes if x.display_name == "Fiction"]
-        assert 0 == english_fiction_lane.priority
+        assert 1000 == english_fiction_lane.priority
         [world] = [x for x in lanes if x.display_name == "World Languages"]
-        assert 5 == world.priority
+        assert 1005 == world.priority
 
         # ensure the target age is appropriately set for the children and middle grade lane
         [children_and_middle_grade_lane] = [

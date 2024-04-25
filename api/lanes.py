@@ -125,7 +125,8 @@ def create_default_lanes(_db, library):
     if not large and not small and not tiny:
         estimates = library.estimated_holdings_by_language()
         large, small, tiny = _lane_configuration_from_collection_sizes(estimates)
-    priority = 0
+
+    priority = 1000
 
     if large and len(large) > 0:
         language = large[0]
