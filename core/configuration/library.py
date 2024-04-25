@@ -380,6 +380,22 @@ class LibrarySettings(BaseSettings):
             default_library_only=True,
         ),
     )
+    facets_enabled_dynamic: list[str] = FormField(
+        list(FacetConstants.FACET_DISPLAY_TITLES_DYNAMIC.keys()),
+        form=LibraryConfFormItem(
+            label="Allow patrons to filter by dynamic facets",
+            type=ConfigurationFormItemType.MENU,
+            options={
+                facet: FacetConstants.GROUP_DISPLAY_TITLES[facet]
+                for facet in FacetConstants.FACET_DISPLAY_TITLES_DYNAMIC.keys()
+            },
+            category="Lanes & Filters",
+            read_only=True,
+            format="narrow",
+            level=Level.SYS_ADMIN_ONLY,
+            default_library_only=True,
+        ),
+    )
     library_description: str | None = FormField(
         None,
         form=LibraryConfFormItem(

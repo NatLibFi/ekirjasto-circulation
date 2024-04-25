@@ -369,6 +369,10 @@ class Library(Base, HasSessionCache):
 
     def enabled_facets(self, group_name: str) -> list[str]:
         """Look up the enabled facets for a given facet group."""
+
+        if self.is_facet_dynamic_and_disabled(group_name):
+            return []
+
         if group_name == FacetConstants.DISTRIBUTOR_FACETS_GROUP_NAME:
             enabled = []
             for collection in self.collections:
@@ -384,6 +388,12 @@ class Library(Base, HasSessionCache):
             return enabled
 
         return getattr(self.settings, f"facets_enabled_{group_name}")  # type: ignore[no-any-return]
+
+    def is_facet_dynamic_and_disabled(self, facet_group_name: str) -> bool:
+        return (
+            facet_group_name in FacetConstants.FACET_DISPLAY_TITLES_DYNAMIC
+            and not facet_group_name in self.settings.facets_enabled_dynamic
+        )
 
     @property
     def has_root_lanes(self) -> bool:
