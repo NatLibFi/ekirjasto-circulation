@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2024-04-19 08:36+0300\n"
+"POT-Creation-Date: 2024-04-24 23:41+0300\n"
 "PO-Revision-Date: 2024-02-19 22:15+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -239,19 +239,27 @@ msgstr ""
 msgid "Send patrons to the lane with this ID."
 msgstr ""
 
-#: api/ekirjasto_authentication.py:69
+#: api/ekirjasto_authentication.py:74
 msgid "E-kirjasto API environment"
 msgstr ""
 
-#: api/ekirjasto_authentication.py:70
+#: api/ekirjasto_authentication.py:75
 msgid "Select what environment of E-kirjasto accounts should be used."
 msgstr ""
 
-#: api/ekirjasto_authentication.py:87
+#: api/ekirjasto_authentication.py:92
+msgid "E-magazines environment"
+msgstr ""
+
+#: api/ekirjasto_authentication.py:93
+msgid "Select what environment of e-magazines service should be used."
+msgstr ""
+
+#: api/ekirjasto_authentication.py:109
 msgid "Delegate token expire time in seconds"
 msgstr ""
 
-#: api/ekirjasto_authentication.py:88
+#: api/ekirjasto_authentication.py:110
 msgid ""
 "Expire time for a delegate token to authorize in behalf of a ekirjasto "
 "token. This should be less than the expire time for ekirjasto token, so "
