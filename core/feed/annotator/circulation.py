@@ -55,8 +55,11 @@ from core.model.patron import Hold, Loan, Patron
 from core.model.work import Work
 from core.service.container import Services
 from core.util.datetime_helpers import from_timestamp
+from core.util.languages import LanguageCodes
 from core.util.opds_writer import OPDSFeed
 
+import default_lane_names_to_localize
+from core.classifier.localized_names import genres as localized_genre_names
 
 class AcquisitionHelper:
     @classmethod
@@ -953,8 +956,12 @@ class LibraryAnnotator(CirculationManagerAnnotator):
         )
         if group_uri:
             # Finland
-            # Attempt to translate the group title.
-            group_title = _(group_title)
+            # Attempt to translate the group title if it is to be localized.
+            if (
+                group_title in default_lane_names_to_localize.lanes.keys()
+                or group_title in localized_genre_names.keys()
+            ):
+                group_title = _(group_title)
 
             entry.computed.other_links.append(
                 Link(href=group_uri, rel=OPDSFeed.GROUP_REL, title=str(group_title))
