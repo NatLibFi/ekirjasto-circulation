@@ -23,6 +23,7 @@ lanes = {
     "Business": _("Business"),
     "Chapter Books": _("Chapter Books"),
     "Children and Middle Grade": _("Children and Middle Grade"),
+    "Children & Young Adult": _("Children & Young Adult"),
     "Christianity": _("Christianity"),
     "Civil War History": _("Civil War History"),
     "Classics": _("Classics"),
@@ -156,6 +157,7 @@ lanes = {
     "Women Detectives": _("Women Detectives"),
     "Women's Fiction": _("Women's Fiction"),
     "World History": _("World History"),
+    "World Languages": _("World Languages"),
     "Young Adult Fiction": _("Young Adult Fiction"),
     "Young Adult Nonfiction": _("Young Adult Nonfiction"),
 }

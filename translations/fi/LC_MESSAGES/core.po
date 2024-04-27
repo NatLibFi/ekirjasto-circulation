@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2024-04-24 23:41+0300\n"
+"POT-Creation-Date: 2024-04-27 23:15+0300\n"
 "PO-Revision-Date: 2024-03-01 11:37+0000\n"
 "Last-Translator: Marika Kaskinen, 2024\n"
 "Language: fi\n"
@@ -72,7 +72,7 @@ msgstr "Baarimestari ja cocktailit"
 #: default_lane_names_to_localize.py:19
 #, fuzzy
 msgid "Biography"
-msgstr "Valokuvaus"
+msgstr "Elämäkerrat"
 
 #: core/classifier/localized_names.py:75 default_lane_names_to_localize.py:20
 msgid "Biography & Memoir"
@@ -93,562 +93,579 @@ msgstr "Liiketoiminta"
 #: default_lane_names_to_localize.py:24
 #, fuzzy
 msgid "Chapter Books"
-msgstr "E-kirjat"
+msgstr "Lukukirjat"
 
 #: default_lane_names_to_localize.py:25
+#, fuzzy
 msgid "Children and Middle Grade"
-msgstr ""
+msgstr "Lasten kirjat"
 
-#: core/classifier/localized_names.py:130 default_lane_names_to_localize.py:26
+#: default_lane_names_to_localize.py:26
+#, fuzzy
+msgid "Children & Young Adult"
+msgstr "Lapset ja nuoret"
+
+#: core/classifier/localized_names.py:130 default_lane_names_to_localize.py:27
 msgid "Christianity"
 msgstr "Kristinusko"
 
-#: core/classifier/localized_names.py:95 default_lane_names_to_localize.py:27
+#: core/classifier/localized_names.py:95 default_lane_names_to_localize.py:28
 msgid "Civil War History"
 msgstr "Sisällissodan historia"
 
-#: core/classifier/localized_names.py:8 default_lane_names_to_localize.py:28
+#: core/classifier/localized_names.py:8 default_lane_names_to_localize.py:29
 msgid "Classics"
 msgstr "Klassikot"
 
-#: core/classifier/localized_names.py:9 default_lane_names_to_localize.py:29
+#: core/classifier/localized_names.py:9 default_lane_names_to_localize.py:30
 msgid "Comics & Graphic Novels"
 msgstr "Sarjakuvalehdet ja -romaanit"
 
-#: core/classifier/localized_names.py:135 default_lane_names_to_localize.py:30
+#: core/classifier/localized_names.py:135 default_lane_names_to_localize.py:31
 msgid "Computers"
 msgstr "Tietokoneet"
 
-#: default_lane_names_to_localize.py:31
+#: default_lane_names_to_localize.py:32
 #, fuzzy
 msgid "Contemporary Fiction"
 msgstr "Kaunokirjallisuus"
 
-#: core/classifier/localized_names.py:38 default_lane_names_to_localize.py:32
+#: core/classifier/localized_names.py:38 default_lane_names_to_localize.py:33
 msgid "Contemporary Romance"
 msgstr "Nykyajan romantiikka"
 
-#: core/classifier/localized_names.py:88 default_lane_names_to_localize.py:33
+#: core/classifier/localized_names.py:88 default_lane_names_to_localize.py:34
 msgid "Cooking"
 msgstr "Ruoanlaitto"
 
-#: core/classifier/localized_names.py:31 default_lane_names_to_localize.py:34
+#: core/classifier/localized_names.py:31 default_lane_names_to_localize.py:35
 msgid "Cozy Mystery"
 msgstr "Hyvän mielen dekkarit"
 
-#: core/classifier/localized_names.py:107 default_lane_names_to_localize.py:35
+#: core/classifier/localized_names.py:107 default_lane_names_to_localize.py:36
 msgid "Crafts & Hobbies"
 msgstr "Käsityöt ja harrastukset"
 
-#: core/classifier/localized_names.py:28 default_lane_names_to_localize.py:36
+#: core/classifier/localized_names.py:28 default_lane_names_to_localize.py:37
 msgid "Crime & Detective Stories"
 msgstr "Rikos- ja salapoliisiromaanit"
 
-#: core/classifier/localized_names.py:47 default_lane_names_to_localize.py:37
+#: core/classifier/localized_names.py:47 default_lane_names_to_localize.py:38
 msgid "Cyberpunk"
 msgstr "Kyberpunk"
 
-#: core/classifier/localized_names.py:72 default_lane_names_to_localize.py:38
+#: core/classifier/localized_names.py:72 default_lane_names_to_localize.py:39
 msgid "Design"
 msgstr "Muotoilu"
 
-#: core/classifier/localized_names.py:123 default_lane_names_to_localize.py:39
+#: core/classifier/localized_names.py:123 default_lane_names_to_localize.py:40
 msgid "Dictionaries"
 msgstr "Sanakirjat"
 
-#: core/classifier/localized_names.py:10 default_lane_names_to_localize.py:40
+#: core/classifier/localized_names.py:10 default_lane_names_to_localize.py:41
 msgid "Drama"
 msgstr "Draama"
 
-#: default_lane_names_to_localize.py:41
+#: default_lane_names_to_localize.py:42
 #, fuzzy
 msgid "Dystopian"
-msgstr "Dystooppinen scifi"
+msgstr "Dystooppinen"
 
-#: default_lane_names_to_localize.py:42
+#: default_lane_names_to_localize.py:43
+#, fuzzy
 msgid "Early Readers"
-msgstr ""
+msgstr "Varhaiset lukijat"
 
-#: core/classifier/localized_names.py:79 default_lane_names_to_localize.py:43
+#: core/classifier/localized_names.py:79 default_lane_names_to_localize.py:44
 msgid "Economics"
 msgstr "Taloustiede"
 
-#: core/classifier/localized_names.py:76 default_lane_names_to_localize.py:44
+#: core/classifier/localized_names.py:76 default_lane_names_to_localize.py:45
 msgid "Education"
 msgstr "Koulutus"
 
-#: core/classifier/localized_names.py:113 default_lane_names_to_localize.py:45
+#: core/classifier/localized_names.py:113 default_lane_names_to_localize.py:46
 msgid "Entertainment"
 msgstr "Viihde"
 
-#: core/classifier/localized_names.py:13 default_lane_names_to_localize.py:46
+#: core/classifier/localized_names.py:13 default_lane_names_to_localize.py:47
 msgid "Epic Fantasy"
 msgstr "Eeppinen fantasia"
 
-#: core/classifier/localized_names.py:11 default_lane_names_to_localize.py:47
+#: core/classifier/localized_names.py:11 default_lane_names_to_localize.py:48
 msgid "Erotica"
 msgstr "Erotiikka"
 
-#: core/classifier/localized_names.py:56 default_lane_names_to_localize.py:48
+#: core/classifier/localized_names.py:56 default_lane_names_to_localize.py:49
 msgid "Espionage"
 msgstr "Vakoilu"
 
-#: core/classifier/localized_names.py:96 default_lane_names_to_localize.py:49
+#: core/classifier/localized_names.py:96 default_lane_names_to_localize.py:50
 msgid "European History"
 msgstr "Euroopan historia"
 
-#: core/classifier/localized_names.py:84 default_lane_names_to_localize.py:50
+#: core/classifier/localized_names.py:84 default_lane_names_to_localize.py:51
 msgid "Family & Relationships"
 msgstr "Perhe ja ihmissuhteet"
 
-#: core/classifier/localized_names.py:12 default_lane_names_to_localize.py:51
+#: core/classifier/localized_names.py:12 default_lane_names_to_localize.py:52
 msgid "Fantasy"
 msgstr "Fantasia"
 
-#: core/classifier/localized_names.py:73 default_lane_names_to_localize.py:52
+#: core/classifier/localized_names.py:73 default_lane_names_to_localize.py:53
 msgid "Fashion"
 msgstr "Muoti"
 
-#: default_lane_names_to_localize.py:53
+#: default_lane_names_to_localize.py:54
 #, fuzzy
 msgid "Fiction"
-msgstr "Urbaani fiktio"
+msgstr "Kaunokirjallisuus"
 
-#: core/classifier/localized_names.py:114 default_lane_names_to_localize.py:54
+#: core/classifier/localized_names.py:114 default_lane_names_to_localize.py:55
 msgid "Film & TV"
 msgstr "Elokuvat ja televisio"
 
-#: core/classifier/localized_names.py:16 default_lane_names_to_localize.py:55
+#: core/classifier/localized_names.py:16 default_lane_names_to_localize.py:56
 msgid "Folklore"
 msgstr "Kansanperinne"
 
-#: core/classifier/localized_names.py:86 default_lane_names_to_localize.py:56
+#: core/classifier/localized_names.py:86 default_lane_names_to_localize.py:57
 msgid "Food & Health"
 msgstr "Ruoka ja terveys"
 
-#: core/classifier/localized_names.py:124 default_lane_names_to_localize.py:57
+#: core/classifier/localized_names.py:124 default_lane_names_to_localize.py:58
 msgid "Foreign Language Study"
 msgstr "Vieraiden kielten opiskelu"
 
-#: core/classifier/localized_names.py:109 default_lane_names_to_localize.py:58
+#: core/classifier/localized_names.py:109 default_lane_names_to_localize.py:59
 msgid "Games"
 msgstr "Pelit"
 
-#: core/classifier/localized_names.py:108 default_lane_names_to_localize.py:59
+#: core/classifier/localized_names.py:108 default_lane_names_to_localize.py:60
 msgid "Gardening"
 msgstr "Puutarhanhoito"
 
-#: core/classifier/localized_names.py:20 default_lane_names_to_localize.py:60
+#: core/classifier/localized_names.py:20 default_lane_names_to_localize.py:61
 msgid "Ghost Stories"
 msgstr "Kummitustarinat"
 
-#: core/classifier/localized_names.py:19 default_lane_names_to_localize.py:61
+#: core/classifier/localized_names.py:19 default_lane_names_to_localize.py:62
 msgid "Gothic Horror"
 msgstr "Goottilainen kauhu"
 
-#: core/classifier/localized_names.py:39 default_lane_names_to_localize.py:62
+#: core/classifier/localized_names.py:39 default_lane_names_to_localize.py:63
 msgid "Gothic Romance"
 msgstr "Goottilainen romantiikka"
 
-#: core/classifier/localized_names.py:29 default_lane_names_to_localize.py:63
+#: core/classifier/localized_names.py:29 default_lane_names_to_localize.py:64
 msgid "Hard-Boiled Mystery"
 msgstr "Kovaksikeitetyt dekkarit"
 
-#: core/classifier/localized_names.py:89 default_lane_names_to_localize.py:64
+#: core/classifier/localized_names.py:89 default_lane_names_to_localize.py:65
 msgid "Health & Diet"
 msgstr "Terveys ja ruokavaliot"
 
-#: core/classifier/localized_names.py:131 default_lane_names_to_localize.py:65
+#: core/classifier/localized_names.py:131 default_lane_names_to_localize.py:66
 msgid "Hinduism"
 msgstr "Hindulaisuus"
 
-#: core/classifier/localized_names.py:14 default_lane_names_to_localize.py:66
+#: core/classifier/localized_names.py:14 default_lane_names_to_localize.py:67
 msgid "Historical Fantasy"
 msgstr "Historiallinen fantasia"
 
-#: core/classifier/localized_names.py:17 default_lane_names_to_localize.py:67
+#: core/classifier/localized_names.py:17 default_lane_names_to_localize.py:68
 msgid "Historical Fiction"
 msgstr "Historiallinen fiktio"
 
-#: core/classifier/localized_names.py:32 default_lane_names_to_localize.py:68
+#: core/classifier/localized_names.py:32 default_lane_names_to_localize.py:69
 msgid "Historical Mystery"
 msgstr "Historialliset dekkarit"
 
-#: core/classifier/localized_names.py:40 default_lane_names_to_localize.py:69
+#: core/classifier/localized_names.py:40 default_lane_names_to_localize.py:70
 msgid "Historical Romance"
 msgstr "Historiallinen romantiikka"
 
-#: core/classifier/localized_names.py:55 default_lane_names_to_localize.py:70
+#: core/classifier/localized_names.py:55 default_lane_names_to_localize.py:71
 msgid "Historical Thriller"
 msgstr "Historialliset trillerit"
 
-#: core/classifier/localized_names.py:91 default_lane_names_to_localize.py:71
+#: core/classifier/localized_names.py:91 default_lane_names_to_localize.py:72
 msgid "History"
 msgstr "Historia"
 
-#: default_lane_names_to_localize.py:72
+#: default_lane_names_to_localize.py:73
+#, fuzzy
 msgid "History & Sociology"
-msgstr ""
+msgstr "Historia ja sosiologia"
 
-#: core/classifier/localized_names.py:105 default_lane_names_to_localize.py:73
+#: core/classifier/localized_names.py:105 default_lane_names_to_localize.py:74
 msgid "Hobbies & Home"
 msgstr "Harrastukset ja koti"
 
-#: core/classifier/localized_names.py:18 default_lane_names_to_localize.py:74
+#: core/classifier/localized_names.py:18 default_lane_names_to_localize.py:75
 msgid "Horror"
 msgstr "Kauhu"
 
-#: core/classifier/localized_names.py:110 default_lane_names_to_localize.py:75
+#: core/classifier/localized_names.py:110 default_lane_names_to_localize.py:76
 msgid "House & Home"
 msgstr "Talo ja koti"
 
-#: default_lane_names_to_localize.py:76
-msgid "Humor"
-msgstr ""
-
 #: default_lane_names_to_localize.py:77
-msgid "Informational Books"
-msgstr ""
+#, fuzzy
+msgid "Humor"
+msgstr "Huumori"
 
-#: core/classifier/localized_names.py:132 default_lane_names_to_localize.py:78
+#: default_lane_names_to_localize.py:78
+#, fuzzy
+msgid "Informational Books"
+msgstr "Informatiiviset kirjat"
+
+#: core/classifier/localized_names.py:132 default_lane_names_to_localize.py:79
 msgid "Islam"
 msgstr "Islam"
 
-#: core/classifier/localized_names.py:133 default_lane_names_to_localize.py:79
+#: core/classifier/localized_names.py:133 default_lane_names_to_localize.py:80
 msgid "Judaism"
 msgstr "Juutalaisuus"
 
-#: core/classifier/localized_names.py:97 default_lane_names_to_localize.py:80
+#: core/classifier/localized_names.py:97 default_lane_names_to_localize.py:81
 msgid "Latin American History"
 msgstr "Latinalaisen Amerikan historia"
 
-#: core/classifier/localized_names.py:125 default_lane_names_to_localize.py:81
+#: core/classifier/localized_names.py:125 default_lane_names_to_localize.py:82
 msgid "Law"
 msgstr "Laki"
 
-#: core/classifier/localized_names.py:62 default_lane_names_to_localize.py:82
+#: core/classifier/localized_names.py:62 default_lane_names_to_localize.py:83
 msgid "Legal Thriller"
 msgstr "Oikeudenkäyntitrillerit"
 
-#: core/classifier/localized_names.py:26 default_lane_names_to_localize.py:83
+#: core/classifier/localized_names.py:26 default_lane_names_to_localize.py:84
 msgid "LGBTQ Fiction"
 msgstr "HLBTQ-fiktio"
 
-#: core/classifier/localized_names.py:117 default_lane_names_to_localize.py:84
+#: core/classifier/localized_names.py:117 default_lane_names_to_localize.py:85
 msgid "Life Strategies"
 msgstr "Elämänstrategiat"
 
-#: core/classifier/localized_names.py:118 default_lane_names_to_localize.py:85
+#: core/classifier/localized_names.py:118 default_lane_names_to_localize.py:86
 msgid "Literary Criticism"
 msgstr "Kirjallisuuskritiikki"
 
-#: core/classifier/localized_names.py:25 default_lane_names_to_localize.py:86
+#: core/classifier/localized_names.py:25 default_lane_names_to_localize.py:87
 msgid "Literary Fiction"
 msgstr "Kaunokirjallisuus"
 
-#: core/classifier/localized_names.py:80 default_lane_names_to_localize.py:87
+#: core/classifier/localized_names.py:80 default_lane_names_to_localize.py:88
 msgid "Management & Leadership"
 msgstr "Johtaminen ja johtajuus"
 
-#: core/classifier/localized_names.py:136 default_lane_names_to_localize.py:88
+#: core/classifier/localized_names.py:136 default_lane_names_to_localize.py:89
 msgid "Mathematics"
 msgstr "Matematiikka"
 
-#: core/classifier/localized_names.py:137 default_lane_names_to_localize.py:89
+#: core/classifier/localized_names.py:137 default_lane_names_to_localize.py:90
 msgid "Medical"
 msgstr "Lääketiede"
 
-#: core/classifier/localized_names.py:58 default_lane_names_to_localize.py:90
+#: core/classifier/localized_names.py:58 default_lane_names_to_localize.py:91
 msgid "Medical Thriller"
 msgstr "Lääketieteelliset trillerit"
 
-#: core/classifier/localized_names.py:98 default_lane_names_to_localize.py:91
+#: core/classifier/localized_names.py:98 default_lane_names_to_localize.py:92
 msgid "Medieval History"
 msgstr "Keskiajan historia"
 
-#: core/classifier/localized_names.py:99 default_lane_names_to_localize.py:92
+#: core/classifier/localized_names.py:99 default_lane_names_to_localize.py:93
 msgid "Middle East History"
 msgstr "Lähi-idän historia"
 
-#: core/classifier/localized_names.py:100 default_lane_names_to_localize.py:93
+#: core/classifier/localized_names.py:100 default_lane_names_to_localize.py:94
 msgid "Military History"
 msgstr "Sotahistoria"
 
-#: core/classifier/localized_names.py:48 default_lane_names_to_localize.py:94
+#: core/classifier/localized_names.py:48 default_lane_names_to_localize.py:95
 msgid "Military SF"
 msgstr "Sotilaallinen scifi"
 
-#: core/classifier/localized_names.py:63 default_lane_names_to_localize.py:95
+#: core/classifier/localized_names.py:63 default_lane_names_to_localize.py:96
 msgid "Military Thriller"
 msgstr "Sotilaalliset trillerit"
 
-#: core/classifier/localized_names.py:101 default_lane_names_to_localize.py:96
+#: core/classifier/localized_names.py:101 default_lane_names_to_localize.py:97
 msgid "Modern History"
 msgstr "Uuden ajan historia"
 
-#: default_lane_names_to_localize.py:97
+#: default_lane_names_to_localize.py:98
+#, fuzzy
 msgid "Movie and TV Novelizations"
-msgstr ""
+msgstr "Elokuva- ja TV-romaanisaatiot"
 
-#: core/classifier/localized_names.py:115 default_lane_names_to_localize.py:98
+#: core/classifier/localized_names.py:115 default_lane_names_to_localize.py:99
 msgid "Music"
 msgstr "Musiikki"
 
-#: core/classifier/localized_names.py:27 default_lane_names_to_localize.py:99
+#: core/classifier/localized_names.py:27 default_lane_names_to_localize.py:100
 msgid "Mystery"
 msgstr "Dekkarit"
 
-#: default_lane_names_to_localize.py:100
+#: default_lane_names_to_localize.py:101
 #, fuzzy
 msgid "Mystery & Thriller"
-msgstr "Sotilaalliset trillerit"
+msgstr "Mysteeri ja trillerit"
 
-#: core/classifier/localized_names.py:138 default_lane_names_to_localize.py:101
+#: core/classifier/localized_names.py:138 default_lane_names_to_localize.py:102
 msgid "Nature"
 msgstr "Luonto"
 
-#: default_lane_names_to_localize.py:102
+#: default_lane_names_to_localize.py:103
 #, fuzzy
 msgid "Nonfiction"
-msgstr "Naisten fiktio"
+msgstr "Tietokirjallisuus"
 
-#: core/classifier/localized_names.py:23 default_lane_names_to_localize.py:103
+#: core/classifier/localized_names.py:23 default_lane_names_to_localize.py:104
 msgid "Occult Horror"
 msgstr "Yliluonnollinen kauhu"
 
-#: core/classifier/localized_names.py:33 default_lane_names_to_localize.py:104
+#: core/classifier/localized_names.py:33 default_lane_names_to_localize.py:105
 msgid "Paranormal Mystery"
 msgstr "Yliluonnolliset dekkarit"
 
-#: core/classifier/localized_names.py:41 default_lane_names_to_localize.py:105
+#: core/classifier/localized_names.py:41 default_lane_names_to_localize.py:106
 msgid "Paranormal Romance"
 msgstr "Yliluonnollinen romantiikka"
 
-#: core/classifier/localized_names.py:85 default_lane_names_to_localize.py:106
+#: core/classifier/localized_names.py:85 default_lane_names_to_localize.py:107
 msgid "Parenting"
 msgstr "Vanhemmuus"
 
-#: core/classifier/localized_names.py:83 default_lane_names_to_localize.py:107
+#: core/classifier/localized_names.py:83 default_lane_names_to_localize.py:108
 msgid "Parenting & Family"
 msgstr "Vanhemmuus ja perhe"
 
-#: core/classifier/localized_names.py:116 default_lane_names_to_localize.py:108
+#: core/classifier/localized_names.py:116 default_lane_names_to_localize.py:109
 msgid "Performing Arts"
 msgstr "Esittävät taiteet"
 
-#: core/classifier/localized_names.py:119 default_lane_names_to_localize.py:109
+#: core/classifier/localized_names.py:119 default_lane_names_to_localize.py:110
 msgid "Periodicals"
 msgstr "Aikakauslehdet"
 
-#: core/classifier/localized_names.py:77 default_lane_names_to_localize.py:110
+#: core/classifier/localized_names.py:77 default_lane_names_to_localize.py:111
 msgid "Personal Finance & Business"
 msgstr "Henkilökohtainen talous ja liiketoiminta"
 
-#: core/classifier/localized_names.py:81 default_lane_names_to_localize.py:111
+#: core/classifier/localized_names.py:81 default_lane_names_to_localize.py:112
 msgid "Personal Finance & Investing"
 msgstr "Henkilökohtainen talous ja sijoittaminen"
 
-#: core/classifier/localized_names.py:111 default_lane_names_to_localize.py:112
+#: core/classifier/localized_names.py:111 default_lane_names_to_localize.py:113
 msgid "Pets"
 msgstr "Lemmikkieläimet"
 
-#: core/classifier/localized_names.py:120 default_lane_names_to_localize.py:113
+#: core/classifier/localized_names.py:120 default_lane_names_to_localize.py:114
 msgid "Philosophy"
 msgstr "Filosofia"
 
-#: core/classifier/localized_names.py:74 default_lane_names_to_localize.py:114
+#: core/classifier/localized_names.py:74 default_lane_names_to_localize.py:115
 msgid "Photography"
 msgstr "Valokuvaus"
 
-#: default_lane_names_to_localize.py:115
+#: default_lane_names_to_localize.py:116
 #, fuzzy
 msgid "Picture Books"
-msgstr "Suositut kirjat"
+msgstr "Kuvakirjat"
 
-#: core/classifier/localized_names.py:35 default_lane_names_to_localize.py:116
+#: core/classifier/localized_names.py:35 default_lane_names_to_localize.py:117
 msgid "Poetry"
 msgstr "Runous"
 
-#: default_lane_names_to_localize.py:117
+#: default_lane_names_to_localize.py:118
 #, fuzzy
 msgid "Poetry Books"
-msgstr "Suositut kirjat"
+msgstr "Runokirjat"
 
-#: core/classifier/localized_names.py:30 default_lane_names_to_localize.py:118
+#: core/classifier/localized_names.py:30 default_lane_names_to_localize.py:119
 msgid "Police Procedural"
 msgstr "Poliisiromaanit"
 
-#: core/classifier/localized_names.py:59 default_lane_names_to_localize.py:119
+#: core/classifier/localized_names.py:59 default_lane_names_to_localize.py:120
 msgid "Political Thriller"
 msgstr "Poliittiset trillerit"
 
-#: default_lane_names_to_localize.py:120
+#: default_lane_names_to_localize.py:121
+#, fuzzy
 msgid "Politics & Current Events"
-msgstr ""
+msgstr "Politiikka ja ajankohtaiset tapahtumat"
 
-#: core/classifier/localized_names.py:60 default_lane_names_to_localize.py:121
+#: core/classifier/localized_names.py:60 default_lane_names_to_localize.py:122
 msgid "Psychological Thriller"
 msgstr "Psykologiset trillerit"
 
-#: core/classifier/localized_names.py:139 default_lane_names_to_localize.py:122
+#: core/classifier/localized_names.py:139 default_lane_names_to_localize.py:123
 msgid "Psychology"
 msgstr "Psykologia"
 
-#: core/classifier/localized_names.py:82 default_lane_names_to_localize.py:123
+#: core/classifier/localized_names.py:82 default_lane_names_to_localize.py:124
 msgid "Real Estate"
 msgstr "Kiinteistöt"
 
-#: default_lane_names_to_localize.py:124
+#: default_lane_names_to_localize.py:125
 #, fuzzy
 msgid "Realistic Fiction"
-msgstr "Uskonnollinen fiktio"
+msgstr "Realistinen fiktio"
 
-#: core/classifier/localized_names.py:122 default_lane_names_to_localize.py:125
+#: core/classifier/localized_names.py:122 default_lane_names_to_localize.py:126
 msgid "Reference & Study Aids"
 msgstr "Tietokirjat ja opintoapu"
 
-#: core/classifier/localized_names.py:127 default_lane_names_to_localize.py:126
+#: core/classifier/localized_names.py:127 default_lane_names_to_localize.py:127
 msgid "Religion & Spirituality"
 msgstr "Uskonto ja hengellisyys"
 
-#: core/classifier/localized_names.py:36 default_lane_names_to_localize.py:127
+#: core/classifier/localized_names.py:36 default_lane_names_to_localize.py:128
 msgid "Religious Fiction"
 msgstr "Uskonnollinen fiktio"
 
-#: core/classifier/localized_names.py:102 default_lane_names_to_localize.py:128
+#: core/classifier/localized_names.py:102 default_lane_names_to_localize.py:129
 msgid "Renaissance & Early Modern History"
 msgstr "Renessanssi ja uuden ajan alun historia"
 
-#: core/classifier/localized_names.py:37 default_lane_names_to_localize.py:129
+#: core/classifier/localized_names.py:37 default_lane_names_to_localize.py:130
 msgid "Romance"
 msgstr "Romantiikka"
 
-#: core/classifier/localized_names.py:51 default_lane_names_to_localize.py:130
+#: core/classifier/localized_names.py:51 default_lane_names_to_localize.py:131
 msgid "Romantic SF"
 msgstr "Romanttinen scifi"
 
-#: core/classifier/localized_names.py:43 default_lane_names_to_localize.py:131
+#: core/classifier/localized_names.py:43 default_lane_names_to_localize.py:132
 msgid "Romantic Suspense"
 msgstr "Romanttinen jännitys"
 
-#: core/classifier/localized_names.py:140 default_lane_names_to_localize.py:132
+#: core/classifier/localized_names.py:140 default_lane_names_to_localize.py:133
 msgid "Science"
 msgstr "Tiede"
 
-#: core/classifier/localized_names.py:44 default_lane_names_to_localize.py:133
+#: core/classifier/localized_names.py:44 default_lane_names_to_localize.py:134
 msgid "Science Fiction"
 msgstr "Science Fiction"
 
-#: core/classifier/localized_names.py:134 default_lane_names_to_localize.py:134
+#: core/classifier/localized_names.py:134 default_lane_names_to_localize.py:135
 msgid "Science & Technology"
 msgstr "Tiede ja teknologia"
 
-#: core/classifier/localized_names.py:143 default_lane_names_to_localize.py:135
+#: core/classifier/localized_names.py:143 default_lane_names_to_localize.py:136
 msgid "Self-Help"
 msgstr "Oma-apu"
 
-#: core/classifier/localized_names.py:53 default_lane_names_to_localize.py:136
+#: core/classifier/localized_names.py:53 default_lane_names_to_localize.py:137
 msgid "Short Stories"
 msgstr "Novellit"
 
-#: core/classifier/localized_names.py:141 default_lane_names_to_localize.py:137
+#: core/classifier/localized_names.py:141 default_lane_names_to_localize.py:138
 msgid "Social Sciences"
 msgstr "Yhteiskuntatieteet"
 
-#: core/classifier/localized_names.py:46 default_lane_names_to_localize.py:138
+#: core/classifier/localized_names.py:46 default_lane_names_to_localize.py:139
 msgid "Space Opera"
 msgstr "Avaruusooppera"
 
-#: core/classifier/localized_names.py:144 default_lane_names_to_localize.py:139
+#: core/classifier/localized_names.py:144 default_lane_names_to_localize.py:140
 msgid "Sports"
 msgstr "Urheilu"
 
-#: core/classifier/localized_names.py:50 default_lane_names_to_localize.py:140
+#: core/classifier/localized_names.py:50 default_lane_names_to_localize.py:141
 msgid "Steampunk"
 msgstr "Steampunk"
 
-#: core/classifier/localized_names.py:126 default_lane_names_to_localize.py:141
+#: core/classifier/localized_names.py:126 default_lane_names_to_localize.py:142
 msgid "Study Aids"
 msgstr "Opintoapu"
 
-#: core/classifier/localized_names.py:57 default_lane_names_to_localize.py:142
+#: core/classifier/localized_names.py:57 default_lane_names_to_localize.py:143
 msgid "Supernatural Thriller"
 msgstr "Yliluonnolliset trillerit"
 
-#: core/classifier/localized_names.py:142 default_lane_names_to_localize.py:143
+#: core/classifier/localized_names.py:142 default_lane_names_to_localize.py:144
 msgid "Technology"
 msgstr "Teknologia"
 
-#: core/classifier/localized_names.py:61 default_lane_names_to_localize.py:144
+#: core/classifier/localized_names.py:61 default_lane_names_to_localize.py:145
 msgid "Technothriller"
 msgstr "Teknotrillerit"
 
-#: default_lane_names_to_localize.py:145
+#: default_lane_names_to_localize.py:146
 #, fuzzy
 msgid "Thriller"
-msgstr "Teknotrillerit"
+msgstr "Trillerit"
 
-#: core/classifier/localized_names.py:145 default_lane_names_to_localize.py:146
+#: core/classifier/localized_names.py:145 default_lane_names_to_localize.py:147
 msgid "Travel"
 msgstr "Matkailu"
 
-#: core/classifier/localized_names.py:146 default_lane_names_to_localize.py:147
+#: core/classifier/localized_names.py:146 default_lane_names_to_localize.py:148
 msgid "True Crime"
 msgstr "True Crime"
 
-#: core/classifier/localized_names.py:103 default_lane_names_to_localize.py:148
+#: core/classifier/localized_names.py:103 default_lane_names_to_localize.py:149
 msgid "United States History"
 msgstr "Yhdysvaltojen historia"
 
-#: core/classifier/localized_names.py:15 default_lane_names_to_localize.py:149
+#: core/classifier/localized_names.py:15 default_lane_names_to_localize.py:150
 msgid "Urban Fantasy"
 msgstr "Urbaani fantasia"
 
-#: core/classifier/localized_names.py:64 default_lane_names_to_localize.py:150
+#: core/classifier/localized_names.py:64 default_lane_names_to_localize.py:151
 msgid "Urban Fiction"
 msgstr "Urbaani fiktio"
 
-#: core/classifier/localized_names.py:21 default_lane_names_to_localize.py:151
+#: core/classifier/localized_names.py:21 default_lane_names_to_localize.py:152
 msgid "Vampires"
 msgstr "Vampyyrit"
 
-#: core/classifier/localized_names.py:90 default_lane_names_to_localize.py:152
+#: core/classifier/localized_names.py:90 default_lane_names_to_localize.py:153
 msgid "Vegetarian & Vegan"
 msgstr "Kasvissyönti ja veganismi"
 
-#: core/classifier/localized_names.py:22 default_lane_names_to_localize.py:153
+#: core/classifier/localized_names.py:22 default_lane_names_to_localize.py:154
 msgid "Werewolves"
 msgstr "Ihmissudet"
 
-#: core/classifier/localized_names.py:42 default_lane_names_to_localize.py:154
+#: core/classifier/localized_names.py:42 default_lane_names_to_localize.py:155
 msgid "Western Romance"
 msgstr "Lännen romantiikka"
 
-#: core/classifier/localized_names.py:65 default_lane_names_to_localize.py:155
+#: core/classifier/localized_names.py:65 default_lane_names_to_localize.py:156
 msgid "Westerns"
 msgstr "Westernit"
 
-#: core/classifier/localized_names.py:34 default_lane_names_to_localize.py:156
+#: core/classifier/localized_names.py:34 default_lane_names_to_localize.py:157
 msgid "Women Detectives"
 msgstr "Naisetsivät"
 
-#: core/classifier/localized_names.py:66 default_lane_names_to_localize.py:157
+#: core/classifier/localized_names.py:66 default_lane_names_to_localize.py:158
 msgid "Women's Fiction"
 msgstr "Naisten fiktio"
 
-#: core/classifier/localized_names.py:104 default_lane_names_to_localize.py:158
+#: core/classifier/localized_names.py:104 default_lane_names_to_localize.py:159
 msgid "World History"
 msgstr "Maailmanhistoria"
 
-#: default_lane_names_to_localize.py:159
-#, fuzzy
-msgid "Young Adult Fiction"
-msgstr "Urbaani fiktio"
-
 #: default_lane_names_to_localize.py:160
 #, fuzzy
+msgid "World Languages"
+msgstr "Maailman kielet"
+
+#: default_lane_names_to_localize.py:161
+#, fuzzy
+msgid "Young Adult Fiction"
+msgstr "Nuorten kaunokirjallisuus"
+
+#: default_lane_names_to_localize.py:162
+#, fuzzy
 msgid "Young Adult Nonfiction"
-msgstr "Humoristinen tietokirjallisuus"
+msgstr "Nuorten tietokirjallisuus"
 
 #: core/config.py:95
 msgid "Debug"
@@ -827,7 +844,7 @@ msgstr "Salli asiakkaiden suodattaa kokoelman nimen mukaan"
 #: core/facets.py:105
 #, fuzzy
 msgid "Allow patrons to filter by language"
-msgstr "Salli asiakkaiden suodattaa jakelijan mukaan"
+msgstr "Salli asiakkaiden suodattaa kielen mukaan"
 
 #: core/facets.py:109
 msgid "Title"

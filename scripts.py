@@ -491,6 +491,9 @@ class CollectTranslationsScript(Script):
         )
         library.settings_dict["help_web"] = "https://google.com"
         library.settings_dict["website"] = "https://google.com"
+        library.settings_dict["large_collection_languages"] = ["fi", "sv", "en"]
+        library.settings_dict["small_collection_languages"] = ["sv", "en"]
+        library.settings_dict["tine_collection_languages"] = ["sv", "en"]
         library.is_default = True
         create_default_lanes(self._db, library)
 
@@ -509,7 +512,17 @@ class CollectTranslationsScript(Script):
             file.write("lanes = {\n")
             lanes_added = []
             for lane in lanes:
-                if not lane.display_name in lanes_added:
+                translate_name = not lane.display_name in lanes_added
+
+                for language in LanguageCodes.NATIVE_NAMES_RAW_DATA:
+                    if (
+                        lane.display_name == language["name"]
+                        or lane.display_name == language["nativeName"]
+                    ):
+                        translate_name = False
+                        break
+
+                if translate_name:
                     file.write(
                         f'    "{lane.display_name}": _("{lane.display_name}"),\n'
                     )
