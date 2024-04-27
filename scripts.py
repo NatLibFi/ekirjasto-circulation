@@ -491,6 +491,9 @@ class CollectTranslationsScript(Script):
         )
         library.settings_dict["help_web"] = "https://google.com"
         library.settings_dict["website"] = "https://google.com"
+        library.settings_dict["large_collection_languages"] = ["fi", "sv", "en"]
+        library.settings_dict["small_collection_languages"] = ["fi", "sv", "en"]
+        library.settings_dict["tine_collection_languages"] = ["fi", "sv", "en"]
         library.is_default = True
         create_default_lanes(self._db, library)
 

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2024-04-24 23:41+0300\n"
+"POT-Creation-Date: 2024-04-27 17:50+0300\n"
 "PO-Revision-Date: 2024-02-19 22:14+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -94,543 +94,563 @@ msgstr ""
 msgid "Children and Middle Grade"
 msgstr ""
 
-#: core/classifier/localized_names.py:130 default_lane_names_to_localize.py:26
+#: default_lane_names_to_localize.py:26
+msgid "Children & Young Adult"
+msgstr ""
+
+#: core/classifier/localized_names.py:130 default_lane_names_to_localize.py:27
 msgid "Christianity"
 msgstr ""
 
-#: core/classifier/localized_names.py:95 default_lane_names_to_localize.py:27
+#: core/classifier/localized_names.py:95 default_lane_names_to_localize.py:28
 msgid "Civil War History"
 msgstr ""
 
-#: core/classifier/localized_names.py:8 default_lane_names_to_localize.py:28
+#: core/classifier/localized_names.py:8 default_lane_names_to_localize.py:29
 msgid "Classics"
 msgstr ""
 
-#: core/classifier/localized_names.py:9 default_lane_names_to_localize.py:29
+#: core/classifier/localized_names.py:9 default_lane_names_to_localize.py:30
 msgid "Comics & Graphic Novels"
 msgstr ""
 
-#: core/classifier/localized_names.py:135 default_lane_names_to_localize.py:30
+#: core/classifier/localized_names.py:135 default_lane_names_to_localize.py:31
 msgid "Computers"
 msgstr ""
 
-#: default_lane_names_to_localize.py:31
+#: default_lane_names_to_localize.py:32
 msgid "Contemporary Fiction"
 msgstr ""
 
-#: core/classifier/localized_names.py:38 default_lane_names_to_localize.py:32
+#: core/classifier/localized_names.py:38 default_lane_names_to_localize.py:33
 msgid "Contemporary Romance"
 msgstr ""
 
-#: core/classifier/localized_names.py:88 default_lane_names_to_localize.py:33
+#: core/classifier/localized_names.py:88 default_lane_names_to_localize.py:34
 msgid "Cooking"
 msgstr ""
 
-#: core/classifier/localized_names.py:31 default_lane_names_to_localize.py:34
+#: core/classifier/localized_names.py:31 default_lane_names_to_localize.py:35
 msgid "Cozy Mystery"
 msgstr ""
 
-#: core/classifier/localized_names.py:107 default_lane_names_to_localize.py:35
+#: core/classifier/localized_names.py:107 default_lane_names_to_localize.py:36
 msgid "Crafts & Hobbies"
 msgstr ""
 
-#: core/classifier/localized_names.py:28 default_lane_names_to_localize.py:36
+#: core/classifier/localized_names.py:28 default_lane_names_to_localize.py:37
 msgid "Crime & Detective Stories"
 msgstr ""
 
-#: core/classifier/localized_names.py:47 default_lane_names_to_localize.py:37
+#: core/classifier/localized_names.py:47 default_lane_names_to_localize.py:38
 msgid "Cyberpunk"
 msgstr ""
 
-#: core/classifier/localized_names.py:72 default_lane_names_to_localize.py:38
+#: core/classifier/localized_names.py:72 default_lane_names_to_localize.py:39
 msgid "Design"
 msgstr ""
 
-#: core/classifier/localized_names.py:123 default_lane_names_to_localize.py:39
+#: core/classifier/localized_names.py:123 default_lane_names_to_localize.py:40
 msgid "Dictionaries"
 msgstr ""
 
-#: core/classifier/localized_names.py:10 default_lane_names_to_localize.py:40
+#: core/classifier/localized_names.py:10 default_lane_names_to_localize.py:41
 msgid "Drama"
 msgstr ""
 
-#: default_lane_names_to_localize.py:41
+#: default_lane_names_to_localize.py:42
 msgid "Dystopian"
 msgstr ""
 
-#: default_lane_names_to_localize.py:42
+#: default_lane_names_to_localize.py:43
 msgid "Early Readers"
 msgstr ""
 
-#: core/classifier/localized_names.py:79 default_lane_names_to_localize.py:43
+#: core/classifier/localized_names.py:79 default_lane_names_to_localize.py:44
 msgid "Economics"
 msgstr ""
 
-#: core/classifier/localized_names.py:76 default_lane_names_to_localize.py:44
+#: core/classifier/localized_names.py:76 default_lane_names_to_localize.py:45
 msgid "Education"
 msgstr ""
 
-#: core/classifier/localized_names.py:113 default_lane_names_to_localize.py:45
+#: core/facets.py:124 default_lane_names_to_localize.py:46
+msgid "English"
+msgstr ""
+
+#: core/classifier/localized_names.py:113 default_lane_names_to_localize.py:47
 msgid "Entertainment"
 msgstr ""
 
-#: core/classifier/localized_names.py:13 default_lane_names_to_localize.py:46
+#: core/classifier/localized_names.py:13 default_lane_names_to_localize.py:48
 msgid "Epic Fantasy"
 msgstr ""
 
-#: core/classifier/localized_names.py:11 default_lane_names_to_localize.py:47
+#: core/classifier/localized_names.py:11 default_lane_names_to_localize.py:49
 msgid "Erotica"
 msgstr ""
 
-#: core/classifier/localized_names.py:56 default_lane_names_to_localize.py:48
+#: core/classifier/localized_names.py:56 default_lane_names_to_localize.py:50
 msgid "Espionage"
 msgstr ""
 
-#: core/classifier/localized_names.py:96 default_lane_names_to_localize.py:49
+#: core/classifier/localized_names.py:96 default_lane_names_to_localize.py:51
 msgid "European History"
 msgstr ""
 
-#: core/classifier/localized_names.py:84 default_lane_names_to_localize.py:50
+#: core/classifier/localized_names.py:84 default_lane_names_to_localize.py:52
 msgid "Family & Relationships"
 msgstr ""
 
-#: core/classifier/localized_names.py:12 default_lane_names_to_localize.py:51
+#: core/classifier/localized_names.py:12 default_lane_names_to_localize.py:53
 msgid "Fantasy"
 msgstr ""
 
-#: core/classifier/localized_names.py:73 default_lane_names_to_localize.py:52
+#: core/classifier/localized_names.py:73 default_lane_names_to_localize.py:54
 msgid "Fashion"
 msgstr ""
 
-#: default_lane_names_to_localize.py:53
+#: default_lane_names_to_localize.py:55
 msgid "Fiction"
 msgstr ""
 
-#: core/classifier/localized_names.py:114 default_lane_names_to_localize.py:54
+#: core/classifier/localized_names.py:114 default_lane_names_to_localize.py:56
 msgid "Film & TV"
 msgstr ""
 
-#: core/classifier/localized_names.py:16 default_lane_names_to_localize.py:55
+#: core/facets.py:122 default_lane_names_to_localize.py:57
+msgid "Finnish"
+msgstr ""
+
+#: core/classifier/localized_names.py:16 default_lane_names_to_localize.py:58
 msgid "Folklore"
 msgstr ""
 
-#: core/classifier/localized_names.py:86 default_lane_names_to_localize.py:56
+#: core/classifier/localized_names.py:86 default_lane_names_to_localize.py:59
 msgid "Food & Health"
 msgstr ""
 
-#: core/classifier/localized_names.py:124 default_lane_names_to_localize.py:57
+#: core/classifier/localized_names.py:124 default_lane_names_to_localize.py:60
 msgid "Foreign Language Study"
 msgstr ""
 
-#: core/classifier/localized_names.py:109 default_lane_names_to_localize.py:58
+#: core/classifier/localized_names.py:109 default_lane_names_to_localize.py:61
 msgid "Games"
 msgstr ""
 
-#: core/classifier/localized_names.py:108 default_lane_names_to_localize.py:59
+#: core/classifier/localized_names.py:108 default_lane_names_to_localize.py:62
 msgid "Gardening"
 msgstr ""
 
-#: core/classifier/localized_names.py:20 default_lane_names_to_localize.py:60
+#: core/classifier/localized_names.py:20 default_lane_names_to_localize.py:63
 msgid "Ghost Stories"
 msgstr ""
 
-#: core/classifier/localized_names.py:19 default_lane_names_to_localize.py:61
+#: core/classifier/localized_names.py:19 default_lane_names_to_localize.py:64
 msgid "Gothic Horror"
 msgstr ""
 
-#: core/classifier/localized_names.py:39 default_lane_names_to_localize.py:62
+#: core/classifier/localized_names.py:39 default_lane_names_to_localize.py:65
 msgid "Gothic Romance"
 msgstr ""
 
-#: core/classifier/localized_names.py:29 default_lane_names_to_localize.py:63
+#: core/classifier/localized_names.py:29 default_lane_names_to_localize.py:66
 msgid "Hard-Boiled Mystery"
 msgstr ""
 
-#: core/classifier/localized_names.py:89 default_lane_names_to_localize.py:64
+#: core/classifier/localized_names.py:89 default_lane_names_to_localize.py:67
 msgid "Health & Diet"
 msgstr ""
 
-#: core/classifier/localized_names.py:131 default_lane_names_to_localize.py:65
+#: core/classifier/localized_names.py:131 default_lane_names_to_localize.py:68
 msgid "Hinduism"
 msgstr ""
 
-#: core/classifier/localized_names.py:14 default_lane_names_to_localize.py:66
+#: core/classifier/localized_names.py:14 default_lane_names_to_localize.py:69
 msgid "Historical Fantasy"
 msgstr ""
 
-#: core/classifier/localized_names.py:17 default_lane_names_to_localize.py:67
+#: core/classifier/localized_names.py:17 default_lane_names_to_localize.py:70
 msgid "Historical Fiction"
 msgstr ""
 
-#: core/classifier/localized_names.py:32 default_lane_names_to_localize.py:68
+#: core/classifier/localized_names.py:32 default_lane_names_to_localize.py:71
 msgid "Historical Mystery"
 msgstr ""
 
-#: core/classifier/localized_names.py:40 default_lane_names_to_localize.py:69
+#: core/classifier/localized_names.py:40 default_lane_names_to_localize.py:72
 msgid "Historical Romance"
 msgstr ""
 
-#: core/classifier/localized_names.py:55 default_lane_names_to_localize.py:70
+#: core/classifier/localized_names.py:55 default_lane_names_to_localize.py:73
 msgid "Historical Thriller"
 msgstr ""
 
-#: core/classifier/localized_names.py:91 default_lane_names_to_localize.py:71
+#: core/classifier/localized_names.py:91 default_lane_names_to_localize.py:74
 msgid "History"
 msgstr ""
 
-#: default_lane_names_to_localize.py:72
+#: default_lane_names_to_localize.py:75
 msgid "History & Sociology"
 msgstr ""
 
-#: core/classifier/localized_names.py:105 default_lane_names_to_localize.py:73
+#: core/classifier/localized_names.py:105 default_lane_names_to_localize.py:76
 msgid "Hobbies & Home"
 msgstr ""
 
-#: core/classifier/localized_names.py:18 default_lane_names_to_localize.py:74
+#: core/classifier/localized_names.py:18 default_lane_names_to_localize.py:77
 msgid "Horror"
 msgstr ""
 
-#: core/classifier/localized_names.py:110 default_lane_names_to_localize.py:75
+#: core/classifier/localized_names.py:110 default_lane_names_to_localize.py:78
 msgid "House & Home"
 msgstr ""
 
-#: default_lane_names_to_localize.py:76
+#: default_lane_names_to_localize.py:79
 msgid "Humor"
 msgstr ""
 
-#: default_lane_names_to_localize.py:77
+#: default_lane_names_to_localize.py:80
 msgid "Informational Books"
 msgstr ""
 
-#: core/classifier/localized_names.py:132 default_lane_names_to_localize.py:78
+#: core/classifier/localized_names.py:132 default_lane_names_to_localize.py:81
 msgid "Islam"
 msgstr ""
 
-#: core/classifier/localized_names.py:133 default_lane_names_to_localize.py:79
+#: core/classifier/localized_names.py:133 default_lane_names_to_localize.py:82
 msgid "Judaism"
 msgstr ""
 
-#: core/classifier/localized_names.py:97 default_lane_names_to_localize.py:80
+#: core/classifier/localized_names.py:97 default_lane_names_to_localize.py:83
 msgid "Latin American History"
 msgstr ""
 
-#: core/classifier/localized_names.py:125 default_lane_names_to_localize.py:81
+#: core/classifier/localized_names.py:125 default_lane_names_to_localize.py:84
 msgid "Law"
 msgstr ""
 
-#: core/classifier/localized_names.py:62 default_lane_names_to_localize.py:82
+#: core/classifier/localized_names.py:62 default_lane_names_to_localize.py:85
 msgid "Legal Thriller"
 msgstr ""
 
-#: core/classifier/localized_names.py:26 default_lane_names_to_localize.py:83
+#: core/classifier/localized_names.py:26 default_lane_names_to_localize.py:86
 msgid "LGBTQ Fiction"
 msgstr ""
 
-#: core/classifier/localized_names.py:117 default_lane_names_to_localize.py:84
+#: core/classifier/localized_names.py:117 default_lane_names_to_localize.py:87
 msgid "Life Strategies"
 msgstr ""
 
-#: core/classifier/localized_names.py:118 default_lane_names_to_localize.py:85
+#: core/classifier/localized_names.py:118 default_lane_names_to_localize.py:88
 msgid "Literary Criticism"
 msgstr ""
 
-#: core/classifier/localized_names.py:25 default_lane_names_to_localize.py:86
+#: core/classifier/localized_names.py:25 default_lane_names_to_localize.py:89
 msgid "Literary Fiction"
 msgstr ""
 
-#: core/classifier/localized_names.py:80 default_lane_names_to_localize.py:87
+#: core/classifier/localized_names.py:80 default_lane_names_to_localize.py:90
 msgid "Management & Leadership"
 msgstr ""
 
-#: core/classifier/localized_names.py:136 default_lane_names_to_localize.py:88
+#: core/classifier/localized_names.py:136 default_lane_names_to_localize.py:91
 msgid "Mathematics"
 msgstr ""
 
-#: core/classifier/localized_names.py:137 default_lane_names_to_localize.py:89
+#: core/classifier/localized_names.py:137 default_lane_names_to_localize.py:92
 msgid "Medical"
 msgstr ""
 
-#: core/classifier/localized_names.py:58 default_lane_names_to_localize.py:90
+#: core/classifier/localized_names.py:58 default_lane_names_to_localize.py:93
 msgid "Medical Thriller"
 msgstr ""
 
-#: core/classifier/localized_names.py:98 default_lane_names_to_localize.py:91
+#: core/classifier/localized_names.py:98 default_lane_names_to_localize.py:94
 msgid "Medieval History"
 msgstr ""
 
-#: core/classifier/localized_names.py:99 default_lane_names_to_localize.py:92
+#: core/classifier/localized_names.py:99 default_lane_names_to_localize.py:95
 msgid "Middle East History"
 msgstr ""
 
-#: core/classifier/localized_names.py:100 default_lane_names_to_localize.py:93
+#: core/classifier/localized_names.py:100 default_lane_names_to_localize.py:96
 msgid "Military History"
 msgstr ""
 
-#: core/classifier/localized_names.py:48 default_lane_names_to_localize.py:94
+#: core/classifier/localized_names.py:48 default_lane_names_to_localize.py:97
 msgid "Military SF"
 msgstr ""
 
-#: core/classifier/localized_names.py:63 default_lane_names_to_localize.py:95
+#: core/classifier/localized_names.py:63 default_lane_names_to_localize.py:98
 msgid "Military Thriller"
 msgstr ""
 
-#: core/classifier/localized_names.py:101 default_lane_names_to_localize.py:96
+#: core/classifier/localized_names.py:101 default_lane_names_to_localize.py:99
 msgid "Modern History"
 msgstr ""
 
-#: default_lane_names_to_localize.py:97
+#: default_lane_names_to_localize.py:100
 msgid "Movie and TV Novelizations"
 msgstr ""
 
-#: core/classifier/localized_names.py:115 default_lane_names_to_localize.py:98
+#: core/classifier/localized_names.py:115 default_lane_names_to_localize.py:101
 msgid "Music"
 msgstr ""
 
-#: core/classifier/localized_names.py:27 default_lane_names_to_localize.py:99
+#: core/classifier/localized_names.py:27 default_lane_names_to_localize.py:102
 msgid "Mystery"
 msgstr ""
 
-#: default_lane_names_to_localize.py:100
+#: default_lane_names_to_localize.py:103
 msgid "Mystery & Thriller"
 msgstr ""
 
-#: core/classifier/localized_names.py:138 default_lane_names_to_localize.py:101
+#: core/classifier/localized_names.py:138 default_lane_names_to_localize.py:104
 msgid "Nature"
 msgstr ""
 
-#: default_lane_names_to_localize.py:102
+#: default_lane_names_to_localize.py:105
 msgid "Nonfiction"
 msgstr ""
 
-#: core/classifier/localized_names.py:23 default_lane_names_to_localize.py:103
+#: core/classifier/localized_names.py:23 default_lane_names_to_localize.py:106
 msgid "Occult Horror"
 msgstr ""
 
-#: core/classifier/localized_names.py:33 default_lane_names_to_localize.py:104
+#: core/classifier/localized_names.py:33 default_lane_names_to_localize.py:107
 msgid "Paranormal Mystery"
 msgstr ""
 
-#: core/classifier/localized_names.py:41 default_lane_names_to_localize.py:105
+#: core/classifier/localized_names.py:41 default_lane_names_to_localize.py:108
 msgid "Paranormal Romance"
 msgstr ""
 
-#: core/classifier/localized_names.py:85 default_lane_names_to_localize.py:106
+#: core/classifier/localized_names.py:85 default_lane_names_to_localize.py:109
 msgid "Parenting"
 msgstr ""
 
-#: core/classifier/localized_names.py:83 default_lane_names_to_localize.py:107
+#: core/classifier/localized_names.py:83 default_lane_names_to_localize.py:110
 msgid "Parenting & Family"
 msgstr ""
 
-#: core/classifier/localized_names.py:116 default_lane_names_to_localize.py:108
+#: core/classifier/localized_names.py:116 default_lane_names_to_localize.py:111
 msgid "Performing Arts"
 msgstr ""
 
-#: core/classifier/localized_names.py:119 default_lane_names_to_localize.py:109
+#: core/classifier/localized_names.py:119 default_lane_names_to_localize.py:112
 msgid "Periodicals"
 msgstr ""
 
-#: core/classifier/localized_names.py:77 default_lane_names_to_localize.py:110
+#: core/classifier/localized_names.py:77 default_lane_names_to_localize.py:113
 msgid "Personal Finance & Business"
 msgstr ""
 
-#: core/classifier/localized_names.py:81 default_lane_names_to_localize.py:111
+#: core/classifier/localized_names.py:81 default_lane_names_to_localize.py:114
 msgid "Personal Finance & Investing"
 msgstr ""
 
-#: core/classifier/localized_names.py:111 default_lane_names_to_localize.py:112
+#: core/classifier/localized_names.py:111 default_lane_names_to_localize.py:115
 msgid "Pets"
 msgstr ""
 
-#: core/classifier/localized_names.py:120 default_lane_names_to_localize.py:113
+#: core/classifier/localized_names.py:120 default_lane_names_to_localize.py:116
 msgid "Philosophy"
 msgstr ""
 
-#: core/classifier/localized_names.py:74 default_lane_names_to_localize.py:114
+#: core/classifier/localized_names.py:74 default_lane_names_to_localize.py:117
 msgid "Photography"
 msgstr ""
 
-#: default_lane_names_to_localize.py:115
+#: default_lane_names_to_localize.py:118
 msgid "Picture Books"
 msgstr ""
 
-#: core/classifier/localized_names.py:35 default_lane_names_to_localize.py:116
+#: core/classifier/localized_names.py:35 default_lane_names_to_localize.py:119
 msgid "Poetry"
 msgstr ""
 
-#: default_lane_names_to_localize.py:117
+#: default_lane_names_to_localize.py:120
 msgid "Poetry Books"
 msgstr ""
 
-#: core/classifier/localized_names.py:30 default_lane_names_to_localize.py:118
+#: core/classifier/localized_names.py:30 default_lane_names_to_localize.py:121
 msgid "Police Procedural"
 msgstr ""
 
-#: core/classifier/localized_names.py:59 default_lane_names_to_localize.py:119
+#: core/classifier/localized_names.py:59 default_lane_names_to_localize.py:122
 msgid "Political Thriller"
 msgstr ""
 
-#: default_lane_names_to_localize.py:120
+#: default_lane_names_to_localize.py:123
 msgid "Politics & Current Events"
 msgstr ""
 
-#: core/classifier/localized_names.py:60 default_lane_names_to_localize.py:121
+#: core/classifier/localized_names.py:60 default_lane_names_to_localize.py:124
 msgid "Psychological Thriller"
 msgstr ""
 
-#: core/classifier/localized_names.py:139 default_lane_names_to_localize.py:122
+#: core/classifier/localized_names.py:139 default_lane_names_to_localize.py:125
 msgid "Psychology"
 msgstr ""
 
-#: core/classifier/localized_names.py:82 default_lane_names_to_localize.py:123
+#: core/classifier/localized_names.py:82 default_lane_names_to_localize.py:126
 msgid "Real Estate"
 msgstr ""
 
-#: default_lane_names_to_localize.py:124
+#: default_lane_names_to_localize.py:127
 msgid "Realistic Fiction"
 msgstr ""
 
-#: core/classifier/localized_names.py:122 default_lane_names_to_localize.py:125
+#: core/classifier/localized_names.py:122 default_lane_names_to_localize.py:128
 msgid "Reference & Study Aids"
 msgstr ""
 
-#: core/classifier/localized_names.py:127 default_lane_names_to_localize.py:126
+#: core/classifier/localized_names.py:127 default_lane_names_to_localize.py:129
 msgid "Religion & Spirituality"
 msgstr ""
 
-#: core/classifier/localized_names.py:36 default_lane_names_to_localize.py:127
+#: core/classifier/localized_names.py:36 default_lane_names_to_localize.py:130
 msgid "Religious Fiction"
 msgstr ""
 
-#: core/classifier/localized_names.py:102 default_lane_names_to_localize.py:128
+#: core/classifier/localized_names.py:102 default_lane_names_to_localize.py:131
 msgid "Renaissance & Early Modern History"
 msgstr ""
 
-#: core/classifier/localized_names.py:37 default_lane_names_to_localize.py:129
+#: core/classifier/localized_names.py:37 default_lane_names_to_localize.py:132
 msgid "Romance"
 msgstr ""
 
-#: core/classifier/localized_names.py:51 default_lane_names_to_localize.py:130
+#: core/classifier/localized_names.py:51 default_lane_names_to_localize.py:133
 msgid "Romantic SF"
 msgstr ""
 
-#: core/classifier/localized_names.py:43 default_lane_names_to_localize.py:131
+#: core/classifier/localized_names.py:43 default_lane_names_to_localize.py:134
 msgid "Romantic Suspense"
 msgstr ""
 
-#: core/classifier/localized_names.py:140 default_lane_names_to_localize.py:132
+#: core/classifier/localized_names.py:140 default_lane_names_to_localize.py:135
 msgid "Science"
 msgstr ""
 
-#: core/classifier/localized_names.py:44 default_lane_names_to_localize.py:133
+#: core/classifier/localized_names.py:44 default_lane_names_to_localize.py:136
 msgid "Science Fiction"
 msgstr ""
 
-#: core/classifier/localized_names.py:134 default_lane_names_to_localize.py:134
+#: core/classifier/localized_names.py:134 default_lane_names_to_localize.py:137
 msgid "Science & Technology"
 msgstr ""
 
-#: core/classifier/localized_names.py:143 default_lane_names_to_localize.py:135
+#: core/classifier/localized_names.py:143 default_lane_names_to_localize.py:138
 msgid "Self-Help"
 msgstr ""
 
-#: core/classifier/localized_names.py:53 default_lane_names_to_localize.py:136
+#: core/classifier/localized_names.py:53 default_lane_names_to_localize.py:139
 msgid "Short Stories"
 msgstr ""
 
-#: core/classifier/localized_names.py:141 default_lane_names_to_localize.py:137
+#: core/classifier/localized_names.py:141 default_lane_names_to_localize.py:140
 msgid "Social Sciences"
 msgstr ""
 
-#: core/classifier/localized_names.py:46 default_lane_names_to_localize.py:138
+#: core/classifier/localized_names.py:46 default_lane_names_to_localize.py:141
 msgid "Space Opera"
 msgstr ""
 
-#: core/classifier/localized_names.py:144 default_lane_names_to_localize.py:139
+#: core/classifier/localized_names.py:144 default_lane_names_to_localize.py:142
 msgid "Sports"
 msgstr ""
 
-#: core/classifier/localized_names.py:50 default_lane_names_to_localize.py:140
+#: core/classifier/localized_names.py:50 default_lane_names_to_localize.py:143
 msgid "Steampunk"
 msgstr ""
 
-#: core/classifier/localized_names.py:126 default_lane_names_to_localize.py:141
+#: core/classifier/localized_names.py:126 default_lane_names_to_localize.py:144
 msgid "Study Aids"
 msgstr ""
 
-#: core/classifier/localized_names.py:57 default_lane_names_to_localize.py:142
+#: core/classifier/localized_names.py:57 default_lane_names_to_localize.py:145
 msgid "Supernatural Thriller"
 msgstr ""
 
-#: core/classifier/localized_names.py:142 default_lane_names_to_localize.py:143
+#: default_lane_names_to_localize.py:146
+msgid "svenska"
+msgstr ""
+
+#: core/classifier/localized_names.py:142 default_lane_names_to_localize.py:147
 msgid "Technology"
 msgstr ""
 
-#: core/classifier/localized_names.py:61 default_lane_names_to_localize.py:144
+#: core/classifier/localized_names.py:61 default_lane_names_to_localize.py:148
 msgid "Technothriller"
 msgstr ""
 
-#: default_lane_names_to_localize.py:145
+#: default_lane_names_to_localize.py:149
 msgid "Thriller"
 msgstr ""
 
-#: core/classifier/localized_names.py:145 default_lane_names_to_localize.py:146
+#: core/classifier/localized_names.py:145 default_lane_names_to_localize.py:150
 msgid "Travel"
 msgstr ""
 
-#: core/classifier/localized_names.py:146 default_lane_names_to_localize.py:147
+#: core/classifier/localized_names.py:146 default_lane_names_to_localize.py:151
 msgid "True Crime"
 msgstr ""
 
-#: core/classifier/localized_names.py:103 default_lane_names_to_localize.py:148
+#: core/classifier/localized_names.py:103 default_lane_names_to_localize.py:152
 msgid "United States History"
 msgstr ""
 
-#: core/classifier/localized_names.py:15 default_lane_names_to_localize.py:149
+#: core/classifier/localized_names.py:15 default_lane_names_to_localize.py:153
 msgid "Urban Fantasy"
 msgstr ""
 
-#: core/classifier/localized_names.py:64 default_lane_names_to_localize.py:150
+#: core/classifier/localized_names.py:64 default_lane_names_to_localize.py:154
 msgid "Urban Fiction"
 msgstr ""
 
-#: core/classifier/localized_names.py:21 default_lane_names_to_localize.py:151
+#: core/classifier/localized_names.py:21 default_lane_names_to_localize.py:155
 msgid "Vampires"
 msgstr ""
 
-#: core/classifier/localized_names.py:90 default_lane_names_to_localize.py:152
+#: core/classifier/localized_names.py:90 default_lane_names_to_localize.py:156
 msgid "Vegetarian & Vegan"
 msgstr ""
 
-#: core/classifier/localized_names.py:22 default_lane_names_to_localize.py:153
+#: core/classifier/localized_names.py:22 default_lane_names_to_localize.py:157
 msgid "Werewolves"
 msgstr ""
 
-#: core/classifier/localized_names.py:42 default_lane_names_to_localize.py:154
+#: core/classifier/localized_names.py:42 default_lane_names_to_localize.py:158
 msgid "Western Romance"
 msgstr ""
 
-#: core/classifier/localized_names.py:65 default_lane_names_to_localize.py:155
+#: core/classifier/localized_names.py:65 default_lane_names_to_localize.py:159
 msgid "Westerns"
 msgstr ""
 
-#: core/classifier/localized_names.py:34 default_lane_names_to_localize.py:156
+#: core/classifier/localized_names.py:34 default_lane_names_to_localize.py:160
 msgid "Women Detectives"
 msgstr ""
 
-#: core/classifier/localized_names.py:66 default_lane_names_to_localize.py:157
+#: core/classifier/localized_names.py:66 default_lane_names_to_localize.py:161
 msgid "Women's Fiction"
 msgstr ""
 
-#: core/classifier/localized_names.py:104 default_lane_names_to_localize.py:158
+#: core/classifier/localized_names.py:104 default_lane_names_to_localize.py:162
 msgid "World History"
 msgstr ""
 
-#: default_lane_names_to_localize.py:159
+#: default_lane_names_to_localize.py:163
+msgid "World Languages"
+msgstr ""
+
+#: default_lane_names_to_localize.py:164
 msgid "Young Adult Fiction"
 msgstr ""
 
-#: default_lane_names_to_localize.py:160
+#: default_lane_names_to_localize.py:165
 msgid "Young Adult Nonfiction"
 msgstr ""
 
@@ -836,16 +856,8 @@ msgstr ""
 msgid "Popular Books"
 msgstr ""
 
-#: core/facets.py:122
-msgid "Finnish"
-msgstr ""
-
 #: core/facets.py:123
 msgid "Swedish"
-msgstr ""
-
-#: core/facets.py:124
-msgid "English"
 msgstr ""
 
 #: core/facets.py:125
@@ -1149,4 +1161,3 @@ msgstr ""
 #, python-format
 msgid "The server made a request to %(service)s, and that request timed out."
 msgstr ""
-
