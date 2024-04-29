@@ -1,28 +1,30 @@
-# Swedish translations for PROJECT.
+# English translations for PROJECT.
 # Copyright (C) 2024 ORGANIZATION
 # This file is distributed under the same license as the PROJECT project.
 # FIRST AUTHOR <EMAIL@ADDRESS>, 2024.
-#
+# 
+# Translators:
+# Sara Nenonen, 2024
+# Rasmus Smeds, 2024
+# 
 msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2024-04-27 23:15+0300\n"
 "PO-Revision-Date: 2024-03-01 11:36+0000\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language: sv\n"
-"Language-Team: Swedish (https://app.transifex.com/national-library-of-"
-"finland/teams/183401/sv/)\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"Last-Translator: Rasmus Smeds, 2024\n"
+"Language-Team: Swedish (https://app.transifex.com/national-library-of-finland/teams/183401/sv/)\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=utf-8\n"
+"Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.13.0\n"
+"Language: sv\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: api/authenticator.py:324
 msgid ""
-"SAML providers are configured, but secret for signing bearer tokens is "
-"not."
+"SAML providers are configured, but secret for signing bearer tokens is not."
 msgstr ""
 "SAML-leverantörer har konfigurerats, men inte krypteringskoden för att "
 "signera bearer tokens."
@@ -63,8 +65,8 @@ msgstr "Verifiera SSL-certifikat"
 
 #: api/axis.py:121
 msgid ""
-"This should always be True in production, it may need to be set to False "
-"to use theAxis 360 QA Environment."
+"This should always be True in production, it may need to be set to False to "
+"use theAxis 360 QA Environment."
 msgstr ""
 "Detta borde alltid vara Sant i produktionen. Man kan behöva ändra värdet "
 "till Falskt för att kunna använda Axis 360 QA-miljön."
@@ -90,8 +92,9 @@ msgid "Show/Hide Titles with No Available Loans"
 msgstr "Visa/Dölj titlar som inte kan lånas"
 
 #: api/bibliotheca.py:112 api/enki.py:87
-msgid "Titles with no available loans will not be displayed in the Catalog view."
-msgstr "Titlar som inte kan lånas kan inte visas i katalogvyn."
+msgid ""
+"Titles with no available loans will not be displayed in the Catalog view."
+msgstr "Titlar som inte kan lånas visas inte i katalogvyn."
 
 #: api/circulation.py:508
 msgid "Ebook Loan Duration (in Days)"
@@ -99,15 +102,13 @@ msgstr "Lånetid för e-böcker (dagar)"
 
 #: api/circulation.py:510
 msgid ""
-"When a patron uses SimplyE to borrow an ebook from this collection, "
-"SimplyE will ask for a loan that lasts this number of days. This must be "
-"equal to or less than the maximum loan duration negotiated with the "
-"distributor."
+"When a patron uses SimplyE to borrow an ebook from this collection, SimplyE "
+"will ask for a loan that lasts this number of days. This must be equal to or"
+" less than the maximum loan duration negotiated with the distributor."
 msgstr ""
-"När en kund använder SimplyE för att låna en e-bok från denna samling "
-"kommer SimplyE att be om ett lån som varar så här många dagar. Detta "
-"måste vara lika eller mindre än den maximala lånetiden som avtalats med "
-"distributören."
+"När en kund använder SimplyE för att låna en e-bok från denna samling kommer"
+" SimplyE att be om ett lån som varar så här många dagar. Detta måste vara "
+"lika eller mindre än den maximala lånetiden som avtalats med distributören."
 
 #: api/circulation.py:523
 msgid "Default Loan Period (in Days)"
@@ -115,17 +116,17 @@ msgstr "Standard lånetid (dagar)"
 
 #: api/circulation.py:525
 msgid ""
-"Until it hears otherwise from the distributor, this server will assume "
-"that any given loan for this library from this collection will last this "
-"number of days. This number is usually a negotiated value between the "
-"library and the distributor. This only affects estimates&mdash;it cannot "
-"affect the actual length of loans."
+"Until it hears otherwise from the distributor, this server will assume that "
+"any given loan for this library from this collection will last this number "
+"of days. This number is usually a negotiated value between the library and "
+"the distributor. This only affects estimates&mdash;it cannot affect the "
+"actual length of loans."
 msgstr ""
-"Tills denna server hör annat från distributören kommer den att anta att "
-"ett lån för detta bibliotek från denna samling kommer att vara så här "
-"länge. Detta nummer är vanligtvis ett värde som avtalats mellan "
-"biblioteket och distributören. Detta påverkar endast  värden, det kan "
-"inte påverka lånens faktiska längd."
+"Tills denna server hör annat från distributören kommer den att anta att ett "
+"lån för detta bibliotek från denna samling kommer att vara så här länge. "
+"Detta nummer är vanligtvis ett värde som avtalats mellan biblioteket och "
+"distributören. Detta påverkar endast estimates&mdash; det kan inte påverka "
+"lånens faktiska längd."
 
 #: api/circulation.py:555
 #, python-format
@@ -147,8 +148,8 @@ msgstr "Det går inte att hitta ditt aktiva lån för detta verk."
 #: api/circulation.py:1354
 #, python-format
 msgid ""
-"You already fulfilled this loan as %(loan_delivery_mechanism)s, you can't"
-" also do it as %(requested_delivery_mechanism)s"
+"You already fulfilled this loan as %(loan_delivery_mechanism)s, you can't "
+"also do it as %(requested_delivery_mechanism)s"
 msgstr ""
 "Du har redan genomfört detta lån som %(loan_delivery_mechanism)s, du kan "
 "inte också genomföra det som %(requested_delivery_mechanism)s"
@@ -164,11 +165,12 @@ msgstr "Bandet finns inte"
 
 #: api/circulation_manager.py:378
 msgid "All Books"
-msgstr ""
+msgstr "Alla böcker"
 
 #: api/config.py:81
 msgid "Internal signing secret for OAuth and SAML bearer tokens"
-msgstr "Krypteringskod för intern signering av bearer tokens för OAuth och SAML"
+msgstr ""
+"Krypteringskod för intern signering av bearer tokens för OAuth och SAML"
 
 #: api/config.py:86
 msgid "Internal secret key for admin interface cookies"
@@ -180,21 +182,21 @@ msgstr "Värdnamn för åtkomst till webbapplikation"
 
 #: api/config.py:93
 msgid ""
-"Only web applications from these hosts can access this circulation "
-"manager. This can be a single hostname (http://catalog.library.org) or a "
-"pipe-separated list of hostnames "
-"(http://catalog.library.org|https://beta.library.org). You must include "
-"the scheme part of the URI (http:// or https://). You can also set this "
-"to '*' to allow access from any host, but you must not do this in a "
-"production environment -- only during development."
+"Only web applications from these hosts can access this circulation manager. "
+"This can be a single hostname (http://catalog.library.org) or a pipe-"
+"separated list of hostnames "
+"(http://catalog.library.org|https://beta.library.org). You must include the "
+"scheme part of the URI (http:// or https://). You can also set this to '*' "
+"to allow access from any host, but you must not do this in a production "
+"environment -- only during development."
 msgstr ""
-"Endast webbapplikationer från dessa värdar kan använda denna "
-"lånehanterare. Detta kan vara ett värdnamn (http://catalog.library.org) "
-"eller en lista med värdnamn separerade med vertikalstreck "
-"(http://catalog.library.org|https://beta.library.org). Du måste inkludera"
-" schemat för URI (http:// or https://). Du kan också ställa in värdet "
-"till '*' för att ge åtkomst från vilken värd som helst, men du får inte "
-"göra detta i en produktionsmiljö -- bara vid utveckling."
+"Endast webbapplikationer från dessa värdar kan använda denna lånehanterare. "
+"Detta kan vara ett värdnamn (http://catalog.library.org) eller en lista med "
+"värdnamn separerade med vertikalstreck "
+"(http://catalog.library.org|https://beta.library.org). Du måste inkludera "
+"schemat för URI (http:// or https://). Du kan också ställa in värdet till "
+"'*' för att ge åtkomst från vilken värd som helst, men du får inte göra "
+"detta i en produktionsmiljö -- bara vid utveckling."
 
 #: api/config.py:99
 msgid "Cache time for static images and JS and CSS files (in seconds)"
@@ -210,15 +212,15 @@ msgstr "Länk till anpassade användarvillkor"
 
 #: api/config.py:117
 msgid ""
-"If your inclusion in the SimplyE mobile app is governed by terms other "
-"than the default, put the URL to those terms in this link so that "
-"librarians will have access to them. This URL will be used for all "
-"libraries on this circulation manager."
+"If your inclusion in the SimplyE mobile app is governed by terms other than "
+"the default, put the URL to those terms in this link so that librarians will"
+" have access to them. This URL will be used for all libraries on this "
+"circulation manager."
 msgstr ""
 "Om din användning av mobilappen SimplyE omfattas av andra villkor än "
 "standardvillkoren, ska du ange URL för dessa villkor i denna länk så att "
-"bibliotekarierna har tillgång till dem. Denna URL kommer att användas för"
-" alla bibliotek på denna utlåningshanterare,"
+"bibliotekarierna har tillgång till dem. Denna URL kommer att användas för "
+"alla bibliotek på denna utlåningshanterare."
 
 #: api/config.py:123
 msgid "Custom Terms of Service link text"
@@ -233,7 +235,7 @@ msgid ""
 msgstr ""
 "Anpassad text för användarvillkoren i sidfoten till dessa sidor för "
 "administratörsgränssnittet. Detta är nyttigt i första hand om du inte "
-"anluter denna utlåningshanterare till mobilappen SimplyE. Denna text "
+"ansluter denna utlåningshanterare till mobilappen SimplyE. Denna text "
 "används i alla bibliotek i denna utlåningshanterare."
 
 #: api/config.py:135
@@ -281,14 +283,12 @@ msgid "Select what environment of E-kirjasto accounts should be used."
 msgstr "Välj  vilken miljö i e-biblioteket konton ska använda."
 
 #: api/ekirjasto_authentication.py:92
-#, fuzzy
 msgid "E-magazines environment"
-msgstr "E-bibliotekets API-miljö"
+msgstr "Miljö för e-tidningar"
 
 #: api/ekirjasto_authentication.py:93
-#, fuzzy
 msgid "Select what environment of e-magazines service should be used."
-msgstr "Välj  vilken miljö i e-biblioteket konton ska använda."
+msgstr "Välj vilken servicemiljö för e-tidningar ska användas."
 
 #: api/ekirjasto_authentication.py:109
 msgid "Delegate token expire time in seconds"
@@ -297,8 +297,8 @@ msgstr "Förfallotid för fullmaktstoken i sekunder"
 #: api/ekirjasto_authentication.py:110
 msgid ""
 "Expire time for a delegate token to authorize in behalf of a ekirjasto "
-"token. This should be less than the expire time for ekirjasto token, so "
-"it can be refreshed."
+"token. This should be less than the expire time for ekirjasto token, so it "
+"can be refreshed."
 msgstr ""
 "Tidsfrist inom vilken fullmaktstoken ska ge auktorisering för en "
 "e-bibliotekstoken. Den måste vara kortare än förfallotiden för "
@@ -337,8 +337,8 @@ msgid ""
 "The number of days a patron has to check out a book after a hold becomes "
 "available."
 msgstr ""
-"Antalet dagar som kunden har tid att låna en reserverad bok efter att den"
-" blivit tillgänglig."
+"Antalet dagar som kunden har tid att låna en reserverad bok efter att den "
+"blivit tillgänglig."
 
 #: api/odl.py:120
 msgid "Passphrase hint"
@@ -346,14 +346,16 @@ msgstr "Lösenordstips"
 
 #: api/odl.py:121
 msgid "Hint displayed to the user when opening an LCP protected publication."
-msgstr "Tips som visas för användaren när denne öppnar en LCP-skyddad publikation."
+msgstr ""
+"Tips som visas för användaren när denne öppnar en LCP-skyddad publikation."
 
 #: api/odl.py:132
 msgid "Passphrase hint URL"
 msgstr "URL för lösenordstips"
 
 #: api/odl.py:133
-msgid "Hint URL available to the user when opening an LCP protected publication."
+msgid ""
+"Hint URL available to the user when opening an LCP protected publication."
 msgstr ""
 "URL för tipset blir tillgänglig för användaren när en LCP-skyddad "
 "publikation öppnas."
@@ -372,8 +374,7 @@ msgstr "Licensformat som hoppats över"
 
 #: api/odl2.py:47
 msgid ""
-"List of license formats that will NOT be imported into Circulation "
-"Manager."
+"List of license formats that will NOT be imported into Circulation Manager."
 msgstr ""
 "En lista över licensformat som INTE kommer att importeras till "
 "utlåningshanteraren."
@@ -384,8 +385,7 @@ msgstr "Lånegräns per kund"
 
 #: api/odl2.py:60
 msgid ""
-"The maximum number of books a patron can have loaned out at any given "
-"time."
+"The maximum number of books a patron can have loaned out at any given time."
 msgstr "Det maximala antalet böcker en kund kan ha i lån på en gång."
 
 #: api/odl2.py:72
@@ -393,8 +393,9 @@ msgid "Hold limit per patron"
 msgstr "Reservationsgräns per kund"
 
 #: api/odl2.py:73
-msgid "The maximum number of books a patron can have on hold at any given time."
-msgstr "Det maximala antalet böcker en kund ha reserverat på en gång."
+msgid ""
+"The maximum number of books a patron can have on hold at any given time."
+msgstr "Det maximala antalet böcker en kund kan ha reserverat på en gång."
 
 #: api/opds_for_distributors.py:52
 msgid "Library's username or access key"
@@ -430,11 +431,11 @@ msgstr "ILS-namn"
 
 #: api/overdrive.py:185
 msgid ""
-"When multiple libraries share an Overdrive account, Overdrive uses a "
-"setting called 'ILS Name' to determine which ILS to check when validating"
-" a given patron."
+"When multiple libraries share an Overdrive account, Overdrive uses a setting"
+" called 'ILS Name' to determine which ILS to check when validating a given "
+"patron."
 msgstr ""
-"Om flera bibliotek delar ett Overdrive-konto. Overdrive använder en "
+"När flera bibliotek delar ett Overdrive-konto använder Overdrive en "
 "inställning som heter 'ILS Name' för att fastställa vilken ILS ska "
 "kontrolleras när en kund valideras."
 
@@ -444,11 +445,11 @@ msgstr "Tredjeparts tjänst misslyckades."
 
 #: api/problem_details.py:10
 msgid ""
-"The library could not complete your request because a third-party service"
-" has failed."
+"The library could not complete your request because a third-party service "
+"has failed."
 msgstr ""
-"Biblioteket kunde inte slutföra din begäran på grund av att en tredje "
-"parts tjänst misslyckades."
+"Biblioteket kunde inte slutföra din begäran på grund av att en tredje parts "
+"tjänst misslyckades."
 
 #: api/problem_details.py:18
 msgid "Feed should be been pre-cached."
@@ -520,8 +521,8 @@ msgstr "Du har redan lånat denna bok."
 
 #: api/problem_details.py:73
 msgid ""
-"You have reached your loan limit. You cannot borrow anything further "
-"until you return something."
+"You have reached your loan limit. You cannot borrow anything further until "
+"you return something."
 msgstr ""
 "Du har nått din lånegräns. Du kan inte låna mera innan du lämnar något "
 "tillbaka."
@@ -529,8 +530,8 @@ msgstr ""
 #: api/problem_details.py:76
 #, python-format
 msgid ""
-"You have reached your loan limit of %(limit)d. You cannot borrow anything"
-" further until you return something."
+"You have reached your loan limit of %(limit)d. You cannot borrow anything "
+"further until you return something."
 msgstr ""
 "Du har nått din lånegräns på %(limit)d. Du kan inte låna mera innan du "
 "lämnar något tillbaka."
@@ -544,14 +545,14 @@ msgid ""
 "You have reached your hold limit. You cannot place another item on hold "
 "until you borrow something or remove a hold."
 msgstr ""
-"Du har nått din reservationsgräns. Du kan inte göra fler reservationer "
-"innan du lånar något eller återkallar en reservation."
+"Du har nått din reservationsgräns. Du kan inte göra fler reservationer innan"
+" du lånar något eller återkallar en reservation."
 
 #: api/problem_details.py:89
 #, python-format
 msgid ""
-"You have reached your hold limit of %(limit)d. You cannot place another "
-"item on hold until you borrow something or remove a hold."
+"You have reached your hold limit of %(limit)d. You cannot place another item"
+" on hold until you borrow something or remove a hold."
 msgstr ""
 "Du har nått din reservationsgräns på %(limit)d. Du kan inte göra fler "
 "reservationer innan du lånar något eller återkallar en reservation."
@@ -620,10 +621,11 @@ msgstr "Du kan inte göra detta utan att först reservera denna bok."
 
 #: api/problem_details.py:151
 msgid "No active loan or hold."
-msgstr "Inget aktivt lån eller ingen aktiv reservation."
+msgstr "Inget aktivt lån eller aktiv reservation."
 
 #: api/problem_details.py:152
-msgid "You can't do this without first borrowing this book or putting it on hold."
+msgid ""
+"You can't do this without first borrowing this book or putting it on hold."
 msgstr "Du kan inte göra detta utan att först låna eller reservera denna bok."
 
 #: api/problem_details.py:158
@@ -644,19 +646,20 @@ msgstr "Du har ingen reservation med detta ID."
 
 #: api/problem_details.py:172
 msgid "Could not mirror local state to remote."
-msgstr "Det gick inte att spegla det lokala tillståndet till fjärrtillståndet."
+msgstr ""
+"Det gick inte att spegla det lokala tillståndet till fjärrtillståndet."
 
 #: api/problem_details.py:173
 msgid ""
-"Could not convince a third party to accept the change you made. It's "
-"likely to show up again soon."
+"Could not convince a third party to accept the change you made. It's likely "
+"to show up again soon."
 msgstr ""
 "Det gick inte att övertala en tredje part att godkänna din ändring. Den "
 "dyker sannolikt upp på nytt snart."
 
 #: api/problem_details.py:181
 msgid "No such lane."
-msgstr "Finns inget sådant band,"
+msgstr "Finns inget sådant band."
 
 #: api/problem_details.py:182
 msgid "You asked for a nonexistent lane."
@@ -680,7 +683,7 @@ msgstr "Det är inte möjligt att radera en delad lista."
 
 #: api/problem_details.py:202
 msgid "No such collection."
-msgstr "Det finns ingen sådan samlingen."
+msgstr "Det finns ingen sådan samling."
 
 #: api/problem_details.py:203
 msgid "You asked for a nonexistent collection."
@@ -688,15 +691,17 @@ msgstr "Du begärde en samling som inte finns."
 
 #: api/problem_details.py:209
 msgid "Forbidden by policy."
-msgstr "Policyn förbjuder."
+msgstr "Förbjudet enligt policyn."
 
 #: api/problem_details.py:210
 msgid "Library policy prevents us from carrying out your request."
 msgstr "Bibliotekets policy förhindrar oss från att utföra din begäran."
 
 #: api/problem_details.py:214
-msgid "Library policy considers this title inappropriate for your patron type."
-msgstr "Bibliotekets policy anser att detta verk är olämpligt för din kundtyp."
+msgid ""
+"Library policy considers this title inappropriate for your patron type."
+msgstr ""
+"Bibliotekets policy anser att detta verk är olämpligt för din kundtyp."
 
 #: api/problem_details.py:221 api/problem_details.py:222
 msgid "Could not fulfill loan."
@@ -722,7 +727,7 @@ msgstr "Du valde en leveransmekanism som inte stöds av denna bok."
 
 #: api/problem_details.py:242 api/problem_details.py:243
 msgid "Could not release hold."
-msgstr "Det gick inte att frigöra reservationen."
+msgstr "Det gick inte att annullera reservationen."
 
 #: api/problem_details.py:249
 msgid "Unknown SAML provider."
@@ -741,13 +746,12 @@ msgid "Ekirjasto provider was not configured for the library"
 msgstr "E-bibliotekets leverantör är inte konfigurerad för biblioteket"
 
 #: api/problem_details.py:265
-#, fuzzy
 msgid "Ekirjasto remote method not supported."
-msgstr "E-bibliotekets leverantör har inte konfigurerats."
+msgstr "Fjärranvändning av E-biblioteket stöds inte."
 
 #: api/problem_details.py:266
 msgid "Method for a remote call not supported."
-msgstr ""
+msgstr "Metoden för fjärranrop stöds inte."
 
 #: api/problem_details.py:272
 msgid "Invalid SAML bearer token."
@@ -786,14 +790,12 @@ msgid "Authentication with ekirjasto API failed, for unknown reason."
 msgstr "Autentisering med e-bibliotekets API misslyckades. Orsak okänd."
 
 #: api/problem_details.py:306
-#, fuzzy
 msgid "Call to ekirjasto API failed."
-msgstr "Autentisering med e-bibliotekets API misslyckades."
+msgstr "Anrop till E-bibliotekets API misslyckades."
 
 #: api/problem_details.py:307
-#, fuzzy
 msgid "Call to ekirjasto API failed, for unknown reason."
-msgstr "Autentisering med e-bibliotekets API misslyckades. Orsak okänd."
+msgstr "Anrop till E-bibliotekets API misslyckades av okänd orsak."
 
 #: api/problem_details.py:313
 msgid "Unsupported authentication mechanism."
@@ -865,7 +867,8 @@ msgstr "Ogiltigt lån för ODL-meddelande"
 
 #: api/problem_details.py:370
 msgid "The ODL notification is for a loan that's not from an ODL collection."
-msgstr "ODL-meddelandet är avsett för lån som inte kommer från en ODL-samling."
+msgstr ""
+"ODL-meddelandet är avsett för lån som inte kommer från en ODL-samling."
 
 #: api/problem_details.py:376
 msgid "Invalid registration"
@@ -884,8 +887,8 @@ msgstr "Dekrypteringsfel"
 #: api/problem_details.py:384
 msgid "Failed to decrypt a shared secret retrieved from another computer."
 msgstr ""
-"Det gick inte att dekryptera en delad kryptering som hämtats från en "
-"annan dator."
+"Det gick inte att dekryptera en delad kryptering som hämtats från en annan "
+"dator."
 
 #: api/problem_details.py:390
 msgid "Device token not found"
@@ -950,4 +953,3 @@ msgstr "Kundens medlemskap har löpt ut"
 #: api/sirsidynix_authentication_provider.py:34
 msgid "Patron has been blocked."
 msgstr "Kunden har blockerats."
-
