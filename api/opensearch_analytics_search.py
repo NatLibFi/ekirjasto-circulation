@@ -231,7 +231,7 @@ class OpenSearchAnalyticsSearch:
         # Add all term fields to aggregations
         aggs = {}
         for field in self.FACET_FIELDS:
-            aggs[field] = {"terms": {"field": field}}
+            aggs[field] = {"terms": {"field": field, "size": 1000}}
 
         # Prepare and run the query (with 0 size)
         query = {"size": 0, "query": {"bool": {"must": filters}}, "aggs": aggs}
