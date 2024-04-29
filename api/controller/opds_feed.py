@@ -315,7 +315,7 @@ class OPDSFeedController(CirculationManagerController):
         # Check whether there is a query string -- if not, we want to
         # send an OpenSearch document explaining how to search.
         query = flask.request.args.get("q")
-        library_short_name = flask.request.library.short_name
+        library_short_name = lane.get_library(self._db).short_name
 
         # Create a function that, when called, generates a URL to the
         # search controller.
