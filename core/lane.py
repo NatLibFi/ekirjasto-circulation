@@ -924,7 +924,6 @@ class DatabaseBackedFacets(Facets):
 
 
 class FeaturedFacets(FacetsWithEntryPoint):
-
     """A simple faceting object that configures a query so that the 'most
     featurable' items are at the front.
 
@@ -1389,12 +1388,13 @@ class WorkList:
         # Load all of this Library's visible top-level Lane objects
         # from the database.
         # Finland, also include lanes from the default library
+        default_library = Library.default(_db)
+
         top_level_lanes = (
             _db.query(Lane)
+            .filter(or_(Lane.library == library, Lane.library == default_library))
             .filter(Lane.parent == None)
             .filter(Lane._visible == True)
-            .join(Lane.library)
-            .filter(or_(Library.id == library.id, Library._is_default == True))
             .order_by(Lane.priority)
             .all()
         )
