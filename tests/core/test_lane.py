@@ -1434,7 +1434,11 @@ class TestSearchFacets:
 
         # The SearchFacets implementation turned the 'Accept-Language'
         # header into a set of language codes.
-        assert ["dan", "eng"] == facets.languages
+
+        # Finland: Language-header usage removed in favor of added language facet
+        # Before: assert ["dan", "eng"] == facets.languages
+        assert None == facets.languages
+
         assert False == facets._language_from_query
 
         # Try again with bogus media, languages, and minimum score.
