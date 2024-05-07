@@ -65,7 +65,6 @@ from core.model.hybrid import hybrid_property
 from core.model.listeners import site_configuration_has_changed
 from core.problem_details import *
 from core.util import LanguageCodes
-from core.util.accept_language import parse_accept_language
 from core.util.datetime_helpers import utc_now
 from core.util.opds_writer import OPDSFeed
 from core.util.problem_detail import ProblemDetail
@@ -1080,16 +1079,12 @@ class SearchFacets(Facets):
         # Searches against a WorkList will use the union of the
         # languages allowed by the WorkList and the languages found in
         # the client's Accept-Language header.
-        language_header = get_header("Accept-Language")
+
+        # Finland: Accept-Language header usage removed from here
+        # in favor of the added language facet
+
         languages = get_argument("language") or None
         extra["language_from_query"] = languages is not None
-        if not languages:
-            if language_header:
-                languages = parse_accept_language(language_header)
-                languages = [l[0] for l in languages]
-                languages = list(map(LanguageCodes.iso_639_2_for_locale, languages))
-                languages = [l for l in languages if l]
-            languages = languages or None
         extra["languages"] = languages
 
         # The client can request a minimum score for search results.

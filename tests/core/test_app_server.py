@@ -390,12 +390,13 @@ class TestLoadMethods:
             assert default_entrypoint == facets.entrypoint
             assert facets.entrypoint_is_default is True
 
-        # Load a SearchFacets object that pulls information from an
-        # HTTP header.
-        with fixture.app.test_request_context("/", headers={"Accept-Language": "ja"}):
+        # Finland: Load a SearchFacets object with language as facet and ignore Accept-Language header.
+        with fixture.app.test_request_context(
+            "/?language=eng", headers={"Accept-Language": "ja"}
+        ):
             flask.request.library = data.default_library()  # type: ignore[attr-defined]
             facets = load_facets_from_request(base_class=SearchFacets)
-            assert ["jpn"] == facets.languages
+            assert ["eng"] == facets.languages
 
     def test_load_facets_from_request_class_instantiation(
         self, load_methods_fixture: LoadMethodsFixture
