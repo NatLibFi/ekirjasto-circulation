@@ -21,6 +21,7 @@ class TestLCSH:
         assert False == fic("Biography")
         assert None == fic("Kentucky")
         assert None == fic("Social life and customs")
+        assert True == fic("Poetry")  # Finland
 
     def test_audience(self):
         child = Classifier.AUDIENCE_CHILDREN
