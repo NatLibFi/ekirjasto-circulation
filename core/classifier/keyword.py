@@ -41,7 +41,6 @@ class Eg:
 
 
 class KeywordBasedClassifier(AgeOrGradeClassifier):
-
     """Classify a book based on keywords."""
 
     # We have to handle these first because otherwise '\bfiction\b'
@@ -54,6 +53,7 @@ class KeywordBasedClassifier(AgeOrGradeClassifier):
         Eg("tales"),
         Eg("literature"),
         Eg("bildungsromans"),
+        Eg("poetry"),  # Finland
         "fictitious",
     )
     LEVEL_2_NONFICTION_INDICATORS = match_kw(
