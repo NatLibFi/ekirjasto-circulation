@@ -16,7 +16,7 @@ class PatronAuthTokenController(CirculationManagerController):
         """Create a Patron Auth access token for an authenticated patron"""
         patron = flask.request.patron
         auth = flask.request.authorization
-        token_expiry = 3600
+        token_expiry = 604800  # Changed from 1h to 1 week
 
         if not patron or auth.type.lower() != "basic":
             return PATRON_AUTH_ACCESS_TOKEN_NOT_POSSIBLE
