@@ -36,7 +36,7 @@ class TestPatronAuthTokenController:
             ctx.request.patron = patron
             token = fxtr.controller.get_token()
             assert ("accessToken", "tokenType", "expiresIn") == tuple(token.keys())
-            assert token["expiresIn"] == 3600
+            assert token["expiresIn"] == 604800
             assert token["tokenType"] == "Bearer"
 
     def test_get_token_errors(
