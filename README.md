@@ -81,10 +81,20 @@ sudo apt-get install pkg-config
 sudo apt install libxmlsec1 libxmlsec1-dev
 ```
 
-#### pyenv (Optional)
+The dependency of xmlsec library needs to be an older version, at least when
+working with Homebrew. To install a working version:
+
+```sh
+brew uninstall libxmlsec1
+brew install tvuotila/libxmlsec1/libxmlsec1@1.2.37
+cd /opt/homebrew/opt/
+ln -s libxmlsec1\@1.2.37 libxmlsec1
+```
+
+#### pyenv (Optional but recommended)
 
 [pyenv](https://github.com/pyenv/pyenv) pyenv lets you easily switch between multiple versions of Python. It can be
-[installed](https://github.com/pyenv/pyenv-installer) using the command `curl https://pyenv.run | bash`. You can then
+[installed](https://github.com/pyenv/pyenv-installer) using the command `curl https://pyenv.run | bash` or `brew install pyenv`. You can then
 install the version of Python you want to work with.
 
 Check if you already have pyenv-virtualenv as a plugin with your pyenv:
@@ -97,7 +107,7 @@ If you have it installed already you can skip the next part.
 
 It is recommended that [pyenv-virtualenv](https://github.com/pyenv/pyenv-virtualenv) be used to allow `pyenv`
 to manage _virtual environments_ in a manner that can be used by the [poetry](#poetry) tool. The `pyenv-virtualenv`
-plugin can be installed by cloning the relevant repository into the `plugins` subdirectory of your `$PYENV_ROOT`:
+plugin can be installed by `brew install pyenv-virtualenv` or cloning the relevant repository into the `plugins` subdirectory of your `$PYENV_ROOT`:
 
 ```sh
 mkdir -p $PYENV_ROOT/plugins
@@ -351,6 +361,12 @@ Install only the production dependencies:
 
 ```sh
 poetry install --only main,pg
+```
+
+Export required environment variables:
+```sh
+export PALACE_SEARCH_URL="http://localhost:9200/" 
+export SIMPLIFIED_PRODUCTION_DATABASE="postgresql://palace:test@localhost:5432/circ" 
 ```
 
 Run the application with:
