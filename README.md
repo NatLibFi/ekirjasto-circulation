@@ -94,8 +94,8 @@ ln -s libxmlsec1\@1.2.37 libxmlsec1
 #### pyenv (Optional but recommended)
 
 [pyenv](https://github.com/pyenv/pyenv) pyenv lets you easily switch between multiple versions of Python. It can be
-[installed](https://github.com/pyenv/pyenv-installer) using the command `curl https://pyenv.run | bash` or `brew install pyenv`. You can then
-install the version of Python you want to work with.
+[installed](https://github.com/pyenv/pyenv-installer) using the command `curl https://pyenv.run | bash` or
+`brew install pyenv`. You can then install the version of Python you want to work with.
 
 Check if you already have pyenv-virtualenv as a plugin with your pyenv:
 
@@ -107,7 +107,8 @@ If you have it installed already you can skip the next part.
 
 It is recommended that [pyenv-virtualenv](https://github.com/pyenv/pyenv-virtualenv) be used to allow `pyenv`
 to manage _virtual environments_ in a manner that can be used by the [poetry](#poetry) tool. The `pyenv-virtualenv`
-plugin can be installed by `brew install pyenv-virtualenv` or cloning the relevant repository into the `plugins` subdirectory of your `$PYENV_ROOT`:
+plugin can be installed by `brew install pyenv-virtualenv` or cloning the relevant repository into the `plugins`
+subdirectory of your `$PYENV_ROOT`:
 
 ```sh
 mkdir -p $PYENV_ROOT/plugins
@@ -266,7 +267,8 @@ export SIMPLIFIED_ENABLE_BASIC_TOKEN_AUTH=true
 
 #### Firebase Cloud Messaging
 
-For Firebase Cloud Messaging (FCM) support (e.g., for notifications), `one` (and only one) of the following should be set:
+For Firebase Cloud Messaging (FCM) support (e.g., for notifications), `one` (and only one) of the following should be
+set:
 
 - `SIMPLIFIED_FCM_CREDENTIALS_JSON` - the JSON-format Google Cloud Platform (GCP) service account key or
 - `SIMPLIFIED_FCM_CREDENTIALS_FILE` - the name of the file containing that key.
@@ -364,9 +366,10 @@ poetry install --only main,pg
 ```
 
 Export required environment variables:
+
 ```sh
-export PALACE_SEARCH_URL="http://localhost:9200/" 
-export SIMPLIFIED_PRODUCTION_DATABASE="postgresql://palace:test@localhost:5432/circ" 
+export PALACE_SEARCH_URL="http://localhost:9200/"
+export SIMPLIFIED_PRODUCTION_DATABASE="postgresql://palace:test@localhost:5432/circ"
 ```
 
 Run the application with:
@@ -432,7 +435,8 @@ At this point, we have a library named _Hazelnut Peak_ configured to use the _Pa
 It's now necessary to tell the application to start importing books from the OPDS feed. When the application is
 running inside a Docker image, the image is typically configured to execute various import operations on a regular
 schedule using `cron`. Because we're running the application from the command-line for development purposes, we
-need to execute these operations ourselves manually. In this particular case, we need to execute the `opds_import_monitor`:
+need to execute these operations ourselves manually. In this particular case, we need to execute the
+`opds_import_monitor`:
 
 ```sh
 (circ) $ ./bin/opds_import_monitor
@@ -712,7 +716,7 @@ following environment variables:
 - `SIMPLIFIED_TEST_DATABASE`
 - `PALACE_TEST_SEARCH_URL`
 
-Make sure the ports and usernames are updated to reflect the local configuration.
+Make sure the ports and usernames are updated to reflect the local configuration, e.g.:
 
 ```sh
 # Set environment variables
