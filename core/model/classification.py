@@ -59,6 +59,7 @@ class Subject(Base):
     TAG: str = Classifier.TAG  # Folksonomic tags.
     FREEFORM_AUDIENCE: str = Classifier.FREEFORM_AUDIENCE
     NYPL_APPEAL = Classifier.NYPL_APPEAL
+    DEMARQUE = Classifier.DEMARQUE
 
     # Types with terms that are suitable for search.
     TYPES_FOR_SEARCH = [FAST, OVERDRIVE, BISAC, TAG]
@@ -92,6 +93,7 @@ class Subject(Base):
         "http://www.bisg.org/standards/bisac_subject/": BISAC,
         # Feedbooks uses a modified BISAC which we know how to handle.
         "http://www.feedbooks.com/categories": BISAC,
+        "http://schema.org/Audience": DEMARQUE
     }
 
     uri_lookup = dict()
