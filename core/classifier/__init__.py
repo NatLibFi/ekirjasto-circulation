@@ -1,3 +1,8 @@
+"""
+A classifier module that classifies books and subjects into various categories. This module is called when importing
+collections to a library. It's called by the core/model/classification.py.
+"""
+
 # If the genre classification does not match the fiction classification, throw
 # away the genre classifications.
 #
@@ -37,6 +42,7 @@ class ClassifierConstants:
     BISAC = "BISAC"
     BIC = "BIC"
     TAG = "tag"  # Folksonomic tags.
+    DEMARQUE = "De Marque"
 
     # Appeal controlled vocabulary developed by NYPL
     NYPL_APPEAL = "NYPL Appeal"
@@ -44,6 +50,7 @@ class ClassifierConstants:
     GRADE_LEVEL = "Grade level"  # "1-2", "Grade 4", "Kindergarten", etc.
     AGE_RANGE = "schema:typicalAgeRange"  # "0-2", etc.
     AXIS_360_AUDIENCE = "Axis 360 Audience"
+    DEMARQUE_AUDIENCE = "schema:Audience"
 
     # We know this says something about the audience but we're not sure what.
     # Could be any of the values from GRADE_LEVEL or AGE_RANGE, plus
@@ -1104,7 +1111,6 @@ class WorkClassifier:
         self.seen_classifications.add(key)
         if self.debug:
             self.classifications.append(classification)
-
         # Make sure the Subject is ready to be used in calculations.
         if not classification.subject.checked:  # or self.debug
             classification.subject.assign_to_genre()
@@ -1222,6 +1228,34 @@ class WorkClassifier:
                     # This is a generic juvenile classification like
                     # "Juvenile Fiction".
                     self.overdrive_juvenile_generic = classification
+
+            # E-kirjasto: Since De Marque classifications have target ages for children's and YA books, we want to weigh
+            # them more heavily by setting their weights to 1.0. This ensures that those books are classified accordingly.
+            if (
+                subject.type == "De Marque"
+                and (subject.audience == Classifier.AUDIENCE_CHILDREN
+                or subject.audience == Classifier.AUDIENCE_YOUNG_ADULT)
+            ):
+                
+                if subject.target_age:
+                    # Set the weight to 1.0 for any target age.
+                    self.audience_weights = Counter()
+                    self.audience_weights[subject.audience] += weight * 1.0
+                    scaled_weight = classification.weight_as_indicator_of_target_age
+                    target_min = subject.target_age.lower
+                    target_max = subject.target_age.upper
+                    if target_min is not None:
+                        self.target_age_lower_weights[target_min] = 1.0
+                    if target_max is not None:
+                        self.target_age_upper_weights[target_max] = 1.0
+            #E-kirjasto: Some De Marque adult books were incorrectly classified as children's books. Let's set the
+            # weight to 1.0 for any adult audience books.
+            if (subject.type == "De Marque" and subject.audience == Classifier.AUDIENCE_ADULT):
+                    self.audience_weights = Counter()
+                    self.audience_weights[subject.audience] += weight * 1.0
+
+
+
 
     def weigh_metadata(self):
         """Modify the weights according to the given Work's metadata.
@@ -1497,12 +1531,10 @@ class WorkClassifier:
         if target_age_min is None:
             target_age_min = target_age_max
 
-        if target_age_max is None:
+        # Err on the side of setting the minimum age too high but first ensure we have values to compare.
+        if target_age_min and target_age_max and target_age_min > target_age_max:
             target_age_max = target_age_min
-
-        # Err on the side of setting the minimum age too high.
-        if target_age_min > target_age_max:
-            target_age_max = target_age_min
+        
         return Classifier.range_tuple(target_age_min, target_age_max)
 
     def genres(self, fiction, cutoff=0.15):
@@ -1624,6 +1656,7 @@ from core.classifier.age import (
 from core.classifier.bic import BICClassifier
 from core.classifier.bisac import BISACClassifier
 from core.classifier.ddc import DeweyDecimalClassifier
+from core.classifier.demarque import DeMarqueClassifier
 from core.classifier.gutenberg import GutenbergBookshelfClassifier
 from core.classifier.keyword import (
     Eg,
