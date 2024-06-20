@@ -1,7 +1,4 @@
-import pytest
-
-from core.classifier import DeMarqueClassifier, Classifier
-from core.classifier.demarque import *
+from core.classifier import DeMarqueClassifier
 
 
 class MockSubject:
@@ -28,14 +25,12 @@ class TestDeMarqueClassifier:
         # Otherwise, the identifier is left alone.
         assert "RRRR0000" != DeMarqueClassifier.scrub_identifier("RRRR0000")
 
-
     def test_scrub_name(self):
         """Sometimes a data provider sends BISAC names that contain extra or
         nonstandard characters. We store the data as it was provided to us,
         but when it's time to classify things, we normalize it.
         """
         assert "Early childhood" == DeMarqueClassifier.scrub_name("Early childhood")
-
 
     def test_audience(self):
         """Test that the correct audience is returned for each identifier."""
@@ -45,7 +40,6 @@ class TestDeMarqueClassifier:
         assert "Young Adult" == DeMarqueClassifier.audience("READ0004", "Teen")
         assert "Young Adult" == DeMarqueClassifier.audience("READ0005", "Young adult")
         assert "Adult" == DeMarqueClassifier.audience("READ0000", "Adult")
-
 
     def test_target_age(self):
         """Test that the correct target age range is returned for each identifier. Adult books do not have a target age

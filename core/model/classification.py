@@ -93,7 +93,7 @@ class Subject(Base):
         "http://www.bisg.org/standards/bisac_subject/": BISAC,
         # Feedbooks uses a modified BISAC which we know how to handle.
         "http://www.feedbooks.com/categories": BISAC,
-        "http://schema.org/Audience": DEMARQUE
+        "http://schema.org/Audience": DEMARQUE,
     }
 
     uri_lookup = dict()
