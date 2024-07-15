@@ -46,12 +46,12 @@ make run
 ```
 
 When you need to stop the application and containers and delete everything to start fresh, first check the path of the
-postgres docker container volume in `docker-compose-dev.yml`. Update the `POSTGRES_DATA` in the Makefile to match it and then run:
+postgres docker container volume in `docker-compose-dev.yml`. Update the `POSTGRES_DATA` in the Makefile to match it
+and then run:
 
 ```shell
 make clean
 ```
-
 
 ### Docker Compose
 
