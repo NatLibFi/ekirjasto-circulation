@@ -26,6 +26,33 @@ features.
 
 ## Set Up
 
+### Using Makefile to set up everything for development
+
+Before running the commands in the Makefile, you should have `docker-compose-dev.yml` file in your directory. Also, you
+should change the url of `EKIRJASTO_AUTHENTICATION_URL` in the environment variables section to the real one.
+
+To install dependencies and packages and create the needed (python 3.11.1) virtual environment, run:
+
+```shell
+make install_all
+```
+
+If all went well, you should see the activated virtual environment `(circ-dev)` in your shell.
+
+After this, all you need to do to start docker containers and run the application is:
+
+```shell
+make run
+```
+
+When you need to stop the application and containers and delete everything to start fresh, first check the path of the
+postgres docker container volume in `docker-compose-dev.yml`. Update the `POSTGRES_DATA` in the Makefile to match it and then run:
+
+```shell
+make clean
+```
+
+
 ### Docker Compose
 
 In order to help quickly set up a development environment, we include a [docker-compose.yml](./docker-compose.yml)
