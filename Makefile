@@ -9,7 +9,7 @@ install_all: install_dependencies install_env
 
 # SECTION 1: Install dependencies
 
-DEPENDENCIES := pkg-config libffi libjpeg
+DEPENDENCIES := pkg-config libffi libjpeg poetry
 
 install_dependencies: dependencies install_libxmlsec1
 
