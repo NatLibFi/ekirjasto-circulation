@@ -1,17 +1,12 @@
-# Makefile for setting up pyenv, pyenv-virtualenv, and installing dependencies with Poetry
+# Makefile for setting up a virtual enviroment and running the application.
 
-.PHONY: install_all install_dependencies dependencies install_libxmlsec1 install_env install_pyenv \
-	install_pyenv_virtualenv setup_shell install_python create_virtualenv install_packages run setup_env_variables \
-	run_python_app start_docker stop_docker rebuild_docker clean
-
-install_all: install_dependencies install_env
-
+.PHONY: install dependencies install_libxmlsec1 
 
 # SECTION 1: Install dependencies
 
-DEPENDENCIES := pkg-config libffi libjpeg poetry
+DEPENDENCIES := pkg-config libffi libjpeg poetry pyenv pyenv-virtualenv
 
-install_dependencies: dependencies install_libxmlsec1
+install: dependencies install_libxmlsec1
 
 dependencies: $(DEPENDENCIES)
 
@@ -32,59 +27,23 @@ install_libxmlsec1:
 		echo "libxmlsec1@1.2.37 is already installed."; \
 	fi
 
+# SECTION 2: Set up the virtual environment with Python packages
 
-# SECTION 2: Install and set up the virtual environment with needed dependiencies
+.PHONY: venv
 
 # The Python version and virtual environment name
 PYTHON_VERSION=3.11.1
-VENV_NAME=circ-dev
+VENV_NAME=circ-311
 
-install_env: install_pyenv install_pyenv_virtualenv setup_shell install_python create_virtualenv install_packages
-
-install_pyenv:
-	@if ! command -v pyenv >/dev/null 2>&1; then \
-		echo "Installing pyenv..."; \
-		brew install pyenv; \
-		echo 'eval "$$(pyenv init --path)"' >> ~/.zshrc; \
-		eval "$$(pyenv init --path)"; \
-	else \
-		echo "pyenv is already installed."; \
-	fi
-
-install_pyenv_virtualenv:
-	@if ! pyenv commands | grep virtualenv >/dev/null 2>&1; then \
-		echo "Installing pyenv-virtualenv..."; \
-		brew install pyenv-virtualenv; \
-		echo 'eval "$$(pyenv virtualenv-init -)"' >> ~/.zshrc; \
-		eval "$$(pyenv virtualenv-init -)"; \
-	else \
-		echo "pyenv-virtualenv is already installed."; \
-	fi
-
-setup_shell:
-	@echo "Setting up shell configuration..."
-	@grep -qxF 'export PYENV_ROOT="$(HOME)/.pyenv"' $(HOME)/.zshrc || echo 'export PYENV_ROOT="$(HOME)/.pyenv"' >> $(HOME)/.zshrc
-	@grep -qxF 'export PATH="$(PYENV_ROOT)/bin:$(PATH)"' $(HOME)/.zshrc || echo 'export PATH="$(PYENV_ROOT)/bin:$(PATH)"' >> $(HOME)/.zshrc
-	@grep -qxF 'eval "$$(pyenv init --path)"' $(HOME)/.zshrc || echo 'eval "$$(pyenv init --path)"' >> $(HOME)/.zshrc
-	@grep -qxF 'eval "$$(pyenv init -)"' $(HOME)/.zshrc || echo 'eval "$$(pyenv init -)"' >> $(HOME)/.zshrc
-	@grep -qxF 'eval "$$(pyenv virtualenv-init -)"' $(HOME)/.zshrc || echo 'eval "$$(pyenv virtualenv-init -)"' >> $(HOME)/.zshrc
-	@echo "Please restart your shell or run 'source $(HOME)/.zshrc' to apply changes."
-
-install_python:
+venv:
 	@echo "Installing Python $(PYTHON_VERSION)..."
 	pyenv install -s $(PYTHON_VERSION)
-
-create_virtualenv:
 	@echo "Creating virtual environment $(VENV_NAME)..."
 	pyenv virtualenv $(PYTHON_VERSION) $(VENV_NAME)
 
-install_packages:
-	@echo "Installing packages with Poetry..."
-	pyenv activate $(VENV_NAME)
-	poetry install
-
-
 # SECTION 3: Run the python application and the containers in development mode.
+
+.PHONY: run setup_env_variables run_python_app start_docker stop_docker rebuild_docker clean
 
 # Define environment variables, change them to whatever you need
 export ADMIN_EKIRJASTO_AUTHENTICATION_URL=https://localhost # This should be changed to the actual one!
