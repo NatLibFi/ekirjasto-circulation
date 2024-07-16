@@ -29,17 +29,49 @@ features.
 ### Using Makefile to set up everything for development
 
 Before running the commands in the Makefile, you should have `docker-compose-dev.yml` file in your directory. Also, you
-should change the url of `EKIRJASTO_AUTHENTICATION_URL` in the environment variables section to the real one.
+should change the url of `EKIRJASTO_AUTHENTICATION_URL` in the Makefile's environment variables section to the real one.
 
-To install dependencies and packages and create the needed (python 3.11.1) virtual environment, run:
+To install dependencies and packages, run:
 
 ```shell
-make install_all
+make install
 ```
 
-If all went well, you should see the activated virtual environment `(circ-dev)` in your shell.
+For pyenv to work, add the following to your `.zshrc`:
 
-After this, all you need to do to start docker containers and run the application is:
+```sh
+export PYENV_ROOT="$HOME/.pyenv"
+command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
+eval "$(pyenv init -)"
+eval "$(pyenv virtualenv-init -)"
+```
+and source it with:
+
+```shell
+source ~/.zshrc
+```
+
+Create a virtual environment with Python 3.11.1, run:
+
+```shell
+make venv
+```
+
+Activate the virtual environment and install dependencies with Poetry:
+
+```shell
+pyenv activate circ-311
+poetry install
+```
+
+If all went well, you should see the activated virtual environment `(circ-311)` in your shell and all packages
+installed. You can verify this by checking the Python version:
+
+```shell
+python3 --version
+```
+
+Now, all you need to do to start docker containers and run the application is:
 
 ```shell
 make run
@@ -52,6 +84,9 @@ and then run:
 ```shell
 make clean
 ```
+
+You can modify the Makefile to also create a virtual enviroment for Python 3.10.1. You can switch between the virtual
+environments by activating and deactivating them with e.g. `pyenv activate circ-311` and `pyenv deactivate circ-311`.
 
 ### Docker Compose
 
