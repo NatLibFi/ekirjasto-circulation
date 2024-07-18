@@ -253,7 +253,9 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
         auth_header = "Basic %s" % base64.b64encode(f"{username}:{password}")
         headers["Authorization"] = auth_header
 
-        return HTTP.get_with_timeout(url, headers=headers)
+        return HTTP.get_with_timeout(
+            url, headers=headers, timeout=30
+        )  # Added a bigger timeout for loan checkouts
 
     def _url_for(self, *args: Any, **kwargs: Any) -> str:
         """Wrapper around flask's url_for to be overridden for tests."""

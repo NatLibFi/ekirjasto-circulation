@@ -1,6 +1,6 @@
 # Makefile for setting up a virtual enviroment and running the application.
 
-.PHONY: install dependencies install_libxmlsec1 
+.PHONY: install dependencies install_libxmlsec1
 
 # SECTION 1: Install dependencies
 
