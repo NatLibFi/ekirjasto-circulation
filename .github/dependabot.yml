@@ -17,5 +17,5 @@ updates:
     schedule:
       interval: "daily"
       # Ignore everything for now (and stay in pace with the upstream)
-      ignore:
+    ignore:
        - dependency-name: "*"
