@@ -244,6 +244,10 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
                     "href": f"{self._ekirjasto_api_url}/v1/identities/patron/relations",
                 },
                 {
+                    "rel": "invite",
+                    "href": f"{self._ekirjasto_api_url}/v1/identities/invite",
+                },
+                {
                     "rel": "passkey_register_start",
                     "href": self._create_circulation_url(
                         "ekirjasto_passkey_register_start", _db
