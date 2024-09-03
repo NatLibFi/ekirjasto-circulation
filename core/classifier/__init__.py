@@ -1,3 +1,8 @@
+"""
+A classifier module that classifies books and subjects into various categories. This module is called when importing
+collections to a library or updating classifications. It's called by the core/model/classification.py.
+"""
+
 # If the genre classification does not match the fiction classification, throw
 # away the genre classifications.
 #
@@ -37,6 +42,7 @@ class ClassifierConstants:
     BISAC = "BISAC"
     BIC = "BIC"
     TAG = "tag"  # Folksonomic tags.
+    DEMARQUE = "De Marque"
 
     # Appeal controlled vocabulary developed by NYPL
     NYPL_APPEAL = "NYPL Appeal"
@@ -44,6 +50,7 @@ class ClassifierConstants:
     GRADE_LEVEL = "Grade level"  # "1-2", "Grade 4", "Kindergarten", etc.
     AGE_RANGE = "schema:typicalAgeRange"  # "0-2", etc.
     AXIS_360_AUDIENCE = "Axis 360 Audience"
+    DEMARQUE_AUDIENCE = "schema:Audience"
 
     # We know this says something about the audience but we're not sure what.
     # Could be any of the values from GRADE_LEVEL or AGE_RANGE, plus
@@ -1624,6 +1631,7 @@ from core.classifier.age import (
 from core.classifier.bic import BICClassifier
 from core.classifier.bisac import BISACClassifier
 from core.classifier.ddc import DeweyDecimalClassifier
+from core.classifier.demarque import DeMarqueClassifier
 from core.classifier.gutenberg import GutenbergBookshelfClassifier
 from core.classifier.keyword import (
     Eg,
