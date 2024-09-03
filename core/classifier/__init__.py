@@ -1230,7 +1230,6 @@ class WorkClassifier:
                     # "Juvenile Fiction".
                     self.overdrive_juvenile_generic = classification
 
-    
         # E-kirjasto: Since De Marque classifications have target ages for children's and YA books, we want to weigh
         # them more heavily by setting their weights to 1.0. This ensures that those books are classified accordingly.
         if subject.type == "De Marque" and (
@@ -1256,7 +1255,6 @@ class WorkClassifier:
         ):
             self.audience_weights = Counter()
             self.audience_weights[subject.audience] += weight * 1.0
-    
 
     def weigh_metadata(self):
         """Modify the weights according to the given Work's metadata.
