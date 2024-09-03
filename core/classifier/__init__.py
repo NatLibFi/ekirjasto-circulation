@@ -1532,12 +1532,10 @@ class WorkClassifier:
         if target_age_min is None:
             target_age_min = target_age_max
 
-        if target_age_max is None:
+        # Err on the side of setting the minimum age too high but first ensure we have values to compare.
+        if target_age_min and target_age_max and target_age_min > target_age_max:
             target_age_max = target_age_min
 
-        # Err on the side of setting the minimum age too high.
-        if target_age_min > target_age_max:
-            target_age_max = target_age_min
         return Classifier.range_tuple(target_age_min, target_age_max)
 
     def genres(self, fiction, cutoff=0.15):
