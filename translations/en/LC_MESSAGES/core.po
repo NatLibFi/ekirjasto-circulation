@@ -2,7 +2,7 @@
 # Copyright (C) 2024 ORGANIZATION
 # This file is distributed under the same license as the PROJECT project.
 # FIRST AUTHOR <EMAIL@ADDRESS>, 2024.
-#
+# 
 msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
@@ -10,1117 +10,1159 @@ msgstr ""
 "POT-Creation-Date: 2024-04-27 23:15+0300\n"
 "PO-Revision-Date: 2024-02-19 22:14+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language: en\n"
 "Language-Team: en <LL@li.org>\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.13.0\n"
+"Language: en\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: core/classifier/localized_names.py:7 default_lane_names_to_localize.py:7
 msgid "Adventure"
-msgstr ""
+msgstr "Adventure"
 
 #: core/classifier/localized_names.py:92 default_lane_names_to_localize.py:8
 msgid "African History"
-msgstr ""
+msgstr "African History"
 
 #: core/classifier/localized_names.py:49 default_lane_names_to_localize.py:9
 msgid "Alternative History"
-msgstr ""
+msgstr "Alternative History"
 
 #: core/classifier/localized_names.py:93 default_lane_names_to_localize.py:10
 msgid "Ancient History"
-msgstr ""
+msgstr "Ancient History"
 
 #: core/classifier/localized_names.py:106 default_lane_names_to_localize.py:11
 msgid "Antiques & Collectibles"
-msgstr ""
+msgstr "Antiques & Collectibles"
 
 #: core/classifier/localized_names.py:68 default_lane_names_to_localize.py:12
 msgid "Architecture"
-msgstr ""
+msgstr "Architecture"
 
 #: core/classifier/localized_names.py:69 default_lane_names_to_localize.py:13
 msgid "Art"
-msgstr ""
+msgstr "Art"
 
 #: core/classifier/localized_names.py:70 default_lane_names_to_localize.py:14
 msgid "Art Criticism & Theory"
-msgstr ""
+msgstr "Art Criticism & Theory"
 
 #: core/classifier/localized_names.py:67 default_lane_names_to_localize.py:15
 msgid "Art & Design"
-msgstr ""
+msgstr "Art & Design"
 
 #: core/classifier/localized_names.py:71 default_lane_names_to_localize.py:16
 msgid "Art History"
-msgstr ""
+msgstr "Art History"
 
 #: core/classifier/localized_names.py:94 default_lane_names_to_localize.py:17
 msgid "Asian History"
-msgstr ""
+msgstr "Asian History"
 
 #: core/classifier/localized_names.py:87 default_lane_names_to_localize.py:18
 msgid "Bartending & Cocktails"
-msgstr ""
+msgstr "Bartending & Cocktails"
 
 #: default_lane_names_to_localize.py:19
 msgid "Biography"
-msgstr ""
+msgstr "Biography"
 
 #: core/classifier/localized_names.py:75 default_lane_names_to_localize.py:20
 msgid "Biography & Memoir"
-msgstr ""
+msgstr "Biography & Memoir"
 
 #: core/classifier/localized_names.py:128 default_lane_names_to_localize.py:21
 msgid "Body, Mind & Spirit"
-msgstr ""
+msgstr "Body, Mind & Spirit"
 
 #: core/classifier/localized_names.py:129 default_lane_names_to_localize.py:22
 msgid "Buddhism"
-msgstr ""
+msgstr "Buddhism"
 
 #: core/classifier/localized_names.py:78 default_lane_names_to_localize.py:23
 msgid "Business"
-msgstr ""
+msgstr "Business"
 
 #: default_lane_names_to_localize.py:24
 msgid "Chapter Books"
-msgstr ""
+msgstr "Chapter Books"
 
 #: default_lane_names_to_localize.py:25
 msgid "Children and Middle Grade"
-msgstr ""
+msgstr "Children and Middle Grade"
 
 #: default_lane_names_to_localize.py:26
 msgid "Children & Young Adult"
-msgstr ""
+msgstr "Children & Young Adult"
 
 #: core/classifier/localized_names.py:130 default_lane_names_to_localize.py:27
 msgid "Christianity"
-msgstr ""
+msgstr "Christianity"
 
 #: core/classifier/localized_names.py:95 default_lane_names_to_localize.py:28
 msgid "Civil War History"
-msgstr ""
+msgstr "Civil War History"
 
 #: core/classifier/localized_names.py:8 default_lane_names_to_localize.py:29
 msgid "Classics"
-msgstr ""
+msgstr "Classics"
 
 #: core/classifier/localized_names.py:9 default_lane_names_to_localize.py:30
 msgid "Comics & Graphic Novels"
-msgstr ""
+msgstr "Comics & Graphic Novels"
 
 #: core/classifier/localized_names.py:135 default_lane_names_to_localize.py:31
 msgid "Computers"
-msgstr ""
+msgstr "Computers"
 
 #: default_lane_names_to_localize.py:32
 msgid "Contemporary Fiction"
-msgstr ""
+msgstr "Contemporary Fiction"
 
 #: core/classifier/localized_names.py:38 default_lane_names_to_localize.py:33
 msgid "Contemporary Romance"
-msgstr ""
+msgstr "Contemporary Romance"
 
 #: core/classifier/localized_names.py:88 default_lane_names_to_localize.py:34
 msgid "Cooking"
-msgstr ""
+msgstr "Cooking"
 
 #: core/classifier/localized_names.py:31 default_lane_names_to_localize.py:35
 msgid "Cozy Mystery"
-msgstr ""
+msgstr "Cozy Mystery"
 
 #: core/classifier/localized_names.py:107 default_lane_names_to_localize.py:36
 msgid "Crafts & Hobbies"
-msgstr ""
+msgstr "Crafts & Hobbies"
 
 #: core/classifier/localized_names.py:28 default_lane_names_to_localize.py:37
 msgid "Crime & Detective Stories"
-msgstr ""
+msgstr "Crime & Detective Stories"
 
 #: core/classifier/localized_names.py:47 default_lane_names_to_localize.py:38
 msgid "Cyberpunk"
-msgstr ""
+msgstr "Cyberpunk"
 
 #: core/classifier/localized_names.py:72 default_lane_names_to_localize.py:39
 msgid "Design"
-msgstr ""
+msgstr "Design"
 
 #: core/classifier/localized_names.py:123 default_lane_names_to_localize.py:40
 msgid "Dictionaries"
-msgstr ""
+msgstr "Dictionaries"
 
 #: core/classifier/localized_names.py:10 default_lane_names_to_localize.py:41
 msgid "Drama"
-msgstr ""
+msgstr "Drama"
 
 #: default_lane_names_to_localize.py:42
 msgid "Dystopian"
-msgstr ""
+msgstr "Dystopian"
 
 #: default_lane_names_to_localize.py:43
 msgid "Early Readers"
-msgstr ""
+msgstr "Early Readers"
 
 #: core/classifier/localized_names.py:79 default_lane_names_to_localize.py:44
 msgid "Economics"
-msgstr ""
+msgstr "Economics"
 
 #: core/classifier/localized_names.py:76 default_lane_names_to_localize.py:45
 msgid "Education"
-msgstr ""
+msgstr "Education"
 
 #: core/classifier/localized_names.py:113 default_lane_names_to_localize.py:46
 msgid "Entertainment"
-msgstr ""
+msgstr "Entertainment"
 
 #: core/classifier/localized_names.py:13 default_lane_names_to_localize.py:47
 msgid "Epic Fantasy"
-msgstr ""
+msgstr "Epic Fantasy"
 
 #: core/classifier/localized_names.py:11 default_lane_names_to_localize.py:48
 msgid "Erotica"
-msgstr ""
+msgstr "Erotica"
 
 #: core/classifier/localized_names.py:56 default_lane_names_to_localize.py:49
 msgid "Espionage"
-msgstr ""
+msgstr "Espionage"
 
 #: core/classifier/localized_names.py:96 default_lane_names_to_localize.py:50
 msgid "European History"
-msgstr ""
+msgstr "European History"
 
 #: core/classifier/localized_names.py:84 default_lane_names_to_localize.py:51
 msgid "Family & Relationships"
-msgstr ""
+msgstr "Family & Relationships"
 
 #: core/classifier/localized_names.py:12 default_lane_names_to_localize.py:52
 msgid "Fantasy"
-msgstr ""
+msgstr "Fantasy"
 
 #: core/classifier/localized_names.py:73 default_lane_names_to_localize.py:53
 msgid "Fashion"
-msgstr ""
+msgstr "Fashion"
 
 #: default_lane_names_to_localize.py:54
 msgid "Fiction"
-msgstr ""
+msgstr "Fiction"
 
 #: core/classifier/localized_names.py:114 default_lane_names_to_localize.py:55
 msgid "Film & TV"
-msgstr ""
+msgstr "Film & TV"
 
 #: core/classifier/localized_names.py:16 default_lane_names_to_localize.py:56
 msgid "Folklore"
-msgstr ""
+msgstr "Folklore"
 
 #: core/classifier/localized_names.py:86 default_lane_names_to_localize.py:57
 msgid "Food & Health"
-msgstr ""
+msgstr "Food & Health"
 
 #: core/classifier/localized_names.py:124 default_lane_names_to_localize.py:58
 msgid "Foreign Language Study"
-msgstr ""
+msgstr "Foreign Language Study"
 
 #: core/classifier/localized_names.py:109 default_lane_names_to_localize.py:59
 msgid "Games"
-msgstr ""
+msgstr "Games"
 
 #: core/classifier/localized_names.py:108 default_lane_names_to_localize.py:60
 msgid "Gardening"
-msgstr ""
+msgstr "Gardening"
 
 #: core/classifier/localized_names.py:20 default_lane_names_to_localize.py:61
 msgid "Ghost Stories"
-msgstr ""
+msgstr "Ghost Stories"
 
 #: core/classifier/localized_names.py:19 default_lane_names_to_localize.py:62
 msgid "Gothic Horror"
-msgstr ""
+msgstr "Gothic Horror"
 
 #: core/classifier/localized_names.py:39 default_lane_names_to_localize.py:63
 msgid "Gothic Romance"
-msgstr ""
+msgstr "Gothic Romance"
 
 #: core/classifier/localized_names.py:29 default_lane_names_to_localize.py:64
 msgid "Hard-Boiled Mystery"
-msgstr ""
+msgstr "Hard-Boiled Mystery"
 
 #: core/classifier/localized_names.py:89 default_lane_names_to_localize.py:65
 msgid "Health & Diet"
-msgstr ""
+msgstr "Health & Diet"
 
 #: core/classifier/localized_names.py:131 default_lane_names_to_localize.py:66
 msgid "Hinduism"
-msgstr ""
+msgstr "Hinduism"
 
 #: core/classifier/localized_names.py:14 default_lane_names_to_localize.py:67
 msgid "Historical Fantasy"
-msgstr ""
+msgstr "Historical Fantasy"
 
 #: core/classifier/localized_names.py:17 default_lane_names_to_localize.py:68
 msgid "Historical Fiction"
-msgstr ""
+msgstr "Historical Fiction"
 
 #: core/classifier/localized_names.py:32 default_lane_names_to_localize.py:69
 msgid "Historical Mystery"
-msgstr ""
+msgstr "Historical Mystery"
 
 #: core/classifier/localized_names.py:40 default_lane_names_to_localize.py:70
 msgid "Historical Romance"
-msgstr ""
+msgstr "Historical Romance"
 
 #: core/classifier/localized_names.py:55 default_lane_names_to_localize.py:71
 msgid "Historical Thriller"
-msgstr ""
+msgstr "Historical Thriller"
 
 #: core/classifier/localized_names.py:91 default_lane_names_to_localize.py:72
 msgid "History"
-msgstr ""
+msgstr "History"
 
 #: default_lane_names_to_localize.py:73
 msgid "History & Sociology"
-msgstr ""
+msgstr "History & Sociology"
 
 #: core/classifier/localized_names.py:105 default_lane_names_to_localize.py:74
 msgid "Hobbies & Home"
-msgstr ""
+msgstr "Hobbies & Home"
 
 #: core/classifier/localized_names.py:18 default_lane_names_to_localize.py:75
 msgid "Horror"
-msgstr ""
+msgstr "Horror"
 
 #: core/classifier/localized_names.py:110 default_lane_names_to_localize.py:76
 msgid "House & Home"
-msgstr ""
+msgstr "House & Home"
 
 #: default_lane_names_to_localize.py:77
 msgid "Humor"
-msgstr ""
+msgstr "Humor"
 
 #: default_lane_names_to_localize.py:78
 msgid "Informational Books"
-msgstr ""
+msgstr "Informational Books"
 
 #: core/classifier/localized_names.py:132 default_lane_names_to_localize.py:79
 msgid "Islam"
-msgstr ""
+msgstr "Islam"
 
 #: core/classifier/localized_names.py:133 default_lane_names_to_localize.py:80
 msgid "Judaism"
-msgstr ""
+msgstr "Judaism"
 
 #: core/classifier/localized_names.py:97 default_lane_names_to_localize.py:81
 msgid "Latin American History"
-msgstr ""
+msgstr "Latin American History"
 
 #: core/classifier/localized_names.py:125 default_lane_names_to_localize.py:82
 msgid "Law"
-msgstr ""
+msgstr "Law"
 
 #: core/classifier/localized_names.py:62 default_lane_names_to_localize.py:83
 msgid "Legal Thriller"
-msgstr ""
+msgstr "Legal Thriller"
 
 #: core/classifier/localized_names.py:26 default_lane_names_to_localize.py:84
 msgid "LGBTQ Fiction"
-msgstr ""
+msgstr "LGBTQ Fiction"
 
 #: core/classifier/localized_names.py:117 default_lane_names_to_localize.py:85
 msgid "Life Strategies"
-msgstr ""
+msgstr "Life Strategies"
 
 #: core/classifier/localized_names.py:118 default_lane_names_to_localize.py:86
 msgid "Literary Criticism"
-msgstr ""
+msgstr "Literary Criticism"
 
 #: core/classifier/localized_names.py:25 default_lane_names_to_localize.py:87
 msgid "Literary Fiction"
-msgstr ""
+msgstr "Literary Fiction"
 
 #: core/classifier/localized_names.py:80 default_lane_names_to_localize.py:88
 msgid "Management & Leadership"
-msgstr ""
+msgstr "Management & Leadership"
 
 #: core/classifier/localized_names.py:136 default_lane_names_to_localize.py:89
 msgid "Mathematics"
-msgstr ""
+msgstr "Mathematics"
 
 #: core/classifier/localized_names.py:137 default_lane_names_to_localize.py:90
 msgid "Medical"
-msgstr ""
+msgstr "Medical"
 
 #: core/classifier/localized_names.py:58 default_lane_names_to_localize.py:91
 msgid "Medical Thriller"
-msgstr ""
+msgstr "Medical Thriller"
 
 #: core/classifier/localized_names.py:98 default_lane_names_to_localize.py:92
 msgid "Medieval History"
-msgstr ""
+msgstr "Medieval History"
 
 #: core/classifier/localized_names.py:99 default_lane_names_to_localize.py:93
 msgid "Middle East History"
-msgstr ""
+msgstr "Middle East History"
 
 #: core/classifier/localized_names.py:100 default_lane_names_to_localize.py:94
 msgid "Military History"
-msgstr ""
+msgstr "Military History"
 
 #: core/classifier/localized_names.py:48 default_lane_names_to_localize.py:95
 msgid "Military SF"
-msgstr ""
+msgstr "Military SF"
 
 #: core/classifier/localized_names.py:63 default_lane_names_to_localize.py:96
 msgid "Military Thriller"
-msgstr ""
+msgstr "Military Thriller"
 
 #: core/classifier/localized_names.py:101 default_lane_names_to_localize.py:97
 msgid "Modern History"
-msgstr ""
+msgstr "Modern History"
 
 #: default_lane_names_to_localize.py:98
 msgid "Movie and TV Novelizations"
-msgstr ""
+msgstr "Movie and TV Novelizations"
 
 #: core/classifier/localized_names.py:115 default_lane_names_to_localize.py:99
 msgid "Music"
-msgstr ""
+msgstr "Music"
 
 #: core/classifier/localized_names.py:27 default_lane_names_to_localize.py:100
 msgid "Mystery"
-msgstr ""
+msgstr "Mystery"
 
 #: default_lane_names_to_localize.py:101
 msgid "Mystery & Thriller"
-msgstr ""
+msgstr "Mystery & Thriller"
 
-#: core/classifier/localized_names.py:138 default_lane_names_to_localize.py:102
+#: core/classifier/localized_names.py:138
+#: default_lane_names_to_localize.py:102
 msgid "Nature"
-msgstr ""
+msgstr "Nature"
 
 #: default_lane_names_to_localize.py:103
 msgid "Nonfiction"
-msgstr ""
+msgstr "Nonfiction"
 
 #: core/classifier/localized_names.py:23 default_lane_names_to_localize.py:104
 msgid "Occult Horror"
-msgstr ""
+msgstr "Occult Horror"
 
 #: core/classifier/localized_names.py:33 default_lane_names_to_localize.py:105
 msgid "Paranormal Mystery"
-msgstr ""
+msgstr "Paranormal Mystery"
 
 #: core/classifier/localized_names.py:41 default_lane_names_to_localize.py:106
 msgid "Paranormal Romance"
-msgstr ""
+msgstr "Paranormal Romance"
 
 #: core/classifier/localized_names.py:85 default_lane_names_to_localize.py:107
 msgid "Parenting"
-msgstr ""
+msgstr "Parenting"
 
 #: core/classifier/localized_names.py:83 default_lane_names_to_localize.py:108
 msgid "Parenting & Family"
-msgstr ""
+msgstr "Parenting & Family"
 
-#: core/classifier/localized_names.py:116 default_lane_names_to_localize.py:109
+#: core/classifier/localized_names.py:116
+#: default_lane_names_to_localize.py:109
 msgid "Performing Arts"
-msgstr ""
+msgstr "Performing Arts"
 
-#: core/classifier/localized_names.py:119 default_lane_names_to_localize.py:110
+#: core/classifier/localized_names.py:119
+#: default_lane_names_to_localize.py:110
 msgid "Periodicals"
-msgstr ""
+msgstr "Periodicals"
 
 #: core/classifier/localized_names.py:77 default_lane_names_to_localize.py:111
 msgid "Personal Finance & Business"
-msgstr ""
+msgstr "Personal Finance & Business"
 
 #: core/classifier/localized_names.py:81 default_lane_names_to_localize.py:112
 msgid "Personal Finance & Investing"
-msgstr ""
+msgstr "Personal Finance & Investing"
 
-#: core/classifier/localized_names.py:111 default_lane_names_to_localize.py:113
+#: core/classifier/localized_names.py:111
+#: default_lane_names_to_localize.py:113
 msgid "Pets"
-msgstr ""
+msgstr "Pets"
 
-#: core/classifier/localized_names.py:120 default_lane_names_to_localize.py:114
+#: core/classifier/localized_names.py:120
+#: default_lane_names_to_localize.py:114
 msgid "Philosophy"
-msgstr ""
+msgstr "Philosophy"
 
 #: core/classifier/localized_names.py:74 default_lane_names_to_localize.py:115
 msgid "Photography"
-msgstr ""
+msgstr "Photography"
 
 #: default_lane_names_to_localize.py:116
 msgid "Picture Books"
-msgstr ""
+msgstr "Picture Books"
 
 #: core/classifier/localized_names.py:35 default_lane_names_to_localize.py:117
 msgid "Poetry"
-msgstr ""
+msgstr "Poetry"
 
 #: default_lane_names_to_localize.py:118
 msgid "Poetry Books"
-msgstr ""
+msgstr "Poetry Books"
 
 #: core/classifier/localized_names.py:30 default_lane_names_to_localize.py:119
 msgid "Police Procedural"
-msgstr ""
+msgstr "Police Procedural"
 
 #: core/classifier/localized_names.py:59 default_lane_names_to_localize.py:120
 msgid "Political Thriller"
-msgstr ""
+msgstr "Political Thriller"
 
 #: default_lane_names_to_localize.py:121
 msgid "Politics & Current Events"
-msgstr ""
+msgstr "Politics & Current Events"
 
 #: core/classifier/localized_names.py:60 default_lane_names_to_localize.py:122
 msgid "Psychological Thriller"
-msgstr ""
+msgstr "Psychological Thriller"
 
-#: core/classifier/localized_names.py:139 default_lane_names_to_localize.py:123
+#: core/classifier/localized_names.py:139
+#: default_lane_names_to_localize.py:123
 msgid "Psychology"
-msgstr ""
+msgstr "Psychology"
 
 #: core/classifier/localized_names.py:82 default_lane_names_to_localize.py:124
 msgid "Real Estate"
-msgstr ""
+msgstr "Real Estate"
 
 #: default_lane_names_to_localize.py:125
 msgid "Realistic Fiction"
-msgstr ""
+msgstr "Realistic Fiction"
 
-#: core/classifier/localized_names.py:122 default_lane_names_to_localize.py:126
+#: core/classifier/localized_names.py:122
+#: default_lane_names_to_localize.py:126
 msgid "Reference & Study Aids"
-msgstr ""
+msgstr "Reference & Study Aids"
 
-#: core/classifier/localized_names.py:127 default_lane_names_to_localize.py:127
+#: core/classifier/localized_names.py:127
+#: default_lane_names_to_localize.py:127
 msgid "Religion & Spirituality"
-msgstr ""
+msgstr "Religion & Spirituality"
 
 #: core/classifier/localized_names.py:36 default_lane_names_to_localize.py:128
 msgid "Religious Fiction"
-msgstr ""
+msgstr "Religious Fiction"
 
-#: core/classifier/localized_names.py:102 default_lane_names_to_localize.py:129
+#: core/classifier/localized_names.py:102
+#: default_lane_names_to_localize.py:129
 msgid "Renaissance & Early Modern History"
-msgstr ""
+msgstr "Renaissance & Early Modern History"
 
 #: core/classifier/localized_names.py:37 default_lane_names_to_localize.py:130
 msgid "Romance"
-msgstr ""
+msgstr "Romance"
 
 #: core/classifier/localized_names.py:51 default_lane_names_to_localize.py:131
 msgid "Romantic SF"
-msgstr ""
+msgstr "Romantic SF"
 
 #: core/classifier/localized_names.py:43 default_lane_names_to_localize.py:132
 msgid "Romantic Suspense"
-msgstr ""
+msgstr "Romantic Suspense"
 
-#: core/classifier/localized_names.py:140 default_lane_names_to_localize.py:133
+#: core/classifier/localized_names.py:140
+#: default_lane_names_to_localize.py:133
 msgid "Science"
-msgstr ""
+msgstr "Science"
 
 #: core/classifier/localized_names.py:44 default_lane_names_to_localize.py:134
 msgid "Science Fiction"
-msgstr ""
+msgstr "Science Fiction"
 
-#: core/classifier/localized_names.py:134 default_lane_names_to_localize.py:135
+#: core/classifier/localized_names.py:134
+#: default_lane_names_to_localize.py:135
 msgid "Science & Technology"
-msgstr ""
+msgstr "Science & Technology"
 
-#: core/classifier/localized_names.py:143 default_lane_names_to_localize.py:136
+#: core/classifier/localized_names.py:143
+#: default_lane_names_to_localize.py:136
 msgid "Self-Help"
-msgstr ""
+msgstr "Self-Help"
 
 #: core/classifier/localized_names.py:53 default_lane_names_to_localize.py:137
 msgid "Short Stories"
-msgstr ""
+msgstr "Short Stories"
 
-#: core/classifier/localized_names.py:141 default_lane_names_to_localize.py:138
+#: core/classifier/localized_names.py:141
+#: default_lane_names_to_localize.py:138
 msgid "Social Sciences"
-msgstr ""
+msgstr "Social Sciences"
 
 #: core/classifier/localized_names.py:46 default_lane_names_to_localize.py:139
 msgid "Space Opera"
-msgstr ""
+msgstr "Space Opera"
 
-#: core/classifier/localized_names.py:144 default_lane_names_to_localize.py:140
+#: core/classifier/localized_names.py:144
+#: default_lane_names_to_localize.py:140
 msgid "Sports"
-msgstr ""
+msgstr "Sports"
 
 #: core/classifier/localized_names.py:50 default_lane_names_to_localize.py:141
 msgid "Steampunk"
-msgstr ""
+msgstr "Steampunk"
 
-#: core/classifier/localized_names.py:126 default_lane_names_to_localize.py:142
+#: core/classifier/localized_names.py:126
+#: default_lane_names_to_localize.py:142
 msgid "Study Aids"
-msgstr ""
+msgstr "Study Aids"
 
 #: core/classifier/localized_names.py:57 default_lane_names_to_localize.py:143
 msgid "Supernatural Thriller"
-msgstr ""
+msgstr "Supernatural Thriller"
 
-#: core/classifier/localized_names.py:142 default_lane_names_to_localize.py:144
+#: core/classifier/localized_names.py:142
+#: default_lane_names_to_localize.py:144
 msgid "Technology"
-msgstr ""
+msgstr "Technology"
 
 #: core/classifier/localized_names.py:61 default_lane_names_to_localize.py:145
 msgid "Technothriller"
-msgstr ""
+msgstr "Technothriller"
 
 #: default_lane_names_to_localize.py:146
 msgid "Thriller"
-msgstr ""
+msgstr "Thriller"
 
-#: core/classifier/localized_names.py:145 default_lane_names_to_localize.py:147
+#: core/classifier/localized_names.py:145
+#: default_lane_names_to_localize.py:147
 msgid "Travel"
-msgstr ""
+msgstr "Travel"
 
-#: core/classifier/localized_names.py:146 default_lane_names_to_localize.py:148
+#: core/classifier/localized_names.py:146
+#: default_lane_names_to_localize.py:148
 msgid "True Crime"
-msgstr ""
+msgstr "True Crime"
 
-#: core/classifier/localized_names.py:103 default_lane_names_to_localize.py:149
+#: core/classifier/localized_names.py:103
+#: default_lane_names_to_localize.py:149
 msgid "United States History"
-msgstr ""
+msgstr "United States History"
 
 #: core/classifier/localized_names.py:15 default_lane_names_to_localize.py:150
 msgid "Urban Fantasy"
-msgstr ""
+msgstr "Urban Fantasy"
 
 #: core/classifier/localized_names.py:64 default_lane_names_to_localize.py:151
 msgid "Urban Fiction"
-msgstr ""
+msgstr "Urban Fiction"
 
 #: core/classifier/localized_names.py:21 default_lane_names_to_localize.py:152
 msgid "Vampires"
-msgstr ""
+msgstr "Vampires"
 
 #: core/classifier/localized_names.py:90 default_lane_names_to_localize.py:153
 msgid "Vegetarian & Vegan"
-msgstr ""
+msgstr "Vegetarian & Vegan"
 
 #: core/classifier/localized_names.py:22 default_lane_names_to_localize.py:154
 msgid "Werewolves"
-msgstr ""
+msgstr "Werewolves"
 
 #: core/classifier/localized_names.py:42 default_lane_names_to_localize.py:155
 msgid "Western Romance"
-msgstr ""
+msgstr "Western Romance"
 
 #: core/classifier/localized_names.py:65 default_lane_names_to_localize.py:156
 msgid "Westerns"
-msgstr ""
+msgstr "Westerns"
 
 #: core/classifier/localized_names.py:34 default_lane_names_to_localize.py:157
 msgid "Women Detectives"
-msgstr ""
+msgstr "Women Detectives"
 
 #: core/classifier/localized_names.py:66 default_lane_names_to_localize.py:158
 msgid "Women's Fiction"
-msgstr ""
+msgstr "Women's Fiction"
 
-#: core/classifier/localized_names.py:104 default_lane_names_to_localize.py:159
+#: core/classifier/localized_names.py:104
+#: default_lane_names_to_localize.py:159
 msgid "World History"
-msgstr ""
+msgstr "World History"
 
 #: default_lane_names_to_localize.py:160
 msgid "World Languages"
-msgstr ""
+msgstr "World Languages"
 
 #: default_lane_names_to_localize.py:161
 msgid "Young Adult Fiction"
-msgstr ""
+msgstr "Young Adult Fiction"
 
 #: default_lane_names_to_localize.py:162
 msgid "Young Adult Nonfiction"
-msgstr ""
+msgstr "Young Adult Nonfiction"
 
 #: core/config.py:95
 msgid "Debug"
-msgstr ""
+msgstr "Debug"
 
 #: core/config.py:96
 msgid "Info"
-msgstr ""
+msgstr "Info"
 
 #: core/config.py:97
 msgid "Warn"
-msgstr ""
+msgstr "Warn"
 
 #: core/config.py:98
 msgid "Error"
-msgstr ""
+msgstr "Error"
 
 #: core/config.py:106
 msgid "Base url of the application"
-msgstr ""
+msgstr "Base url of the application"
 
 #: core/config.py:112
 msgid "Log Level"
-msgstr ""
+msgstr "Log Level"
 
 #: core/config.py:119
 msgid "Application name"
-msgstr ""
+msgstr "Application name"
 
 #: core/config.py:120
 msgid ""
 "Log messages originating from this application will be tagged with this "
-"name. If you run multiple instances, giving each one a different "
-"application name will help you determine which instance is having "
-"problems."
+"name. If you run multiple instances, giving each one a different application"
+" name will help you determine which instance is having problems."
 msgstr ""
+"Log messages originating from this application will be tagged with this "
+"name. If you run multiple instances, giving each one a different application"
+" name will help you determine which instance is having problems."
 
 #: core/config.py:128
 msgid "Database Log Level"
-msgstr ""
+msgstr "Database Log Level"
 
 #: core/config.py:131
 msgid ""
-"Database logs are extremely verbose, so unless you're diagnosing a "
-"database-related problem, it's a good idea to set a higher log level for "
-"database messages."
+"Database logs are extremely verbose, so unless you're diagnosing a database-"
+"related problem, it's a good idea to set a higher log level for database "
+"messages."
 msgstr ""
+"Database logs are extremely verbose, so unless you're diagnosing a database-"
+"related problem, it's a good idea to set a higher log level for database "
+"messages."
 
 #: core/config.py:138
 msgid "Excluded audiobook sources"
-msgstr ""
+msgstr "Excluded audiobook sources"
 
 #: core/config.py:139
 msgid ""
-"Audiobooks from these data sources will be hidden from the collection, "
-"even if they would otherwise show up as available."
+"Audiobooks from these data sources will be hidden from the collection, even "
+"if they would otherwise show up as available."
 msgstr ""
+"Audiobooks from these data sources will be hidden from the collection, even "
+"if they would otherwise show up as available."
 
 #: core/config.py:147
 msgid "Cleanup old measurement data"
-msgstr ""
+msgstr "Cleanup old measurement data"
 
 #: core/config.py:149
 msgid ""
-"If this settings is 'true' old book measurement data will be cleaned out "
-"of the database. Some sites may want to keep this data for later "
-"analysis."
+"If this settings is 'true' old book measurement data will be cleaned out of "
+"the database. Some sites may want to keep this data for later analysis."
 msgstr ""
+"If this settings is 'true' old book measurement data will be cleaned out of "
+"the database. Some sites may want to keep this data for later analysis."
 
 #: core/config.py:157
 msgid "Push notifications status"
-msgstr ""
+msgstr "Push notifications status"
 
 #: core/config.py:159
 msgid ""
-"If this settings is 'true' push notification jobs will run as scheduled, "
-"and attempt to notify patrons via mobile push notifications."
+"If this settings is 'true' push notification jobs will run as scheduled, and"
+" attempt to notify patrons via mobile push notifications."
 msgstr ""
+"If this settings is 'true' push notification jobs will run as scheduled, and"
+" attempt to notify patrons via mobile push notifications."
 
 #: core/config.py:163
 msgid "True"
-msgstr ""
+msgstr "True"
 
 #: core/config.py:164
 msgid "False"
-msgstr ""
+msgstr "False"
 
 #: core/connection_config.py:17
 msgid "Connection retry limit"
-msgstr ""
+msgstr "Connection retry limit"
 
 #: core/connection_config.py:18
 msgid ""
 "The maximum number of times to retry a request for certain connection-"
 "related errors."
 msgstr ""
+"The maximum number of times to retry a request for certain connection-"
+"related errors."
 
 #: core/entrypoint.py:107 core/facets.py:116 core/facets.py:120
 #: core/facets.py:121
 msgid "All"
-msgstr ""
+msgstr "All"
 
 #: core/entrypoint.py:144
 msgid "eBooks"
-msgstr ""
+msgstr "eBooks"
 
 #: core/entrypoint.py:153
 msgid "Audiobooks"
-msgstr ""
+msgstr "Audiobooks"
 
 #: core/external_search.py:2448
 #, python-format
 msgid "Invalid page key: %(key)s"
-msgstr ""
+msgstr "Invalid page key: %(key)s"
 
 #: core/facets.py:89
 msgid "Sort by"
-msgstr ""
+msgstr "Sort by"
 
 #: core/facets.py:90
 msgid "Availability"
-msgstr ""
+msgstr "Availability"
 
 #: core/facets.py:91
 msgid "Collection"
-msgstr ""
+msgstr "Collection"
 
 #: core/facets.py:92
 msgid "Distributor"
-msgstr ""
+msgstr "Distributor"
 
 #: core/facets.py:93
 msgid "Collection Name"
-msgstr ""
+msgstr "Collection Name"
 
 #: core/facets.py:94
 msgid "Language"
-msgstr ""
+msgstr "Language"
 
 #: core/facets.py:98
 msgid "Allow patrons to sort by"
-msgstr ""
+msgstr "Allow patrons to sort by"
 
 #: core/facets.py:99
 msgid "Allow patrons to filter availability to"
-msgstr ""
+msgstr "Allow patrons to filter availability to"
 
 #: core/facets.py:100
 msgid "Allow patrons to filter collection to"
-msgstr ""
+msgstr "Allow patrons to filter collection to"
 
 #: core/facets.py:101
 msgid "Allow patrons to filter by distributor"
-msgstr ""
+msgstr "Allow patrons to filter by distributor"
 
 #: core/facets.py:102
 msgid "Allow patrons to filter by collection name"
-msgstr ""
+msgstr "Allow patrons to filter by collection name"
 
 #: core/facets.py:105
 msgid "Allow patrons to filter by language"
-msgstr ""
+msgstr "Allow patrons to filter by language"
 
 #: core/facets.py:109
 msgid "Title"
-msgstr ""
+msgstr "Title"
 
 #: core/facets.py:110
 msgid "Author"
-msgstr ""
+msgstr "Author"
 
 #: core/facets.py:111
 msgid "Last Update"
-msgstr ""
+msgstr "Last Update"
 
 #: core/facets.py:112
 msgid "Recently Added"
-msgstr ""
+msgstr "Recently Added"
 
 #: core/facets.py:113
 msgid "Series Position"
-msgstr ""
+msgstr "Series Position"
 
 #: core/facets.py:114
 msgid "Work ID"
-msgstr ""
+msgstr "Work ID"
 
 #: core/facets.py:115
 msgid "Available now"
-msgstr ""
+msgstr "Available now"
 
 #: core/facets.py:117
 msgid "Yours to keep"
-msgstr ""
+msgstr "Yours to keep"
 
 #: core/facets.py:118
 msgid "Everything"
-msgstr ""
+msgstr "Everything"
 
 #: core/facets.py:119
 msgid "Popular Books"
-msgstr ""
+msgstr "Popular Books"
 
 #: core/facets.py:122
 msgid "Finnish"
-msgstr ""
+msgstr "Finnish"
 
 #: core/facets.py:123
 msgid "Swedish"
-msgstr ""
+msgstr "Swedish"
 
 #: core/facets.py:124
 msgid "English"
-msgstr ""
+msgstr "English"
 
 #: core/facets.py:125
 msgid "Others"
-msgstr ""
+msgstr "Others"
 
 #: core/lane.py:386
 #, python-format
 msgid "I don't know how to order a feed by '%(order)s'"
-msgstr ""
+msgstr "I don't know how to order a feed by '%(order)s'"
 
 #: core/lane.py:394
 #, python-format
 msgid "I don't understand the availability term '%(availability)s'"
-msgstr ""
+msgstr "I don't understand the availability term '%(availability)s'"
 
 #: core/lane.py:406
 #, python-format
 msgid "I don't understand what '%(collection)s' refers to."
-msgstr ""
+msgstr "I don't understand what '%(collection)s' refers to."
 
 #: core/lane.py:422
 #, python-format
 msgid "I don't understand which distributor '%(distributor)s' refers to."
-msgstr ""
+msgstr "I don't understand which distributor '%(distributor)s' refers to."
 
 #: core/lane.py:438
 #, python-format
 msgid "I don't understand which collection '%(collection_name)s' refers to."
-msgstr ""
+msgstr "I don't understand which collection '%(collection_name)s' refers to."
 
 #: core/lane.py:1255
 #, python-format
 msgid "Invalid page size: %(size)s"
-msgstr ""
+msgstr "Invalid page size: %(size)s"
 
 #: core/lane.py:1273
 #, python-format
 msgid "Invalid offset: %(offset)s"
-msgstr ""
+msgstr "Invalid offset: %(offset)s"
 
 #: core/lane.py:1596
 #, python-format
 msgid "All %(worklist)s"
-msgstr ""
+msgstr "All %(worklist)s"
 
 #: core/opds2_import.py:194 core/opds_import.py:166
 msgid "Custom accept header"
-msgstr ""
+msgstr "Custom accept header"
 
 #: core/opds2_import.py:195 core/opds_import.py:168
 msgid ""
-"Some servers expect an accept header to decide which file to send. You "
-"can use */* if the server doesn't expect anything."
+"Some servers expect an accept header to decide which file to send. You can "
+"use */* if the server doesn't expect anything."
 msgstr ""
+"Some servers expect an accept header to decide which file to send. You can "
+"use */* if the server doesn't expect anything."
 
 #: core/opds2_import.py:207
 msgid "List of identifiers that will be skipped"
-msgstr ""
+msgstr "List of identifiers that will be skipped"
 
 #: core/opds2_import.py:208
 msgid ""
 "Circulation Manager will not be importing publications with identifiers "
 "having one of the selected types."
 msgstr ""
+"Circulation Manager will not be importing publications with identifiers "
+"having one of the selected types."
 
 #: core/opds2_import.py:326
 msgid "Import books from a publicly-accessible OPDS 2.0 feed."
-msgstr ""
+msgstr "Import books from a publicly-accessible OPDS 2.0 feed."
 
 #: core/opds_import.py:110
 msgid "URL"
-msgstr ""
+msgstr "URL"
 
 #: core/opds_import.py:116
 msgid "Data source name"
-msgstr ""
+msgstr "Data source name"
 
 #: core/opds_import.py:122
 msgid "Default audience"
-msgstr ""
+msgstr "Default audience"
 
 #: core/opds_import.py:123
 msgid ""
-"If the vendor does not specify the target audience for their books, "
-"assume the books have this target audience."
+"If the vendor does not specify the target audience for their books, assume "
+"the books have this target audience."
 msgstr ""
+"If the vendor does not specify the target audience for their books, assume "
+"the books have this target audience."
 
 #: core/opds_import.py:129
 msgid "No default audience"
-msgstr ""
+msgstr "No default audience"
 
 #: core/opds_import.py:138
 msgid "Username"
-msgstr ""
+msgstr "Username"
 
 #: core/opds_import.py:139
 msgid ""
-"If HTTP Basic authentication is required to access the OPDS feed (it "
-"usually isn't), enter the username here."
+"If HTTP Basic authentication is required to access the OPDS feed (it usually"
+" isn't), enter the username here."
 msgstr ""
+"If HTTP Basic authentication is required to access the OPDS feed (it usually"
+" isn't), enter the username here."
 
 #: core/opds_import.py:148
 msgid "Password"
-msgstr ""
+msgstr "Password"
 
 #: core/opds_import.py:149
 msgid ""
-"If HTTP Basic authentication is required to access the OPDS feed (it "
-"usually isn't), enter the password here."
+"If HTTP Basic authentication is required to access the OPDS feed (it usually"
+" isn't), enter the password here."
 msgstr ""
+"If HTTP Basic authentication is required to access the OPDS feed (it usually"
+" isn't), enter the password here."
 
 #: core/opds_import.py:177
 msgid "Identifer"
-msgstr ""
+msgstr "Identifer"
 
 #: core/opds_import.py:179
 msgid "Which book identifier to use as ID."
-msgstr ""
+msgstr "Which book identifier to use as ID."
 
 #: core/opds_import.py:182
 msgid "(Default) Use <id>"
-msgstr ""
+msgstr "(Default) Use <id>"
 
 #: core/opds_import.py:183
 msgid "Use <dcterms:identifier> first, if not exist use <id>"
-msgstr ""
+msgstr "Use <dcterms:identifier> first, if not exist use <id>"
 
 #: core/opds_import.py:654
 msgid "Import books from a publicly-accessible OPDS feed."
-msgstr ""
+msgstr "Import books from a publicly-accessible OPDS feed."
 
 #: core/problem_details.py:11
 msgid "Invalid input."
-msgstr ""
+msgstr "Invalid input."
 
 #: core/problem_details.py:12
 msgid "You provided invalid or unrecognized input."
-msgstr ""
+msgstr "You provided invalid or unrecognized input."
 
 #: core/problem_details.py:18
 msgid "Invalid credentials"
-msgstr ""
+msgstr "Invalid credentials"
 
 #: core/problem_details.py:19
 msgid "Valid credentials are required."
-msgstr ""
+msgstr "Valid credentials are required."
 
 #: core/problem_details.py:25
 msgid "Method not allowed"
-msgstr ""
+msgstr "Method not allowed"
 
 #: core/problem_details.py:26
 msgid "The HTTP method you used is not allowed on this resource."
-msgstr ""
+msgstr "The HTTP method you used is not allowed on this resource."
 
 #: core/problem_details.py:32
 msgid "Unsupported media type"
-msgstr ""
+msgstr "Unsupported media type"
 
 #: core/problem_details.py:33
 msgid "You submitted an unsupported media type."
-msgstr ""
+msgstr "You submitted an unsupported media type."
 
 #: core/problem_details.py:39
 msgid "Payload too large"
-msgstr ""
+msgstr "Payload too large"
 
 #: core/problem_details.py:40
 msgid "You submitted a document that was too large."
-msgstr ""
+msgstr "You submitted a document that was too large."
 
 #: core/problem_details.py:46
 msgid "Internal server error."
-msgstr ""
+msgstr "Internal server error."
 
 #: core/problem_details.py:47
 msgid "Internal server error"
-msgstr ""
+msgstr "Internal server error"
 
 #: core/problem_details.py:56
 msgid "Invalid URN"
-msgstr ""
+msgstr "Invalid URN"
 
 #: core/problem_details.py:57
 msgid "Could not parse identifier."
-msgstr ""
+msgstr "Could not parse identifier."
 
 #: core/problem_details.py:63
 msgid "Unrecognized data source."
-msgstr ""
+msgstr "Unrecognized data source."
 
 #: core/problem_details.py:64
 msgid "I don't know anything about that data source."
-msgstr ""
+msgstr "I don't know anything about that data source."
 
 #: core/problem_details.py:70
 msgid "Third-party service failed."
-msgstr ""
+msgstr "Third-party service failed."
 
 #: core/problem_details.py:71
 msgid "A third-party service has failed."
-msgstr ""
+msgstr "A third-party service has failed."
 
 #: core/problem_details.py:77
 msgid "Invalid reset password token"
-msgstr ""
+msgstr "Invalid reset password token"
 
 #: core/problem_details.py:78
 msgid "Provided reset password token is not valid."
-msgstr ""
+msgstr "Provided reset password token is not valid."
 
 #: core/user_profile.py:41
 #, python-format
 msgid "Profile document is not a JSON object: %r."
-msgstr ""
+msgstr "Profile document is not a JSON object: %r."
 
 #: core/user_profile.py:47
 #, python-format
 msgid "Could not convert profile document to JSON: %r."
-msgstr ""
+msgstr "Could not convert profile document to JSON: %r."
 
 #: core/user_profile.py:62
 #, python-format
 msgid "Expected %s"
-msgstr ""
+msgstr "Expected %s"
 
 #: core/user_profile.py:67
 msgid "Submitted profile document was not valid JSON."
-msgstr ""
+msgstr "Submitted profile document was not valid JSON."
 
 #: core/user_profile.py:71
 msgid "Submitted profile document was not a JSON object."
-msgstr ""
+msgstr "Submitted profile document was not a JSON object."
 
 #: core/user_profile.py:83
 #, python-format
 msgid "\"%s\" is not a writable setting."
-msgstr ""
+msgstr "\"%s\" is not a writable setting."
 
 #: core/classifier/localized_names.py:24
 msgid "Humorous Fiction"
-msgstr ""
+msgstr "Humorous Fiction"
 
 #: core/classifier/localized_names.py:45
 msgid "Dystopian SF"
-msgstr ""
+msgstr "Dystopian SF"
 
 #: core/classifier/localized_names.py:52
 msgid "Media Tie-in SF"
-msgstr ""
+msgstr "Media Tie-in SF"
 
 #: core/classifier/localized_names.py:54
 msgid "Suspense/Thriller"
-msgstr ""
+msgstr "Suspense/Thriller"
 
 #: core/classifier/localized_names.py:112
 msgid "Humorous Nonfiction"
-msgstr ""
+msgstr "Humorous Nonfiction"
 
 #: core/classifier/localized_names.py:121
 msgid "Political Science"
-msgstr ""
+msgstr "Political Science"
 
 #: core/util/http.py:27
 msgid "Failure contacting external service"
-msgstr ""
+msgstr "Failure contacting external service"
 
 #: core/util/http.py:28
 #, python-format
@@ -1128,33 +1170,36 @@ msgid ""
 "The server tried to access %(service)s but the third-party service "
 "experienced an error."
 msgstr ""
+"The server tried to access %(service)s but the third-party service "
+"experienced an error."
 
 #: core/util/http.py:75
 msgid "Bad response"
-msgstr ""
+msgstr "Bad response"
 
 #: core/util/http.py:76
 #, python-format
 msgid ""
-"The server made a request to %(service)s, and got an unexpected or "
-"invalid response."
+"The server made a request to %(service)s, and got an unexpected or invalid "
+"response."
 msgstr ""
+"The server made a request to %(service)s, and got an unexpected or invalid "
+"response."
 
 #: core/util/http.py:148
 msgid "Network failure contacting third-party service"
-msgstr ""
+msgstr "Network failure contacting third-party service"
 
 #: core/util/http.py:149
 #, python-format
 msgid "The server experienced a network error while contacting %(service)s."
-msgstr ""
+msgstr "The server experienced a network error while contacting %(service)s."
 
 #: core/util/http.py:158
 msgid "Timeout"
-msgstr ""
+msgstr "Timeout"
 
 #: core/util/http.py:159
 #, python-format
 msgid "The server made a request to %(service)s, and that request timed out."
-msgstr ""
-
+msgstr "The server made a request to %(service)s, and that request timed out."
