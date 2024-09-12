@@ -964,6 +964,15 @@ class CirculationAPI:
             on_multiple="interchangeable",
         )
 
+        # Or maybe we have it on hold?
+        existing_hold = get_one(
+            self._db,
+            Hold,
+            patron=patron,
+            license_pool=licensepool,
+            on_multiple="interchangeable",
+        )
+
         loan_info = None
         hold_info = None
         if existing_loan and isinstance(api, PatronActivityCirculationAPI):
@@ -1069,6 +1078,24 @@ class CirculationAPI:
                 raise CannotRenew(
                     _("You cannot renew a loan if other patrons have the work on hold.")
                 )
+            
+            # The patron had a hold and was in the hold queue's 0th position believing
+            # there were copies available. 
+            if existing_hold and existing_hold.position == 0:  # Do we want to also check the position?
+                
+                # Update availability information immediately
+                api.update_availability(licensepool)
+                
+                # Update the hold
+                hold_info = HoldInfo(
+                licensepool.collection,
+                licensepool.data_source,
+                licensepool.identifier.type,
+                licensepool.identifier.identifier,
+                existing_hold.start,
+                None,
+                existing_hold.position,
+            )
             else:
                 # That's fine, we'll just (try to) place a hold.
                 #
