@@ -864,7 +864,7 @@ class TestCirculationAPI:
         assert patron == circulation.patron_at_hold_limit_calls.pop()
         assert pool == api.availability_updated.pop()
 
-        # Sub-test 3: patron is at hold limit but not loan limit
+        # Sub-test 4: patron is at hold limit but not loan limit
         #
         circulation.at_loan_limit = False
         circulation.at_hold_limit = True
