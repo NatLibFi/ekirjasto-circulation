@@ -930,6 +930,41 @@ class TestCirculationAPI:
         loan, hold, is_new = self.borrow(circulation_api)
         assert hold != None
 
+    def test_borrow_no_available_copies_and_update_existing_hold(
+        self, circulation_api: CirculationAPIFixture, library_fixture: LibraryFixture
+    ):
+        # The patron has a previous hold.
+        library_fixture.settings(circulation_api.patron.library).hold_limit = 1
+
+        other_pool = circulation_api.db.licensepool(None)
+        print(other_pool)
+        print(circulation_api)
+        other_pool.open_access = False
+        circulation_api.pool.on_hold_to(
+            circulation_api.patron,
+            start=self.YESTERDAY,
+            end=self.TOMORROW,
+            position=0,
+        )
+        circulation_api.pool.licenses_available = 1
+
+        circulation_api.remote.queue_checkout(NoAvailableCopies())
+
+
+        # with pytest.raises(NoAvailableCopies):
+        #     self.borrow(circulation_api)
+
+        assert [] == circulation_api.remote.availability_updated_for
+
+        loan, hold, is_new = self.borrow(circulation_api)
+        print("here: %s, %s, %s", hold.position, hold.end, is_new)
+        assert loan is None
+        assert hold is not None
+        assert not is_new
+        assert hold.position == 0
+        assert hold.end == None # When the book is reserved for a patron, there is an end_date.
+
+
     def test_fulfill_errors(self, circulation_api: CirculationAPIFixture):
         # Here's an open-access title.
         collection = circulation_api.db.collection(
