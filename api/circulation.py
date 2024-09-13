@@ -1093,7 +1093,7 @@ class CirculationAPI:
                 licensepool.identifier.type,
                 licensepool.identifier.identifier,
                 existing_hold.start,
-                None,
+                datetime.datetime.now() + datetime.timedelta(weeks=2),
                 existing_hold.position,
             )
             else:
