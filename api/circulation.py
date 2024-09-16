@@ -926,7 +926,7 @@ class CirculationAPI:
         delivery_mechanism: LicensePoolDeliveryMechanism,
         hold_notification_email: str | None = None,
     ) -> tuple[Loan | None, Hold | None, bool]:
-        """Either borrow a book or put it on hold. Don't worry about fulfilling
+        """Either borrow a book or put it or leave it on hold. Don't worry about fulfilling
         the loan yet.
 
         :return: A 3-tuple (`Loan`, `Hold`, `is_new`). Either `Loan`
@@ -1080,7 +1080,7 @@ class CirculationAPI:
                 )
             
             # The patron had a hold and was in the hold queue's 0th position believing
-            # there were copies available. 
+            # there were copies available for them to checkout. 
             if existing_hold and existing_hold.position == 0:  # Do we want to also check the position?
                 
                 # Update availability information immediately
@@ -1244,7 +1244,7 @@ class CirculationAPI:
         
         if not at_loan_limit and at_hold_limit:
             # This patron can take out a loan, but not a hold. This is relevant when
-            # the book is not available, but the patron is at their hold limit.
+            # the book is not available, but the patron is at their hold limit and at position 0 in the hold queue.
             return
 
         if at_loan_limit and at_hold_limit:
