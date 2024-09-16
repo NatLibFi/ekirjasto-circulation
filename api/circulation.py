@@ -1086,14 +1086,15 @@ class CirculationAPI:
                 # Update availability information immediately
                 api.update_availability(licensepool)
                 
-                # Update the hold
+                # Update the hold so the patron doesn't lose their hold. Extend the hold to expire in the
+                # next 3 days.
                 hold_info = HoldInfo(
                 licensepool.collection,
                 licensepool.data_source,
                 licensepool.identifier.type,
                 licensepool.identifier.identifier,
                 existing_hold.start,
-                datetime.datetime.now() + datetime.timedelta(weeks=2),
+                datetime.datetime.now() + datetime.timedelta(days=3),
                 existing_hold.position,
             )
             else:
