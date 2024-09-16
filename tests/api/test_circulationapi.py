@@ -869,25 +869,33 @@ class TestCirculationAPI:
         circulation.at_loan_limit = False
         circulation.at_hold_limit = True
 
-        # If the book is not available, we get PatronHoldLimitReached
+        # Test updated: If the book is not available, we should NOT yet
+        # raise PatronHoldLimitReached. The patron is at their hold limit
+        # but they may be trying to take out a loan on a book that is
+        # reserved for them (hold position 0).
         pool.licenses_available = 0
-        with pytest.raises(PatronHoldLimitReached) as hold_limit_info:
+        try:
             circulation.enforce_limits(patron, pool)
-        assert 12 == hold_limit_info.value.limit
+        except PatronHoldLimitReached:
+            assert not PatronHoldLimitReached
 
         # Reaching this conclusion required checking both patron
-        # limits and asking the remote API for updated availability
+        # limits. The remote API isn't queried for updated availability
         # information for this LicensePool.
         assert patron == circulation.patron_at_loan_limit_calls.pop()
         assert patron == circulation.patron_at_hold_limit_calls.pop()
-        assert pool == api.availability_updated.pop()
+        assert [] == api.availability_updated
+
 
         # If the book is available, we're fine -- we're not at our loan limit.
+        # The remote API isn't queried for updated availability
+        # information for this LicensePool.
         pool.licenses_available = 1
         circulation.enforce_limits(patron, pool)
         assert patron == circulation.patron_at_loan_limit_calls.pop()
         assert patron == circulation.patron_at_hold_limit_calls.pop()
-        assert pool == api.availability_updated.pop()
+        assert [] == api.availability_updated
+
 
     def test_borrow_hold_limit_reached(
         self, circulation_api: CirculationAPIFixture, library_fixture: LibraryFixture
@@ -901,17 +909,20 @@ class TestCirculationAPI:
         library_fixture.settings(circulation_api.patron.library).hold_limit = 1
         other_pool = circulation_api.db.licensepool(None)
         other_pool.open_access = False
-        other_pool.on_hold_to(circulation_api.patron)
-
+        circulation_api.pool.on_hold_to(
+            circulation_api.patron,
+            start=self.YESTERDAY,
+            end=self.TOMORROW,
+            position=0,
+        )
         # The patron wants to take out a loan on an unavailable title.
         circulation_api.pool.licenses_available = 0
         try:
             self.borrow(circulation_api)
         except Exception as e:
-            # The result is a PatronHoldLimitReached configured with the
-            # library's hold limit.
-            assert isinstance(e, PatronHoldLimitReached)
-            assert 1 == e.limit
+            # Test updated to not raise exception: The result should NOT be a PatronHoldLimitReached exception when
+            # they are already in the hold queue in position 0 trying to loan the title.
+            assert not isinstance(e, PatronHoldLimitReached)
 
         # If we increase the limit, borrow succeeds.
         library_fixture.settings(circulation_api.patron.library).hold_limit = 2
@@ -935,7 +946,7 @@ class TestCirculationAPI:
     ):
         """
         The hold limit is 1, and the patron has a hold with position 0 in the hold queue on a book they're
-        trying to checkout. When the patron tries to borrow the book but turns out to not be available, the
+        trying to checkout. When the patron tries to borrow the book but it turns out to not be available, the
         hold is updated to have a new end date with all other properties unchanged.
         The circulation information for the book is immediately updated, to reduce the risk that other patrons
         would encounter the same problem.
@@ -945,7 +956,6 @@ class TestCirculationAPI:
         library_fixture.settings(circulation_api.patron.library).hold_limit = 1
 
         other_pool = circulation_api.db.licensepool(None)
-
         other_pool.open_access = False
 
         # The patron has a hold with position 0 in the hold queue
@@ -957,8 +967,8 @@ class TestCirculationAPI:
         )
         original_hold_end_date = existing_hold.end
 
-        # The patron wants to take out a loan on an unavailable title and it's not available.
-        circulation_api.pool.licenses_available = 1
+        # The patron wants to take out their hold for loan but which turns out to not be available.
+        circulation_api.pool.licenses_available = 0
         circulation_api.remote.queue_checkout(NoAvailableCopies())
 
         # We want to ensure that the update hasn't yet happened when NoAvailableCopies was raised
