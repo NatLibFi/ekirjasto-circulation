@@ -1263,7 +1263,7 @@ class CirculationAPI:
         
         if not at_loan_limit and at_hold_limit:
             # This patron can take out a loan, but not a hold. This is relevant when
-            # the book is not available, but the patron is at their hold limit and at position 0 in the hold queue.
+            # the patron can't place a hold but can take out a loan.
             return
 
         if at_loan_limit and at_hold_limit:
