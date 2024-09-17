@@ -1164,35 +1164,42 @@ class CirculationAPI:
         # Checking out a book didn't work, so let's try putting
         # the book on hold.
         if not hold_info:
-            try:
-                hold_info = api.place_hold(
-                    patron, pin, licensepool, hold_notification_email
-                )
-            except AlreadyOnHold as e:
-                hold_info = HoldInfo(
-                    licensepool.collection,
-                    licensepool.data_source,
-                    licensepool.identifier.type,
-                    licensepool.identifier.identifier,
-                    None,
-                    None,
-                    None,
-                )
-            except CurrentlyAvailable:
-                if loan_exception:
-                    # We tried to take out a loan and got an
-                    # exception.  But we weren't sure whether the real
-                    # problem was the exception we got or the fact
-                    # that the book wasn't available. Then we tried to
-                    # place a hold, which didn't work because the book
-                    # is currently available. That answers the
-                    # question: we should have let the first exception
-                    # go through.  Raise it now.
-                    raise loan_exception
+            # At this point, we need to check to see if the patron
+            # has reached their hold limit since we did not raise
+            # an exception for it earlier when limits were enforced.
+            at_hold_limit = self.patron_at_hold_limit(patron)
+            if not at_hold_limit:
+                try:
+                    hold_info = api.place_hold(
+                        patron, pin, licensepool, hold_notification_email
+                    )
+                except AlreadyOnHold as e:
+                    hold_info = HoldInfo(
+                        licensepool.collection,
+                        licensepool.data_source,
+                        licensepool.identifier.type,
+                        licensepool.identifier.identifier,
+                        None,
+                        None,
+                        None,
+                    )
+                except CurrentlyAvailable:
+                    if loan_exception:
+                        # We tried to take out a loan and got an
+                        # exception.  But we weren't sure whether the real
+                        # problem was the exception we got or the fact
+                        # that the book wasn't available. Then we tried to
+                        # place a hold, which didn't work because the book
+                        # is currently available. That answers the
+                        # question: we should have let the first exception
+                        # go through.  Raise it now.
+                        raise loan_exception
 
-                # This shouldn't normally happen, but if it does,
-                # treat it as any other exception.
-                raise
+                    # This shouldn't normally happen, but if it does,
+                    # treat it as any other exception.
+                    raise
+            else:
+                raise PatronHoldLimitReached
 
         # It's pretty rare that we'd go from having a loan for a book
         # to needing to put it on hold, but we do check for that case.
