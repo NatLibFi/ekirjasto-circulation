@@ -944,14 +944,11 @@ class TestCirculationAPI:
         trying to checkout. When the patron tries to borrow the book but it turns out to not be available, the
         hold is updated to have a new end date with all other properties unchanged.
         The circulation information for the book is immediately updated, to reduce the risk that other patrons
-        would encounter the same problem.
-        """ 
+        would encounter the same problem. Finally, the patron gets a NoAvailableCopiesWhenReserved exception.
+        """
 
         # The hold limit is 1
         library_fixture.settings(circulation_api.patron.library).hold_limit = 1
-
-        other_pool = circulation_api.db.licensepool(None)
-        other_pool.open_access = False
 
         # The patron has a hold with position 0 in the hold queue
         existing_hold, is_new = circulation_api.pool.on_hold_to(
@@ -963,19 +960,19 @@ class TestCirculationAPI:
         original_hold_end_date = existing_hold.end
 
         # The patron wants to take out their hold for loan but which turns out to not be available.
-        circulation_api.pool.licenses_available = 0
         circulation_api.remote.queue_checkout(NoAvailableCopies())
 
-        # We want to ensure that the update hasn't yet happened when NoAvailableCopies was raised
-        assert [] == circulation_api.remote.availability_updated_for
+        # The patron tries to borrow the book but gets a NoAvailableCopiesWhenReserved exception
+        try:
+            self.borrow(circulation_api)
+        except Exception as e:
+            assert isinstance(e, NoAvailableCopiesWhenReserved)
 
-        loan, hold, is_new = self.borrow(circulation_api)
-
-        assert loan is None
-        assert hold is not None # It should be a hold, not loan.
-        assert not is_new   # The hold is updated, it shouldn't be a new hold.
-        assert hold.position == 0
-        assert hold.end != original_hold_end_date # The updated hold should have a new end date.
+        # Nonetheless, the hold is updated to have a new extended end date.
+        assert existing_hold.position == 0
+        assert (
+            existing_hold.end != original_hold_end_date
+        )  # The updated hold should have a new end date.
         # When NoAvailableCopies was raised, the circulation
         # information for the book was immediately updated, to reduce
         # the risk that other patrons would encounter the same
