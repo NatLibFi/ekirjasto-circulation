@@ -909,20 +909,15 @@ class TestCirculationAPI:
         library_fixture.settings(circulation_api.patron.library).hold_limit = 1
         other_pool = circulation_api.db.licensepool(None)
         other_pool.open_access = False
-        circulation_api.pool.on_hold_to(
-            circulation_api.patron,
-            start=self.YESTERDAY,
-            end=self.TOMORROW,
-            position=0,
-        )
-        # The patron wants to take out a loan on an unavailable title.
-        circulation_api.pool.licenses_available = 0
+        other_pool.on_hold_to(circulation_api.patron)
+        # The patron wants to take out a loan on another title which is not available.
+        circulation_api.remote.queue_checkout(NoAvailableCopies())
+
         try:
             self.borrow(circulation_api)
         except Exception as e:
-            # Test updated to not raise exception: The result should NOT be a PatronHoldLimitReached exception when
-            # they are already in the hold queue in position 0 trying to loan the title.
-            assert not isinstance(e, PatronHoldLimitReached)
+            # The result is a PatronHoldLimitReached.
+            assert isinstance(e, PatronHoldLimitReached)
 
         # If we increase the limit, borrow succeeds.
         library_fixture.settings(circulation_api.patron.library).hold_limit = 2
