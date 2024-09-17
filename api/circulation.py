@@ -1011,6 +1011,11 @@ class CirculationAPI:
         # Enforce any library-specific limits on loans or holds.
         self.enforce_limits(patron, licensepool)
 
+        # When the patron is at the top of the hold queue ("reverved")
+        # but the loan fails, we want to raise an exception  when that
+        # happens.
+        reserved_license_exception = False
+
         # Since that didn't raise an exception, we don't know of any
         # reason why the patron shouldn't be able to get a loan or a
         # hold. There are race conditions that will allow someone to
@@ -1214,6 +1219,12 @@ class CirculationAPI:
         if existing_loan:
             self._db.delete(existing_loan)
         __transaction.commit()
+
+        # Raise the exception of failed loan when the patron falsely believed
+        # there was an available licanse at the top of the hold queue.
+        if reserved_license_exception:
+            raise NoAvailableCopiesWhenReserved
+
         return None, hold, is_new
 
     def enforce_limits(self, patron: Patron, pool: LicensePool) -> None:
