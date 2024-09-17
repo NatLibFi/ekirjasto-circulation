@@ -1083,12 +1083,10 @@ class CirculationAPI:
                 raise CannotRenew(
                     _("You cannot renew a loan if other patrons have the work on hold.")
                 )
-            
+
             # The patron had a hold and was in the hold queue's 0th position believing
             # there were copies available for them to checkout.
-            if (
-                existing_hold and existing_hold.position == 0
-            ):
+            if existing_hold and existing_hold.position == 0:
                 # Update the hold so the patron doesn't lose their hold. Extend the hold to expire in the
                 # next 3 days.
                 hold_info = HoldInfo(
@@ -1260,7 +1258,7 @@ class CirculationAPI:
             # This patron can take out either a loan or a hold, so the
             # limits don't apply.
             return
-        
+
         if not at_loan_limit and at_hold_limit:
             # This patron can take out a loan, but not a hold. This is relevant when
             # the patron can't place a hold but can take out a loan.

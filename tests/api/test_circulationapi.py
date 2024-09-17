@@ -886,7 +886,6 @@ class TestCirculationAPI:
         assert patron == circulation.patron_at_hold_limit_calls.pop()
         assert [] == api.availability_updated
 
-
         # If the book is available, we're fine -- we're not at our loan limit.
         # The remote API isn't queried for updated availability
         # information for this LicensePool.
@@ -895,7 +894,6 @@ class TestCirculationAPI:
         assert patron == circulation.patron_at_loan_limit_calls.pop()
         assert patron == circulation.patron_at_hold_limit_calls.pop()
         assert [] == api.availability_updated
-
 
     def test_borrow_hold_limit_reached(
         self, circulation_api: CirculationAPIFixture, library_fixture: LibraryFixture
