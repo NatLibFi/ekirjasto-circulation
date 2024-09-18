@@ -1111,7 +1111,7 @@ class TestLoanController:
             )
             assert isinstance(response, ProblemDetail)
             assert NO_COPIES_WHEN_RESERVED.uri == response.uri
-            assert 403 == response.status_code
+            assert 502 == response.status_code
 
     def test_borrow_fails_with_outstanding_fines(
         self, loan_fixture: LoanFixture, library_fixture: LibraryFixture
