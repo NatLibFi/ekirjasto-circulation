@@ -58,8 +58,8 @@ NO_AVAILABLE_LICENSE = pd(
 
 # E-kirjasto
 NO_COPIES_WHEN_RESERVED = pd(
-    "http://librarysimplified.org/terms/problem/no-available-license",
-    403,
+    "http://librarysimplified.org/terms/problem/cannot-issue-loan",
+    502,
     _("No available license."),
     _("All copies of this book are loaned out after all. You are still next in line."),
 )
