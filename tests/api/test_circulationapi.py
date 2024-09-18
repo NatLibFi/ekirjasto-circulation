@@ -872,12 +872,16 @@ class TestCirculationAPI:
         # Test updated: If the book is not available, we should NOT yet
         # raise PatronHoldLimitReached. The patron is at their hold limit
         # but they may be trying to take out a loan on a book that is
-        # reserved for them (hold position 0).
+        # reserved for them (hold position 0). We want to let them proceed
+        # at this point.
         pool.licenses_available = 0
         try:
             circulation.enforce_limits(patron, pool)
         except PatronHoldLimitReached:
-            assert not PatronHoldLimitReached
+            assert False, "PatronHoldLimitReached is raised when it shouldn't"
+        else:
+            # If no exception is raised, the test should pass
+            assert True
 
         # Reaching this conclusion required checking both patron
         # limits. The remote API isn't queried for updated availability
