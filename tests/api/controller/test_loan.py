@@ -21,6 +21,7 @@ from api.circulation import (
 from api.circulation_exceptions import (
     AlreadyOnHold,
     NoAvailableCopies,
+    NoAvailableCopiesWhenReserved,
     NoLicenses,
     NotFoundOnRemote,
     PatronHoldLimitReached,
@@ -30,6 +31,7 @@ from api.problem_details import (
     CANNOT_RELEASE_HOLD,
     HOLD_LIMIT_REACHED,
     NO_ACTIVE_LOAN,
+    NO_COPIES_WHEN_RESERVED,
     NOT_FOUND_ON_REMOTE,
     OUTSTANDING_FINES,
 )
@@ -1090,6 +1092,26 @@ class TestLoanController:
             )
             assert isinstance(response, ProblemDetail)
             assert HOLD_LIMIT_REACHED.uri == response.uri
+
+    def test_loan_fails_when_patron_is_at_hold_limit_and_hold_position_zero(
+        self, loan_fixture: LoanFixture
+    ):
+        edition, pool = loan_fixture.db.edition(with_license_pool=True)
+        pool.open_access = False
+        with loan_fixture.request_context_with_library(
+            "/", headers=dict(Authorization=loan_fixture.valid_auth)
+        ):
+            patron = loan_fixture.manager.loans.authenticated_patron_from_request()
+            loan_fixture.manager.d_circulation.queue_checkout(pool, NoAvailableCopies())
+            loan_fixture.manager.d_circulation.queue_hold(
+                pool, NoAvailableCopiesWhenReserved()
+            )
+            response = loan_fixture.manager.loans.borrow(
+                pool.identifier.type, pool.identifier.identifier
+            )
+            assert isinstance(response, ProblemDetail)
+            assert NO_COPIES_WHEN_RESERVED.uri == response.uri
+            assert 502 == response.status_code
 
     def test_borrow_fails_with_outstanding_fines(
         self, loan_fixture: LoanFixture, library_fixture: LibraryFixture

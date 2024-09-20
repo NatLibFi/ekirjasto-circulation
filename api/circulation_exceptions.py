@@ -217,6 +217,17 @@ class CannotRenew(CirculationException):
     status_code = 400
 
 
+class NoAvailableCopiesWhenReserved(CannotLoan):
+    """The patron can't check this book out because all available
+    copies are already checked out. The book is "reserved" to the
+    patron.
+    """
+
+    def as_problem_detail_document(self, debug=False):
+        """Return a suitable problem detail document."""
+        return NO_COPIES_WHEN_RESERVED
+
+
 class NoAvailableCopies(CannotLoan):
     """The patron can't check this book out because all available
     copies are already checked out.
