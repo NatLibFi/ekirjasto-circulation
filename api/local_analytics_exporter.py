@@ -75,7 +75,7 @@ class LocalAnalyticsExporter:
         rows = [dict(row) for row in results]
 
         # Count how many contributor rows we need
-        max_contribs = max([0, *[len(row.get("contributors", [])) for row in rows]])
+        max_contribs = max([0, *[len(row.get("contributors", []) or []) for row in rows]])
 
         header = [
             "Tekijä (aakkostus)",
@@ -99,8 +99,7 @@ class LocalAnalyticsExporter:
             genres = row.get("genres")
             categories = ", ".join(genres) if genres else ""
 
-            contributors = row.get("contributors", [])
-
+            contributors = row.get("contributors") or []            
             sheet.append(
                 [
                     # Tekijä (aakkostus)
