@@ -12,9 +12,9 @@ HOME=/var/www/circulation
 # These scripts update internal caches.
 #
 */30 * * * * root core/bin/run -d 15 search_index_refresh >> /var/log/cron.log 2>&1
-10 0 * * * root core/bin/run search_index_clear >> /var/log/cron.log 2>&1
-0 0 * * * root core/bin/run update_custom_list_size >> /var/log/cron.log 2>&1
-0 2 * * * root core/bin/run update_lane_size >> /var/log/cron.log 2>&1
+0 0 * * * root core/bin/run search_index_clear >> /var/log/cron.log 2>&1
+45 * * * * root core/bin/run update_custom_list_size >> /var/log/cron.log 2>&1
+55 * * * * root core/bin/run update_lane_size >> /var/log/cron.log 2>&1
 */30 * * * * root core/bin/run -d 5 equivalent_identifiers_refresh >> /var/log/cron.log 2>&1
 
 # These scripts improve the bibliographic information associated with
@@ -30,7 +30,7 @@ HOME=/var/www/circulation
 
 # If any works are classified under unprocessed subjects, reclassify
 # those works.
-30 22 * * * root core/bin/run work_classify_unchecked_subjects >> /var/log/cron.log 2>&1
+0 0,12 * * * root core/bin/run work_classify_unchecked_subjects >> /var/log/cron.log 2>&1
 
 # Remove miscellaneous expired things from the database
 0 2 * * * root core/bin/run database_reaper >> /var/log/cron.log 2>&1
@@ -83,28 +83,28 @@ HOME=/var/www/circulation
 # OPDS 1.x + ODL
 #
 15 * * * * root core/bin/run odl_import_monitor >> /var/log/cron.log 2>&1
-0 */8 * * * root core/bin/run odl_hold_reaper >> /var/log/cron.log 2>&1
+0 */4 * * * root core/bin/run odl_hold_reaper >> /var/log/cron.log 2>&1
 
 # OPDS 2.x + ODL import
 #
-45 * * * * root core/bin/run odl2_import_monitor >> /var/log/cron.log 2>&1
+30 * * * * root core/bin/run odl2_import_monitor >> /var/log/cron.log 2>&1
 
 # SAML
 #
 0 5 * * * root core/bin/run saml_monitor >> /var/log/cron.log 2>&1
 
 # Auto update lists
-# Every hour between 7AM - 1AM
-5 0,1,7-23 * * * root core/bin/run custom_list_update_new_entries >> /var/log/cron.log 2>&1
+# Every hour between 8 - 16
+5 0,1,8-16 * * * root core/bin/run custom_list_update_new_entries >> /var/log/cron.log 2>&1
 
 # Rotate the patron auth JWE access token key daily
 #
 0 3 * * * root core/bin/run rotate_patron_auth_key >> /var/log/cron.log 2>&1
 
 # Notifications
-#
-10 */8 * * * root core/bin/run loan_notifications >> /var/log/cron.log 2>&1
-15 */8 * * * root core/bin/run hold_notifications >> /var/log/cron.log 2>&1
+# Run every four hours starting from 08:00
+0 8,12,16,20 * * * root core/bin/run loan_notifications >> /var/log/cron.log 2>&1
+0 8,12,16,20 * * * root core/bin/run hold_notifications >> /var/log/cron.log 2>&1
 0 1 * * * root core/bin/run patron_activity_sync_notifications >> /var/log/cron.log 2>&1
 
 # Audiobook playtimes
