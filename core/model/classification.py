@@ -501,12 +501,22 @@ class Genre(Base, HasSessionCache):
             length = len(classifier.genres[self.name].subgenres)
         else:
             length = 0
-        return "<Genre %s (%d subjects, %d works, %d subcategories)>" % (
+        genre_data = "<Genre %s (%d subjects, %d works, %d subcategories)>" % (
             self.name,
             len(self.subjects),
             len(self.works),
             length,
         )
+        genre_data += "\n  <Subjects: %s>" % (
+            ", ".join(
+                [
+                    f"{subject.name} ({subject.type}, {subject.identifier})"
+                    for subject in self.subjects
+                ]
+            )
+        )
+
+        return genre_data
 
     def cache_key(self):
         return self.name
