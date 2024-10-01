@@ -345,7 +345,7 @@ msgstr "Kirjallisuustiede"
 
 #: core/classifier/localized_names.py:25 default_lane_names_to_localize.py:87
 msgid "Literary Fiction"
-msgstr "Korkeakirjallisuus"
+msgstr "Yleinen kaunokirjallisuus"
 
 #: core/classifier/localized_names.py:80 default_lane_names_to_localize.py:88
 msgid "Management & Leadership"
