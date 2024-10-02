@@ -226,6 +226,10 @@ class TestBISACClassifier:
 
         genre_is("Young Adult Fiction / Poetry", "Poetry")
         genre_is("Poetry", "Poetry")
+        # Making sure we classify Poetry as Poetry
+        genre_is("Poetry / European / General", "Poetry")
+        # Making sure we classify Literary Criticism as such, not Poetry
+        genre_is("Literary Criticism / Poetry", "Literary Criticism")
 
         # Grandfathered in from an older test to validate that the new
         # BISAC algorithm gives the same results as the old one.
