@@ -450,7 +450,7 @@ def create_lanes_for_large_collection(_db, library, languages, priority=0):
         lane_from_genres(
             _db,
             library,
-            [genres.Literary_Fiction],
+            [genres.General_Fiction],
             display_name="Contemporary Fiction",
             priority=ya_fiction_priority,
             **ya_common_args
@@ -717,7 +717,7 @@ def create_lanes_for_large_collection(_db, library, languages, priority=0):
         **children_common_args
     )
     children_priority += 1
-    realistic_fiction.add_genre(genres.Literary_Fiction.name)
+    realistic_fiction.add_genre(genres.General_Fiction.name)
     children.sublanes.append(realistic_fiction)
 
     children_graphic_novels, ignore = create(

@@ -3290,7 +3290,7 @@ class FilterFixture:
     """A fixture preconfigured with data for testing filters."""
 
     transaction: DatabaseTransactionFixture
-    literary_fiction: Genre
+    general_fiction: Genre
     fantasy: Genre
     horror: Genre
     best_sellers: CustomList
@@ -3302,7 +3302,7 @@ class FilterFixture:
         data.transaction = transaction
         session = transaction.session
         # Look up three Genre objects which can be used to make filters.
-        data.literary_fiction, ignore = Genre.lookup(session, "Literary Fiction")
+        data.general_fiction, ignore = Genre.lookup(session, "General Fiction")
         data.fantasy, ignore = Genre.lookup(session, "Fantasy")
         data.horror, ignore = Genre.lookup(session, "Horror")
 
@@ -3407,17 +3407,17 @@ class TestFilter:
         assert [] == Filter(genre_restriction_sets=[]).genre_restriction_sets
         assert [] == Filter(genre_restriction_sets=None).genre_restriction_sets
 
-        # Restrict to books that are literary fiction AND (horror OR
+        # Restrict to books that are general fiction AND (horror OR
         # fantasy).
         restricted = Filter(
             genre_restriction_sets=[
                 [data.horror, data.fantasy],
-                [data.literary_fiction],
+                [data.general_fiction],
             ]
         )
         assert [
             [data.horror.id, data.fantasy.id],
-            [data.literary_fiction.id],
+            [data.general_fiction.id],
         ] == restricted.genre_restriction_sets
 
         # This is a restriction: 'only books that have no genre'
@@ -3516,7 +3516,7 @@ class TestFilter:
 
         # This lane inherits most of its configuration from its parent.
         inherits = transaction.lane(display_name="Child who inherits", parent=parent)
-        inherits.genres = [data.literary_fiction]
+        inherits.genres = [data.general_fiction]
         inherits.customlists = [data.staff_picks]
 
         class Mock:
@@ -3778,10 +3778,10 @@ class TestFilter:
         # We want books by a specific author.
         filter.author = ContributorData(sort_name="Ebrity, Sel")
 
-        # We want books that are literary fiction, *and* either
+        # We want books that are general fiction, *and* either
         # fantasy or horror.
         filter.genre_restriction_sets = [
-            [data.literary_fiction],
+            [data.general_fiction],
             [data.fantasy, data.horror],
         ]
 
@@ -3852,13 +3852,13 @@ class TestFilter:
         assert filter.author_filter == contributor_filter
 
         # The genre restrictions are also expressed as nested filters.
-        literary_fiction_filter, fantasy_or_horror_filter = nested.pop("genres")
+        general_fiction_filter, fantasy_or_horror_filter = nested.pop("genres")
 
         # There are two different restrictions on genre, because
         # genre_restriction_sets was set to two lists of genres.
         assert {
-            "terms": {"genres.term": [data.literary_fiction.id]}
-        } == literary_fiction_filter.to_dict()
+            "terms": {"genres.term": [data.general_fiction.id]}
+        } == general_fiction_filter.to_dict()
         assert {
             "terms": {"genres.term": [data.fantasy.id, data.horror.id]}
         } == fantasy_or_horror_filter.to_dict()

@@ -602,7 +602,7 @@ fiction_genres = [
         ],
     ),
     "Humorous Fiction",
-    "Literary Fiction",
+    "General Fiction",
     "LGBTQ Fiction",
     dict(
         name="Mystery",
