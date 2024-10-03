@@ -266,7 +266,7 @@ class BISACClassifier(Classifier):
         m(True, "Literary Collections"),
         m(stop, "Humor"),
         m(stop, "Drama"),
-        m(stop, "Poetry"),
+        m(True, "Poetry"),
         m(False, anything),
     ]
 

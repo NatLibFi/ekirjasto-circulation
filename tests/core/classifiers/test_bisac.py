@@ -169,9 +169,7 @@ class TestBISACClassifier:
         # We determined fiction/nonfiction status for every BISAC
         # subject except for humor, drama, and poetry.
         for subject in need_fiction:
-            assert any(
-                subject.name.lower().startswith(x) for x in ["humor", "drama", "poetry"]
-            )
+            assert any(subject.name.lower().startswith(x) for x in ["humor", "drama"])
 
         # We determined the target audience for every BISAC subject.
         assert [] == need_audience
@@ -228,6 +226,10 @@ class TestBISACClassifier:
 
         genre_is("Young Adult Fiction / Poetry", "Poetry")
         genre_is("Poetry", "Poetry")
+        # Making sure we classify Poetry as Poetry
+        genre_is("Poetry / European / General", "Poetry")
+        # Making sure we classify Literary Criticism as such, not Poetry
+        genre_is("Literary Criticism / Poetry", "Literary Criticism")
 
         # Grandfathered in from an older test to validate that the new
         # BISAC algorithm gives the same results as the old one.
@@ -262,13 +264,16 @@ class TestBISACClassifier:
         fiction_is("Fiction / Science Fiction", True)
         fiction_is("Antiques & Collectibles / Kitchenware", False)
 
-        # Humor, drama and poetry do not have fiction classifications
+        # Humor and drama do not have fiction classifications
         # unless the fiction classification comes from elsewhere in the
-        # subject.
+        # subject. Poetry used y´to be in this category but as changed in
+        # e-kirjasto.
         fiction_is("Humor", None)
         fiction_is("Drama", None)
-        fiction_is("Poetry", None)
+        fiction_is("Poetry / Russian & Former Soviet Union", True)
         fiction_is("Young Adult Fiction / Poetry", True)
+        # When Poetry is a subclass, fiction status is based on the upper class.
+        fiction_is("Literary Criticism / Poetry", False)
 
         fiction_is("Young Adult Nonfiction / Humor", False)
         fiction_is("Juvenile Fiction / Humorous Stories", True)
