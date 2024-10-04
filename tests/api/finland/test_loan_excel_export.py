@@ -28,7 +28,7 @@ LOAN_DB_FIXTURE = [
         "sort_author": "Eliot, George",
         "publisher": "Standard Ebooks",
         "language": "eng",
-        "genres": ["Literary Fiction"],
+        "genres": ["General Fiction"],
         "contributors": ["Eliot, George (Author)", "Fake contributor (Author)"],
         "location": None,
         "library_name": "Open Access Library",

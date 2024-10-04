@@ -385,7 +385,7 @@ class BISACClassifier(Classifier):
         m(Historical_Fiction, anything, "Historical"),
         m(Humorous_Fiction, fiction, "Humorous"),
         m(Humorous_Fiction, fiction, "Satire"),
-        m(Literary_Fiction, fiction, "Literary"),
+        m(General_Fiction, fiction, "Literary"),
         m(LGBTQ_Fiction, fiction, "Gay"),
         m(LGBTQ_Fiction, fiction, "Lesbian"),
         m(LGBTQ_Fiction, fiction, "Gay & Lesbian"),

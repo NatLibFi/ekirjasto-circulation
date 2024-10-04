@@ -154,3 +154,5 @@ class TestKeyword:
         assert None == Keyword.genre(None, "Fiction/Urban")
 
         assert classifier.Folklore == Keyword.genre(None, "fables")
+
+        assert classifier.General_Fiction == Keyword.genre(None, "literary fiction")

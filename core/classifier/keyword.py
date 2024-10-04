@@ -575,7 +575,7 @@ class KeywordBasedClassifier(AgeOrGradeClassifier):
         Literary_Criticism: match_kw(
             "criticism, interpretation",
         ),
-        Literary_Fiction: match_kw(
+        General_Fiction: match_kw(
             "literary",
             "literary fiction",
             "general fiction",
