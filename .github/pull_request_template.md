@@ -20,3 +20,4 @@
 
 - [ ] I have updated the documentation accordingly.
 - [ ] All new and existing tests passed.
+- [ ] Transifex translators have been notified.
