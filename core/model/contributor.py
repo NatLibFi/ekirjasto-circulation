@@ -202,11 +202,10 @@ class Contributor(Base):
             Contributor.aliases.name: aliases,
             Contributor.extra.name: extra,
         }
-
+        # This situation should not happen anymore so replace error with warning log.
         if not sort_name and not lc and not viaf:
-            raise ValueError(
-                "Cannot look up a Contributor without any identifying "
-                "information whatsoever!"
+            logging.warning(
+                "Contributor without any identifying " "information whatsoever!"
             )
 
         if sort_name and not lc and not viaf:
