@@ -122,6 +122,7 @@ class TestOPDS2Importer(OPDS2Test):
     POSTMODERNISM_PROQUEST_IDENTIFIER = (
         "urn:librarysimplified.org/terms/id/ProQuest%20Doc%20ID/181639"
     )
+    BOOK_WITHOUT_AUTHOR_IDENTIFIER = "urn:isbn:9789523565593"
 
     @pytest.mark.parametrize(
         "name,manifest_type",
@@ -163,7 +164,7 @@ class TestOPDS2Importer(OPDS2Test):
 
         # 1. Make sure that editions contain all required metadata
         assert isinstance(imported_editions, list)
-        assert 3 == len(imported_editions)
+        assert 4 == len(imported_editions)
 
         # 1.1. Edition with open-access links (Moby-Dick)
         moby_dick_edition = self._get_edition_by_identifier(
@@ -257,7 +258,7 @@ class TestOPDS2Importer(OPDS2Test):
 
         # 2. Make sure that license pools have correct configuration
         assert isinstance(pools, list)
-        assert 3 == len(pools)
+        assert 4 == len(pools)
 
         # 2.1. Edition with open-access links (Moby-Dick)
         moby_dick_license_pool = self._get_license_pool_by_identifier(
@@ -352,10 +353,19 @@ class TestOPDS2Importer(OPDS2Test):
             MediaTypes.PDF_MEDIA_TYPE
             == postmodernism_delivery_mechanisms[1].delivery_mechanism.content_type
         )
+        # Make sure that edited books don't add author contributors
+        post = self._get_edition_by_identifier(
+            imported_editions, self.POSTMODERNISM_PROQUEST_IDENTIFIER
+        )
+        assert isinstance(post, Edition)
+        # If author information is missing completely, Edition has an unknown author
+        assert post.author
+        # ... but the author information is not in anyway recorded as a Contributor.
+        assert 0 == len(post.author_contributors)
 
         # 3. Make sure that work objects contain all the required metadata
         assert isinstance(works, list)
-        assert 3 == len(works)
+        assert 4 == len(works)
 
         # 3.1. Work (Moby-Dick)
         moby_dick_work = self._get_work_by_identifier(
@@ -380,6 +390,24 @@ class TestOPDS2Importer(OPDS2Test):
             == huckleberry_finn_work.summary_text
         )
 
+        # 4.1 Author name is null
+        edition_author_null = self._get_edition_by_identifier(
+            imported_editions, self.BOOK_WITHOUT_AUTHOR_IDENTIFIER
+        )
+        assert isinstance(edition_author_null, Edition)
+        assert "[Unknown]" == edition_author_null.author
+
+        [edition_author_null_contributor] = edition_author_null.author_contributors
+        assert 1 == len(edition_author_null.author_contributors)
+        assert isinstance(edition_author_null_contributor, Contributor)
+        assert "[Unknown]" == edition_author_null_contributor.display_name
+
+        book_without_author = self._get_work_by_identifier(
+            works, self.BOOK_WITHOUT_AUTHOR_IDENTIFIER
+        )
+        assert isinstance(book_without_author, Work)
+        assert "[Unknown]" == book_without_author.author
+
     @pytest.mark.parametrize(
         "this_identifier_type,ignore_identifier_type,identifier",
         [
@@ -387,6 +415,11 @@ class TestOPDS2Importer(OPDS2Test):
                 IdentifierType.ISBN,
                 [IdentifierType.URI, IdentifierType.PROQUEST_ID],
                 MOBY_DICK_ISBN_IDENTIFIER,
+            ),
+            (
+                IdentifierType.ISBN,
+                [IdentifierType.URI, IdentifierType.PROQUEST_ID],
+                BOOK_WITHOUT_AUTHOR_IDENTIFIER,
             ),
             (
                 IdentifierType.URI,
@@ -426,7 +459,7 @@ class TestOPDS2Importer(OPDS2Test):
         data.importer.ignored_identifier_types = [
             t.value for t in ignore_identifier_type
         ]
-
+        print(data.importer.ignored_identifier_types)
         content_server_feed = opds2_files_fixture.sample_text("feed.json")
 
         # Act
@@ -436,12 +469,25 @@ class TestOPDS2Importer(OPDS2Test):
 
         # Assert
 
-        # Ensure that that CM imported only the edition having the selected identifier type.
+        # Ensure that that CM imported only the edition(s) having the selected identifier type.
         assert isinstance(imported_editions, list)
-        assert 1 == len(imported_editions)
-        assert (
-            imported_editions[0].primary_identifier.type == this_identifier_type.value
-        )
+
+        if this_identifier_type == IdentifierType.ISBN:
+            assert 2 == len(imported_editions)
+            assert (
+                imported_editions[0].primary_identifier.type
+                == this_identifier_type.value
+            )
+            assert (
+                imported_editions[1].primary_identifier.type
+                == this_identifier_type.value
+            )
+        else:
+            assert 1 == len(imported_editions)
+            assert (
+                imported_editions[0].primary_identifier.type
+                == this_identifier_type.value
+            )
 
         # Ensure that it was parsed correctly and available by its identifier.
         edition = self._get_edition_by_identifier(imported_editions, identifier)
