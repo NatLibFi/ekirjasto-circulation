@@ -436,6 +436,18 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
                 wikipedia_name=None,
                 roles=contributor.roles if contributor.roles else default_role,
             )
+            # If the feed is missing contributor name information, record the information to our metadata
+            if (
+                contributor_metadata.sort_name is None
+                and contributor_metadata.display_name is None
+            ):
+                contributor_metadata.sort_name = Edition.UNKNOWN_AUTHOR
+                contributor_metadata.display_name = Edition.UNKNOWN_AUTHOR
+                self.log.info(
+                    "Extracted contributor metadata with missing name from {}: {}".format(
+                        encode(contributor), encode(contributor_metadata)
+                    )
+                )
 
             self.log.debug(
                 "Finished extracting contributor metadata from {}: {}".format(
