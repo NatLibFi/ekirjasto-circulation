@@ -36,7 +36,7 @@ LOAN_DB_FIXTURE = [
         "medium": "Book",
         "count": 8,
     },
-     {
+    {
         "identifier": "https://standardebooks.org/ebooks/bertrand-russell/roads-to-freedom",
         "identifier_type": "URI",
         "sort_title": "Roads to Freedom",
