@@ -26,6 +26,7 @@ LOAN_DB_FIXTURE = [
         "identifier_type": "URI",
         "sort_title": "Silas Marner",
         "sort_author": "Eliot, George",
+        "fiction": "fiction",
         "publisher": "Standard Ebooks",
         "language": "eng",
         "genres": ["Literary Fiction"],
@@ -34,6 +35,21 @@ LOAN_DB_FIXTURE = [
         "library_name": "Open Access Library",
         "medium": "Book",
         "count": 8,
+    },
+     {
+        "identifier": "https://standardebooks.org/ebooks/bertrand-russell/roads-to-freedom",
+        "identifier_type": "URI",
+        "sort_title": "Roads to Freedom",
+        "sort_author": "Russell, Bertrand",
+        "fiction": "non-fiction",
+        "publisher": "Standard Ebooks",
+        "language": "eng",
+        "genres": ["Philosophy"],
+        "contributors": ["Russell, Bertrand (Author)"],
+        "location": None,
+        "library_name": "Open Access Library",
+        "medium": "Book",
+        "count": 2,
     },
 ]
 
@@ -60,6 +76,7 @@ class TestExcelExport(unittest.TestCase):
         expected_headers = (
             "Tekijä (aakkostus)",
             "Nimeke",
+            "Fiktio",
             "Tunniste",
             "Tunnisteen tyyppi",
             "Kirjasto",
