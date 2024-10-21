@@ -82,6 +82,7 @@ class LocalAnalyticsExporter:
         header = [
             "Tekijä (aakkostus)",
             "Nimeke",
+            "Fiktio",
             "Tunniste",
             "Tunnisteen tyyppi",
             "Kirjasto",
@@ -108,6 +109,8 @@ class LocalAnalyticsExporter:
                     row.get("sort_author", ""),
                     # Nimeke
                     row.get("sort_title", ""),
+                    # Fiktio
+                    "fiktio" if row.get("fiction") else "ei-fiktio",
                     # Tunniste
                     row.get("identifier", ""),
                     # Tunnisteen tyyppi
@@ -385,6 +388,10 @@ class LocalAnalyticsExporter:
                     Identifier.type.label("identifier_type"),
                     Edition.sort_title,
                     Edition.sort_author,
+                    case(
+                        [(Work.fiction == True, True)],
+                        else_=False,
+                    ).label("fiction"),
                     Work.id.label("work_id"),
                     Edition.publisher,
                     Edition.language,
@@ -505,6 +512,7 @@ class LocalAnalyticsExporter:
                 events.identifier_type,
                 events.sort_title,
                 events.sort_author,
+                events.fiction,
                 events.publisher,
                 events.language,
                 genres.label("genres"),
