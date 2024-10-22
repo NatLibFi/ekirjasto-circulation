@@ -19,6 +19,7 @@ from webpub_manifest_parser.core.ast import (
     Manifestlike,
 )
 from webpub_manifest_parser.core.properties import BooleanProperty
+from webpub_manifest_parser.core.syntax import MissingPropertyError
 from webpub_manifest_parser.errors import BaseError
 from webpub_manifest_parser.opds2 import (
     ManifestParser,
@@ -436,6 +437,18 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
                 wikipedia_name=None,
                 roles=contributor.roles if contributor.roles else default_role,
             )
+            # If the feed is missing contributor name information, record the information to our metadata
+            if (
+                contributor_metadata.sort_name is None
+                and contributor_metadata.display_name is None
+            ):
+                contributor_metadata.sort_name = Edition.UNKNOWN_AUTHOR
+                contributor_metadata.display_name = Edition.UNKNOWN_AUTHOR
+                self.log.info(
+                    "Extracted contributor metadata with missing name from {}: {}".format(
+                        encode(contributor), encode(contributor_metadata)
+                    )
+                )
 
             self.log.debug(
                 "Finished extracting contributor metadata from {}: {}".format(
@@ -1087,6 +1100,8 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
         :param feed: OPDS 2.0 feed
         :param feed_url: Feed URL used to resolve relative links
         """
+        from webpub_manifest_parser.core.ast import Contributor
+
         parser_result = self._parser.parse_manifest(feed)
         feed = parser_result.root
         publication_metadata_dictionary = {}
@@ -1126,6 +1141,15 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
                     recognized_identifier
                 ):
                     self._record_publication_unrecognizable_identifier(publication)
+                    # In the case of missing name properties of a Contributor, we proceed to not record them.
+                if (
+                    isinstance(error, MissingPropertyError)
+                    and isinstance(error.node, Contributor)
+                    and not error.node.name
+                ):
+                    self.log.info(
+                        f"Publication # {recognized_identifier} ({publication.metadata.title}) Contributor was missing name property values but this error is skipped."
+                    )
                 else:
                     self._record_coverage_failure(
                         failures, recognized_identifier, error.error_message

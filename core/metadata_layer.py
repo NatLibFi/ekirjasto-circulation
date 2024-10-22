@@ -353,7 +353,7 @@ class ContributorData:
         """Try as hard as possible to find this person's sort name."""
         if self.sort_name:
             return True
-
+        # This shouldn't happen but let's keep this error
         if not self.display_name:
             raise ValueError(
                 "Cannot find sort name for a contributor with no display name!"
