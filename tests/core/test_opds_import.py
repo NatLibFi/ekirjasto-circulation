@@ -1948,7 +1948,7 @@ class TestOPDSImportMonitor:
             collection=collection,
         )
         assert "Utter failure!" in failure.exception
-
+        print(failures)
         # Both failures were reported in the return value from
         # import_one_feed
         assert 2 == len(failures)
@@ -1992,7 +1992,9 @@ class TestOPDSImportMonitor:
         assert ["last page", "second page", "first page"] == monitor.imports
 
         # Every page of the import had two successes and one failure.
-        assert "Items imported: 6. Failures: 3." == progress.achievements
+        assert (
+            "Items imported: 6. Failures: 3.\nFailed IDs and details:\nISBN: identifier: Failure\nISBN: identifier: Failure\nISBN: identifier: Failure"
+        ) == progress.achievements
 
         # The TimestampData returned by run_once does not include any
         # timing information; that's provided by run().
