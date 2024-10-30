@@ -1961,17 +1961,19 @@ class OPDSImportMonitor(CollectionMonitor):
         feeds = self._get_feeds()
         total_imported = 0
         total_failures = 0
+        failure_summary = []
 
         for link, feed in feeds:
             self.log.info("Importing next feed: %s", link)
             imported_editions, failures = self.import_one_feed(feed)
             total_imported += len(imported_editions)
             total_failures += len(failures)
+            for failure_id, failure_details in failures.items():
+                failure_summary.append(f"ISBN: {failure_id}: {failure_details}")
             self._db.commit()
-
-        achievements = "Items imported: %d. Failures: %d." % (
-            total_imported,
-            total_failures,
+        achievements = (
+            "Items imported: %d. Failures: %d.\nFailed IDs and details:\n%s"
+            % (total_imported, total_failures, "\n".join(failure_summary))
         )
 
         return TimestampData(achievements=achievements)
