@@ -1958,6 +1958,13 @@ class OPDSImportMonitor(CollectionMonitor):
         return reversed(feeds)
 
     def run_once(self, progress: TimestampData) -> TimestampData:
+        """
+        Import all books in a feed.
+
+        :param progress: A TimestampData object indicating the start time of the run.
+        :return: A new TimestampData object with an achievements field
+            containing details of the operation.
+        """
         feeds = self._get_feeds()
         total_imported = 0
         total_failures = 0
