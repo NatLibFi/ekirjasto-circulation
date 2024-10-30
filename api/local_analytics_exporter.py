@@ -89,6 +89,7 @@ class LocalAnalyticsExporter:
             "Sijainti",
             "Formaatti",
             "Kategoria(t)",
+            "Kohderyhmä",
             "Kieli",
             "Kustantaja/Julkaisija",
             "Kaikki lainat",
@@ -123,6 +124,8 @@ class LocalAnalyticsExporter:
                     row.get("medium", ""),
                     # Kategoria(t)
                     categories,
+                    # Kohderyhmä
+                    row.get("audience", ""),
                     # Kieli
                     row.get("language", ""),
                     # Kustantaja/Julkaisija
@@ -392,6 +395,7 @@ class LocalAnalyticsExporter:
                         [(Work.fiction == True, True)],
                         else_=False,
                     ).label("fiction"),
+                    Work.audience,
                     Work.id.label("work_id"),
                     Edition.publisher,
                     Edition.language,
@@ -516,6 +520,7 @@ class LocalAnalyticsExporter:
                 events.publisher,
                 events.language,
                 genres.label("genres"),
+                events.audience,
                 contributors.label("contributors"),
                 events.location,
                 events.library_name,
