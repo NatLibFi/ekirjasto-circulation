@@ -257,6 +257,7 @@ class BISACClassifier(Classifier):
     # genre assigned to it.
     FICTION = [
         m(True, "Fiction"),
+        m(False, "Nonfiction"),
         m(True, "Juvenile Fiction"),
         m(False, "Juvenile Nonfiction"),
         m(True, "Young Adult Fiction"),
@@ -299,6 +300,7 @@ class BISACClassifier(Classifier):
         m(Comics_Graphic_Novels, "Comics & Graphic Novels"),
         m(Comics_Graphic_Novels, nonfiction, "Comics & Graphic Novels"),
         m(Comics_Graphic_Novels, fiction, "Comics & Graphic Novels"),
+        m(Comics_Graphic_Novels, anything, "Comics"),
         # "Literary Criticism / Foo" implies Literary Criticism, not Foo.
         m(Literary_Criticism, anything, literary_criticism),
         # "Fiction / Christian / Foo" implies Religious Fiction
@@ -320,9 +322,9 @@ class BISACClassifier(Classifier):
         # and adjacent genres.
         #
         # Fantasy
-        m(Epic_Fantasy, fiction, "Fantasy", "Epic"),
-        m(Historical_Fantasy, fiction, "Fantasy", "Historical"),
-        m(Urban_Fantasy, fiction, "Fantasy", "Urban"),
+        m(Fantasy, fiction, "Fantasy", "Epic"),
+        m(Fantasy, fiction, "Fantasy", "Historical"),
+        m(Fantasy, fiction, "Fantasy", "Urban"),
         m(Fantasy, fiction, "Fantasy"),
         m(Fantasy, fiction, "Romance", "Fantasy"),
         m(Fantasy, fiction, "Sagas"),
@@ -336,55 +338,55 @@ class BISACClassifier(Classifier):
         ),
         m(Crime_Detective_Stories, fiction, "Crime"),
         m(Crime_Detective_Stories, fiction, "Thrillers", "Crime"),
-        m(Hard_Boiled_Mystery, fiction, "Mystery & Detective", "Hard-Boiled"),
-        m(Police_Procedural, fiction, "Mystery & Detective", "Police Procedural"),
-        m(Cozy_Mystery, fiction, "Mystery & Detective", "Cozy"),
-        m(Historical_Mystery, fiction, "Mystery & Detective", "Historical"),
-        m(Women_Detectives, fiction, "Mystery & Detective", "Women Sleuths"),
+        m(Mystery, fiction, "Mystery & Detective", "Hard-Boiled"),
+        m(Mystery, fiction, "Mystery & Detective", "Police Procedural"),
+        m(Mystery, fiction, "Mystery & Detective", "Cozy"),
+        m(Mystery, fiction, "Mystery & Detective", "Historical"),
+        m(Crime_Detective_Stories, fiction, "Mystery & Detective", "Women Sleuths"),
         m(Mystery, fiction, anything, "Mystery & Detective"),
         # Horror
-        m(Ghost_Stories, fiction, "Ghost"),
-        m(Occult_Horror, fiction, "Occult & Supernatural"),
-        m(Gothic_Horror, fiction, "Gothic"),
+        m(Horror, fiction, "Ghost"),
+        m(Horror, fiction, "Occult & Supernatural"),
+        m(Horror, fiction, "Gothic"),
         m(Horror, fiction, "Horror"),
         # Romance
         # n.b. no BISAC for Gothic Romance
-        m(Contemporary_Romance, fiction, "Romance", "Contemporary"),
-        m(Historical_Romance, fiction, "Romance", "Historical"),
-        m(Paranormal_Romance, fiction, "Romance", "Paranormal"),
-        m(Western_Romance, fiction, "Romance", "Western"),
-        m(Romantic_Suspense, fiction, "Romance", "Suspense"),
-        m(Romantic_SF, fiction, "Romance", "Time Travel"),
-        m(Romantic_SF, fiction, "Romance", "Science Fiction"),
+        m(Romance, fiction, "Romance", "Contemporary"),
+        m(Romance, fiction, "Romance", "Historical"),
+        m(Romance, fiction, "Romance", "Paranormal"),
+        m(Romance, fiction, "Romance", "Western"),
+        m(Romance, fiction, "Romance", "Suspense"),
+        m(Romance, "Romance", "Time Travel"),
+        m(Romance, "Romance", "Science Fiction"),
         m(Romance, fiction, "Romance"),
         # Science fiction
         # n.b. no BISAC for Cyberpunk
-        m(Dystopian_SF, fiction, "Dystopian"),
-        m(Space_Opera, fiction, "Science Fiction", "Space Opera"),
-        m(Military_SF, fiction, "Science Fiction", "Military"),
-        m(Alternative_History, fiction, "Alternative History"),
+        m(Science_Fiction, fiction, "Dystopian"),
+        m(Science_Fiction, fiction, "Science Fiction", "Space Opera"),
+        m(Science_Fiction, fiction, "Science Fiction", "Military"),
+        m(Science_Fiction, fiction, "Alternative History"),
         # Juvenile steampunk is classified directly beneath 'fiction'.
         m(Steampunk, fiction, anything, "Steampunk"),
         m(Science_Fiction, fiction, "Science Fiction"),
         # Thrillers
         # n.b. no BISAC for Supernatural_Thriller
-        m(Historical_Thriller, fiction, "Thrillers", "Historical"),
-        m(Espionage, fiction, "Thrillers", "Espionage"),
-        m(Medical_Thriller, fiction, "Thrillers", "Medical"),
-        m(Political_Thriller, fiction, "Thrillers", "Political"),
-        m(Legal_Thriller, fiction, "Thrillers", "Legal"),
-        m(Technothriller, fiction, "Thrillers", "Technological"),
-        m(Military_Thriller, fiction, "Thrillers", "Military"),
-        m(Suspense_Thriller, fiction, "Thrillers"),
+        m(Thriller, fiction, "Thrillers", "Historical"),
+        m(Thriller, fiction, "Thrillers", "Espionage"),
+        m(Thriller, fiction, "Thrillers", "Medical"),
+        m(Thriller, fiction, "Thrillers", "Political"),
+        m(Thriller, fiction, "Thrillers", "Legal"),
+        m(Thriller, fiction, "Thrillers", "Technological"),
+        m(Thriller, fiction, "Thrillers", "Military"),
+        m(Thriller, fiction, "Thrillers"),
         # Then handle the less complicated genres of fiction.
         m(Adventure, fiction, "Action & Adventure"),
         m(Adventure, fiction, "Sea Stories"),
         m(Adventure, fiction, "War & Military"),
-        m(Classics, fiction, "Classics"),
-        m(Folklore, fiction, "Fairy Tales, Folk Tales, Legends & Mythology"),
-        m(Historical_Fiction, anything, "Historical"),
-        m(Humorous_Fiction, fiction, "Humorous"),
-        m(Humorous_Fiction, fiction, "Satire"),
+        m(General_Fiction, fiction, "Classics"),
+        m(General_Fiction, fiction, "Fairy Tales, Folk Tales, Legends & Mythology"),
+        m(General_Fiction, anything, "Historical"),
+        m(General_Fiction, fiction, "Humorous"),
+        m(General_Fiction, fiction, "Satire"),
         m(General_Fiction, fiction, "Literary"),
         m(LGBTQ_Fiction, fiction, "Gay"),
         m(LGBTQ_Fiction, fiction, "Lesbian"),
@@ -392,7 +394,13 @@ class BISACClassifier(Classifier):
         m(Religious_Fiction, fiction, "Religious"),
         m(Religious_Fiction, fiction, "Jewish"),
         m(Religious_Fiction, fiction, "Visionary & Metaphysical"),
+        #
+        #
+        # TODO: What to do with this one
         m(Womens_Fiction, fiction, anything, "Contemporary Women"),
+        #
+        #
+        #
         m(Westerns, fiction, "Westerns"),
         # n.b. BISAC "Fiction / Urban" is distinct from "Fiction /
         # African-American / Urban", and does not map to any of our
@@ -402,7 +410,15 @@ class BISACClassifier(Classifier):
         # treat as 'nonfiction', but we classify them as fiction. It
         # doesn't matter because they're neither, really.
         m(Drama, nonfiction, "Drama"),
+        #
+        #
+        # one more possible pain in the back here
         m(Poetry, nonfiction, "Poetry"),
+        #
+        #
+        #
+
+        
         # Now on to nonfiction.
         # Classify top-level nonfiction categories into fiction genres.
         #
