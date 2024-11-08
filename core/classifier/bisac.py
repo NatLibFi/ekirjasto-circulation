@@ -565,7 +565,7 @@ class BISACClassifier(Classifier):
         m(Education, nonfiction, "School & Education"),
         m(Family_Relationships, nonfiction, "Family"),
         m(Fantasy, fiction, "Fantasy & Magic"),
-        m(Fantasy, fiction, "Ghost Stories"),
+        m(Horror, fiction, "Ghost Stories"),
         m(Fantasy, fiction, "Magical Realism"),
         m(Fantasy, fiction, "Mermaids"),
         m(Fashion, nonfiction, "Fashion"),
