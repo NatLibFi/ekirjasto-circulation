@@ -34,14 +34,14 @@ NO_NUMBER = -1
 
 
 class ClassifierConstants:
-    DDC = "DDC"
-    LCC = "LCC"
-    LCSH = "LCSH"
-    FAST = "FAST"
-    OVERDRIVE = "Overdrive"
+    # DDC = "DDC"
+    # LCC = "LCC"
+    # LCSH = "LCSH"
+    # FAST = "FAST"
+    # OVERDRIVE = "Overdrive"
     BISAC = "BISAC"
-    BIC = "BIC"
-    TAG = "tag"  # Folksonomic tags.
+    # BIC = "BIC"
+    # TAG = "tag"  # Folksonomic tags.
     DEMARQUE = "De Marque"
 
     # Appeal controlled vocabulary developed by NYPL
