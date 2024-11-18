@@ -161,7 +161,7 @@ class TestBISACClassifier:
         need_fiction = []
         need_audience = []
         for subject in subjects:
-            if subject.fiction is None:
+            if subject.fiction is None: # == humor, drama
                 need_fiction.append(subject)
             if subject.audience is None:
                 need_audience.append(subject)
@@ -175,10 +175,10 @@ class TestBISACClassifier:
         assert [] == need_audience
 
         # At this point, you can also create a list of subjects that
-        # were not classified in some way. There are currently about
+        # were not classified in some way. The old Bisac had about
         # 400 such subjects, most of them under Juvenile and Young
-        # Adult.
-        #
+        # Adult. The new Bisac has almost 650 such subjects.
+
         # Not every subject has to be classified under a genre, but
         # if it's possible for one to be, it should be. This is the place
         # to check how well the current rules are operating.
@@ -203,7 +203,7 @@ class TestBISACClassifier:
         genre_is(
             "History / Modern / 17th Century", "Renaissance & Early Modern History"
         )
-        genre_is("Biography & Autobiography / Composers & Musicians", "Music"),
+        genre_is("Biography & Autobiography / Music","Music"),
         genre_is(
             "Biography & Autobiography / Entertainment & Performing Arts",
             "Entertainment",
@@ -212,8 +212,6 @@ class TestBISACClassifier:
         genre_is("Juvenile Nonfiction / Science & Nature / Fossils", "Nature")
         genre_is("Juvenile Nonfiction / Science & Nature / Physics", "Science")
         genre_is("Juvenile Nonfiction / Science & Nature / General", "Science")
-        genre_is("Juvenile Fiction / Social Issues / General", "Life Strategies")
-        genre_is("Juvenile Nonfiction / Social Issues / Pregnancy", "Life Strategies")
         genre_is(
             "Juvenile Nonfiction / Religious / Christian / Social Issues",
             "Christianity",
@@ -225,7 +223,7 @@ class TestBISACClassifier:
         genre_is("Young Adult Fiction / Social Themes", None)
 
         genre_is("Young Adult Fiction / Poetry", "Poetry")
-        genre_is("Poetry", "Poetry")
+        genre_is("Poetry / General", "Poetry")
         # Making sure we classify Poetry as Poetry
         genre_is("Poetry / European / General", "Poetry")
         # Making sure we classify Literary Criticism as such, not Poetry
@@ -272,6 +270,8 @@ class TestBISACClassifier:
         fiction_is("Drama", None)
         fiction_is("Poetry / Russian & Former Soviet Union", True)
         fiction_is("Young Adult Fiction / Poetry", True)
+        fiction_is("Poetry / General", True)
+
         # When Poetry is a subclass, fiction status is based on the upper class.
         fiction_is("Literary Criticism / Poetry", False)
 
@@ -359,7 +359,7 @@ class TestBISACClassifier:
         # the canonical name is also returned. This will override
         # any other name associated with the subject for classification
         # purposes.
-        assert ("FIC015000", "Fiction / Horror") == BISACClassifier.scrub_identifier(
+        assert ("FIC015000", "FICTION / Horror") == BISACClassifier.scrub_identifier(
             "FBFIC015000"
         )
 
