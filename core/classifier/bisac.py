@@ -109,6 +109,11 @@ class MatchingRule:
                 # It's a special object. Add it to the ruleset as-is.
                 self.ruleset.append(rule)
 
+    # Mostly for debugging purposes
+    def __repr__(self):
+        caught_str = ', '.join(str(item) for item in self.caught)
+        return f"MatchingRule(ruleset={self.ruleset}, caught=[{caught_str}])"
+
     def match(self, *subject):
         """If `subject` matches this ruleset, return the appropriate
         result. Otherwise, return None.
@@ -346,7 +351,6 @@ class BISACClassifier(Classifier):
         m(Ghost_Stories, fiction, "Ghost"),
         m(Occult_Horror, fiction, "Occult & Supernatural"),
         m(Gothic_Horror, fiction, "Gothic"),
-        m(Horror, fiction, "Horror"),
         # Romance
         # n.b. no BISAC for Gothic Romance
         m(Contemporary_Romance, fiction, "Romance", "Contemporary"),
@@ -386,18 +390,15 @@ class BISACClassifier(Classifier):
         m(Humorous_Fiction, fiction, "Humorous"),
         m(Humorous_Fiction, fiction, "Satire"),
         m(General_Fiction, fiction, "Literary"),
-        m(LGBTQ_Fiction, fiction, "Gay"),
-        m(LGBTQ_Fiction, fiction, "Lesbian"),
-        m(LGBTQ_Fiction, fiction, "Gay & Lesbian"),
+        m(LGBTQ_Fiction, fiction, "LGBTQ+"),
         m(Religious_Fiction, fiction, "Religious"),
         m(Religious_Fiction, fiction, "Jewish"),
         m(Religious_Fiction, fiction, "Visionary & Metaphysical"),
-        m(Womens_Fiction, fiction, anything, "Contemporary Women"),
         m(Westerns, fiction, "Westerns"),
         # n.b. BISAC "Fiction / Urban" is distinct from "Fiction /
         # African-American / Urban", and does not map to any of our
         # genres.
-        m(Urban_Fiction, fiction, "African American", "Urban"),
+        m(Urban_Fiction, fiction, "African American & Black", "Urban & Street Lit"),
         # BISAC classifies these genres at the top level, which we
         # treat as 'nonfiction', but we classify them as fiction. It
         # doesn't matter because they're neither, really.
@@ -413,7 +414,7 @@ class BISACClassifier(Classifier):
         m(Architecture, nonfiction, "Architecture"),
         m(Art_Criticism_Theory, nonfiction, "Art", "Criticism & Theory"),
         m(Art_History, nonfiction, "Art", "History"),
-        m(Fashion, nonfiction, "Design", "Fashion"),
+        m(Fashion, nonfiction, "Design", "Fashion & Accessories"),
         m(Design, nonfiction, "Design"),
         m(Art_Design, nonfiction, "Art"),
         m(Photography, nonfiction, "Photography"),
@@ -458,7 +459,8 @@ class BISACClassifier(Classifier):
         m(Bartending_Cocktails, nonfiction, "Cooking", "Beverages"),
         m(Health_Diet, nonfiction, "Cooking", "Health & Healing"),
         m(Health_Diet, nonfiction, "Health & Fitness"),
-        m(Vegetarian_Vegan, nonfiction, "Cooking", "Vegetarian & Vegan"),
+        m(Vegetarian_Vegan, nonfiction, "Cooking", "Vegetarian"),
+        m(Vegetarian_Vegan, nonfiction, "Cooking", "Vegan"),
         m(Cooking, nonfiction, "Cooking"),
         # History
         m(African_History, nonfiction, "History", "Africa"),
@@ -487,11 +489,10 @@ class BISACClassifier(Classifier):
         m(Antiques_Collectibles, nonfiction, "Antiques & Collectibles"),
         m(Crafts_Hobbies, nonfiction, "Crafts & Hobbies"),
         m(Gardening, nonfiction, "Gardening"),
-        m(Games, nonfiction, "Games"),
         m(House_Home, nonfiction, "House & Home"),
         m(Pets, nonfiction, "Pets"),
         # Entertainment
-        m(Film_TV, nonfiction, "Performing Arts", "Film & Video"),
+        m(Film_TV, nonfiction, "Performing Arts", "Film"),
         m(Film_TV, nonfiction, "Performing Arts", "Television"),
         m(Music, nonfiction, "Music"),
         m(Performing_Arts, nonfiction, "Performing Arts"),
@@ -526,7 +527,7 @@ class BISACClassifier(Classifier):
         # Then handle the less complicated genres of nonfiction.
         # n.b. no BISAC for Periodicals.
         # n.b. no BISAC for Humorous Nonfiction per se.
-        m(Music, nonfiction, "Biography & Autobiography", "Composers & Musicians"),
+        m(Music, nonfiction, "Biography & Autobiography", "Music"),
         m(
             Entertainment,
             nonfiction,
@@ -551,22 +552,20 @@ class BISACClassifier(Classifier):
         m(Fantasy, fiction, "Fantasy & Magic"),
         m(Ghost_Stories, fiction, "Ghost Stories"),
         m(Fantasy, fiction, "Magical Realism"),
-        m(Fantasy, fiction, "Mermaids"),
+        m(Fantasy, fiction, "Mermaids & Mermen"),
         m(Fashion, nonfiction, "Fashion"),
         m(Folklore, fiction, "Fairy Tales & Folklore"),
         m(Folklore, fiction, "Legends, Myths, Fables"),
         m(Games, nonfiction, "Games & Activities"),
         m(Health_Diet, nonfiction, "Health & Daily Living"),
-        m(Horror, fiction, "Horror & Ghost Stories"),
+        m(Horror, fiction, "Horror"),
         m(Horror, fiction, "Monsters"),
-        m(Horror, fiction, "Paranormal"),
         m(Horror, fiction, "Paranormal, Occult & Supernatural"),
         m(Horror, fiction, "Vampires"),
         m(Horror, fiction, "Werewolves & Shifters"),
         m(Horror, fiction, "Zombies"),
         m(Humorous_Fiction, fiction, "Humorous Stories"),
         m(Humorous_Nonfiction, "Young Adult Nonfiction", "Humor"),
-        m(LGBTQ_Fiction, fiction, "LGBT"),
         m(Law, nonfiction, "Law & Crime"),
         m(Mystery, fiction, "Mysteries & Detective Stories"),
         m(Nature, nonfiction, "Animals"),
@@ -578,7 +577,6 @@ class BISACClassifier(Classifier):
         m(Reference_Study_Aids, nonfiction, "Language Arts"),
         m(Romance, fiction, "Love & Romance"),
         m(Science_Fiction, fiction, "Robots"),
-        m(Science_Fiction, fiction, "Time Travel"),
         m(Social_Sciences, nonfiction, "Media Studies"),
         m(Suspense_Thriller, fiction, "Superheroes"),
         m(Suspense_Thriller, fiction, "Thrillers & Suspense"),
@@ -592,13 +590,12 @@ class BISACClassifier(Classifier):
         m(Science, nonfiction, "Science & Nature", "General"),
         # Any other subcategory of 'Science & Nature' goes under Nature
         m(Nature, nonfiction, "Science & Nature", something),
-        # Life Strategies is juvenile/YA-specific, and contains both
-        # fiction and nonfiction. It's called "Social Issues" for
-        # juvenile fiction/nonfiction, and "Social Topics" for YA
-        # nonfiction. "Social Themes" in YA fiction is _not_
-        # classified as Life Strategies.
-        m(Life_Strategies, fiction, "social issues"),
-        m(Life_Strategies, nonfiction, "social issues"),
+        # Life Strategies is juvenile/YA-specific.
+        # In the new Bisac, "Social Issues" is "Social Themes" and covers
+        # both Juvenile and YA fiction. This category was not classified
+        # with the old Bisac so leaving it unclassified in the new one as
+        # well for now.
+        # For nonfiction, "Social Topics" covers both Juvenile and YA.
         m(Life_Strategies, nonfiction, social_topics),
     ]
 
