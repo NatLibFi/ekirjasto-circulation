@@ -150,18 +150,29 @@ class TestBISACClassifier:
         subjects = []
         for identifier, name in sorted(BISACClassifier.NAMES.items()):
             subjects.append(self._subject(identifier, name))
+
+        # caught_fiction_rules = []
         for i in BISACClassifier.FICTION:
             if i.caught == []:
+                # caught_fiction_rules.append(i)
                 raise Exception("Fiction rule %s didn't catch anything!" % i.ruleset)
+        # print("Caught fiction rules: ", len(caught_fiction_rules))
+        # for rule in caught_fiction_rules:
+        #     print(rule)
 
+        # caught_genre_rules = []
         for i in BISACClassifier.GENRE:
             if i.caught == []:
+                # caught_genre_rules.append(i)
                 raise Exception("Genre rule %s didn't catch anything!" % i.ruleset)
+        # print("Caught genre rules: ", len(caught_genre_rules))
+        # for rule in caught_genre_rules:
+        #     print(rule)
 
         need_fiction = []
         need_audience = []
         for subject in subjects:
-            if subject.fiction is None: # == humor, drama
+            if subject.fiction is None:  # == humor, drama
                 need_fiction.append(subject)
             if subject.audience is None:
                 need_audience.append(subject)
@@ -182,8 +193,13 @@ class TestBISACClassifier:
         # Not every subject has to be classified under a genre, but
         # if it's possible for one to be, it should be. This is the place
         # to check how well the current rules are operating.
-        #
+
+        # DEBUGGING:
         # need_genre = sorted(x.name for x in subjects if x.genre is None)
+        # print("Bisac subjects without a genre: ", len(need_genre))
+        # print("Subjects without a genre: ")
+        # for genre in need_genre:
+        #     print(genre)
 
     def test_genre_spot_checks(self):
         """Test some unusual cases with respect to how BISAC
@@ -203,7 +219,7 @@ class TestBISACClassifier:
         genre_is(
             "History / Modern / 17th Century", "Renaissance & Early Modern History"
         )
-        genre_is("Biography & Autobiography / Music","Music"),
+        genre_is("Biography & Autobiography / Music", "Music"),
         genre_is(
             "Biography & Autobiography / Entertainment & Performing Arts",
             "Entertainment",

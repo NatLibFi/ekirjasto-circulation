@@ -111,7 +111,7 @@ class MatchingRule:
 
     # Mostly for debugging purposes
     def __repr__(self):
-        caught_str = ', '.join(str(item) for item in self.caught)
+        caught_str = ", ".join(str(item) for item in self.caught)
         return f"MatchingRule(ruleset={self.ruleset}, caught=[{caught_str}])"
 
     def match(self, *subject):
