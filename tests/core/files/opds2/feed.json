@@ -275,6 +275,76 @@
           "width": 800
         }
       ]
+    },
+    {
+      "metadata": {
+        "@type": "http://schema.org/Book",
+        "title": "Test Book with author empty string",
+        "author": {
+          "name": ""
+      },
+        "description": "Test Book description with author empty string",
+        "identifier": "urn:isbn:978-0-06-112008-4",
+        "language": [
+          "eng"
+        ],
+        "publisher": {
+          "name": "Test Publisher"
+        },
+        "published": "2014-09-28T00:00:00Z",
+        "modified": "2015-09-29T17:00:00Z",
+        "subject": [
+          {
+            "scheme": "http://schema.org/audience",
+            "code": "juvenile-fiction",
+            "name": "Juvenile Fiction",
+            "links": []
+          }
+        ]
+      },
+      "links": [
+        {
+          "type": "application/opds-publication+json",
+          "rel": "http://opds-spec.org/acquisition/borrow",
+          "href": "http://example.org/huckleberry-finn",
+          "properties": {
+            "availability": {
+              "state": "available"
+            },
+            "indirectAcquisition": [
+              {
+                "type": "application/vnd.adobe.adept+xml",
+                "child": [
+                  {
+                    "type": "application/epub+zip"
+                  }
+                ]
+              },
+              {
+                "type": "application/vnd.readium.lcp.license.v1.0+json",
+                "child": [
+                  {
+                    "type": "application/epub+zip"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "rel": "http://opds-spec.org/acquisition/sample",
+          "type": "application/epub+zip",
+          "href": "https://example.com/medias/e5/318061475b11cf8c8e3752da2a1cf68384d8bf.epub"
+        }
+      ],
+      "images": [
+        {
+          "href": "http://example.org/cover.jpg",
+          "type": "image/jpeg",
+          "height": 1400,
+          "width": 800
+        }
+      ]
     }
   ]
 }

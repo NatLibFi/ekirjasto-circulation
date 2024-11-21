@@ -123,6 +123,7 @@ class TestOPDS2Importer(OPDS2Test):
         "urn:librarysimplified.org/terms/id/ProQuest%20Doc%20ID/181639"
     )
     BOOK_WITHOUT_AUTHOR_IDENTIFIER = "urn:isbn:9789523565593"
+    BOOK_AUTHOR_EMPTY_STRING_IDENTIFIER = "urn:isbn:978-0-06-112008-4"
 
     @pytest.mark.parametrize(
         "name,manifest_type",
@@ -164,7 +165,7 @@ class TestOPDS2Importer(OPDS2Test):
 
         # 1. Make sure that editions contain all required metadata
         assert isinstance(imported_editions, list)
-        assert 4 == len(imported_editions)
+        assert 5 == len(imported_editions)
 
         # 1.1. Edition with open-access links (Moby-Dick)
         moby_dick_edition = self._get_edition_by_identifier(
@@ -258,7 +259,7 @@ class TestOPDS2Importer(OPDS2Test):
 
         # 2. Make sure that license pools have correct configuration
         assert isinstance(pools, list)
-        assert 4 == len(pools)
+        assert 5 == len(pools)
 
         # 2.1. Edition with open-access links (Moby-Dick)
         moby_dick_license_pool = self._get_license_pool_by_identifier(
@@ -365,7 +366,7 @@ class TestOPDS2Importer(OPDS2Test):
 
         # 3. Make sure that work objects contain all the required metadata
         assert isinstance(works, list)
-        assert 4 == len(works)
+        assert 5 == len(works)
 
         # 3.1. Work (Moby-Dick)
         moby_dick_work = self._get_work_by_identifier(
@@ -390,7 +391,7 @@ class TestOPDS2Importer(OPDS2Test):
             == huckleberry_finn_work.summary_text
         )
 
-        # 4.1 Author name is null
+        # 4.1 Author name is null or empty string
         edition_author_null = self._get_edition_by_identifier(
             imported_editions, self.BOOK_WITHOUT_AUTHOR_IDENTIFIER
         )
@@ -407,6 +408,12 @@ class TestOPDS2Importer(OPDS2Test):
         )
         assert isinstance(book_without_author, Work)
         assert "[Unknown]" == book_without_author.author
+
+        edition_author_empty_string = self._get_edition_by_identifier(
+            imported_editions, self.BOOK_AUTHOR_EMPTY_STRING_IDENTIFIER
+        )
+        assert isinstance(edition_author_empty_string, Edition)
+        assert "[Unknown]" == edition_author_empty_string.author
 
     @pytest.mark.parametrize(
         "this_identifier_type,ignore_identifier_type,identifier",
@@ -473,7 +480,7 @@ class TestOPDS2Importer(OPDS2Test):
         assert isinstance(imported_editions, list)
 
         if this_identifier_type == IdentifierType.ISBN:
-            assert 2 == len(imported_editions)
+            assert 3 == len(imported_editions)
             assert (
                 imported_editions[0].primary_identifier.type
                 == this_identifier_type.value
