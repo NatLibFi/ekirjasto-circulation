@@ -438,9 +438,8 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
                 roles=contributor.roles if contributor.roles else default_role,
             )
             # If the feed is missing contributor name information, record the information to our metadata
-            if (
-                contributor_metadata.sort_name is None
-                and contributor_metadata.display_name is None
+            if not (
+                contributor_metadata.sort_name or contributor_metadata.display_name
             ):
                 contributor_metadata.sort_name = Edition.UNKNOWN_AUTHOR
                 contributor_metadata.display_name = Edition.UNKNOWN_AUTHOR
