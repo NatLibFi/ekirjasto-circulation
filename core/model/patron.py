@@ -524,6 +524,57 @@ class Patron(Base):
         log.debug("Both audience and target age match; it's age-appropriate.")
         return True
 
+    def select_book(self, work) -> SelectedBook:
+        """
+        Add a book to patron's selected books. If the book is already selected, the
+        existing book is returned.
+
+        :param work: Work to select
+
+        :return: SelectedBook object
+        """
+        selected_book = self.load_selected_book(work)
+        if not selected_book:
+            selected_book = SelectedBook(patron=self, work=work)
+            db = Session.object_session(self)
+            db.add(selected_book)
+            db.commit()
+        return selected_book
+
+    def unselect_book(self, work) -> None:
+        """
+        Remove a book from patron's selected books.
+
+        :param work: Work to select
+
+        :return: None
+        """
+        selected_book = self.load_selected_book(work)
+        if selected_book:
+            db = Session.object_session(self)
+            db.delete(selected_book)
+            db.commit()
+        return None
+
+    def load_selected_book(self, work) -> SelectedBook | None:
+        """
+        Load the selected book for the given work.
+
+        :param work: Work to load
+
+        :return: SelectedBook object or None
+        """
+        selected_book = [sb for sb in self.selected_books if sb.work_id == work.id]
+        return selected_book[0] if selected_book else None
+
+    def get_selected_books(self):
+        """
+        Get the selected books for the patron.
+
+        :return: A list of SelectedBook objects
+        """
+        return self.selected_books
+
 
 Index(
     "ix_patron_library_id_external_identifier",
