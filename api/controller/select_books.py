@@ -1,38 +1,39 @@
 from __future__ import annotations
 
-from typing import Any
-
 import flask
-from flask import Response, redirect
-from flask_babel import lazy_gettext as _
-from lxml import etree
-from werkzeug import Response as wkResponse
 
-from api.circulation_exceptions import (
-    AuthorizationBlocked,
-    AuthorizationExpired,
-    CirculationException,
-    PatronAuthorizationFailedException,
-)
 from api.controller.circulation_manager import CirculationManagerController
 from core.feed.acquisition import OPDSAcquisitionFeed
-from core.model.patron import SelectedBook
-from core.util.http import RemoteIntegrationException
-from core.util.opds_writer import OPDSFeed
 from core.util.problem_detail import ProblemDetail
 
+
 class SelectBooksController(CirculationManagerController):
+    def fetch_books(self):
+        """
+        Generate an OPDS feed response containing the selected books for the
+        authenticated patron.
 
-    def fetch_books(self, work_identifier):
+        This method creates an OPDS acquisition feed with the books currently
+        selected by the patron and returns it as a response.
+
+        :return: A Response object.
+        """
         patron = flask.request.patron
-        selected_booklist = patron.get_selected_books()
 
-        for book in selected_booklist:
-            if book.identifier == work_identifier:
-                return book
+        feed = OPDSAcquisitionFeed.selected_books_for(self.circulation, patron)
 
-        return None
-    
+        response = feed.as_response(
+            max_age=0,
+            private=True,
+            mime_types=flask.request.accept_mimetypes,
+        )
+
+        # For loans, the patron's last loan activity sync time was set. Not yet
+        # clear if such is needed for selected books.
+        # response.last_modified = last_modified
+
+        return response
+
     def unselect(self, identifier_type, identifier):
         """
         Unselect a book from the authenticated patron's selected books list.
@@ -50,6 +51,7 @@ class SelectBooksController(CirculationManagerController):
         pools = self.load_licensepools(library, identifier_type, identifier)
 
         unselected_book = patron.unselect_book(work)
+
         item = self._get_patron_loan_or_hold(patron, pools)
 
         return OPDSAcquisitionFeed.single_entry_loans_feed(
@@ -78,27 +80,32 @@ class SelectBooksController(CirculationManagerController):
 
         selected_book = patron.select_book(work)
 
-
         item = self._get_patron_loan_or_hold(patron, pools)
 
         return OPDSAcquisitionFeed.single_entry_loans_feed(
             self.circulation, item, selected_book=selected_book
         )
-    
+
     def _get_patron_loan_or_hold(self, patron, pools):
         """
-        Retrieve the active loan or hold for a patron from a set of license pools.
+        Retrieve the active loan or hold for a patron from a set of license
+        pools.
 
-        This method checks if the patron has an active loan or hold for any of the
-        given license pools. If an active loan is found, it is returned alongside
-        the corresponding license pool. If no loan is found, it checks for an active
-        hold. If neither a loan nor a hold is found, it returns the first license
-        pool from the list.
+        This method checks if the patron has an active loan or hold for any of
+        the given license pools. If an active loan is found, it is returned
+        alongside the corresponding license pool. If no loan is found, it
+        checks for an active hold. If neither a loan nor a hold is found, it
+        returns the first license pool from the list.
 
         :param patron: The patron for whom to find an active loan or hold.
-        :param pools: A list of LicensePool objects associated with the identifier.
-        :return: An active Loan or Hold object, or a LicensePool if no loan or hold is found.
+        :param pools: A list of LicensePool objects associated with the
+        identifier.
+
+        :return: An active Loan or Hold object, or a LicensePool if no loan
+        or hold is found.
         """
+        # TODO: move this function to circulation_manager.py becuase it's
+        # used in multiple controllers
         loan, pool = self.get_patron_loan(patron, pools)
         hold = None
 
