@@ -194,6 +194,13 @@ class Patron(Base):
     # than this time.
     MAX_SYNC_TIME = datetime.timedelta(hours=12)
 
+    selected_books: Mapped[list[SelectedBook]] = relationship(
+        "SelectedBook",
+        backref="patron",
+        cascade="delete",
+        order_by="SelectedBook.creation_date",
+    )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.neighborhood: str | None = None
@@ -722,6 +729,29 @@ class Hold(Base, LoanAndHoldMixin):
             self.position = position
 
     __table_args__ = (UniqueConstraint("patron_id", "license_pool_id"),)
+
+
+class SelectedBook(Base):
+    __tablename__ = "selected_books"
+
+    id = Column(Integer, primary_key=True)
+    patron_id = Column(Integer, ForeignKey("patrons.id"))
+    work_id = Column(Integer, ForeignKey("works.id"))
+    creation_date = Column(DateTime(timezone=True))
+
+    __table_args__ = (UniqueConstraint("patron_id", "work_id"),)
+
+    def __init__(self, patron, work):
+        self.patron_id = patron.id
+        self.work_id = work.id
+        self.creation_date = utc_now()
+
+    def __repr__(self):
+        return "<Patron id={} work title={} created={}>".format(
+            self.patron.id,
+            self.work.title,
+            self.creation_date,
+        )
 
 
 class Annotation(Base):
