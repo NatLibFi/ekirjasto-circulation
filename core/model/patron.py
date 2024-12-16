@@ -567,13 +567,15 @@ class Patron(Base):
         selected_book = [sb for sb in self.selected_books if sb.work_id == work.id]
         return selected_book[0] if selected_book else None
 
-    def get_selected_books(self):
+    def get_selected_works(self) -> list[Work]:
         """
-        Get the selected books for the patron.
+        Fetch a list of Works that the patron has selected.
 
-        :return: A list of SelectedBook objects
+        :return: A list of Work objects
         """
-        return self.selected_books
+        selected_book_objects = self.selected_books
+        selected_works = [sb.work for sb in selected_book_objects]
+        return selected_works
 
 
 Index(
