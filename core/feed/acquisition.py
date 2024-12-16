@@ -512,6 +512,47 @@ class OPDSAcquisitionFeed(BaseOPDSFeed):
         return feed
 
     @classmethod
+    def selected_books_for(
+        cls,
+        circulation: CirculationAPI | None,
+        patron: Patron,
+        annotator: LibraryAnnotator | None = None,
+        **response_kwargs: Any,
+    ) -> OPDSAcquisitionFeed:
+        """
+        Generates a patron-specific OPDS acquisition feed containing their selected books.
+
+        Args:
+            circulation: The circulation API instance (optional).
+            patron: The authenticated patron.
+            annotator: The library annotator instance (optional). If not provided, a new instance will be created.
+            **response_kwargs: Additional keyword arguments to customize the feed generation.
+
+        Returns:
+            An OPDSAcquisitionFeed object representing the patron's selected books.
+        """
+        selected_books_by_work = {}
+        for selected_book in patron.selected_books:
+            work = selected_book.work
+            if work:
+                selected_books_by_work[work] = selected_book
+
+        if not annotator:
+            annotator = LibraryAnnotator(circulation, None, patron.library, patron)
+
+        annotator.selected_books_by_work = selected_books_by_work
+        url = annotator.url_for(
+            "selected_books",
+            library_short_name=patron.library.short_name,
+            _external=True,
+        )
+        works = patron.get_selected_works()
+
+        feed = OPDSAcquisitionFeed("Selected books", url, works, annotator)
+        feed.generate_feed()
+        return feed
+
+    @classmethod
     def single_entry_loans_feed(
         cls,
         circulation: Any,
