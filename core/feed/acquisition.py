@@ -646,7 +646,9 @@ class OPDSAcquisitionFeed(BaseOPDSFeed):
         annotator.active_fulfillments_by_work = active_fulfillments_by_work
         identifier = license_pool.identifier
 
-        annotator.selected_book = selected_book
+        selected_books_by_work: Any = {}
+        selected_books_by_work[work] = selected_book
+        annotator.selected_books_by_work = selected_books_by_work
 
         entry = cls.single_entry(work, annotator, even_if_no_license_pool=True)
 
