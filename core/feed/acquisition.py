@@ -26,7 +26,7 @@ from core.model.constants import LinkRelations
 from core.model.edition import Edition
 from core.model.identifier import Identifier
 from core.model.licensing import LicensePool
-from core.model.patron import Hold, Loan, Patron
+from core.model.patron import Hold, Loan, Patron, SelectedBook
 from core.model.work import Work
 from core.problem_details import INVALID_INPUT
 from core.util.datetime_helpers import utc_now
@@ -518,9 +518,36 @@ class OPDSAcquisitionFeed(BaseOPDSFeed):
         item: LicensePool | Loan,
         annotator: LibraryAnnotator | None = None,
         fulfillment: FulfillmentInfo | None = None,
+        selected_book: SelectedBook | None = None,
         **response_kwargs: Any,
     ) -> OPDSEntryResponse | ProblemDetail | None:
-        """A single entry as a standalone feed specific to a patron"""
+        """
+        Returns a single entry feed for a patron's loan or hold, including
+        information about the loan, hold, and selected book.
+
+        Args:
+            circulation: The circulation object associated with the patron.
+            item: The loan or hold object to generate the feed for. Can be
+                a LicensePool, Loan, or Hold.
+            annotator: An optional LibraryAnnotator object to use for
+                annotating the feed. If not provided, a default annotator
+                will be created.
+            fulfillment: An optional FulfillmentInfo object to include in
+                the feed.
+            selected_book: An optional SelectedBook object to include in
+                the feed.
+            **response_kwargs: Additional keyword arguments to pass to the
+                response generation.
+
+        Returns:
+            An OPDSEntryResponse object containing the feed, a ProblemDetail
+            object if an error occurs, or None if the feed cannot be
+            generated.
+
+        Raises:
+            ValueError: If the 'item' argument is empty or not an instance of
+                LicensePool, Loan, or Hold.
+        """
         if not item:
             raise ValueError("Argument 'item' must be non-empty")
 
@@ -577,6 +604,8 @@ class OPDSAcquisitionFeed(BaseOPDSFeed):
         annotator.active_holds_by_work = active_holds_by_work
         annotator.active_fulfillments_by_work = active_fulfillments_by_work
         identifier = license_pool.identifier
+
+        annotator.selected_book = selected_book
 
         entry = cls.single_entry(work, annotator, even_if_no_license_pool=True)
 
