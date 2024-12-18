@@ -16,7 +16,7 @@ class SelectBooksController(CirculationManagerController):
         This method creates an OPDS acquisition feed with the books currently
         selected by the patron and returns it as a response.
 
-        :return: A Response object.
+        :return: An OPDSEntryResponse.
         """
         patron = flask.request.patron
 
@@ -43,7 +43,7 @@ class SelectBooksController(CirculationManagerController):
         :param identifier_type: The type of identifier for the book
         :param identifier: The identifier for the book
 
-        :return: a Response object
+        :return: An OPDSEntryResponse
         """
         library = flask.request.library
         work = self.load_work(library, identifier_type, identifier)
@@ -68,7 +68,7 @@ class SelectBooksController(CirculationManagerController):
         :param identifier_type: The type of the book identifier (e.g., ISBN).
         :param identifier: The identifier for the book.
 
-        :return: An OPDSEntryResponse containing the selected book information.
+        :return: An OPDSEntryResponse.
         """
         library = flask.request.library
         work = self.load_work(library, identifier_type, identifier)
@@ -115,3 +115,37 @@ class SelectBooksController(CirculationManagerController):
         item = loan or hold
         pool = pool or pools[0]
         return item or pool
+
+    def detail(self, identifier_type, identifier):
+
+        """
+        Return an OPDS feed entry for a selected book.
+
+        If the request method is DELETE, this method unselects the book.
+
+        Whether the request is GET or DELETE, it returns an OPDS entry with
+        loan or hold-specific information and the selected book information.
+
+        :param identifier_type: The type of the book identifier (e.g., ISBN).
+        :param identifier: The identifier for the book.
+
+        :return: An OPDSEntryResponse.
+        """
+        patron = flask.request.patron
+        library = flask.request.library
+
+        if flask.request.method == "DELETE":
+            return self.unselect(identifier_type, identifier)
+
+        if flask.request.method == "GET":
+
+            pools = self.load_licensepools(library, identifier_type, identifier)
+            if isinstance(pools, ProblemDetail):
+                return pools
+
+            item = self._get_patron_loan_or_hold(patron, pools)
+
+            work = self.load_work(library, identifier_type, identifier)
+            selected_book = patron.load_selected_book(work)
+
+            return OPDSAcquisitionFeed.single_entry_loans_feed(self.circulation, item, selected_book=selected_book)
