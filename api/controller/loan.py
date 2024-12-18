@@ -152,8 +152,13 @@ class LoanController(CirculationManagerController):
             "status": 201 if is_new else 200,
             "mime_types": flask.request.accept_mimetypes,
         }
+
+        work = self.load_work(library, identifier_type, identifier)
+        selected_book = patron.load_selected_book(work)
+
+
         return OPDSAcquisitionFeed.single_entry_loans_feed(
-            self.circulation, loan_or_hold, **response_kwargs
+            self.circulation, loan_or_hold, selected_book=selected_book, **response_kwargs
         )
 
     def _borrow(self, patron, credential, pool, mechanism):
@@ -555,6 +560,7 @@ class LoanController(CirculationManagerController):
 
     def detail(self, identifier_type, identifier):
         if flask.request.method == "DELETE":
+            # Causes an error becuase the function is not in LoansController but route!
             return self.revoke_loan_or_hold(identifier_type, identifier)
 
         patron = flask.request.patron
@@ -578,9 +584,12 @@ class LoanController(CirculationManagerController):
                 status_code=404,
             )
 
+        work = self.load_work(library, identifier_type, identifier)
+        selected_book = patron.load_selected_book(work)
+
         if flask.request.method == "GET":
             if loan:
                 item = loan
             else:
                 item = hold
-            return OPDSAcquisitionFeed.single_entry_loans_feed(self.circulation, item)
+            return OPDSAcquisitionFeed.single_entry_loans_feed(self.circulation, item, selected_book=selected_book)
