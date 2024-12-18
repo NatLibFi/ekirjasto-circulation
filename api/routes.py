@@ -408,7 +408,7 @@ def unselect_book(identifier_type, identifier):
     return app.manager.select_books.unselect(identifier_type, identifier)
 
 
-@library_dir_route("/selected_books", methods=["GET", "HEAD"])
+@library_dir_route("/selected_books", methods=["GET"])
 @has_library
 @allows_patron_web
 @requires_auth
