@@ -418,6 +418,16 @@ def selected_books():
     return app.manager.select_books.fetch_books()
 
 
+@library_route("/selected_books/<identifier_type>/<path:identifier>", methods=["GET", "DELETE"])
+@has_library
+@allows_patron_web
+@requires_auth
+@returns_problem_detail
+def selected_book_detail(identifier_type, identifier):
+    return app.manager.select_books.detail(identifier_type, identifier)
+
+
+
 @library_dir_route("/loans", methods=["GET", "HEAD"])
 @has_library
 @allows_patron_web
