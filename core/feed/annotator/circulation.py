@@ -936,10 +936,12 @@ class LibraryAnnotator(CirculationManagerAnnotator):
                 )
             )
 
-        if self.selected_books_by_work[work]:
-            entry.computed.selected = strftime(
-                self.selected_books_by_work[work].creation_date
-            )
+        # Selected books is from LibraryAnnotator
+        if self.selected_books_by_work and work in self.selected_books_by_work:
+            if self.selected_books_by_work[work]:
+                entry.computed.selected = strftime(
+                    self.selected_books_by_work[work].creation_date
+                )
 
         if self.analytics.is_configured():
             entry.computed.other_links.append(
