@@ -156,9 +156,11 @@ class LoanController(CirculationManagerController):
         work = self.load_work(library, identifier_type, identifier)
         selected_book = patron.load_selected_book(work)
 
-
         return OPDSAcquisitionFeed.single_entry_loans_feed(
-            self.circulation, loan_or_hold, selected_book=selected_book, **response_kwargs
+            self.circulation,
+            loan_or_hold,
+            selected_book=selected_book,
+            **response_kwargs,
         )
 
     def _borrow(self, patron, credential, pool, mechanism):
@@ -592,4 +594,6 @@ class LoanController(CirculationManagerController):
                 item = loan
             else:
                 item = hold
-            return OPDSAcquisitionFeed.single_entry_loans_feed(self.circulation, item, selected_book=selected_book)
+            return OPDSAcquisitionFeed.single_entry_loans_feed(
+                self.circulation, item, selected_book=selected_book
+            )

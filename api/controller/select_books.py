@@ -117,7 +117,6 @@ class SelectBooksController(CirculationManagerController):
         return item or pool
 
     def detail(self, identifier_type, identifier):
-
         """
         Return an OPDS feed entry for a selected book.
 
@@ -138,7 +137,6 @@ class SelectBooksController(CirculationManagerController):
             return self.unselect(identifier_type, identifier)
 
         if flask.request.method == "GET":
-
             pools = self.load_licensepools(library, identifier_type, identifier)
             if isinstance(pools, ProblemDetail):
                 return pools
@@ -148,4 +146,6 @@ class SelectBooksController(CirculationManagerController):
             work = self.load_work(library, identifier_type, identifier)
             selected_book = patron.load_selected_book(work)
 
-            return OPDSAcquisitionFeed.single_entry_loans_feed(self.circulation, item, selected_book=selected_book)
+            return OPDSAcquisitionFeed.single_entry_loans_feed(
+                self.circulation, item, selected_book=selected_book
+            )
