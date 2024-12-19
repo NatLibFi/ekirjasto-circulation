@@ -716,7 +716,7 @@ class LibraryAuthenticator(LoggerMixin):
         )
         links.append(
             dict(
-                rel="http://opds-spec.org/shelf",
+                rel="http://opds-spec.org/shelf/selected_books",
                 href=selected_books_url,
                 type=OPDSFeed.ACQUISITION_FEED_TYPE,
             )
