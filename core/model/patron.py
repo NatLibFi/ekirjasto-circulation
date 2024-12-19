@@ -567,7 +567,7 @@ class Patron(Base):
         selected_book = [sb for sb in self.selected_books if sb.work_id == work.id]
         return selected_book[0] if selected_book else None
 
-    def get_selected_works(self) -> list[Work]:
+    def get_selected_works(self):
         """
         Fetch a list of Works that the patron has selected.
 
@@ -792,12 +792,15 @@ class SelectedBook(Base):
     work_id = Column(Integer, ForeignKey("works.id"))
     creation_date = Column(DateTime(timezone=True))
 
+    work = relationship("Work", backref="selected_books")
+    
     __table_args__ = (UniqueConstraint("patron_id", "work_id"),)
 
     def __init__(self, patron, work):
         self.patron_id = patron.id
         self.work_id = work.id
         self.creation_date = utc_now()
+        self.work = work
 
     def __repr__(self):
         return "<Patron id={} work title={} created={}>".format(

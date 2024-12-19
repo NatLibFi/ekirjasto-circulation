@@ -216,9 +216,6 @@ class Work(Base):
         "summary_text",
     ]
 
-    selected_by_patrons: Mapped[list[Patron]] = relationship(
-        "SelectedBook", backref="work"
-    )
 
     @property
     def title(self):
