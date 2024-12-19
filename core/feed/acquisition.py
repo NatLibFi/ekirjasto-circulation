@@ -533,7 +533,7 @@ class OPDSAcquisitionFeed(BaseOPDSFeed):
         """
         selected_books_by_work = {}
         for selected_book in patron.selected_books:
-            work = selected_book.work # type: ignore
+            work = selected_book.work  # type: ignore
             if work:
                 selected_books_by_work[work] = selected_book
 
