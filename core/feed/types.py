@@ -163,7 +163,7 @@ class WorkEntryData(BaseModel):
     subtitle: FeedEntryType | None = None
     series: FeedEntryType | None = None
     imprint: FeedEntryType | None = None
-    selected: datetime | date | None = None
+    selected: datetime | None = None
 
     authors: list[Author] = field(default_factory=list)
     contributors: list[Author] = field(default_factory=list)
