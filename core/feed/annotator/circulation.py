@@ -53,7 +53,7 @@ from core.model.licensing import (
     LicensePool,
     LicensePoolDeliveryMechanism,
 )
-from core.model.patron import Hold, Loan, Patron
+from core.model.patron import Hold, Loan, Patron, SelectedBook
 from core.model.work import Work
 from core.service.container import Services
 from core.util.datetime_helpers import from_timestamp
@@ -696,6 +696,7 @@ class LibraryAnnotator(CirculationManagerAnnotator):
         top_level_title: str = "All Books",
         library_identifies_patrons: bool = True,
         facets: FacetsWithEntryPoint | None = None,
+        selected_books_by_work: dict[Work, SelectedBook] | None = None,
     ) -> None:
         """Constructor.
 
@@ -727,6 +728,7 @@ class LibraryAnnotator(CirculationManagerAnnotator):
         self._top_level_title = top_level_title
         self.identifies_patrons = library_identifies_patrons
         self.facets = facets or None
+        self.selected_books_by_work = selected_books_by_work
 
     def top_level_title(self) -> str:
         return self._top_level_title
@@ -933,6 +935,13 @@ class LibraryAnnotator(CirculationManagerAnnotator):
                     ),
                 )
             )
+
+        # Selected books is from LibraryAnnotator
+        if self.selected_books_by_work and work in self.selected_books_by_work:
+            if self.selected_books_by_work[work]:
+                entry.computed.selected = strftime(  # type: ignore
+                    self.selected_books_by_work[work].creation_date  # type: ignore
+                )
 
         if self.analytics.is_configured():
             entry.computed.other_links.append(

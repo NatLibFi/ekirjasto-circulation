@@ -9,7 +9,15 @@ from core.model.constants import LinkRelations
 from core.model.credential import Credential
 from core.model.datasource import DataSource
 from core.model.licensing import PolicyException
-from core.model.patron import Annotation, Hold, Loan, Patron, PatronProfileStorage
+from core.model.patron import (
+    Annotation,
+    Hold,
+    Loan,
+    Patron,
+    PatronProfileStorage,
+    SelectedBook,
+)
+from core.model.work import Work
 from core.util.datetime_helpers import datetime_utc, utc_now
 from tests.fixtures.database import DatabaseTransactionFixture
 from tests.fixtures.library import LibraryFixture
@@ -736,6 +744,46 @@ class TestPatron:
                     assert False == m(
                         work_audience, work_target_age, reader_audience, reader_age
                     )
+
+    def test_selected_books(self, db: DatabaseTransactionFixture):
+        """Test that a patron can have books added to their selected books list
+        and removed from it. Also, test that the booklist is cleaned up when
+        the patron is deleted."""
+
+        patron = db.patron()
+        book = db.work()
+
+        # Add the book to the patron's booklist
+        selected_book = patron.select_book(book)
+        db.session.commit()
+        assert selected_book in patron.selected_books
+
+        patron.load_selected_book(book)
+        db.session.commit()
+        assert selected_book != None
+        assert selected_book in patron.selected_books
+
+        # Delete the book from the patron's booklist
+        patron.unselect_book(book)
+        db.session.commit()
+        assert book not in patron.selected_books
+
+        # Delete the patron
+        db.session.delete(patron)
+        db.session.commit()
+
+        # Check that the patron's booklist is empty
+        assert (
+            len(
+                db.session.query(SelectedBook)
+                .filter(SelectedBook.patron_id == patron.id)
+                .all()
+            )
+            == 0
+        )
+
+        # Check that the book still exists (just for our sanity)
+        assert len(db.session.query(Work).all()) == 1
 
 
 def mock_url_for(url, **kwargs):
