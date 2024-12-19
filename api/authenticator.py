@@ -697,6 +697,9 @@ class LibraryAuthenticator(LoggerMixin):
         loans_url = url_for(
             "active_loans", _external=True, library_short_name=self.library_short_name
         )
+        selected_books_url = url_for(
+            "selected_books", _external=True, library_short_name=self.library_short_name
+        )
         profile_url = url_for(
             "patron_profile", _external=True, library_short_name=self.library_short_name
         )
@@ -708,6 +711,13 @@ class LibraryAuthenticator(LoggerMixin):
             dict(
                 rel="http://opds-spec.org/shelf",
                 href=loans_url,
+                type=OPDSFeed.ACQUISITION_FEED_TYPE,
+            )
+        )
+        links.append(
+            dict(
+                rel="http://opds-spec.org/shelf",
+                href=selected_books_url,
                 type=OPDSFeed.ACQUISITION_FEED_TYPE,
             )
         )
