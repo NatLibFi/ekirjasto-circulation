@@ -217,7 +217,7 @@ class Work(Base):
     ]
 
     selected_by_patrons: Mapped[list[Patron]] = relationship(
-        "SelectedBook", backref="related_work"
+        "SelectedBook", backref="work"
     )
 
     @property

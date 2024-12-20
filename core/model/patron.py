@@ -792,6 +792,7 @@ class SelectedBook(Base):
     work_id = Column(Integer, ForeignKey("works.id"))
     creation_date = Column(DateTime(timezone=True))
 
+
     __table_args__ = (UniqueConstraint("patron_id", "work_id"),)
 
     def __init__(self, patron, work):
@@ -800,9 +801,9 @@ class SelectedBook(Base):
         self.creation_date = utc_now()
 
     def __repr__(self):
-        return "<Patron id={} work title={} created={}>".format(
-            self.patron.id,
-            self.work.title,
+        return "<Patron id={} work id={} created={}>".format(
+            self.patron_id,
+            self.work_id,
             self.creation_date,
         )
 
