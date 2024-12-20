@@ -25,6 +25,7 @@ from api.controller.opds_feed import OPDSFeedController
 from api.controller.patron_auth_token import PatronAuthTokenController
 from api.controller.playtime_entries import PlaytimeEntriesController
 from api.controller.profile import ProfileController
+from api.controller.select_books import SelectBooksController
 from api.controller.urn_lookup import URNLookupController
 from api.controller.work import WorkController
 from api.custom_index import CustomIndexView
@@ -91,6 +92,7 @@ class CirculationManager(LoggerMixin):
     version: ApplicationVersionController
     odl_notification_controller: ODLNotificationController
     playtime_entries: PlaytimeEntriesController
+    select_books: SelectBooksController
 
     # Admin controllers
     admin_sign_in_controller: SignInController
@@ -327,6 +329,7 @@ class CirculationManager(LoggerMixin):
         self.patron_auth_token = PatronAuthTokenController(self)
         self.catalog_descriptions = CatalogDescriptionsController(self)
         self.playtime_entries = PlaytimeEntriesController(self)
+        self.select_books = SelectBooksController(self)
 
     def setup_configuration_dependent_controllers(self):
         """Set up all the controllers that depend on the

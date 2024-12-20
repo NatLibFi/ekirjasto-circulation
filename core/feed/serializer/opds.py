@@ -29,6 +29,7 @@ TAG_MAPPING = {
     "patron": f"{{{OPDSFeed.SIMPLIFIED_NS}}}patron",
     "series": f"{{{OPDSFeed.SCHEMA_NS}}}series",
     "hashed_passphrase": f"{{{OPDSFeed.LCP_NS}}}hashed_passphrase",
+    "selected": f"{{{OPDSFeed.SIMPLIFIED_NS}}}selected",
 }
 
 ATTRIBUTE_MAPPING = {
@@ -263,6 +264,9 @@ class OPDS1Serializer(SerializerInterface[etree._Element], OPDSFeed):
 
         for link in feed_entry.other_links:
             entry.append(OPDSFeed.link(**link.asdict()))
+
+        if feed_entry.selected:
+            entry.append(OPDSFeed.E("selected", feed_entry.selected))
 
         return entry
 
