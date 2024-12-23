@@ -96,8 +96,7 @@ class WorkController(CirculationManagerController):
     def permalink(self, identifier_type, identifier):
         """Serve an entry for a single book.
 
-        This does not include any loan or hold-specific information for
-        the authenticated patron.
+        This includes any loan or hold-specific information as well as selected book information for an authenticated patron.
 
         This is different from the /works lookup protocol, in that it
         returns a single entry while the /works lookup protocol returns a
@@ -124,8 +123,10 @@ class WorkController(CirculationManagerController):
             item = loan or hold
             pool = pool or pools[0]
 
+            selected_book = patron.load_selected_book(work)
+
             return OPDSAcquisitionFeed.single_entry_loans_feed(
-                self.circulation, item or pool
+                self.circulation, item or pool, selected_book=selected_book
             )
         else:
             annotator = self.manager.annotator(lane=None)

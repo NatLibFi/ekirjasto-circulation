@@ -564,6 +564,7 @@ from core.model.patron import (
     LoanCheckout,
     Patron,
     PatronProfileStorage,
+    SelectedBook,
 )
 from core.model.resource import (
     Hyperlink,
