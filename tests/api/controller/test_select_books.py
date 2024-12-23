@@ -1,51 +1,21 @@
-import datetime
-import urllib.parse
-from collections.abc import Generator
-from decimal import Decimal
-from unittest.mock import MagicMock, patch
-
-import flask
+from typing import TYPE_CHECKING
 
 import feedparser
 import pytest
-from flask import Response as FlaskResponse
-from flask import url_for
-from werkzeug import Response as wkResponse
 
-from typing import TYPE_CHECKING
-
-from api.circulation import (
-    BaseCirculationAPI,
-    CirculationAPI,
-    FulfillmentInfo,
-    HoldInfo,
-    LoanInfo,
-)
 from core.model import (
     DataSource,
     Edition,
     Identifier,
     LicensePool,
     SelectedBook,
-    Work,
     get_one,
-    get_one_or_create,
 )
-from core.util.datetime_helpers import datetime_utc, utc_now
-from core.util.flask_util import Response
-from core.util.opds_writer import OPDSFeed
-from core.feed.acquisition import OPDSAcquisitionFeed
-
 from tests.fixtures.api_controller import CirculationControllerFixture
 from tests.fixtures.database import DatabaseTransactionFixture
-from tests.fixtures.library import LibraryFixture
-from core.feed.annotator.circulation import LibraryAnnotator
-from core.feed.types import WorkEntry
-from core.feed.acquisition import OPDSAcquisitionFeed
-
 
 if TYPE_CHECKING:
-    from api.controller.select_books import SelectBooksController
+    pass
 
 
 class SelectBooksFixture(CirculationControllerFixture):
@@ -53,7 +23,6 @@ class SelectBooksFixture(CirculationControllerFixture):
     lp: LicensePool
     datasource: DataSource
     edition: Edition
-
 
     def __init__(self, db: DatabaseTransactionFixture):
         super().__init__(db)
@@ -71,7 +40,6 @@ def selected_book_fixture(db: DatabaseTransactionFixture):
 
 
 class TestSelectBooksController:
-
     def test_select_unselect_success(self, selected_book_fixture: SelectBooksFixture):
         """
         Test that a book can be successfully selected and unselected by a patron.
@@ -81,9 +49,13 @@ class TestSelectBooksController:
         in the database and a feed is returned without a <selected> tag.
         """
 
-        with selected_book_fixture.request_context_with_library("/", headers=dict(Authorization=selected_book_fixture.valid_auth)):
+        with selected_book_fixture.request_context_with_library(
+            "/", headers=dict(Authorization=selected_book_fixture.valid_auth)
+        ):
             # We have an authenticated patron
-            patron = selected_book_fixture.manager.select_books.authenticated_patron_from_request()
+            patron = (
+                selected_book_fixture.manager.select_books.authenticated_patron_from_request()
+            )
             identifier_type = Identifier.GUTENBERG_ID
             identifier = "1234567890"
             edition, _ = selected_book_fixture.db.edition(
@@ -128,13 +100,14 @@ class TestSelectBooksController:
             [entry] = feed.entries
             assert "selected" not in entry
 
-
     def test_detail(self, selected_book_fixture: SelectBooksFixture):
         """
         Test that a selected book's details are fetched successfully.
         """
 
-        with selected_book_fixture.request_context_with_library("/", headers=dict(Authorization=selected_book_fixture.valid_auth)):
+        with selected_book_fixture.request_context_with_library(
+            "/", headers=dict(Authorization=selected_book_fixture.valid_auth)
+        ):
             # A patron first selects a work
             selected_book_fixture.manager.select_books.authenticated_patron_from_request()
             identifier_type = Identifier.GUTENBERG_ID
@@ -166,7 +139,9 @@ class TestSelectBooksController:
         Test that the selected books acquisition feed is fetched successfully.
         """
 
-        with selected_book_fixture.request_context_with_library("/", headers=dict(Authorization=selected_book_fixture.valid_auth)):
+        with selected_book_fixture.request_context_with_library(
+            "/", headers=dict(Authorization=selected_book_fixture.valid_auth)
+        ):
             # A patron first selects a work
             selected_book_fixture.manager.select_books.authenticated_patron_from_request()
             identifier_type = Identifier.GUTENBERG_ID
