@@ -28,10 +28,6 @@ class SelectBooksController(CirculationManagerController):
             mime_types=flask.request.accept_mimetypes,
         )
 
-        # For loans, the patron's last loan activity sync time was set. Not yet
-        # clear if such is needed for selected books.
-        # response.last_modified = last_modified
-
         return response
 
     def unselect(self, identifier_type, identifier):

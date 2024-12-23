@@ -792,7 +792,6 @@ class SelectedBook(Base):
     work_id = Column(Integer, ForeignKey("works.id"))
     creation_date = Column(DateTime(timezone=True))
 
-
     __table_args__ = (UniqueConstraint("patron_id", "work_id"),)
 
     def __init__(self, patron, work):
