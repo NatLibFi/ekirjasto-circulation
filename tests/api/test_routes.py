@@ -327,7 +327,7 @@ class TestWorkController:
 
 
 class TestSelectedBooksController:
-    CONTROLLER_NAME = "selected_book_controller"
+    CONTROLLER_NAME = "select_books"
 
     @pytest.fixture(scope="function")
     def fixture(self, route_test: RouteTestFixture) -> RouteTestFixture:
@@ -337,21 +337,31 @@ class TestSelectedBooksController:
     def test_select(self, fixture: RouteTestFixture):
         url = "/works/<identifier_type>/<identifier>/select_book"
         fixture.assert_authenticated_request_calls(
-            url, fixture.controller.select, "<identifier_type>", "<identifier>", None, None  # type: ignore[union-attr]
+            url,
+            fixture.controller.select,  # type: ignore[union-attr]
+            "<identifier_type>",
+            "<identifier>",
+            http_method="POST",
         )
-        fixture.assert_supported_methods(url, "POST")
 
     def test_unselect(self, fixture: RouteTestFixture):
         url = "/works/<identifier_type>/<identifier>/unselect_book"
         fixture.assert_authenticated_request_calls(
-            url, fixture.controller.unselect, "<identifier_type>", "<identifier>", None, None  # type: ignore[union-attr]
+            url,
+            fixture.controller.unselect,  # type: ignore[union-attr]
+            "<identifier_type>",
+            "<identifier>",
+            http_method="DELETE",
         )
-        fixture.assert_supported_methods(url, "DELETE")
 
     def test_detail(self, fixture: RouteTestFixture):
         url = "/selected_books/<identifier_type>/<identifier>"
-        fixture.assert_authenticated_request_calls(
-            url, fixture.controller.detail, "<identifier_type>", "<identifier>", None, None  # type: ignore[union-attr]
+        fixture.assert_request_calls_method_using_identifier(
+            url,
+            fixture.controller.detail,  # type: ignore[union-attr]
+            "<identifier_type>",
+            "<identifier>",
+            authenticated=True,
         )
         fixture.assert_supported_methods(url, "GET", "DELETE")
 
