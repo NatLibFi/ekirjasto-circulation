@@ -48,6 +48,7 @@ from core.model.datasource import DataSource
 from core.model.edition import Edition
 from core.model.identifier import Identifier, RecursiveEquivalencyCache
 from core.model.measurement import Measurement
+from core.model.patron import Patron
 from core.util import LanguageCodes
 from core.util.datetime_helpers import utc_now
 
@@ -214,6 +215,10 @@ class Work(Base):
     LARGE_FIELDS = [
         "summary_text",
     ]
+
+    selected_by_patrons: Mapped[list[Patron]] = relationship(
+        "SelectedBook", backref="work"
+    )
 
     @property
     def title(self):

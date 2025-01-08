@@ -194,6 +194,13 @@ class Patron(Base):
     # than this time.
     MAX_SYNC_TIME = datetime.timedelta(hours=12)
 
+    selected_books: Mapped[list[SelectedBook]] = relationship(
+        "SelectedBook",
+        backref="patron",
+        cascade="delete",
+        order_by="SelectedBook.creation_date",
+    )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.neighborhood: str | None = None
@@ -517,6 +524,59 @@ class Patron(Base):
         log.debug("Both audience and target age match; it's age-appropriate.")
         return True
 
+    def select_book(self, work) -> SelectedBook:
+        """
+        Add a book to patron's selected books. If the book is already selected, the
+        existing book is returned.
+
+        :param work: Work to select
+
+        :return: SelectedBook object
+        """
+        selected_book = self.load_selected_book(work)
+        if not selected_book:
+            selected_book = SelectedBook(patron=self, work=work)
+            db = Session.object_session(self)
+            db.add(selected_book)
+            db.commit()
+        return selected_book
+
+    def unselect_book(self, work) -> None:
+        """
+        Remove a book from patron's selected books.
+
+        :param work: Work to select
+
+        :return: None
+        """
+        selected_book = self.load_selected_book(work)
+        if selected_book:
+            db = Session.object_session(self)
+            db.delete(selected_book)
+            db.commit()
+        return None
+
+    def load_selected_book(self, work) -> SelectedBook | None:
+        """
+        Load the selected book for the given work.
+
+        :param work: Work to load
+
+        :return: SelectedBook object or None
+        """
+        selected_book = [sb for sb in self.selected_books if sb.work_id == work.id]
+        return selected_book[0] if selected_book else None
+
+    def get_selected_works(self):
+        """
+        Fetch a list of Works that the patron has selected.
+
+        :return: A list of Work objects
+        """
+        selected_book_objects = self.selected_books
+        selected_works = [sb.work for sb in selected_book_objects]
+        return selected_works
+
 
 Index(
     "ix_patron_library_id_external_identifier",
@@ -722,6 +782,29 @@ class Hold(Base, LoanAndHoldMixin):
             self.position = position
 
     __table_args__ = (UniqueConstraint("patron_id", "license_pool_id"),)
+
+
+class SelectedBook(Base):
+    __tablename__ = "selected_books"
+
+    id = Column(Integer, primary_key=True)
+    patron_id = Column(Integer, ForeignKey("patrons.id"))
+    work_id = Column(Integer, ForeignKey("works.id"))
+    creation_date = Column(DateTime(timezone=True))
+
+    __table_args__ = (UniqueConstraint("patron_id", "work_id"),)
+
+    def __init__(self, patron, work):
+        self.patron_id = patron.id
+        self.work_id = work.id
+        self.creation_date = utc_now()
+
+    def __repr__(self):
+        return "<Patron id={} work id={} created={}>".format(
+            self.patron_id,
+            self.work_id,
+            self.creation_date,
+        )
 
 
 class Annotation(Base):

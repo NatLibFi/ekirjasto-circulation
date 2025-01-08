@@ -384,6 +384,51 @@ def patron_auth_token():
     return app.manager.patron_auth_token.get_token()
 
 
+@library_dir_route(
+    "/works/<identifier_type>/<path:identifier>/select_book", methods=["POST"]
+)
+@has_library
+@allows_patron_web
+@requires_auth
+@returns_problem_detail
+@compressible
+def select_book(identifier_type, identifier):
+    return app.manager.select_books.select(identifier_type, identifier)
+
+
+@library_dir_route(
+    "/works/<identifier_type>/<path:identifier>/unselect_book", methods=["DELETE"]
+)
+@has_library
+@allows_patron_web
+@requires_auth
+@returns_problem_detail
+@compressible
+def unselect_book(identifier_type, identifier):
+    return app.manager.select_books.unselect(identifier_type, identifier)
+
+
+@library_dir_route("/selected_books", methods=["GET"])
+@has_library
+@allows_patron_web
+@requires_auth
+@returns_problem_detail
+@compressible
+def selected_books():
+    return app.manager.select_books.fetch_books()
+
+
+@library_route(
+    "/selected_books/<identifier_type>/<path:identifier>", methods=["GET", "DELETE"]
+)
+@has_library
+@allows_patron_web
+@requires_auth
+@returns_problem_detail
+def selected_book_detail(identifier_type, identifier):
+    return app.manager.select_books.detail(identifier_type, identifier)
+
+
 @library_dir_route("/loans", methods=["GET", "HEAD"])
 @has_library
 @allows_patron_web

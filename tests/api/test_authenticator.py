@@ -1180,6 +1180,7 @@ class TestLibraryAuthenticator:
                 reset_link,
                 profile,
                 loans,
+                selected_books,
                 license,
                 logo,
                 privacy_policy,
@@ -1199,6 +1200,10 @@ class TestLibraryAuthenticator:
             assert "/loans" in loans["href"]
             assert "http://opds-spec.org/shelf" == loans["rel"]
             assert OPDSFeed.ACQUISITION_FEED_TYPE == loans["type"]
+
+            assert "/selected_books" in selected_books["href"]
+            assert "http://opds-spec.org/shelf/selected_books" == selected_books["rel"]
+            assert OPDSFeed.ACQUISITION_FEED_TYPE == selected_books["type"]
 
             assert "/patrons/me" in profile["href"]
             assert ProfileController.LINK_RELATION == profile["rel"]

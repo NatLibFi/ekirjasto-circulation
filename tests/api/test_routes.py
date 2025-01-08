@@ -326,6 +326,54 @@ class TestWorkController:
         )
 
 
+class TestSelectedBooksController:
+    CONTROLLER_NAME = "select_books"
+
+    @pytest.fixture(scope="function")
+    def fixture(self, route_test: RouteTestFixture) -> RouteTestFixture:
+        route_test.set_controller_name(self.CONTROLLER_NAME)
+        return route_test
+
+    def test_select(self, fixture: RouteTestFixture):
+        url = "/works/<identifier_type>/<identifier>/select_book"
+        fixture.assert_authenticated_request_calls(
+            url,
+            fixture.controller.select,  # type: ignore[union-attr]
+            "<identifier_type>",
+            "<identifier>",
+            http_method="POST",
+        )
+
+    def test_unselect(self, fixture: RouteTestFixture):
+        url = "/works/<identifier_type>/<identifier>/unselect_book"
+        fixture.assert_authenticated_request_calls(
+            url,
+            fixture.controller.unselect,  # type: ignore[union-attr]
+            "<identifier_type>",
+            "<identifier>",
+            http_method="DELETE",
+        )
+
+    def test_detail(self, fixture: RouteTestFixture):
+        url = "/selected_books/<identifier_type>/<identifier>"
+        fixture.assert_request_calls_method_using_identifier(
+            url,
+            fixture.controller.detail,  # type: ignore[union-attr]
+            "<identifier_type>",
+            "<identifier>",
+            authenticated=True,
+        )
+        fixture.assert_supported_methods(url, "GET", "DELETE")
+
+    def test_selected_books(self, fixture: RouteTestFixture):
+        url = "/selected_books"
+        fixture.assert_authenticated_request_calls(
+            url,
+            fixture.controller.fetch_books,  # type: ignore[union-attr]
+        )
+        fixture.assert_supported_methods(url, "GET")
+
+
 class TestAnalyticsController:
     CONTROLLER_NAME = "analytics_controller"
 
