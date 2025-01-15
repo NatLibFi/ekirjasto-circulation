@@ -87,7 +87,7 @@ HOME=/var/www/circulation
 
 # OPDS 2.x + ODL import
 #
-30 * * * * root core/bin/run odl2_import_monitor >> /var/log/cron.log 2>&1
+15 * * * * root core/bin/run odl2_import_monitor >> /var/log/cron.log 2>&1
 
 # SAML
 #
