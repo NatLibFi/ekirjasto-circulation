@@ -1112,9 +1112,11 @@ class WorkClassifier:
         if self.debug:
             self.classifications.append(classification)
 
-        # Make sure the Subject is ready to be used in calculations.
-        if not classification.subject.checked:  # or self.debug
-            classification.subject.assign_to_genre()
+        # E-kirjasto: Commenting out the below check but leaving
+        # it in case we want to use it later. We want to force classification
+        # for all subjects so that they are up to date.
+        # if not classification.subject.checked  # or self.debug
+        classification.subject.assign_to_genre()
 
         if classification.comes_from_license_source:
             self.direct_from_license_source.add(classification)
