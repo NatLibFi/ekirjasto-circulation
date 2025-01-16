@@ -1571,6 +1571,9 @@ class Metadata:
                         # to do anything.
                         del new_subjects[key]
                         surviving_classifications.append(classification)
+                        # E-kirjasto: We want to re-classify all existing
+                        # classifications.
+                        work_requires_full_recalculation = True
                 else:
                     # This classification comes from some other data
                     # source.  Don't mess with it.
