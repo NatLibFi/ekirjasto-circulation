@@ -507,14 +507,14 @@ class Genre(Base, HasSessionCache):
             len(self.works),
             length,
         )
-        genre_data += "\n  <Subjects: %s>" % (
-            ", ".join(
-                [
-                    f"{subject.name} ({subject.type}, {subject.identifier})"
-                    for subject in self.subjects
-                ]
-            )
-        )
+        # genre_data += "\n  <Subjects: %s>" % (
+        #     ", ".join(
+        #         [
+        #             f"{subject.name} ({subject.type}, {subject.identifier})"
+        #             for subject in self.subjects
+        #         ]
+        #     )
+        # )
 
         return genre_data
 
