@@ -797,7 +797,7 @@ class GenreData:
         self.audience_restriction = audience_restriction
 
     def __repr__(self):
-        return "<GenreData: %s>" % self.name
+        return "<GenreData: %s fiction=%s>" % (self.name, self.is_fiction)
 
     @property
     def self_and_subgenres(self):
@@ -1362,7 +1362,7 @@ class WorkClassifier:
 
         # Actually figure out the classifications
         fiction = self.fiction(default_fiction=default_fiction)
-        genres = self.genres(fiction)
+        genres, fiction = self.genres(fiction)
         audience = self.audience(genres, default_audience=default_audience)
         target_age = self.target_age(audience)
         if self.debug:
@@ -1539,7 +1539,23 @@ class WorkClassifier:
         return Classifier.range_tuple(target_age_min, target_age_max)
 
     def genres(self, fiction, cutoff=0.15):
-        """Consolidate genres and apply a low-pass filter."""
+        """
+        Consolidate genres and apply a low-pass filter.
+        The function compares all current genres to the fiction status and
+        removes any if they differ from it. If there's only one genre and it
+        conflicts with the fiction status, the fiction status will will change
+        to the genre's fiction status.
+
+        Args:
+            fiction (Boolean): A derived fiction status of a work.
+            cutoff (Float): A cutoff value. TO DO: Remove it later because
+            E-kirjasto does not need it.
+
+        Returns:
+            dictionary: Dictionary of genres and their weights.
+            boolean: Fiction status.
+
+        """
         # Remove any genres whose fiction status is inconsistent with the
         # (independently determined) fiction status of the book.
         #
@@ -1551,28 +1567,24 @@ class WorkClassifier:
         if not genres:
             # We have absolutely no idea, and it would be
             # irresponsible to guess.
-            return {}
+            return {}, fiction
 
         for genre in list(genres.keys()):
             # If we have a fiction determination, that lets us eliminate
             # possible genres that conflict with that determination.
-            #
-            # TODO: If we don't have a fiction determination, the
-            # genres we end up with may help us make one.
             if fiction is not None and (genre.default_fiction != fiction):
-                del genres[genre]
+                if len(list(genres.keys())) > 1:
+                    del genres[genre]
+                # If there's only one genre, we don't want to lose it or its
+                # fiction status.
+                else:
+                    # 
+                    fiction = genre.default_fiction
 
         # Consolidate parent genres into their heaviest subgenre.
+        # E-kirjasto: Leaving this for now as it's still somewhat useful.
         genres = self.consolidate_genre_weights(genres)
-        total_weight = float(sum(genres.values()))
-
-        # Strip out the stragglers.
-        for g, score in list(genres.items()):
-            affinity = score / total_weight
-            if affinity < cutoff:
-                total_weight -= score
-                del genres[g]
-        return genres
+        return genres, fiction
 
     def weigh_genre(self, genre_data, weight):
         """A helper method that ensure we always use database Genre
