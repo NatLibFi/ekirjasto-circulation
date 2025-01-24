@@ -272,6 +272,7 @@ class BISACClassifier(Classifier):
         m(stop, "Humor"),
         m(stop, "Drama"),
         m(True, "Poetry"),
+        m(True, "Comics & Graphic Novels"),
         m(False, anything),
     ]
 
@@ -726,8 +727,12 @@ class BISACClassifier(Classifier):
     def scrub_identifier(cls, identifier):
         if not identifier:
             return identifier
+        # Feedbooks can use prefix FB
         if identifier.startswith("FB"):
             identifier = identifier[2:]
+        # And Feedbooks can use postfix N
+        if identifier.endswith("N"):
+            identifier = identifier[:-1]
         if identifier in cls.NAMES:
             # We know the canonical name for this BISAC identifier,
             # and we are better equipped to classify the canonical
