@@ -1590,6 +1590,8 @@ class WorkClassifier:
         """A helper method that ensure we always use database Genre
         objects, not GenreData objects, when weighting genres.
         """
+        # TO DO: E-kirjasto: This function is mostly used to weigh
+        # a genre based on its publisher. Could be teared down.
         try:
             from core.model import Genre
         except ValueError:
