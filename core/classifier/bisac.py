@@ -302,9 +302,9 @@ class BISACClassifier(Classifier):
         m(Erotica, anything, "Erotica"),
         # Put all non-erotica comics into the same bucket, regardless
         # of their content.
-        m(Comics_Graphic_Novels, "Comics & Graphic Novels"),
-        m(Comics_Graphic_Novels, nonfiction, "Comics & Graphic Novels"),
         m(Comics_Graphic_Novels, fiction, "Comics & Graphic Novels"),
+        # TO DO: What should nonfiction comics be assigned to?
+        m(Comics_Graphic_Novels, nonfiction, "Comics & Graphic Novels"),
         # "Literary Criticism / Foo" implies Literary Criticism, not Foo.
         m(Literary_Criticism, anything, literary_criticism),
         # "Fiction / Christian / Foo" implies Religious Fiction
@@ -669,7 +669,7 @@ class BISACClassifier(Classifier):
         m(Historical_Fiction, fiction, "World Literature", something, "18th Century"),
         m(Historical_Fiction, fiction, "World Literature", something, "19th Century"),
         m(General_Fiction, fiction, "World Literature"),
-        m(General_Fiction, fiction, "General"),
+        m(General_Fiction, fiction, "General")
     ]
 
     @classmethod
