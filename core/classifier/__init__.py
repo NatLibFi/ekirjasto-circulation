@@ -797,7 +797,7 @@ class GenreData:
         self.audience_restriction = audience_restriction
 
     def __repr__(self):
-        return "<GenreData: %s fiction=%s>" % (self.name, self.is_fiction)
+        return f"<GenreData: {self.name} fiction={self.is_fiction}>"
 
     @property
     def self_and_subgenres(self):
@@ -1578,7 +1578,6 @@ class WorkClassifier:
                 # If there's only one genre, we don't want to lose it or its
                 # fiction status.
                 else:
-                    # 
                     fiction = genre.default_fiction
 
         # Consolidate parent genres into their heaviest subgenre.
