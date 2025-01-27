@@ -669,7 +669,7 @@ class BISACClassifier(Classifier):
         m(Historical_Fiction, fiction, "World Literature", something, "18th Century"),
         m(Historical_Fiction, fiction, "World Literature", something, "19th Century"),
         m(General_Fiction, fiction, "World Literature"),
-        m(General_Fiction, fiction, "General")
+        m(General_Fiction, fiction, "General"),
     ]
 
     @classmethod
