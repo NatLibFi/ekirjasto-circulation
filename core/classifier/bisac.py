@@ -387,6 +387,14 @@ class BISACClassifier(Classifier):
         m(Adventure, fiction, "War & Military"),
         m(Classics, fiction, "Classics"),
         m(Folklore, fiction, "Fairy Tales, Folk Tales, Legends & Mythology"),
+        m(Music, nonfiction, "Biography & Autobiography", "Music"),
+        m(
+            Entertainment,
+            nonfiction,
+            "Biography & Autobiography",
+            "Entertainment & Performing Arts",
+        ),
+        m(Biography_Memoir, nonfiction, "Biography & Autobiography"),
         m(Historical_Fiction, anything, "Historical"),
         m(Humorous_Fiction, fiction, "Humorous"),
         m(Humorous_Fiction, fiction, "Satire"),
@@ -528,14 +536,6 @@ class BISACClassifier(Classifier):
         # Then handle the less complicated genres of nonfiction.
         # n.b. no BISAC for Periodicals.
         # n.b. no BISAC for Humorous Nonfiction per se.
-        m(Music, nonfiction, "Biography & Autobiography", "Music"),
-        m(
-            Entertainment,
-            nonfiction,
-            "Biography & Autobiography",
-            "Entertainment & Performing Arts",
-        ),
-        m(Biography_Memoir, nonfiction, "Biography & Autobiography"),
         m(Education, nonfiction, "Education"),
         m(Philosophy, nonfiction, "Philosophy"),
         m(Political_Science, nonfiction, "Political Science"),
@@ -669,7 +669,7 @@ class BISACClassifier(Classifier):
         m(Historical_Fiction, fiction, "World Literature", something, "18th Century"),
         m(Historical_Fiction, fiction, "World Literature", something, "19th Century"),
         m(General_Fiction, fiction, "World Literature"),
-        m(General_Fiction, fiction, "General")
+        m(General_Fiction, fiction, "General"),
     ]
 
     @classmethod
