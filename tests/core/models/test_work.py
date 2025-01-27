@@ -546,13 +546,13 @@ class TestWork:
         work.assign_genres_from_weights({Romance: 1000, Fantasy: 1000})
         db.session.commit()
         before = sorted((x.genre.name, x.affinity) for x in work.work_genres)
-        assert [("Fantasy", 0.5), ("Romance", 0.5)] == before
+        assert [("Fantasy", 0.0), ("Romance", 0.0)] == before
 
         # But now it's classified under Science Fiction and Romance.
         work.assign_genres_from_weights({Romance: 100, Science_Fiction: 300})
         db.session.commit()
         after = sorted((x.genre.name, x.affinity) for x in work.work_genres)
-        assert [("Romance", 0.25), ("Science Fiction", 0.75)] == after
+        assert [("Romance", 0.0), ("Science Fiction", 0.0)] == after
 
     def test_classifications_with_genre(self, db: DatabaseTransactionFixture):
         work = db.work(with_open_access_download=True)

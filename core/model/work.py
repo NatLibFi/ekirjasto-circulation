@@ -1331,7 +1331,19 @@ class Work(Base):
         return classification_changed
 
     def assign_genres_from_weights(self, genre_weights):
-        # Assign WorkGenre objects to the remainder.
+        """
+        Assigns genres to a work based on existing genre associations.
+
+        This method updates the work's genres by removing any genres that are no longer
+        associated with the work and adding any new genres that are not already
+        associated.
+
+        Returns:
+            tuple: A tuple containing the updated list of genres and a boolean
+                indicating whether any changes were made.
+        """
+        # TO DO: E-kirjasto: Tear down the need for passing in weights because we won't
+        # be using them.
         from core.model.classification import Genre
 
         changed = False

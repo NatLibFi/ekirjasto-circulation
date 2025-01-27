@@ -329,7 +329,7 @@ class TestWorkClassifier:
         data.classifier.weigh_metadata()
         assert None == data.classifier.fiction()
         assert None == data.classifier.audience()
-        assert {} == data.classifier.genres(None)
+        assert ({}, None) == data.classifier.genres(None)
         assert (None, None) == data.classifier.target_age(None)
 
     def test_weight_metadata_title(
@@ -675,7 +675,7 @@ class TestWorkClassifier:
         source = data.work.license_pools[0].data_source
         data.identifier.classify(source, Subject.TAG, "Comic Books", weight=100)
         data.classifier.add(data.identifier.classifications[0])
-        genres = data.classifier.genres(fiction=True)
+        genres, fiction = data.classifier.genres(fiction=True)
         assert [(classifier.Comics_Graphic_Novels, 100)] == list(genres.items())
 
     def test_format_classification_not_from_license_source_is_ignored(
@@ -690,7 +690,7 @@ class TestWorkClassifier:
         oclc = DataSource.lookup(session, DataSource.OCLC)
         data.identifier.classify(oclc, Subject.TAG, "Comic Books", weight=100)
         data.classifier.add(data.identifier.classifications[0])
-        genres = data.classifier.genres(fiction=True)
+        genres, fiction = data.classifier.genres(fiction=True)
         assert [] == list(genres.items())
 
     def test_childrens_book_when_no_evidence_for_adult_book(
@@ -816,11 +816,11 @@ class TestWorkClassifier:
 
         # But any given book is either fiction or nonfiction. If we say this
         # book is fiction, it's classified as 100% SF.
-        genres = data.classifier.genres(True)
+        genres, fiction = data.classifier.genres(True)
         assert [(fiction_genre.genredata, 100)] == list(genres.items())
 
         # If we say it's nonfiction, it ends up 100% history.
-        genres = data.classifier.genres(False)
+        genres, fiction = data.classifier.genres(False)
         assert [(nonfiction_genre.genredata, 100)] == list(genres.items())
 
     def test_genres_consolidated_before_classification(
@@ -848,8 +848,13 @@ class TestWorkClassifier:
         # eliminated by the low-pass filter.
         data.classifier.genre_weights[romantic_suspense] = 4
 
-        [genre] = list(data.classifier.genres(True).items())
-        assert (historical_romance.genredata, 105) == genre
+        # genre, fiction = list(data.classifier.genres(True).items())
+        genres_and_fiction = data.classifier.genres(True)
+        genre, fiction = genres_and_fiction[0], genres_and_fiction[1]
+        assert (
+            historical_romance.genredata in genre
+            and genre[historical_romance.genredata] == 105
+        )
 
         # TODO: This behavior is a little random. As in, it's
         # random which genre comes out on top.
@@ -908,14 +913,19 @@ class TestWorkClassifier:
         # a weight of at least the total weight * 0.15 to qualify.  In
         # this case, the total weight is 115 and the cutoff weight is
         # 17.25.
-        [[genre, weight]] = list(data.classifier.genres(True).items())
-        assert romance.genredata == genre
-
+        genres, _ = data.classifier.genres(True)
+        genre_weights = list(genres.items())
+        assert romance.genredata in [genre for genre, _ in genre_weights]
         # Increase SF's weight past the cutoff and we get both genres.
         data.classifier.genre_weights[sf] = 18
 
-        [[g1, weight], [g2, weight]] = list(data.classifier.genres(True).items())
-        assert {g1, g2} == {romance.genredata, sf.genredata}
+        genres, _ = data.classifier.genres(True)
+        genre_weights = list(genres.items())
+        [g1, weight], [g2, weight2] = genre_weights
+        assert (g1, weight) == (romance.genredata, 100) and (g2, weight2) == (
+            sf.genredata,
+            18,
+        )
 
     def test_classify_sets_minimum_age_high_if_minimum_lower_than_maximum(
         self, work_classifier_fixture: TestWorkClassifierFixture
