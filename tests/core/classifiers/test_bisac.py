@@ -1133,7 +1133,9 @@ class TestBISACClassifier:
         genre_is("YOUNG ADULT NONFICTION / Places / Middle East", None)
         genre_is("YOUNG ADULT NONFICTION / Places / United States", None)
         genre_is("YOUNG ADULT NONFICTION / Recycling & Green Living", None)
-        genre_is("YOUNG ADULT NONFICTION / Volunteering", None)
+        genre_is("FICTION / Mystery & Detective / Amateur Sleuth", "Mystery")
+        genre_is("BIOGRAPHY & AUTOBIOGRAPHY / Historical", "Biography & Memoir")
+        genre_is("FICTION / General", "General Fiction")
 
     def test_deprecated_bisac_terms(self):
         """These BISAC terms have been deprecated. We classify them
