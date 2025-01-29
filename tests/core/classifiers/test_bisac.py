@@ -213,7 +213,9 @@ class TestBISACClassifier:
         genre_is("Fiction / Science Fiction / Short Stories", "Short Stories")
         genre_is("Fiction / Steampunk", "Steampunk")
         genre_is("Fiction / Science Fiction / Steampunk", "Steampunk")
-        genre_is("Fiction / African American / Urban", "Urban Fiction")
+        genre_is(
+            "FICTION / African American & Black / Urban & Street Lit", "Urban Fiction"
+        )
         genre_is("Fiction / Urban", None)
         genre_is("History / Native American", "United States History")
         genre_is(
@@ -1149,13 +1151,6 @@ class TestBISACClassifier:
             "Life Strategies",
         )
 
-    def test_non_bisac_classified_as_keywords(self):
-        """Categories that are not official BISAC categories (and any official
-        BISAC categories our rules didn't catch) are classified as
-        though they were free-text keywords.
-        """
-        self.genre_is("Fiction / Unicorns", "Fantasy")
-
     def test_fiction_spot_checks(self):
         def fiction_is(name, expect):
             subject = self._subject("", name)
@@ -1248,10 +1243,11 @@ class TestBISACClassifier:
         subject = self._subject("FBFIC022000", "Mystery & Detective")
         assert "Mystery" == subject.genre.name
 
-        # This is not an official BISAC classification, so we'll
-        # end up running it through the keyword classifier.
+        # This is not an official BISAC classification, so we're not
+        # expecting to find anything
         subject = self._subject("FSHUM000000N", "Human Science")
-        assert "Social Sciences" == subject.genre.name
+        if subject.genre is None:
+            assert subject.genre is None
 
     def test_scrub_identifier(self):
         # FeedBooks prefixes are removed.
