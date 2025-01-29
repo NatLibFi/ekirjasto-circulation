@@ -680,8 +680,7 @@ class BISACClassifier(Classifier):
                 return None
             if fiction is not None:
                 return fiction
-        keyword = "/".join(name)
-        return KeywordBasedClassifier.is_fiction(identifier, keyword)
+        return None
 
     @classmethod
     def audience(cls, identifier, name):
@@ -715,10 +714,7 @@ class BISACClassifier(Classifier):
                 return None
             if genre is not None:
                 return genre
-
-        # If all else fails, try a keyword-based classifier.
-        keyword = "/".join(name)
-        return KeywordBasedClassifier.genre(identifier, keyword, fiction, audience)
+        return None
 
     # A BISAC name copied from the BISAC website may end with this
     # human-readable note, which is not part of the official name.
