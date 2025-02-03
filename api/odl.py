@@ -489,7 +489,30 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
             raise NoAvailableCopies()
         loan, ignore = license.loan_to(patron)
 
-        doc = self.get_license_status_document(loan)
+        try:
+            doc = self.get_license_status_document(loan)
+        except BadResponseException as e:
+            logger.info("error: %s", e)  # ei päätynyt tänne, koska alkoi toimimaan yhtäkkiä
+            _db.delete(loan)
+            response = e.response
+            # DeMarque sends "application/api-problem+json", but the ODL spec says we should
+            # expect "application/problem+json", so we need to check for both.
+            if response.headers.get("Content-Type") in [
+                "application/api-problem+json",
+                "application/problem+json",
+            ]:
+                try:
+                    json_response = response.json()
+                    logger.info("type: %s", json_response.get("type"))
+                except ValueError:
+                    json_response = {}
+
+                if (
+                    json_response.get("type")
+                    == "http://opds-spec.org/odl/error/checkout/unavailable"
+                ):
+                    raise NoAvailableCopies()
+            raise
         status = doc.get("status")
 
         if status not in [self.READY_STATUS, self.ACTIVE_STATUS]:
