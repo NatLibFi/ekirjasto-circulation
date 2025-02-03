@@ -71,7 +71,7 @@ from core.opds_import import (
 from core.service.container import Services
 from core.util import base64
 from core.util.datetime_helpers import to_utc, utc_now
-from core.util.http import HTTP, BadResponseException
+from core.util.http import HTTP, BadResponseException, RemoteIntegrationException
 
 
 class ODLAPIConstants:
