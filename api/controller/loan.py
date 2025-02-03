@@ -44,6 +44,7 @@ from api.problem_details import (
     NO_ACCEPTABLE_FORMAT,
     NO_ACTIVE_LOAN,
     NO_ACTIVE_LOAN_OR_HOLD,
+    NO_COPIES_WHEN_RESERVED,
     NO_LICENSES,
     NOT_FOUND_ON_REMOTE,
     OUTSTANDING_FINES,
@@ -209,8 +210,6 @@ class LoanController(CirculationManagerController):
             result = e.as_problem_detail_document(debug=False)
         except AuthorizationBlocked as e:
             result = e.as_problem_detail_document(debug=False)
-        except CannotLoan as e:
-            result = CHECKOUT_FAILED.with_debug(str(e))
         except CannotLoan as e:
             if isinstance(e, NoAvailableCopiesWhenReserved):
                 result = e.as_problem_detail_document()
