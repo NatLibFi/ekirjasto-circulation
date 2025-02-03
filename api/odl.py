@@ -245,7 +245,7 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
 
         return self._hasher_instance
 
-    def _get(self, url: str, headers: dict[str, str] | None = None) -> Response:
+    def _get(self, url: str, headers: dict[str, str] | None = None, allowed_response_codes=None) -> Response:
         """Make a normal HTTP request, but include an authentication
         header with the credentials for the collection.
         """
