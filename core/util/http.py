@@ -82,15 +82,19 @@ class BadResponseException(RemoteIntegrationException):
         "Got status code %s from external server, cannot continue."
     )
 
-    def __init__(self, url_or_service, message, debug_message=None, status_code=None):
+    def __init__(self, url_or_service, message, response=Response, debug_message=None, status_code=None):
         """Indicate that a remote integration has failed.
 
         `param url_or_service` The name of the service that failed
            (e.g. "Overdrive"), or the specific URL that had the problem.
         """
+        if debug_message is None:
+            debug_message = (
+                f"Status code: {response.status_code}\nContent: {response.text}"
+            )
+
         super().__init__(url_or_service, message, debug_message)
-        # to be set to 500, etc.
-        self.status_code = status_code
+        self.response = response
 
     def document_debug_message(self, debug=True):
         if debug:
