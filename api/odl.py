@@ -73,6 +73,9 @@ from core.util import base64
 from core.util.datetime_helpers import to_utc, utc_now
 from core.util.http import HTTP, BadResponseException, RemoteIntegrationException
 
+import logging
+
+logger = logging.getLogger(__name__)
 
 class ODLAPIConstants:
     DEFAULT_PASSPHRASE_HINT = "View the help page for more information."
