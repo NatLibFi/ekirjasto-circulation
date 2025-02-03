@@ -325,18 +325,36 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
                 hint_url=self.settings.passphrase_hint_url,
             )
 
-        response = self._get(url)
+        try:
+            response = self._get(url, allowed_response_codes=["2xx"])
+            logger.info("RESPONSE: %s", response)
+        except BadResponseException as e:
+            response = e.response
+            logger.info("Response here: %s", response)
+            header_string = ", ".join(
+                {f"{k}: {v}" for k, v in response.headers.items()}
+            )
+            response_string = (
+                response.text
+                if len(response.text) < 100
+                else response.text[:100] + "..."
+            )
+            logger.error(
+                f"Error getting License Status Document for loan ({loan.id}):  Url '{url}' returned "
+                f"status code {response.status_code}. Expected 2XX. Response headers: {header_string}. "
+                f"Response content: {response_string}."
+            )
+            raise
 
         try:
             status_doc = json.loads(response.content)
         except ValueError as e:
-            raise BadResponseException(
+            raise RemoteIntegrationException(
                 url, "License Status Document was not valid JSON."
-            )
+            ) from e
         if status_doc.get("status") not in self.STATUS_VALUES:
-            raise BadResponseException(
-                url, "License Status Document had an unknown status value."
-            )
+            logger.info("status: %s", status_doc.get("status")) # Tänne ei nyt päädytty, kun homma alkoi toimimaan...
+            raise BadResponseException(url, "License Status Document had an unknown status value.")
         return status_doc  # type: ignore[no-any-return]
 
     def checkin(self, patron: Patron, pin: str, licensepool: LicensePool) -> None:
