@@ -3,6 +3,7 @@ from __future__ import annotations
 import binascii
 import datetime
 import json
+import logging
 import uuid
 from abc import ABC
 from collections.abc import Callable
@@ -71,7 +72,7 @@ from core.opds_import import (
 from core.service.container import Services
 from core.util import base64
 from core.util.datetime_helpers import to_utc, utc_now
-from core.util.http import HTTP, BadResponseException
+from core.util.http import HTTP, BadResponseException, RemoteIntegrationException
 
 
 class ODLAPIConstants:
@@ -242,7 +243,12 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
 
         return self._hasher_instance
 
-    def _get(self, url: str, headers: dict[str, str] | None = None) -> Response:
+    def _get(
+        self,
+        url: str,
+        headers: dict[str, str] | None = None,
+        allowed_response_codes=None,
+    ) -> Response:
         """Make a normal HTTP request, but include an authentication
         header with the credentials for the collection.
         """
@@ -322,14 +328,31 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
                 hint_url=self.settings.passphrase_hint_url,
             )
 
-        response = self._get(url)
+        try:
+            response = self._get(url, allowed_response_codes=["2xx"])
+        except BadResponseException as e:
+            response = e.response
+            header_string = ", ".join(
+                {f"{k}: {v}" for k, v in response.headers.items()}
+            )
+            response_string = (
+                response.text
+                if len(response.text) < 100
+                else response.text[:100] + "..."
+            )
+            logging.getLogger().error(
+                f"Error getting License Status Document for loan ({loan.id}):  Url '{url}' returned "
+                f"status code {response.status_code}. Expected 2XX. Response headers: {header_string}. "
+                f"Response content: {response_string}."
+            )
+            raise
 
         try:
             status_doc = json.loads(response.content)
         except ValueError as e:
-            raise BadResponseException(
+            raise RemoteIntegrationException(
                 url, "License Status Document was not valid JSON."
-            )
+            ) from e
         if status_doc.get("status") not in self.STATUS_VALUES:
             raise BadResponseException(
                 url, "License Status Document had an unknown status value."
