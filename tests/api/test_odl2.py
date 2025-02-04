@@ -150,7 +150,9 @@ class TestODL2Importer:
         assert moby_dick_license_pool.identifier.identifier == "978-3-16-148410-0"
         assert moby_dick_license_pool.identifier.type == "ISBN"
         assert not moby_dick_license_pool.open_access
-        assert 30 == moby_dick_license_pool.licenses_owned
+        assert (
+            10 == moby_dick_license_pool.licenses_owned
+        )  # There may be 30 left but 10 concurrent users
         assert 10 == moby_dick_license_pool.licenses_available
 
         assert 2 == len(moby_dick_license_pool.delivery_mechanisms)
