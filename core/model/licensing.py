@@ -85,9 +85,21 @@ class LicenseFunctions:
 
     @property
     def total_remaining_loans(self) -> int | None:
+        """
+        The total number of loans available for this License.
+        :return: `None` if the license is not limited by the number of checkouts
+                (=loans), otherwise the number of remaining loans, taking into account
+                both the total number of remaining checkouts and the concurrency limit.
+        """
         if self.is_inactive:
             return 0
         elif self.is_loan_limited:
+            if self.terms_concurrency is not None:
+                # We need a type ignore here because mypy doesn't understand that
+                # `is_loan_limited` implies `checkouts_left` is not None.
+                # For any loan limited license, there's always the tracker for
+                # checkouts_left.
+                return min(self.checkouts_left, self.terms_concurrency)  # type: ignore[type-var]
             return self.checkouts_left
         else:
             return self.terms_concurrency
