@@ -363,8 +363,8 @@ class TestLicense:
         [
             ("perpetual", True, False, False, False, 2, 1),
             ("time_limited", False, True, False, False, 1, 1),
-            ("loan_limited", False, False, True, False, 4, 2),
-            ("time_and_loan_limited", False, True, True, False, 52, 1),
+            ("loan_limited", False, False, True, False, 3, 2),
+            ("time_and_loan_limited", False, True, True, False, 1, 1),
             ("expired_time_limited", False, True, False, True, 0, 0),
             ("expired_loan_limited", False, False, True, True, 0, 0),
             ("unavailable", True, False, False, True, 0, 0),

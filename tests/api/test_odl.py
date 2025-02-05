@@ -1607,8 +1607,8 @@ class TestODLImporter:
         assert DeliveryMechanism.ADOBE_DRM == lpdm.delivery_mechanism.drm_scheme
         assert RightsStatus.IN_COPYRIGHT == lpdm.rights_status.uri
         assert (
-            52 == warrior_pool.licenses_owned
-        )  # 52 remaining checkouts in the License Info Document
+            1 == warrior_pool.licenses_owned
+        )  # 52 remaining checkouts in the License Info Document but also care about concurrency
         assert 1 == warrior_pool.licenses_available
         [license] = warrior_pool.licenses
         assert "1" == license.identifier
@@ -1633,7 +1633,7 @@ class TestODLImporter:
         )
         assert (
             52 == license.checkouts_left
-        )  # 52 remaining checkouts in the License Info Document
+        )  # 52 remaining checkouts in the License Info Document but only 1 concurrent user
         assert 1 == license.checkouts_available
 
         # This item is an open access audiobook.
@@ -1680,7 +1680,8 @@ class TestODLImporter:
         assert DeliveryMechanism.ADOBE_DRM == lpdm.delivery_mechanism.drm_scheme
         assert RightsStatus.IN_COPYRIGHT == lpdm.rights_status.uri
         assert (
-            41 == canadianity_pool.licenses_owned
+            11
+            == canadianity_pool.licenses_owned  # 10+1 now that concurrency is also accounted
         )  # 40 remaining checkouts + 1 perpetual license in the License Info Documents
         assert 11 == canadianity_pool.licenses_available
         [license1, license2] = sorted(
@@ -1729,7 +1730,7 @@ class TestODLImporter:
             lpdm.rights_status.uri for lpdm in lpdms
         ]
         assert (
-            72 == midnight_pool.licenses_owned
+            2 == midnight_pool.licenses_owned
         )  # 20 + 52 remaining checkouts in corresponding License Info Documents
         assert 2 == midnight_pool.licenses_available
         [license1, license2] = sorted(
@@ -1955,7 +1956,7 @@ class TestOdlAndOdl2Importer:
         assert len(imported_pool.licenses) == 5
 
         # Make sure that the license statistics are correct and include only active licenses.
-        assert imported_pool.licenses_owned == 41
+        assert imported_pool.licenses_owned == 6
         assert imported_pool.licenses_available == 6
 
         # Correct number of active and inactive licenses
@@ -2000,7 +2001,7 @@ class TestOdlAndOdl2Importer:
             [imported_pool] = imported_pools
             assert len(imported_pool.licenses) == 3
             assert imported_pool.licenses_available == 2
-            assert imported_pool.licenses_owned == 7
+            assert imported_pool.licenses_owned == 4
 
             # No licenses are expired
             assert sum(not l.is_inactive for l in imported_pool.licenses) == len(
