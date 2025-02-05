@@ -4,7 +4,8 @@ from tempfile import NamedTemporaryFile
 import unicodecsv as csv
 from openpyxl import Workbook
 from openpyxl.styles import Border, Font, PatternFill, Side
-from sqlalchemy.sql import func, select
+from sqlalchemy import Integer
+from sqlalchemy.sql import cast, func, select
 from sqlalchemy.sql.expression import and_, case, join, literal_column, or_
 
 from core.model import (
@@ -26,7 +27,20 @@ from core.model.contributor import Contribution, Contributor
 
 
 class LocalAnalyticsExporter:
-    """Export large numbers of analytics events in CSV format."""
+    """Export large numbers of analytics events in CSV or Excel format."""
+
+    def _fetch_and_process_data(self, _db, start, end, locations, library):
+        """Fetches data, converts them into a list of dicts and calculates max contributors."""
+        query = self.analytics_query_loan_statistics(start, end, locations, library)
+        results = _db.execute(query)
+        rows = [dict(row) for row in results]
+
+        max_contributors = 0
+        for row in rows:
+            contributors = row.get("contributors", []) or []
+            max_contributors = max(max_contributors, len(contributors))
+
+        return rows, max_contributors
 
     def export(self, _db, start, end, locations=None, library=None):
         # Get the results from the database.
@@ -55,6 +69,7 @@ class LocalAnalyticsExporter:
             "medium",
             "distributor",
             "open_access",
+            "published_year",
         ]
         output = BytesIO()
         writer = csv.writer(output, encoding="utf-8")
@@ -62,27 +77,20 @@ class LocalAnalyticsExporter:
         writer.writerows(results)
         return output.getvalue().decode("utf-8")
 
-    # Finland
     def export_excel(self, _db, start, end, locations=None, library=None):
-        # Get the results from the database.
-        query = self.analytics_query_loan_statistics(start, end, locations, library)
-        results = _db.execute(query)
+        """Exports loan statistics data into an Excel file."""
+        rows, max_contributors = self._fetch_and_process_data(
+            _db, start, end, locations, library
+        )
 
         # Prepare Excel workbook
         workbook = Workbook()
         sheet = workbook.active
 
-        rows = [dict(row) for row in results]
-
-        # Count how many contributor rows we need
-        max_contribs = max(
-            [0, *[len(row.get("contributors", []) or []) for row in rows]]
-        )
-
         header = [
             "Tekijä (aakkostus)",
             "Nimeke",
-            "Fiktio",
+            "Lajityyppi",
             "Tunniste",
             "Tunnisteen tyyppi",
             "Kirjasto",
@@ -92,9 +100,11 @@ class LocalAnalyticsExporter:
             "Kohderyhmä",
             "Kieli",
             "Kustantaja/Julkaisija",
+            "Julkaisuvuosi",
             "Kaikki lainat",
         ]
-        for i in range(max_contribs):
+        # Add headers for contributor columns. These will be populated with all contributor names (authors and others).
+        for i in range(max_contributors):
             header.append(f"Tekijä {i+1}")
 
         sheet.append(header)
@@ -104,6 +114,7 @@ class LocalAnalyticsExporter:
             categories = ", ".join(genres) if genres else ""
 
             contributors = row.get("contributors") or []
+
             sheet.append(
                 [
                     # Tekijä (aakkostus)
@@ -111,7 +122,7 @@ class LocalAnalyticsExporter:
                     # Nimeke
                     row.get("sort_title", ""),
                     # Fiktio
-                    "fiktio" if row.get("fiction") else "ei-fiktio",
+                    "kaunokirjallisuus" if row.get("fiction") else "tietokirjallisuus",
                     # Tunniste
                     row.get("identifier", ""),
                     # Tunnisteen tyyppi
@@ -130,10 +141,12 @@ class LocalAnalyticsExporter:
                     row.get("language", ""),
                     # Kustantaja/Julkaisija
                     row.get("publisher", ""),
+                    # Julkaisuvuosi
+                    row.get("published_year"),
                     # Kaikki lainat
                     row.get("count", ""),
-                    # Tekijät (1-n rows)
-                    *contributors,
+                    # Tekijät (all contributors) (1-n rows)
+                    *contributors,  # Using combined 'contributors' list
                 ]
             )
 
@@ -171,6 +184,80 @@ class LocalAnalyticsExporter:
             tmp.seek(0)
             stream = tmp.read()
         return stream
+
+    def export_csv(self, _db, start, end, locations=None, library=None):
+        """Exports loan statistics data into a CSV file."""
+        rows, max_contributors = self._fetch_and_process_data(
+            _db, start, end, locations, library
+        )
+
+        # Prepare CSV output
+        header = [
+            "Tekijä (aakkostus)",
+            "Nimeke",
+            "Lajityyppi",
+            "Tunniste",
+            "Tunnisteen tyyppi",
+            "Kirjasto",
+            "Sijainti",
+            "Formaatti",
+            "Kategoria(t)",
+            "Kohderyhmä",
+            "Kieli",
+            "Kustantaja/Julkaisija",
+            "Julkaisuvuosi",
+            "Kaikki lainat",
+        ]
+
+        # Add headers for contributor columns. These will be populated with all contributor names (authors and others).
+        for i in range(max_contributors):
+            header.append(f"Tekijä {i+1}")
+
+        output = BytesIO()
+        writer = csv.writer(output, encoding="utf-8")
+        writer.writerow(header)
+
+        for row in rows:
+            genres = row.get("genres")
+            categories = ", ".join(genres) if genres else ""
+
+            contributors = row.get("contributors") or []
+
+            writer.writerow(
+                [
+                    # Tekijä (aakkostus)
+                    row.get("sort_author", ""),
+                    # Nimeke
+                    row.get("sort_title", ""),
+                    # Fiktio
+                    "kaunokirjallisuus" if row.get("fiction") else "tietokirjallisuus",
+                    # Tunniste
+                    row.get("identifier", ""),
+                    # Tunnisteen tyyppi
+                    row.get("identifier_type", ""),
+                    # Kirjasto
+                    row.get("library_name", ""),
+                    # Sijainti
+                    row.get("location", ""),
+                    # Formaatti
+                    row.get("medium", ""),
+                    # Kategoria(t)
+                    categories,
+                    # Kohderyhmä
+                    row.get("audience", ""),
+                    # Kieli
+                    row.get("language", ""),
+                    # Kustantaja/Julkaisija
+                    row.get("publisher", ""),
+                    # Julkaisuvuosi
+                    row.get("published_year"),
+                    # Kaikki lainat
+                    row.get("count", ""),
+                    # Tekijät (all contributors) (1-n rows)
+                    *contributors,  # Using combined 'contributors' list
+                ]
+            )
+        return output.getvalue().decode("utf-8")
 
     def analytics_query(self, start, end, locations=None, library=None):
         """Build a database query that fetches rows of analytics data.
@@ -235,6 +322,7 @@ class LocalAnalyticsExporter:
                     Edition.medium,
                     DataSource.name.label("distributor"),
                     LicensePool.open_access,
+                    func.extract("year", Edition.published).label("published_year"),
                 ],
             )
             .select_from(
@@ -339,6 +427,7 @@ class LocalAnalyticsExporter:
                 events.medium,
                 events.distributor,
                 case({True: "true", False: "false"}, value=events.open_access),
+                events.published_year,
             ]
         ).select_from(events_alias)
         return query
@@ -346,7 +435,7 @@ class LocalAnalyticsExporter:
     # Finland
     def analytics_query_loan_statistics(self, start, end, locations=None, library=None):
         """Build a database query that fetches analytics data
-        for loan statistics Excel export.
+        for loan statistics export.
 
         Heavily modified from analytics_query method.
 
@@ -404,6 +493,9 @@ class LocalAnalyticsExporter:
                     Edition.medium,
                     Edition.id.label("edition_id"),
                     func.count().label("count"),
+                    cast(func.extract("year", Edition.published), Integer).label(
+                        "published_year"
+                    ),
                 ],
             )
             .select_from(
@@ -432,6 +524,7 @@ class LocalAnalyticsExporter:
                 Library.name.label("library_name"),
                 Edition.id.label("edition_id"),
                 Edition.medium,
+                Edition.published,
             )
             .order_by(Edition.sort_author.asc())
             .alias("events_alias")
@@ -441,18 +534,17 @@ class LocalAnalyticsExporter:
             events_alias.name + "." + events_alias.c.edition_id.name
         )
 
+        # Fetch all contributors (authors and others)
         contributors_alias = (
             select(
                 [
                     Contributor.sort_name,
-                    Contributor.display_name,
-                    Contributor.family_name,
-                    Contributor.lc,
-                    Contributor.viaf,
                     Contribution.role,
                 ]
             )
-            .where(Contribution.edition_id == edition_id_column)
+            .where(
+                Contribution.edition_id == edition_id_column,
+            )
             .select_from(
                 join(
                     Contributor,
@@ -526,6 +618,7 @@ class LocalAnalyticsExporter:
                 events.library_name,
                 events.medium,
                 events.count,
+                events.published_year,
             ]
         ).select_from(events_alias)
         return query

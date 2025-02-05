@@ -341,6 +341,31 @@ def bulk_circulation_events_excel():
     return response
 
 
+@library_route("/admin/circulation_loan_statistics_csv")
+@returns_json_or_response_or_problem_detail
+@allows_library
+@requires_admin
+def bulk_circulation_events_csv():
+    """Returns a CSV file containing loan amounts and co-authors
+    for each work on a given timeframe."""
+    (
+        data,
+        date,
+        date_end,
+        library,
+    ) = app.manager.admin_dashboard_controller.circulation_loan_statistics_csv()
+    if isinstance(data, ProblemDetail):
+        return data
+
+    response = Response(data)
+    response.headers["Content-Type"] = "text/csv"
+    response.headers[
+        "Content-Disposition"
+    ] = f"attachment; filename=lainaukset_{library}_{date}_{date_end}.csv"
+
+    return response
+
+
 @library_route("/admin/circulation_events")
 @has_library
 @returns_json_or_response_or_problem_detail
