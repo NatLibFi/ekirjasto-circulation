@@ -69,7 +69,6 @@ class LocalAnalyticsExporter:
             "medium",
             "distributor",
             "open_access",
-            "published_year",
         ]
         output = BytesIO()
         writer = csv.writer(output, encoding="utf-8")
@@ -322,7 +321,6 @@ class LocalAnalyticsExporter:
                     Edition.medium,
                     DataSource.name.label("distributor"),
                     LicensePool.open_access,
-                    func.extract("year", Edition.published).label("published_year"),
                 ],
             )
             .select_from(
@@ -427,7 +425,6 @@ class LocalAnalyticsExporter:
                 events.medium,
                 events.distributor,
                 case({True: "true", False: "false"}, value=events.open_access),
-                events.published_year,
             ]
         ).select_from(events_alias)
         return query
