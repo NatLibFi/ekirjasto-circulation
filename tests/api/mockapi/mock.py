@@ -1,13 +1,7 @@
 import json
-import logging
-from collections.abc import Generator
-from contextlib import contextmanager
-from typing import Any, NamedTuple
-from unittest.mock import patch
+from typing import Any
 
 from requests import Request, Response
-
-from core.util.http import HTTP
 
 
 class MockRequestsResponse(Response):
