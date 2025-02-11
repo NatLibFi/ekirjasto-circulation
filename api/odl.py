@@ -3,7 +3,6 @@ from __future__ import annotations
 import binascii
 import datetime
 import json
-import logging
 import uuid
 from abc import ABC
 from collections.abc import Callable
@@ -244,10 +243,7 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
         return self._hasher_instance
 
     def _get(
-        self,
-        url: str,
-        headers: dict[str, str] | None = None,
-        allowed_response_codes=None,
+        self, url: str, headers: dict[str, str] | None = None, *args, **kwargs
     ) -> Response:
         """Make a normal HTTP request, but include an authentication
         header with the credentials for the collection.
@@ -340,12 +336,13 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
                 if len(response.text) < 100
                 else response.text[:100] + "..."
             )
-            logging.getLogger().error(
+            raise BadResponseException(
+                url,
                 f"Error getting License Status Document for loan ({loan.id}):  Url '{url}' returned "
                 f"status code {response.status_code}. Expected 2XX. Response headers: {header_string}. "
-                f"Response content: {response_string}."
+                f"Response content: {response_string}.",
+                response,
             )
-            raise
 
         try:
             status_doc = json.loads(response.content)
@@ -354,7 +351,7 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
                 url, "License Status Document was not valid JSON."
             ) from e
         if status_doc.get("status") not in self.STATUS_VALUES:
-            raise BadResponseException(
+            raise RemoteIntegrationException(
                 url, "License Status Document had an unknown status value."
             )
         return status_doc  # type: ignore[no-any-return]
