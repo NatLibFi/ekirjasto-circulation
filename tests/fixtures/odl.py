@@ -40,10 +40,10 @@ class MonkeyPatchedODLFixture:
         )
 
     @staticmethod
-    def _get(patched_self, url, headers=None):
+    def _get(patched_self, url, headers=None, *args, **kwargs):
         patched_self.requests.append([url, headers])
         response = patched_self.responses.pop()
-        return HTTP._process_response(url, response)
+        return HTTP._process_response(url, response, *args, **kwargs)
 
     @staticmethod
     def _url_for(patched_self, *args, **kwargs):

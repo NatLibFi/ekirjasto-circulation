@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime
 import json
 import urllib.parse
+from functools import partial
 from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock
 
@@ -37,7 +38,7 @@ from core.model import (
 )
 from core.util import datetime_helpers
 from core.util.datetime_helpers import datetime_utc, utc_now
-from core.util.http import BadResponseException
+from core.util.http import BadResponseException, RemoteIntegrationException
 from tests.fixtures.api_odl import (
     LicenseHelper,
     LicenseInfoHelper,
@@ -116,25 +117,38 @@ class TestODLAPI:
         assert loan.external_identifier == requested_url
 
     def test_get_license_status_document_errors(
-        self, odl_api_test_fixture: ODLAPITestFixture
+        self, odl_api_test_fixture: ODLAPITestFixture, caplog
     ) -> None:
         loan, _ = odl_api_test_fixture.license.loan_to(odl_api_test_fixture.patron)
 
+        # The first request is ok but the content isn't json.
         odl_api_test_fixture.api.queue_response(200, content="not json")
         pytest.raises(
-            BadResponseException,
+            RemoteIntegrationException,
             odl_api_test_fixture.api.get_license_status_document,
             loan,
         )
 
+        # The second request is ok but the json status-field contains an unkown status value
         odl_api_test_fixture.api.queue_response(
             200, content=json.dumps(dict(status="unknown"))
         )
         pytest.raises(
-            BadResponseException,
+            RemoteIntegrationException,
             odl_api_test_fixture.api.get_license_status_document,
             loan,
         )
+
+        # The last request gets a 400 status code and some json response
+        odl_api_test_fixture.api.queue_response(
+            400, content=json.dumps(dict(content="some content"))
+        )
+
+        with pytest.raises(BadResponseException) as excinfo:
+            odl_api_test_fixture.api.get_license_status_document(loan)
+
+        # Check the exception message
+        assert "returned status code 400. Expected 2XX." in str(excinfo.value)
 
     def test_checkin_success(
         self, db: DatabaseTransactionFixture, odl_api_test_fixture: ODLAPITestFixture
@@ -506,6 +520,63 @@ class TestODLAPI:
         )
 
         assert 0 == db.session.query(Loan).count()
+
+    @pytest.mark.parametrize(
+        "response_type",
+        ["application/api-problem+json", "application/problem+json"],
+    )
+    def test_checkout_no_available_copies_unknown_to_us(
+        self,
+        db: DatabaseTransactionFixture,
+        odl_api_test_fixture: ODLAPITestFixture,
+        response_type: str,
+    ) -> None:
+        """
+        The title has no available copies, but we are out of sync with the distributor, so we think there
+        are copies available.
+        """
+        checkout = partial(
+            odl_api_test_fixture.api.checkout,
+            odl_api_test_fixture.patron,
+            "pin",
+            odl_api_test_fixture.pool,
+            MagicMock(),
+        )
+
+        # We think there are copies available.
+        odl_api_test_fixture.license.setup(  # type: ignore[attr-defined]
+            concurrency=1,
+            available=1,
+        )
+
+        # But the distributor says there are no available copies.
+        odl_api_test_fixture.api.queue_response(
+            400,
+            headers={"Content-Type": response_type},
+            content=odl_api_test_fixture.files.sample_text("unavailable.json"),
+        )
+
+        with pytest.raises(NoAvailableCopies):
+            checkout()
+
+        assert db.session.query(Loan).count() == 0
+
+        # Test the case where we get bad JSON back from the distributor.
+        odl_api_test_fixture.api.queue_response(
+            400,
+            headers={"Content-Type": response_type},
+            content="hot garbage",
+        )
+
+        with pytest.raises(BadResponseException):
+            checkout()
+
+        # Test the case where we just get an unknown bad response.
+        odl_api_test_fixture.api.queue_response(
+            500, headers={"Content-Type": "text/plain"}, content="halt and catch fire 🔥"
+        )
+        with pytest.raises(BadResponseException):
+            checkout()
 
     def test_checkout_no_licenses(
         self, db: DatabaseTransactionFixture, odl_api_test_fixture: ODLAPITestFixture
