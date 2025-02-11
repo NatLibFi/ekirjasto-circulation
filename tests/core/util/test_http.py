@@ -331,7 +331,7 @@ class TestRemoteIntegrationException:
 class TestBadResponseException:
     def test_helper_constructor(self):
         response = MockRequestsResponse(102, content="nonsense")
-        exc = BadResponseException.from_response(
+        exc = BadResponseException(
             "http://url/", "Terrible response, just terrible", response
         )
 
