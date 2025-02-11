@@ -18,6 +18,7 @@ from feedparser import FeedParserDict
 from flask_babel import lazy_gettext as _
 from lxml import etree
 from pydantic import AnyHttpUrl
+from requests import Response
 from sqlalchemy.orm.session import Session
 
 from api.circulation import (
@@ -1711,9 +1712,7 @@ class OPDSImportMonitor(CollectionMonitor):
         self._feed_base_url = f"{parsed_url.scheme}://{parsed_url.hostname}{(':' + str(parsed_url.port)) if parsed_url.port else ''}/"
         super().__init__(_db, collection)
 
-    def _get(
-        self, url: str, headers: dict[str, str]
-    ) -> tuple[int, dict[str, str], bytes]:
+    def _get(self, url: str, headers: Mapping[str, str]) -> Response:
         """Make the sort of HTTP request that's normal for an OPDS feed.
 
         Long timeout, raise error on anything but 2xx or 3xx.
@@ -1727,8 +1726,7 @@ class OPDSImportMonitor(CollectionMonitor):
         )
         if not url.startswith("http"):
             url = urljoin(self._feed_base_url, url)
-        response = HTTP.get_with_timeout(url, headers=headers, **kwargs)
-        return response.status_code, response.headers, response.content  # type: ignore[return-value]
+        return HTTP.get_with_timeout(url, headers=headers, **kwargs)
 
     def _get_accept_header(self) -> str:
         return ",".join(
@@ -1858,22 +1856,18 @@ class OPDSImportMonitor(CollectionMonitor):
                 return True
         return False
 
-    def _verify_media_type(
-        self, url: str, status_code: int, headers: dict[str, str], feed: bytes
-    ) -> None:
+    def _verify_media_type(self, url: str, response: Response) -> None:
         # Make sure we got an OPDS feed, and not an error page that was
         # sent with a 200 status code.
-        media_type = headers.get("content-type")
+        media_type = response.headers.get("Content-Type")
         if not media_type or not any(
             x in media_type for x in (OPDSFeed.ATOM_LIKE_TYPES)
         ):
             message = "Expected Atom feed, got %s" % media_type
-            raise BadResponseException(
-                url, message=message, debug_message=feed, status_code=status_code
-            )
+            raise BadResponseException(url, message=message, response=response)
 
     def follow_one_link(
-        self, url: str, do_get: Callable[..., tuple[int, Any, bytes]] | None = None
+        self, url: str, do_get: Callable[..., Response] | None = None
     ) -> tuple[list[str], bytes | None]:
         """Download a representation of a URL and extract the useful
         information.
@@ -1884,9 +1878,10 @@ class OPDSImportMonitor(CollectionMonitor):
         """
         self.log.info("Following next link: %s", url)
         get = do_get or self._get
-        status_code, headers, feed = get(url, {})
+        response = get(url, {})
+        feed = response.content
 
-        self._verify_media_type(url, status_code, headers, feed)
+        self._verify_media_type(url, response)
 
         new_data = self.feed_contains_new_data(feed)
 

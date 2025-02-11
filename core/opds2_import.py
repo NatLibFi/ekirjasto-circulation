@@ -9,6 +9,7 @@ from urllib.parse import urljoin, urlparse
 
 import webpub_manifest_parser.opds2.ast as opds2_ast
 from flask_babel import lazy_gettext as _
+from requests import Response
 from sqlalchemy.orm import Session
 from uritemplate import URITemplate
 from webpub_manifest_parser.core import ManifestParserFactory, ManifestParserResult
@@ -1163,20 +1164,16 @@ class OPDS2ImportMonitor(OPDSImportMonitor):
     PROTOCOL = ExternalIntegration.OPDS2_IMPORT
     MEDIA_TYPE = OPDS2MediaTypesRegistry.OPDS_FEED.key, "application/json"
 
-    def _verify_media_type(
-        self, url: str, status_code: int, headers: dict[str, str], feed: bytes
-    ) -> None:
+    def _verify_media_type(self, url: str, response: Response) -> None:
         # Make sure we got an OPDS feed, and not an error page that was
         # sent with a 200 status code.
-        media_type = headers.get("content-type")
+        media_type = response.headers.get("content-type")
         if not media_type or not any(x in media_type for x in self.MEDIA_TYPE):
             message = "Expected {} OPDS 2.0 feed, got {}".format(
                 self.MEDIA_TYPE, media_type
             )
 
-            raise BadResponseException(
-                url, message=message, debug_message=feed, status_code=status_code
-            )
+            raise BadResponseException(url, message=message, response=response)
 
     def _get_accept_header(self) -> str:
         return "{}, {};q=0.9, */*;q=0.1".format(
