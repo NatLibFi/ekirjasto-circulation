@@ -5,7 +5,7 @@ import traceback
 import urllib
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from collections.abc import Callable, Generator, Iterable, Sequence
+from collections.abc import Callable, Generator, Iterable, Mapping, Sequence
 from datetime import datetime
 from io import BytesIO
 from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast, overload
@@ -1738,7 +1738,7 @@ class OPDSImportMonitor(CollectionMonitor):
             ]
         )
 
-    def _update_headers(self, headers: dict[str, str] | None) -> dict[str, str]:
+    def _update_headers(self, headers: Mapping[str, str] | None) -> dict[str, str]:
         headers = dict(headers) if headers else {}
         if self.username and self.password and not "Authorization" in headers:
             headers["Authorization"] = "Basic %s" % base64.b64encode(

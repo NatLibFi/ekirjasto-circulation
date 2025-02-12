@@ -1167,7 +1167,7 @@ class OPDS2ImportMonitor(OPDSImportMonitor):
     def _verify_media_type(self, url: str, response: Response) -> None:
         # Make sure we got an OPDS feed, and not an error page that was
         # sent with a 200 status code.
-        media_type = response.headers.get("content-type")
+        media_type = response.headers.get("Content-Type")
         if not media_type or not any(x in media_type for x in self.MEDIA_TYPE):
             message = "Expected {} OPDS 2.0 feed, got {}".format(
                 self.MEDIA_TYPE, media_type

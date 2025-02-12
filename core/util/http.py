@@ -291,7 +291,7 @@ class HTTP(LoggerMixin):
             # a generic RequestNetworkException.
             raise RequestNetworkException(url, e)
 
-        return process_response_with(  # type: ignore[no-any-return]
+        return process_response_with(
             url,
             response,
             allowed_response_codes,
