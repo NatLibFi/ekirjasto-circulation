@@ -32,6 +32,7 @@ from core.model import (
 )
 from core.util.datetime_helpers import utc_now
 from core.util.opds_writer import OPDSFeed
+from tests.api.mockapi.mock import MockRequestsResponse
 from tests.api.mockapi.opds_for_distributors import MockOPDSForDistributorsAPI
 from tests.fixtures.api_opds_dist_files import OPDSForDistributorsFilesFixture
 from tests.fixtures.database import DatabaseTransactionFixture
@@ -759,7 +760,9 @@ class TestOPDSForDistributorsReaperMonitor:
             """An OPDSForDistributorsReaperMonitor that overrides _get."""
 
             def _get(self, url, headers):
-                return (200, {"content-type": OPDSFeed.ACQUISITION_FEED_TYPE}, feed)
+                return MockRequestsResponse(
+                    200, {"content-type": OPDSFeed.ACQUISITION_FEED_TYPE}, feed
+                )
 
         data_source = DataSource.lookup(
             opds_dist_api_fixture.db.session, "Biblioboard", autocreate=True

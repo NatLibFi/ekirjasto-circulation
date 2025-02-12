@@ -50,7 +50,7 @@ class CustomListImporter:
 
     @staticmethod
     def _error_response(message: str, response: Response) -> str:
-        if response.headers.get("content-type") == "application/api-problem+json":
+        if response.headers.get("Content-Type") == "application/api-problem+json":
             error_text = json.loads(response.content)
             return f"{message}: {response.status_code} {response.reason}: {error_text['title']}: {error_text['detail']}"
         else:

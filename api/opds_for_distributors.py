@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime
 import json
-from collections.abc import Generator
+from collections.abc import Generator, Mapping
 from typing import TYPE_CHECKING, Any
 
 import feedparser
@@ -460,9 +460,7 @@ class OPDSForDistributorsImportMonitor(OPDSImportMonitor):
 
         self.api = OPDSForDistributorsAPI(_db, collection)
 
-    def _get(
-        self, url: str, headers: dict[str, str]
-    ) -> tuple[int, dict[str, str], bytes]:
+    def _get(self, url: str, headers: Mapping[str, str]) -> Response:
         """Make a normal HTTP request for an OPDS feed, but add in an
         auth header with the credentials for the collection.
         """

@@ -48,6 +48,7 @@ from core.util import first_or_default
 from core.util.datetime_helpers import datetime_utc
 from core.util.http import BadResponseException
 from core.util.opds_writer import AtomFeed, OPDSFeed, OPDSMessage
+from tests.api.mockapi.mock import MockRequestsResponse
 from tests.core.mock import DummyHTTPClient
 from tests.fixtures.database import DatabaseTransactionFixture
 from tests.fixtures.opds_files import OPDSFilesFixture
@@ -1714,7 +1715,10 @@ class TestOPDSImportMonitor:
 
         class MockOPDSImportMonitor(OPDSImportMonitor):
             def _get(self, url, headers):
-                return 200, {"content-type": AtomFeed.ATOM_TYPE}, feed
+                # return 200, MockRe{"content-type": AtomFeed.ATOM_TYPE}, feed
+                return MockRequestsResponse(
+                    200, {"content-type": AtomFeed.ATOM_TYPE}, feed
+                )
 
         data_source_name = "OPDS"
         collection = db.collection(
@@ -1820,7 +1824,8 @@ class TestOPDSImportMonitor:
         def follow():
             return monitor.follow_one_link("http://url", do_get=http.do_get)
 
-        http.queue_response(200, OPDSFeed.ACQUISITION_FEED_TYPE, content=feed)
+        http.queue_requests_response(200, OPDSFeed.ACQUISITION_FEED_TYPE, content=feed)
+
         next_links, content = follow()
         assert 1 == len(next_links)
         assert "http://localhost:5000/?after=327&size=100" == next_links[0]
@@ -1849,24 +1854,25 @@ class TestOPDSImportMonitor:
         # Note that this works even when the media type is imprecisely
         # specified as Atom or bare XML.
         for imprecise_media_type in OPDSFeed.ATOM_LIKE_TYPES:
-            http.queue_response(200, imprecise_media_type, content=feed)
+            print("here: ", imprecise_media_type)
+            http.queue_requests_response(200, imprecise_media_type, content=feed)
             next_links, content = follow()
             assert 0 == len(next_links)
             assert None == content
 
-        http.queue_response(200, AtomFeed.ATOM_TYPE, content=feed)
+        http.queue_requests_response(200, AtomFeed.ATOM_TYPE, content=feed)
         next_links, content = follow()
         assert 0 == len(next_links)
         assert None == content
 
         # If the media type is missing or is not an Atom feed,
         # an exception is raised.
-        http.queue_response(200, None, content=feed)
+        http.queue_requests_response(200, None, content=feed)
         with pytest.raises(BadResponseException) as excinfo:
             follow()
         assert "Expected Atom feed, got None" in str(excinfo.value)
 
-        http.queue_response(200, "not/atom", content=feed)
+        http.queue_requests_response(200, "not/atom", content=feed)
         with pytest.raises(BadResponseException) as excinfo:
             follow()
         assert "Expected Atom feed, got not/atom" in str(excinfo.value)

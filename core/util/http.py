@@ -82,15 +82,24 @@ class BadResponseException(RemoteIntegrationException):
         "Got status code %s from external server, cannot continue."
     )
 
-    def __init__(self, url_or_service, message, debug_message=None, status_code=None):
+    def __init__(
+        self,
+        url_or_service,
+        message,
+        response=Response,
+        debug_message=None,
+    ):
         """Indicate that a remote integration has failed.
 
         `param url_or_service` The name of the service that failed
            (e.g. "Overdrive"), or the specific URL that had the problem.
         """
+        self.response = response
+        if debug_message is None:
+            debug_message = (
+                f"Status code: {response.status_code}\nContent: {response.text}"
+            )
         super().__init__(url_or_service, message, debug_message)
-        # to be set to 500, etc.
-        self.status_code = status_code
 
     def document_debug_message(self, debug=True):
         if debug:
@@ -101,37 +110,10 @@ class BadResponseException(RemoteIntegrationException):
         return None
 
     @classmethod
-    def from_response(cls, url, message, response):
-        """Helper method to turn a `requests` Response object into
-        a BadResponseException.
-        """
-        if isinstance(response, tuple):
-            # The response has been unrolled into a (status_code,
-            # headers, body) 3-tuple.
-            status_code, headers, content = response
-        else:
-            status_code = response.status_code
-            content = response.content
-        # The HTTP content response is a bytestring that we want to
-        # convert to unicode for the debug message.
-        if content and isinstance(content, bytes):
-            content = content.decode("utf-8")
-        return BadResponseException(
-            url,
-            message,
-            status_code=status_code,
-            debug_message="Status code: %s\nContent: %s"
-            % (
-                status_code,
-                content,
-            ),
-        )
-
-    @classmethod
     def bad_status_code(cls, url, response):
         """The response is bad because the status code is wrong."""
         message = cls.BAD_STATUS_CODE_MESSAGE % response.status_code
-        return cls.from_response(
+        return cls(
             url,
             message,
             response,
@@ -314,7 +296,6 @@ class HTTP(LoggerMixin):
             response,
             allowed_response_codes,
             disallowed_response_codes,
-            expected_encoding,
         )
 
     @classmethod
@@ -324,7 +305,6 @@ class HTTP(LoggerMixin):
         response,
         allowed_response_codes=None,
         disallowed_response_codes=None,
-        expected_encoding: str = "utf-8",
     ):
         """Raise a RequestNetworkException if the response code indicates a
         server-side failure, or behavior so unpredictable that we can't
@@ -338,61 +318,52 @@ class HTTP(LoggerMixin):
         :param expected_encoding Typically we expect HTTP responses to be UTF-8
             encoded, but for certain requests we can change the encoding type.
         """
-        if allowed_response_codes:
-            allowed_response_codes = list(map(str, allowed_response_codes))
-            status_code_not_in_allowed = (
-                "Got status code %%s from external server, but can only continue on: %s."
-                % (", ".join(sorted(allowed_response_codes)),)
-            )
-        if disallowed_response_codes:
-            disallowed_response_codes = list(map(str, disallowed_response_codes))
-        else:
-            disallowed_response_codes = []
-
-        code = response.status_code
-        series = cls.series(code)
-        code = str(code)
-
-        if allowed_response_codes and (
-            code in allowed_response_codes or series in allowed_response_codes
-        ):
+        allowed_response_codes_str = (
+            list(map(str, allowed_response_codes)) if allowed_response_codes else []
+        )
+        disallowed_response_codes_str = (
+            list(map(str, disallowed_response_codes))
+            if disallowed_response_codes
+            else []
+        )
+        series = cls.series(response.status_code)
+        code = str(response.status_code)
+        if code in allowed_response_codes_str or series in allowed_response_codes_str:
             # The code or series has been explicitly allowed. Allow
             # the request to be processed.
             return response
-
         error_message = None
         if (
             series == "5xx"
-            or code in disallowed_response_codes
-            or series in disallowed_response_codes
+            or code in disallowed_response_codes_str
+            or series in disallowed_response_codes_str
         ):
             # Unless explicitly allowed, the 5xx series always results in
             # an exception.
             error_message = BadResponseException.BAD_STATUS_CODE_MESSAGE
         elif allowed_response_codes and not (
-            code in allowed_response_codes or series in allowed_response_codes
+            code in allowed_response_codes_str or series in allowed_response_codes_str
         ):
-            error_message = status_code_not_in_allowed
-
+            error_message = (
+                "Got status code %%s from external server, but can only continue on: %s."
+                % (", ".join(sorted(allowed_response_codes_str)),)
+            )
         if error_message:
             raise BadResponseException(
                 url,
                 error_message % code,
-                status_code=code,
                 debug_message="Response content: %s"
-                % cls._decode_response_content(expected_encoding, response, url),
+                % cls._decode_response_content(response, url),
+                response=response,
             )
         return response
 
     @classmethod
-    def _decode_response_content(cls, expected_encoding, response, url) -> str:
-        response_content = response.content
-        if response_content and isinstance(response_content, bytes):
-            try:
-                response_content = response_content.decode(expected_encoding)
-            except Exception as e:
-                raise RequestNetworkException(url, e)
-        return response_content
+    def _decode_response_content(cls, response: Response, url: str) -> str:
+        try:
+            return response.text
+        except Exception as e:
+            raise RequestNetworkException(url, str(e)) from e
 
     @classmethod
     def series(cls, status_code):

@@ -210,8 +210,6 @@ class LoanController(CirculationManagerController):
         except AuthorizationBlocked as e:
             result = e.as_problem_detail_document(debug=False)
         except CannotLoan as e:
-            result = CHECKOUT_FAILED.with_debug(str(e))
-        except CannotLoan as e:
             if isinstance(e, NoAvailableCopiesWhenReserved):
                 result = e.as_problem_detail_document()
             else:

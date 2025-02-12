@@ -71,7 +71,7 @@ from core.opds_import import (
 from core.service.container import Services
 from core.util import base64
 from core.util.datetime_helpers import to_utc, utc_now
-from core.util.http import HTTP, BadResponseException
+from core.util.http import HTTP, BadResponseException, RemoteIntegrationException
 
 
 class ODLAPIConstants:
@@ -242,7 +242,9 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
 
         return self._hasher_instance
 
-    def _get(self, url: str, headers: dict[str, str] | None = None) -> Response:
+    def _get(
+        self, url: str, headers: dict[str, str] | None = None, *args: Any, **kwargs: Any
+    ) -> Response:
         """Make a normal HTTP request, but include an authentication
         header with the credentials for the collection.
         """
@@ -322,16 +324,34 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
                 hint_url=self.settings.passphrase_hint_url,
             )
 
-        response = self._get(url)
+        try:
+            response = self._get(url, allowed_response_codes=["2xx"])
+        except BadResponseException as e:
+            response = e.response
+            header_string = ", ".join(
+                {f"{k}: {v}" for k, v in response.headers.items()}
+            )
+            response_string = (
+                response.text
+                if len(response.text) < 100
+                else response.text[:100] + "..."
+            )
+            raise BadResponseException(
+                url,
+                f"Error getting License Status Document for loan ({loan.id}):  Url '{url}' returned "
+                f"status code {response.status_code}. Expected 2XX. Response headers: {header_string}. "
+                f"Response content: {response_string}.",
+                response,
+            )
 
         try:
             status_doc = json.loads(response.content)
         except ValueError as e:
-            raise BadResponseException(
+            raise RemoteIntegrationException(
                 url, "License Status Document was not valid JSON."
-            )
+            ) from e
         if status_doc.get("status") not in self.STATUS_VALUES:
-            raise BadResponseException(
+            raise RemoteIntegrationException(
                 url, "License Status Document had an unknown status value."
             )
         return status_doc  # type: ignore[no-any-return]
@@ -468,7 +488,29 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
             raise NoAvailableCopies()
         loan, ignore = license.loan_to(patron)
 
-        doc = self.get_license_status_document(loan)
+        try:
+            doc = self.get_license_status_document(loan)
+        except BadResponseException as e:
+            _db.delete(loan)
+            response = e.response
+            # DeMarque sends "application/api-problem+json", but the ODL spec says we should
+            # expect "application/problem+json", so we need to check for both.
+            if response.headers.get("Content-Type") in [
+                "application/api-problem+json",
+                "application/problem+json",
+            ]:
+                try:
+                    json_response = response.json()
+                except ValueError:
+                    json_response = {}
+
+                if (
+                    json_response.get("type")
+                    == "http://opds-spec.org/odl/error/checkout/unavailable"
+                ):
+                    raise NoAvailableCopies()
+            raise
+
         status = doc.get("status")
 
         if status not in [self.READY_STATUS, self.ACTIVE_STATUS]:
