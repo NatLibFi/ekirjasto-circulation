@@ -106,9 +106,8 @@ class DashboardController(CirculationManagerController):
             library_short_name,
         )
 
-    # Finland
-    # Copied and modified from bulk_circulation_events
-    def circulation_loan_statistics_excel(self):
+    def _get_date_range_and_params(self):
+        """Helper function to get date ranges and other parameters."""
         date_format = "%Y-%m-%d"
 
         def get_date(field):
@@ -118,7 +117,7 @@ class DashboardController(CirculationManagerController):
                 return today
             try:
                 return datetime.strptime(value, date_format).date()
-            except ValueError as e:
+            except ValueError:
                 return today
 
         date_start = get_date("date")
@@ -128,8 +127,53 @@ class DashboardController(CirculationManagerController):
         library = getattr(flask.request, "library", None)
         library_short_name = library.short_name if library else None
 
+        return (
+            date_start,
+            date_end,
+            date_end_label,
+            locations,
+            library,
+            library_short_name,
+            date_format,
+        )
+
+    def circulation_loan_statistics_excel(self):
+        """Exports circulation loan statistics to Excel."""
+        (
+            date_start,
+            date_end,
+            date_end_label,
+            locations,
+            library,
+            library_short_name,
+            date_format,
+        ) = self._get_date_range_and_params()
+
         local_analytics_exporter = LocalAnalyticsExporter()
         data = local_analytics_exporter.export_excel(
+            self._db, date_start, date_end, locations, library
+        )
+        return (
+            data,
+            date_start.strftime(date_format),
+            date_end_label.strftime(date_format),
+            library_short_name,
+        )
+
+    def circulation_loan_statistics_csv(self):
+        """Exports circulation loan statistics to CSV."""
+        (
+            date_start,
+            date_end,
+            date_end_label,
+            locations,
+            library,
+            library_short_name,
+            date_format,
+        ) = self._get_date_range_and_params()
+
+        local_analytics_exporter = LocalAnalyticsExporter()
+        data = local_analytics_exporter.export_csv(
             self._db, date_start, date_end, locations, library
         )
         return (
