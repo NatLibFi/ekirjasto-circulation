@@ -1,3 +1,8 @@
+"""
+This module provides tools for exporting analytics data from the system
+into CSV or Excel formats.
+"""
+
 from io import BytesIO
 from tempfile import NamedTemporaryFile
 
@@ -30,7 +35,20 @@ class LocalAnalyticsExporter:
     """Export large numbers of analytics events in CSV or Excel format."""
 
     def _fetch_and_process_data(self, _db, start, end, locations, library):
-        """Fetches data, converts them into a list of dicts and calculates max contributors."""
+        """Fetches data, converts them into a list of dicts and calculates max contributors.
+
+        Args:
+            _db: The database session.
+            start: The start date for the analytics data.
+            end: The end date for the analytics data.
+            locations: A comma-separated string of locations to filter by.
+            library: The library to filter by.
+
+        Returns:
+            A tuple containing:
+                - A list of dictionaries, where each dictionary represents a row of data.
+                - The maximum number of contributors found in any row.
+        """
         query = self.analytics_query_loan_statistics(start, end, locations, library)
         results = _db.execute(query)
         rows = [dict(row) for row in results]
@@ -43,7 +61,18 @@ class LocalAnalyticsExporter:
         return rows, max_contributors
 
     def export(self, _db, start, end, locations=None, library=None):
-        # Get the results from the database.
+        """Exports analytics data into a CSV string.
+
+        Args:
+            _db: The database session.
+            start: The start date for the analytics data.
+            end: The end date for the analytics data.
+            locations: A comma-separated string of locations to filter by.
+            library: The library to filter by.
+
+        Returns:
+            A string containing the CSV data.
+        """
         query = self.analytics_query(start, end, locations, library)
         results = _db.execute(query)
 
@@ -77,7 +106,18 @@ class LocalAnalyticsExporter:
         return output.getvalue().decode("utf-8")
 
     def export_excel(self, _db, start, end, locations=None, library=None):
-        """Exports loan statistics data into an Excel file."""
+        """Exports loan statistics data into an Excel file.
+
+        Args:
+            _db: The database session.
+            start: The start date for the analytics data.
+            end: The end date for the analytics data.
+            locations: A comma-separated string of locations to filter by.
+            library: The library to filter by.
+
+        Returns:
+            A bytes object containing the Excel file data.
+        """
         rows, max_contributors = self._fetch_and_process_data(
             _db, start, end, locations, library
         )
@@ -102,7 +142,8 @@ class LocalAnalyticsExporter:
             "Julkaisuvuosi",
             "Kaikki lainat",
         ]
-        # Add headers for contributor columns. These will be populated with all contributor names (authors and others).
+        # Add headers for contributor columns.
+        # These will be populated with all contributor names (authors and others).
         for i in range(max_contributors):
             header.append(f"Tekijä {i+1}")
 
@@ -185,7 +226,18 @@ class LocalAnalyticsExporter:
         return stream
 
     def export_csv(self, _db, start, end, locations=None, library=None):
-        """Exports loan statistics data into a CSV file."""
+        """Exports loan statistics data into a CSV file.
+
+        Args:
+            _db: The database session.
+            start: The start date for the analytics data.
+            end: The end date for the analytics data.
+            locations: A comma-separated string of locations to filter by.
+            library: The library to filter by.
+
+        Returns:
+            A string containing the CSV data.
+        """
         rows, max_contributors = self._fetch_and_process_data(
             _db, start, end, locations, library
         )
@@ -208,7 +260,8 @@ class LocalAnalyticsExporter:
             "Kaikki lainat",
         ]
 
-        # Add headers for contributor columns. These will be populated with all contributor names (authors and others).
+        # Add headers for contributor columns.
+        # These will be populated with all contributor names (authors and others).
         for i in range(max_contributors):
             header.append(f"Tekijä {i+1}")
 
@@ -266,8 +319,14 @@ class LocalAnalyticsExporter:
         modeled after Work.to_search_documents, which generates a
         large JSON document entirely in the database.
 
-        :return: An iterator of results, each of which can be written
-            directly to a CSV file.
+        Args:
+            start: The start date for the analytics data.
+            end: The end date for the analytics data.
+            locations: A comma-separated string of locations to filter by.
+            library: The library to filter by.
+
+        Returns:
+            A SQLAlchemy Select object representing the query.
         """
 
         clauses = [
@@ -439,7 +498,14 @@ class LocalAnalyticsExporter:
         This method uses low-level SQLAlchemy code to do all
         calculations and data conversations in the database.
 
-        :return: A SQLAlchemy query
+        Args:
+            start: The start date for the analytics data.
+            end: The end date for the analytics data.
+            locations: A comma-separated string of locations to filter by.
+            library: The library to filter by.
+
+        Returns:
+            A SQLAlchemy Select object representing the query.
         """
 
         clauses = []
