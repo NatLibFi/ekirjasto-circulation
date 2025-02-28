@@ -755,8 +755,6 @@ class DisappearingBookReportScript(Script):
         qu = (
             self._db.query(LicensePool)
             .filter(LicensePool.open_access == False)
-            .filter(LicensePool.suppressed == False)
-            .filter(LicensePool.licenses_owned <= 0)
             .order_by(LicensePool.availability_time.desc())
         )
         first_row = [
@@ -769,8 +767,14 @@ class DisappearingBookReportScript(Script):
             "Current licenses available",
             "Changes in number of licenses",
             "Changes in title availability",
+            "License Identifier",
+            "License Status",
+            "License Checkouts left",
+            "License Checkouts available",
+            "License Concurrency",
+            "License Expiration",
         ]
-        print("\t".join(first_row))
+        print(",".join(first_row))
 
         for pool in qu:
             self.explain(pool)
@@ -855,7 +859,7 @@ class DisappearingBookReportScript(Script):
 
         data = [f"{identifier.type} {identifier.identifier}"]
         if edition:
-            data.extend([edition.title, edition.author])
+            data.extend([f'"{edition.title}"', f'"{edition.author}"'])
         if licensepool.availability_time:
             first_seen = licensepool.availability_time.strftime(self.format)
         else:
@@ -883,8 +887,34 @@ class DisappearingBookReportScript(Script):
             event.start.strftime(self.format) for event in title_removal_events
         ]
         data.append(", ".join(title_removals))
+        # Print the main license pool information
+        print(",".join(str(item) for item in data))  # Convert all items to strings
 
-        print("\t".join([str(x) for x in data]))
+        # Then fetch each license in the pool
+        for license in licensepool.licenses:
+            # Append each field's data as a separate entry in the data list
+            expire_date = (
+                license.expires.strftime(self.format) if license.expires else "N/A"
+            )
+            license_data = [
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",  # Fill the first 9 columns with empty strings
+                license.identifier,
+                license.status,
+                license.checkouts_left,
+                license.checkouts_available,
+                license.terms_concurrency,
+                expire_date,
+            ]
+            # And print each license on a new line
+            print(",".join(str(item) for item in license_data))
 
 
 class NYTBestSellerListsScript(TimestampScript):
