@@ -2391,6 +2391,18 @@ class Explain(IdentifierInputScript):
                 pool.licenses_reserved,
             )
         )
+        self.write("Licenses: %s" % (len(pool.licenses)))
+        for license in pool.licenses:
+            self.write("License ID: %s:" % (license.identifier))
+            self.write(
+                "    Checkouts left: %s, Checkouts available: %s, Concurrency: %s , Expires: %s"
+                % (
+                    license.checkouts_left,
+                    license.checkouts_available,
+                    license.terms_concurrency,
+                    license.expires,
+                )
+            )
 
     def explain_work(self, work):
         self.write("Work info:")
