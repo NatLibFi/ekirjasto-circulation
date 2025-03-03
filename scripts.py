@@ -907,12 +907,13 @@ class LicenseReportScript(Script):
             "Current licenses available",
             "Changes in number of licenses",
             "Changes in title availability",
-            "License Identifier",
-            "License Status",
-            "License Checkouts left",
-            "License Checkouts available",
-            "License Concurrency",
-            "License Expiration",
+            "License identifier",
+            "License status",
+            "License checkouts left",
+            "License checkouts available",
+            "License concurrency",
+            "Active loans",
+            "License expiration",
         ]
         print(",".join(first_row))
 
@@ -1051,6 +1052,7 @@ class LicenseReportScript(Script):
                 license.checkouts_left,
                 license.checkouts_available,
                 license.terms_concurrency,
+                len(license.loans),
                 expire_date,
             ]
             # And print each license on a new line
