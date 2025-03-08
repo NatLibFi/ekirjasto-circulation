@@ -1034,8 +1034,10 @@ class CirculationData:
                 ]
                 for license in old_licenses:
                     if license not in new_licenses:
+                        # In case a license is removed from the feed we need to set it to be unavailable so that it's not used for loans or statistics.
+                        license.status = LicenseStatus.unavailable
                         self.log.warning(
-                            f"License {license.identifier} has been removed from feed."
+                            f"License {license.identifier} has been removed from feed and set to be unavailable"
                         )
                 changed_availability = pool.update_availability_from_licenses(
                     as_of=self.last_checked,
