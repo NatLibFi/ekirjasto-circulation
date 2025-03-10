@@ -298,6 +298,51 @@ class TestCirculationData:
         assert new_license.id == old_license.id
         assert old_license.status == LicenseStatus.unavailable
 
+    def test_apply_updates_existing_license_when_removed_from_feed(
+        self, db: DatabaseTransactionFixture, caplog
+    ):
+        edition, pool = db.edition(with_license_pool=True)
+
+        # Start with one license for this pool.
+        existing_license = db.license(
+            pool,
+            expires=None,
+            checkouts_left=2,
+            checkouts_available=3,
+            status=LicenseStatus.available,
+        )
+
+        assert isinstance(existing_license.identifier, str)
+        assert existing_license.checkouts_left == 2
+        assert existing_license.checkouts_available == 3
+        assert existing_license.status == LicenseStatus.available
+
+        # The feed does not include the license
+        circulation_data = CirculationData(
+            licenses=[],  # No licenses in the updated feed
+            data_source=edition.data_source,
+            primary_identifier=edition.primary_identifier,
+        )
+        with caplog.at_level("WARNING"):
+            circulation_data.apply(db.session, pool.collection)
+            db.session.commit()
+
+        updated_license = pool.licenses[0]
+        assert updated_license.id == existing_license.id
+        assert (
+            updated_license.status == LicenseStatus.unavailable
+        )  # Status should have changed
+        assert (
+            updated_license.checkouts_left == 2
+        )  # Checkouts left should remain unchanged.
+        assert (
+            updated_license.checkouts_available == 3
+        )  # Checkouts available should remain unchanged.
+        assert (
+            f"License {existing_license.identifier} has been removed from feed"
+            in caplog.text
+        )
+
     def test_apply_with_licenses_overrides_availability(
         self, db: DatabaseTransactionFixture
     ):
