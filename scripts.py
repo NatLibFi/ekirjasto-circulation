@@ -901,10 +901,12 @@ class LicenseReportScript(Script):
             "Work/Licensepool Identifier",
             "Title",
             "Author",
+            "Collection",
             "First seen",
             "Last seen (best guess)",
-            "Current licenses owned",
-            "Current licenses available",
+            "Current copies owned",
+            "Current copies available",
+            "Patrons in hold queue",
             "Changes in number of licenses",
             "Changes in title availability",
             "License identifier",
@@ -998,9 +1000,10 @@ class LicenseReportScript(Script):
             licensepool
         )
 
-        data = [f"{identifier.type} {identifier.identifier}"]
+        data = [identifier.identifier]
         if edition:
             data.extend([f'"{edition.title}"', f'"{edition.author}"'])
+        data.append(licensepool.collection.name)
         if licensepool.availability_time:
             first_seen = licensepool.availability_time.strftime(self.format)
         else:
@@ -1013,6 +1016,7 @@ class LicenseReportScript(Script):
         data.append(last_seen)
         data.append(licensepool.licenses_owned)
         data.append(licensepool.licenses_available)
+        data.append(licensepool.patrons_in_hold_queue)
 
         license_removals = []
         for event in license_removal_events:
@@ -1048,7 +1052,7 @@ class LicenseReportScript(Script):
                 "",
                 "",  # Fill the first 9 columns with empty strings
                 license.identifier,
-                license.status,
+                license.status.value,
                 license.checkouts_left,
                 license.checkouts_available,
                 license.terms_concurrency,
