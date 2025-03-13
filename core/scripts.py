@@ -2395,8 +2395,9 @@ class Explain(IdentifierInputScript):
         for license in pool.licenses:
             self.write("License ID: %s:" % (license.identifier))
             self.write(
-                "    Checkouts left: %s, Checkouts available: %s, Concurrency: %s , Expires: %s"
+                "    Status: %s, Checkouts left: %s, Checkouts available: %s, Concurrency: %s , Expires: %s"
                 % (
+                    license.status.value,
                     license.checkouts_left,
                     license.checkouts_available,
                     license.terms_concurrency,
