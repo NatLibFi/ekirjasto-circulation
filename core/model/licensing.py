@@ -147,7 +147,7 @@ class License(Base, LicenseFunctions):
 
     # For tracking missing licenses in import
     last_checked = Column(DateTime(timezone=True), default=None)
-    is_missing = Column(Boolean, default=False)
+    is_missing = Column(Boolean, default=False, nullable=False)
 
     # A License belongs to one LicensePool.
     license_pool_id = Column(Integer, ForeignKey("licensepools.id"), index=True)

@@ -386,27 +386,33 @@ class TestCirculationData:
 
         # License A is available
         assert license_a.status == LicenseStatus.available
-        assert license_a.is_missing == False
-        assert license_a.last_checked >= hour_ago
+        assert license_a.is_missing is False
+        assert license_a.last_checked is not None and license_a.last_checked >= hour_ago
         # License B and missing_license are missing (plus they haven't been checked before)
         assert license_b.status == LicenseStatus.unavailable
-        assert license_b.is_missing == True
-        assert license_b.last_checked >= hour_ago
+        assert license_b.is_missing is True
+        assert license_b.last_checked is not None and license_b.last_checked >= hour_ago
         assert (
             f"License {license_b.identifier} is missing from feed so set to be unavailable!"
             in caplog.text
         )
         assert missing_license.status == LicenseStatus.unavailable
-        assert missing_license.last_checked >= hour_ago
-        assert missing_license.is_missing == True
+        assert (
+            missing_license.last_checked is not None
+            and missing_license.last_checked >= hour_ago
+        )
+        assert missing_license.is_missing is True
         assert (
             f"License {missing_license.identifier} is missing from feed so set to be unavailable!"
             in caplog.text
         )
         # License D is in the feed but has run out of checkouts and it's status remains unavailable
         assert expired_license.status == LicenseStatus.unavailable
-        assert expired_license.is_missing == False
-        assert expired_license.last_checked >= hour_ago
+        assert expired_license.is_missing is False
+        assert (
+            expired_license.last_checked is not None
+            and expired_license.last_checked >= hour_ago
+        )
 
         # Second time we see this work (and pool) during the same import: Only license B is in the feed
         circulation_data = CirculationData(
@@ -429,16 +435,19 @@ class TestCirculationData:
 
         # License A should remain available
         assert license_a.status == LicenseStatus.available
-        assert license_a.is_missing == False
-        assert license_a.last_checked >= hour_ago
+        assert license_a.is_missing is False
+        assert license_a.last_checked is not None and license_a.last_checked >= hour_ago
         # License B should now be available and not missing
         assert license_b.status == LicenseStatus.available
-        assert license_b.is_missing == False
-        assert license_b.last_checked >= hour_ago
+        assert license_b.is_missing is False  # type: ignore
+        assert license_b.last_checked is not None and license_b.last_checked >= hour_ago
         # License C is still missing and unavailable
         assert missing_license.status == LicenseStatus.unavailable
-        assert missing_license.is_missing == True
-        assert missing_license.last_checked >= hour_ago
+        assert missing_license.is_missing is True
+        assert (
+            missing_license.last_checked is not None
+            and missing_license.last_checked >= hour_ago
+        )
         assert (
             f"License {missing_license.identifier} is missing from feed so set to be unavailable!"
             in caplog.text
@@ -446,8 +455,11 @@ class TestCirculationData:
         # The expired license is also missing this time - it remains unavailable but since we saw it
         # when importing the work the first time, it remains not missing.
         assert expired_license.status == LicenseStatus.unavailable
-        assert expired_license.is_missing == False
-        assert expired_license.last_checked >= hour_ago
+        assert expired_license.is_missing is False
+        assert (
+            expired_license.last_checked is not None
+            and expired_license.last_checked >= hour_ago
+        )
 
         # Next day during import we see the title with only license A and the expired license D - again.
         with freeze_time("2025-03-14T07:00:00+00:00"):
@@ -478,27 +490,39 @@ class TestCirculationData:
 
             # License A is available
             assert license_a.status == LicenseStatus.available
-            assert license_a.is_missing == False
-            assert license_a.last_checked >= next_day
+            assert license_a.is_missing is False
+            assert (
+                license_a.last_checked is not None
+                and license_a.last_checked >= next_day
+            )
             # License B and missing_license are missing again
             assert license_b.status == LicenseStatus.unavailable
-            assert license_b.is_missing == True
-            assert license_b.last_checked >= next_day
+            assert license_b.is_missing is True
+            assert (
+                license_b.last_checked is not None
+                and license_b.last_checked >= next_day
+            )
             assert (
                 f"License {license_b.identifier} is missing from feed so set to be unavailable!"
                 in caplog.text
             )
             assert missing_license.status == LicenseStatus.unavailable
-            assert missing_license.last_checked >= next_day
-            assert missing_license.is_missing == True
+            assert (
+                missing_license.last_checked is not None
+                and missing_license.last_checked >= next_day
+            )
+            assert missing_license.is_missing is True
             assert (
                 f"License {missing_license.identifier} is missing from feed so set to be unavailable!"
                 in caplog.text
             )
             # The expired license is still unavailable
             assert expired_license.status == LicenseStatus.unavailable
-            assert expired_license.is_missing == False
-            assert expired_license.last_checked >= next_day
+            assert expired_license.is_missing is False
+            assert (
+                expired_license.last_checked is not None
+                and expired_license.last_checked >= next_day
+            )
 
     def test_apply_with_licenses_overrides_availability(
         self, db: DatabaseTransactionFixture

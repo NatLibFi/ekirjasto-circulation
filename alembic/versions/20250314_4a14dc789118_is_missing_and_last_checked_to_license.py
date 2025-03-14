@@ -21,7 +21,7 @@ def upgrade() -> None:
     op.add_column(
         "licenses", sa.Column("last_checked", sa.DateTime(timezone=True), nullable=True)
     )
-    op.add_column("licenses", sa.Column("is_missing", sa.Boolean(), nullable=True))
+    op.add_column("licenses", sa.Column("is_missing", sa.Boolean(), nullable=False))
     # ### end Alembic commands ###
 
 
