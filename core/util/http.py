@@ -326,6 +326,7 @@ class HTTP(LoggerMixin):
             if disallowed_response_codes
             else []
         )
+        print(f"response {response}, code {response.status_code}")
         series = cls.series(response.status_code)
         code = str(response.status_code)
         if code in allowed_response_codes_str or series in allowed_response_codes_str:
@@ -356,6 +357,7 @@ class HTTP(LoggerMixin):
                 % cls._decode_response_content(response, url),
                 response=response,
             )
+        print("RESPONSE: ", response)
         return response
 
     @classmethod
