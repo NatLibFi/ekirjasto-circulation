@@ -3,6 +3,7 @@ from __future__ import annotations
 import binascii
 import datetime
 import json
+import logging
 import uuid
 from abc import ABC
 from collections.abc import Callable
@@ -28,6 +29,9 @@ from api.circulation import (
 )
 from api.circulation_exceptions import *
 from api.lcp.hash import Hasher, HasherFactory, HashingAlgorithm
+from api.lcp.license import LicenseDocument
+from api.lcp.status import LoanStatus
+from api.odl_api.auth import OpdsWithOdlException
 from core import util
 from core.integration.settings import (
     ConfigurationFormItem,
@@ -72,6 +76,8 @@ from core.service.container import Services
 from core.util import base64
 from core.util.datetime_helpers import to_utc, utc_now
 from core.util.http import HTTP, BadResponseException, RemoteIntegrationException
+
+log = logging.getLogger("ODL API")
 
 
 class ODLAPIConstants:
@@ -356,6 +362,67 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
             )
         return status_doc  # type: ignore[no-any-return]
 
+    @staticmethod
+    def _notification_url(
+        short_name: str | None, patron_id: str, license_id: str
+    ) -> str:
+        """Get the notification URL that should be passed in the ODL checkout link.
+
+        This is broken out into a separate function to make it easier to override
+        in tests.
+        """
+        return url_for(
+            "odl_notify",
+            library_short_name=short_name,
+            patron_identifier=patron_id,
+            license_identifier=license_id,
+            _external=True,
+        )
+
+    def _request_loan_status(
+        self, url: str, ignored_problem_types: list[str] | None = None
+    ) -> LoanStatus:
+        try:
+            response = self._get(url, allowed_response_codes=["2xx", "201"])
+            log.info(
+                f"response: {response}, headers: {response.headers}, content: {response.content}"
+            )
+            status_doc = LoanStatus.from_json(response.content)
+            log.info(f"status_doc: {status_doc}")
+        except Exception as e:
+            log.exception(
+                f"Error validating Loan Status Document. '{url}' returned and invalid document. {e}"
+            )
+            raise RemoteIntegrationException(
+                url, "Loan Status Document not valid."
+            ) from e
+        except BadResponseException as e:
+            response = e.response
+            error_message = f"Error requesting Loan Status Document. '{url}' returned status code {response.status_code}."
+            if isinstance(e, OpdsWithOdlException):
+                # It this problem type is explicitly ignored, we just raise the exception instead of proceeding with
+                # logging the information about it. The caller will handle the exception.
+                if ignored_problem_types and e.type in ignored_problem_types:
+                    log.debug(f"ignored: {e.type}")
+                    raise
+                error_message += f" Problem Detail: '{e.type}' - {e.title}"
+                if e.detail:
+                    log.debug(f"e detail: {e.detail}")
+                    error_message += f" - {e.detail}"
+            else:
+                header_string = ", ".join(
+                    {f"{k}: {v}" for k, v in response.headers.items()}
+                )
+                response_string = (
+                    response.text
+                    if len(response.text) < 100
+                    else response.text[:100] + "..."
+                )
+                error_message += f" Response headers: {header_string}. Response content: {response_string}."
+            log.exception(error_message)
+            raise
+        return status_doc
+
     def checkin(self, patron: Patron, pin: str, licensepool: LicensePool) -> None:
         """Return a loan early."""
         _db = Session.object_session(patron)
@@ -461,7 +528,7 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
     def _checkout(
         self, patron: Patron, licensepool: LicensePool, hold: Hold | None = None
     ) -> Loan:
-        _db = Session.object_session(patron)
+        db = Session.object_session(patron)
 
         if not any(l for l in licensepool.licenses if not l.is_inactive):
             raise NoLicenses()
@@ -470,7 +537,7 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
         self.update_licensepool(licensepool)
 
         if hold:
-            self._update_hold_data(hold)
+            self._update_hold_data(hold)  # tätä ei ollenkaan
 
         # If there's a holds queue, the patron must have a non-expired hold
         # with position 0 to check out the book.
@@ -481,74 +548,150 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
         ) and licensepool.licenses_available < 1:
             raise NoAvailableCopies()
 
+        if self.collection is None:
+            raise ValueError(f"Collection not found: {self.collection_id}")
+        default_loan_period = self.collection.default_loan_period(patron.library)
+        requested_expiry = utc_now() + datetime.timedelta(days=default_loan_period)
+        patron_id = patron.identifier_to_remote_service(licensepool.data_source)
+        library_short_name = patron.library.short_name  # mitä hittooo
+        print("shortname: ", library_short_name)
+        hasher = self._get_hasher()
+        unhashed_pass: LCPUnhashedPassphrase = (
+            self._credential_factory.get_patron_passphrase(db, patron)
+        )
+        hashed_pass: LCPHashedPassphrase = unhashed_pass.hash(hasher)
+        self._credential_factory.set_hashed_passphrase(db, patron, hashed_pass)
+        encoded_pass = base64.b64encode(binascii.unhexlify(hashed_pass.hashed))
+
         # Create a local loan so its database id can be used to
         # receive notifications from the distributor.
-        license = licensepool.best_available_license()
-        if not license:
+        licenses = licensepool.best_available_licenses()
+
+        # loan, ignore = None, None  # Tälle pitää tehä jotai
+
+        license_: License | None = None
+        loan_status: LoanStatus | None = None
+        for license_ in licenses:
+            try:
+                log.info(f"Trying license: {license_.identifier}")
+                loan_status = self._checkout_license(
+                    license_,
+                    library_short_name,
+                    patron_id,
+                    requested_expiry.isoformat(),
+                    encoded_pass,
+                )
+                break
+            except NoAvailableCopies:
+                # This license had no available copies, so we try the next one.
+                ...
+
+        if license_ is None or loan_status is None:
+            # It could be that we have a hold which means we thought the book was available, but it wasn't. We raise a NoAvailableCopies() and have the handler handle the patron's hold
+            # position.
+            log.debug("NONE appeared")
+            licensepool.update_availability_from_licenses()
             raise NoAvailableCopies()
-        loan, ignore = license.loan_to(patron)
+
+        if not loan_status.active:
+            # Something went wrong with this loan, and we don't actually
+            # have the book checked out. This should never happen.
+            log.debug("Loan status was {loan.status}")
+            raise CannotLoan()
+
+        # We save the link to the loan status document in the loan's external_identifier field, so
+        # we are able to retrieve it later.
+        loan_status_document_link: BaseLink | None = loan_status.links.get(
+            rel="self", type=LoanStatus.content_type()
+        )
+        log.debug(f"status link: {loan_status_document_link}")
+        # The ODL spec requires that a 'self' link be present in the links section of the response.
+        # See: https://drafts.opds.io/odl-1.0.html#54-interacting-with-a-checkout-link
+        # However, the open source LCP license status server does not provide this link, so we make
+        # an extra request to try to get the information we need from the 'status' link in the license
+        # document, which the LCP server does provide.
+        # TODO: Raise this issue with LCP server maintainers, and try to get a fix in place.
+        #   once that is done, we should be able to remove this fallback.
+        if not loan_status_document_link:
+            log.debug("no link")
+            license_document_link = loan_status.links.get(
+                rel="license", type=LicenseDocument.content_type()
+            )
+            if license_document_link:
+                log.debug("is link")
+                response = self._get(
+                    license_document_link.href, allowed_response_codes=["2xx"]
+                )
+                loan_status_document_link = license_doc.links.get(
+                    rel="status", type=LoanStatus.content_type()
+                )
+
+        if not loan_status_document_link:
+            log.debug("No loan status link")
+            raise CannotLoan()
+
+        loan, ignore = licensepool.loan_to(patron)
+
+        log.info(f"license: {license_.identifier} {license_.checkouts_left}")
+        # We also need to update the remaining checkouts for the license.
+        license_.checkout()
+        log.info(f"license: {license_.identifier} {license_.checkouts_left} after loan")
+
+        # If there was a hold CirculationAPI will take care of deleting it. So we just need to
+        # update the license pool to reflect the loan. Since update_availability_from_licenses
+        # takes into account holds, we need to tell it to ignore the hold about to be deleted.
+        licensepool.update_availability_from_licenses()
+        return loan
+
+    def _checkout_license(
+        self,
+        license_: License,
+        library_short_name: str | None,
+        patron_id: str,
+        expiry: str,
+        encoded_pass: str,
+    ) -> LoanStatus:
+        identifier = str(license_.identifier)
+        checkout_id = str(uuid.uuid4())
+        notification_url = self._notification_url(
+            library_short_name,
+            patron_id,
+            identifier,
+        )
+
+        # We should never be able to get here if the license doesn't have a checkout_url, but
+        # we assert it anyway, to be sure we fail fast if it happens.
+        assert license_.checkout_url is not None
+        url_template = URITemplate(license_.checkout_url)
+        checkout_url = url_template.expand(
+            id=identifier,
+            checkout_id=checkout_id,
+            patron_id=patron_id,
+            expires=expiry,
+            notification_url=notification_url,
+            passphrase=encoded_pass,
+            hint=self.settings.passphrase_hint,
+            hint_url=self.settings.passphrase_hint_url,
+        )
 
         try:
-            doc = self.get_license_status_document(loan)
-        except BadResponseException as e:
-            _db.delete(loan)
-            response = e.response
-            # DeMarque sends "application/api-problem+json", but the ODL spec says we should
-            # expect "application/problem+json", so we need to check for both.
-            if response.headers.get("Content-Type") in [
-                "application/api-problem+json",
-                "application/problem+json",
-            ]:
-                try:
-                    json_response = response.json()
-                except ValueError:
-                    json_response = {}
-
-                if (
-                    json_response.get("type")
-                    == "http://opds-spec.org/odl/error/checkout/unavailable"
-                ):
-                    raise NoAvailableCopies()
+            loan_status = self._request_loan_status(
+                checkout_url,
+                ignored_problem_types=[
+                    "http://opds-spec.org/odl/error/checkout/unavailable"
+                ],
+            )
+            log.debug(f"Loan status: {loan_status}")
+            return loan_status
+        except OpdsWithOdlException as e:
+            log.debug("Here?")
+            if e.type == "http://opds-spec.org/odl/error/checkout/unavailable":
+                # TODO: This would be a good place to do an async availability update, since we know
+                #   the book is unavailable, when we thought it was available. For now, we know that
+                #   the license has no checkouts_available, so we do that update.
+                license_.checkouts_available = 0
+                raise NoAvailableCopies() from e
             raise
-
-        status = doc.get("status")
-
-        if status not in [self.READY_STATUS, self.ACTIVE_STATUS]:
-            # Something went wrong with this loan and we don't actually
-            # have the book checked out. This should never happen.
-            # Remove the loan we created.
-            _db.delete(loan)
-            raise CannotLoan()
-
-        links = doc.get("links", [])
-        external_identifier = None
-        for link in links:
-            if link.get("rel") == "self":
-                external_identifier = link.get("href")
-                break
-        if not external_identifier:
-            _db.delete(loan)
-            raise CannotLoan()
-
-        start = utc_now()
-        expires = doc.get("potential_rights", {}).get("end")
-        if expires:
-            expires = dateutil.parser.parse(expires)
-
-        # We need to set the start and end dates on our local loan since
-        # the code that calls this only sets them when a new loan is created.
-        loan.start = start
-        loan.end = expires
-        loan.external_identifier = external_identifier
-
-        # We also need to update the remaining checkouts for the license.
-        loan.license.checkout()
-
-        # We have successfully borrowed this book.
-        if hold:
-            _db.delete(hold)
-        self.update_licensepool(licensepool)
-        return loan
 
     def fulfill(
         self,

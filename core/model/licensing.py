@@ -5,6 +5,7 @@ from __future__ import annotations
 import datetime
 import logging
 from enum import Enum as PythonEnum
+from enum import IntEnum, auto
 from typing import TYPE_CHECKING, Literal, overload
 
 from sqlalchemy import Boolean, Column, DateTime
@@ -1085,7 +1086,43 @@ class LicensePool(Base):
             hold.external_identifier = external_identifier
         return hold, new
 
-    def best_available_license(self) -> License | None:
+    class _LicensePriority(IntEnum):
+        TIME_LIMITED = auto()
+        PERPETUAL = auto()
+        TIME_AND_LOAN_LIMITED = auto()
+        LOAN_LIMITED = auto()
+
+    @staticmethod
+    def _time_limited_sort_key(license_: License) -> int:
+        if license_.expires is None:
+            return 0
+        return int(license_.expires.timestamp())
+
+    @staticmethod
+    def _loan_limited_sort_key(license_: License) -> int:
+        return (license_.checkouts_left or 0) * -1
+
+    @classmethod
+    def _license_sort_func(cls, license_: License) -> tuple[_LicensePriority, int, int]:
+        time_limited_key = cls._time_limited_sort_key(license_)
+        loan_limited_key = cls._loan_limited_sort_key(license_)
+
+        if license_.is_time_limited and license_.is_loan_limited:
+            return (
+                cls._LicensePriority.TIME_AND_LOAN_LIMITED,
+                time_limited_key,
+                loan_limited_key,
+            )
+
+        if license_.is_time_limited:
+            return cls._LicensePriority.TIME_LIMITED, time_limited_key, loan_limited_key
+
+        if license_.is_loan_limited:
+            return cls._LicensePriority.LOAN_LIMITED, time_limited_key, loan_limited_key
+
+        return cls._LicensePriority.PERPETUAL, time_limited_key, loan_limited_key
+
+    def best_available_licenses(self) -> list[License]:
         """Determine the next license that should be lent out for this pool.
 
         Time-limited licenses and perpetual licenses are the best. It doesn't matter which
@@ -1102,27 +1139,10 @@ class LicensePool(Base):
         The worst option would be pay-per-use, but we don't yet support any distributors that
         offer that model.
         """
-        best: License | None = None
-
-        for license in (l for l in self.licenses if l.is_available_for_borrowing):
-            if (
-                not best
-                or (license.is_time_limited and not best.is_time_limited)
-                or (
-                    license.is_time_limited
-                    and best.is_time_limited
-                    and license.expires < best.expires  # type: ignore[operator]
-                )
-                or (license.is_perpetual and not best.is_time_limited)
-                or (
-                    license.is_loan_limited
-                    and best.is_loan_limited
-                    and license.checkouts_left > best.checkouts_left  # type: ignore[operator]
-                )
-            ):
-                best = license
-
-        return best
+        return sorted(
+            (l for l in self.licenses if l.is_available_for_borrowing),
+            key=self._license_sort_func,
+        )
 
     @classmethod
     def consolidate_works(cls, _db, batch_size=10):
