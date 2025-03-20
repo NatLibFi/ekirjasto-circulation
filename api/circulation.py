@@ -1034,7 +1034,7 @@ class CirculationAPI:
             loan_info = api.checkout(
                 patron, pin, licensepool, delivery_mechanism=delivery_mechanism
             )
-
+            print("circ: ", loan_info)
             if isinstance(loan_info, HoldInfo):
                 # If the API couldn't give us a loan, it may have given us
                 # a hold instead of raising an exception.
@@ -1076,6 +1076,7 @@ class CirculationAPI:
                 None,
             )
         except NoAvailableCopies:
+            print("circ: no available copies")
             if existing_loan:
                 # The patron tried to renew a loan but there are
                 # people waiting in line for them to return the book,
@@ -1112,6 +1113,7 @@ class CirculationAPI:
             # Since the patron incorrectly believed there were
             # licenses available, update availability information
             # immediately.
+            print("circ: no licenses")
             api.update_availability(licensepool)
             raise
         except PatronLoanLimitReached as e:

@@ -551,10 +551,11 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
         if self.collection is None:
             raise ValueError(f"Collection not found: {self.collection_id}")
         default_loan_period = self.collection.default_loan_period(patron.library)
+        log.info(f"Collection: {self.collection}, Loan period: {default_loan_period}")
         requested_expiry = utc_now() + datetime.timedelta(days=default_loan_period)
+        log.info(f"Requested expiry: {requested_expiry}")
         patron_id = patron.identifier_to_remote_service(licensepool.data_source)
-        library_short_name = patron.library.short_name  # mitä hittooo
-        print("shortname: ", library_short_name)
+        library_short_name = patron.library.short_name
         hasher = self._get_hasher()
         unhashed_pass: LCPUnhashedPassphrase = (
             self._credential_factory.get_patron_passphrase(db, patron)
@@ -566,8 +567,6 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
         # Create a local loan so its database id can be used to
         # receive notifications from the distributor.
         licenses = licensepool.best_available_licenses()
-
-        # loan, ignore = None, None  # Tälle pitää tehä jotai
 
         license_: License | None = None
         loan_status: LoanStatus | None = None
@@ -589,22 +588,23 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
         if license_ is None or loan_status is None:
             # It could be that we have a hold which means we thought the book was available, but it wasn't. We raise a NoAvailableCopies() and have the handler handle the patron's hold
             # position.
-            log.debug("NONE appeared")
+            log.info("NONE appeared")
             licensepool.update_availability_from_licenses()
             raise NoAvailableCopies()
 
         if not loan_status.active:
             # Something went wrong with this loan, and we don't actually
             # have the book checked out. This should never happen.
-            log.debug("Loan status was {loan.status}")
+            print("loan status: ", loan_status.status)
+            # raise CannotLoan()
             raise CannotLoan()
 
         # We save the link to the loan status document in the loan's external_identifier field, so
         # we are able to retrieve it later.
-        loan_status_document_link: BaseLink | None = loan_status.links.get(
-            rel="self", type=LoanStatus.content_type()
+        loan_status_document_link: Link | None = loan_status.links.get(
+            rel="self", mime_type=LoanStatus.content_type()
         )
-        log.debug(f"status link: {loan_status_document_link}")
+        log.info(f"status link: {loan_status_document_link}")
         # The ODL spec requires that a 'self' link be present in the links section of the response.
         # See: https://drafts.opds.io/odl-1.0.html#54-interacting-with-a-checkout-link
         # However, the open source LCP license status server does not provide this link, so we make
@@ -613,29 +613,29 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
         # TODO: Raise this issue with LCP server maintainers, and try to get a fix in place.
         #   once that is done, we should be able to remove this fallback.
         if not loan_status_document_link:
-            log.debug("no link")
+            log.info("no link")
             license_document_link = loan_status.links.get(
-                rel="license", type=LicenseDocument.content_type()
+                rel="license", mime_type=LicenseDocument.content_type()
             )
             if license_document_link:
-                log.debug("is link")
+                log.info("is link")
                 response = self._get(
                     license_document_link.href, allowed_response_codes=["2xx"]
                 )
                 loan_status_document_link = license_doc.links.get(
-                    rel="status", type=LoanStatus.content_type()
+                    rel="status", mime_type=LoanStatus.content_type()
                 )
 
         if not loan_status_document_link:
-            log.debug("No loan status link")
+            log.info("No loan status link")
             raise CannotLoan()
 
         loan, ignore = licensepool.loan_to(patron)
 
-        log.info(f"license: {license_.identifier} {license_.checkouts_left}")
+        log.info(f"License {license_.identifier}: checkouts left before loan: {license_.checkouts_left}")
         # We also need to update the remaining checkouts for the license.
         license_.checkout()
-        log.info(f"license: {license_.identifier} {license_.checkouts_left} after loan")
+        log.info(f"License {license_.identifier}: checkouts left after loan: {license_.checkouts_left}")
 
         # If there was a hold CirculationAPI will take care of deleting it. So we just need to
         # update the license pool to reflect the loan. Since update_availability_from_licenses
