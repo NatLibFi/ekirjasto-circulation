@@ -8,42 +8,48 @@ from functools import cached_property
 
 log = logging.getLogger("License status doc")
 
-# TODO: Remove this when we drop support for Python 3.10
-if sys.version_info >= (3, 11):
-    from enum import StrEnum
-else:
 
-    class StrEnum(str, Enum):
-        pass
-
-
-@dataclass
-class BaseLink:
-    href: str
-    rel: str
-
-
-@dataclass
-class Link(BaseLink):
+class Link:
     """
     https://readium.org/lcp-specs/releases/lsd/latest#25-links
     """
 
-    title: str | None = None
-    profile: str | None = None
+    def __init__(
+        self,
+        href: str = None,
+        rel: str = None,
+        title: str = None,
+        mime_type: str = None,  # Handling 'type' explicitly
+        templated: str = None,
+        profile: str = None
+    ):
+        self.href = href
+        self.rel = rel
+        self.title = title
+        self.mime_type = mime_type
+        self.templated = templated
+        self.profile = profile
 
+    @classmethod
+    def from_dict(cls, data: dict):
+        # Handle 'type' mapping to 'content_type'
+        if 'type' in data:
+            data['mime_type'] = data.pop('type')
+        return cls(**data)
 
-class Status(StrEnum):
+    def __repr__(self):
+        return f"<Link(rel={self.rel}, href={self.href}, content_type={self.mime_type})>"
+class Status:
     """
     https://readium.org/lcp-specs/releases/lsd/latest.html#23-status-of-a-license
     """
 
-    READY = auto()
-    ACTIVE = auto()
-    REVOKED = auto()
-    RETURNED = auto()
-    CANCELLED = auto()
-    EXPIRED = auto()
+    READY = "ready"
+    ACTIVE = "active"
+    REVOKED = "revoked"
+    RETURNED = "returned"
+    CANCELLED = "cancelled"
+    EXPIRED = "expired"
 
 
 @dataclass
@@ -65,16 +71,16 @@ class PotentialRights:
     end: datetime | None = None
 
 
-class EventType(StrEnum):
+class EventType:
     """
     https://readium.org/lcp-specs/releases/lsd/latest#27-events
     """
 
-    REGISTER = auto()
-    RENEW = auto()
-    RETURN = auto()
-    REVOKE = auto()
-    CANCEL = auto()
+    REGISTER = "register"
+    RENEW = "renew"
+    RETURN = "renew"
+    REVOKE = "revoke"
+    CANCEL = "cancel"
 
 
 @dataclass
@@ -83,7 +89,7 @@ class Event:
     https://readium.org/lcp-specs/releases/lsd/latest#27-events
     """
 
-    type: EventType
+    event_type: EventType
     name: str
     timestamp: datetime
     id: str | None = None
@@ -91,7 +97,7 @@ class Event:
 
 
 @dataclass
-class CompactCollection:
+class LinkCollection:
     """
     Represents a collection of links.
     """
@@ -104,9 +110,12 @@ class CompactCollection:
     def append(self, item: Link):
         self.items.append(item)
 
-    def __len__(self):
-        return len(self.items)
-
+    def get(self, *, rel: str, mime_type: str) -> Link | None:
+        """Get the first link that matches the given rel and type."""
+        return next(
+            (link for link in self.items if link.rel == rel and link.mime_type == mime_type),
+            None
+        )
 
 @dataclass
 class LoanStatus:
@@ -130,29 +139,38 @@ class LoanStatus:
     status: Status
     # message: str
     # updated: Updated
-    links: CompactCollection
+    links: LinkCollection
     potential_rights: PotentialRights = field(default_factory=PotentialRights)
     events: list[Event] = field(default_factory=list)
+
+    def __post_init__(self):
+        # Ensure that links is a LinkCollection, even if a list is provided
+        # self.links = LinkCollection(
+        #     items=[Link(**{**link, 'mime_type': link.get('type', None)}) if isinstance(link, dict) else link for link in self.links]
+        # )
+        self.links = LinkCollection(
+            items=[
+                Link.from_dict(link) if isinstance(link, dict) else link
+                for link in self.links
+            ]
+        )
 
     @staticmethod
     def content_type() -> str:
         return "application/vnd.readium.license.status.v1.0+json"
 
-    @cached_property
+    @property
     def active(self) -> bool:
         return self.status in [Status.READY, Status.ACTIVE]
 
     @classmethod
     def from_json(cls, data: bytes):
-        try:
-            decoded_data = data.decode("utf-8")
-            log.info(f"Decoded data: {decoded_data}")
-            parsed_data = json.loads(decoded_data)
-            log.info(f"Parsed JSON data: {parsed_data}")
-            return cls(**parsed_data)
-        except (UnicodeDecodeError, json.JSONDecodeError) as e:
-            log.exception(f"Failed to decode or parse JSON: {e}")
-            raise ValueError("Invalid JSON format") from e
-        except TypeError as e:
-            log.exception(f"Failed to create {cls.__name__} from parsed data: {e}")
-            raise ValueError(f"Invalid LoanStatus structure: {e}") from e
+        data_dict = json.loads(data.decode("utf-8"))
+        
+        # If 'type' exists, replace it with 'content_type'
+        if isinstance(data_dict.get('links'), list):
+            for link in data_dict['links']:
+                if 'type' in link:
+                    link['mime_type'] = link.pop('type')
+                    
+        return cls(**data_dict)
