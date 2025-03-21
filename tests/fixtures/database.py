@@ -652,8 +652,6 @@ class DatabaseTransactionFixture:
         checkouts_available=None,
         status=LicenseStatus.available,
         terms_concurrency=None,
-        is_missing=False,
-        last_checked=None,
     ) -> License:
         identifier = identifier or self.fresh_str()
         checkout_url = checkout_url or self.fresh_str()

@@ -553,9 +553,6 @@ class LicenseData(LicenseFunctions):
         for key, value in vars(self).items():
             if key != "content_types":
                 setattr(license_obj, key, value)
-        # Update the license details
-        license_obj.is_missing = False
-        license_obj.last_checked = utc_now()
         return license_obj
 
 
@@ -1035,27 +1032,13 @@ class CirculationData:
                 new_licenses = [
                     license.add_to_pool(_db, pool) for license in self.licenses
                 ]
-                # Exaggerate import duration a bit
-                import_duration = utc_now() - datetime.timedelta(hours=2)
-                for old_license in old_licenses:
-                    if old_license not in new_licenses:
-                        # A work can appear several times in the feed with a different license each time. If a license
-                        # is seen at any time, it's details are kept as they were at that time.
-                        if (
-                            old_license.is_missing == False
-                            and old_license.last_checked
-                            and old_license.last_checked >= import_duration
-                        ):
-                            pass
-                        # In case a license is removed from the feed we need to set it to be unavailable so that
-                        # it's not used for loans or statistics.
-                        else:
-                            old_license.is_missing = True
-                            old_license.last_checked = utc_now()
-                            old_license.status = LicenseStatus.unavailable
-                            self.log.warning(
-                                f"License {old_license.identifier} is missing from feed so set to be unavailable!"
-                            )
+                for license in old_licenses:
+                    if license not in new_licenses:
+                        # In case a license is removed from the feed we need to set it to be unavailable so that it's not used for loans or statistics.
+                        license.status = LicenseStatus.unavailable
+                        self.log.warning(
+                            f"License {license.identifier} has been removed from feed and set to be unavailable"
+                        )
                 changed_availability = pool.update_availability_from_licenses(
                     as_of=self.last_checked,
                 )
