@@ -145,10 +145,6 @@ class License(Base, LicenseFunctions):
     # License info document terms.concurrency field
     terms_concurrency = Column(Integer)
 
-    # For tracking missing licenses in import
-    last_checked = Column(DateTime(timezone=True), default=None)
-    is_missing = Column(Boolean, default=False, nullable=False)
-
     # A License belongs to one LicensePool.
     license_pool_id = Column(Integer, ForeignKey("licensepools.id"), index=True)
     license_pool: Mapped[LicensePool] = relationship(
