@@ -2,6 +2,7 @@ import datetime
 from copy import deepcopy
 
 import pytest
+from freezegun import freeze_time
 
 from core.metadata_layer import (
     CirculationData,
@@ -298,28 +299,84 @@ class TestCirculationData:
         assert new_license.id == old_license.id
         assert old_license.status == LicenseStatus.unavailable
 
-    def test_apply_updates_existing_license_when_removed_from_feed(
+    @freeze_time("2025-03-13T07:00:00+00:00")
+    def test_apply_updates_multiple_licenses_with_partial_imports(
         self, db: DatabaseTransactionFixture, caplog
     ):
+        """This test covers:
+        - Licenses that used to be in the pool have disappeared from the feed in which case they should be made
+        unavailable
+        - The same work can appear several times in the feed and have a different license each time.
+        Make sure that all existing licenses are not incorrectly set as unavailable - unless they have really
+        expired."""
         edition, pool = db.edition(with_license_pool=True)
 
-        # Start with one license for this pool.
-        existing_license = db.license(
+        hour_ago = utc_now() - datetime.timedelta(hours=1)
+
+        # Our licensepool in the database has four licenses:
+        # Valid license A
+        license_a = db.license(
             pool,
+            identifier="A",
             expires=None,
             checkouts_left=2,
             checkouts_available=3,
             status=LicenseStatus.available,
+            is_missing=None,
+            last_checked=None,
+        )
+        # Valid license B
+        license_b = db.license(
+            pool,
+            identifier="B",
+            expires=None,
+            checkouts_left=1,
+            checkouts_available=2,
+            status=LicenseStatus.available,
+            is_missing=None,
+            last_checked=None,
+        )
+        # Valid license C
+        missing_license = db.license(
+            pool,
+            identifier="C",
+            expires=None,
+            checkouts_left=5,
+            checkouts_available=5,
+            status=LicenseStatus.available,
+            is_missing=None,
+            last_checked=None,
+        )
+        # And license D that shows no more checkouts and an already unavailable status.
+        expired_license = db.license(
+            pool,
+            identifier="D",
+            expires=None,
+            checkouts_left=0,
+            checkouts_available=0,
+            status=LicenseStatus.unavailable,
+            is_missing=None,
+            last_checked=None,
         )
 
-        assert isinstance(existing_license.identifier, str)
-        assert existing_license.checkouts_left == 2
-        assert existing_license.checkouts_available == 3
-        assert existing_license.status == LicenseStatus.available
-
-        # The feed does not include the license
+        # First time we see this work (and pool) during import: Only license A and D appear.
         circulation_data = CirculationData(
-            licenses=[],  # No licenses in the updated feed
+            licenses=[
+                LicenseData(
+                    identifier="A",
+                    status=LicenseStatus.available,
+                    checkouts_available=3,
+                    checkout_url="whatever",
+                    status_url="whatever",
+                ),
+                LicenseData(
+                    identifier="D",
+                    status=LicenseStatus.unavailable,
+                    checkouts_available=0,
+                    checkout_url="whatever",
+                    status_url="whatever",
+                ),
+            ],
             data_source=edition.data_source,
             primary_identifier=edition.primary_identifier,
         )
@@ -327,21 +384,145 @@ class TestCirculationData:
             circulation_data.apply(db.session, pool.collection)
             db.session.commit()
 
-        updated_license = pool.licenses[0]
-        assert updated_license.id == existing_license.id
+        # License A is available
+        assert license_a.status == LicenseStatus.available
+        assert license_a.is_missing is False
+        assert license_a.last_checked is not None and license_a.last_checked >= hour_ago
+        # License B and missing_license are missing (plus they haven't been checked before)
+        assert license_b.status == LicenseStatus.unavailable
+        assert license_b.is_missing is True
+        assert license_b.last_checked is not None and license_b.last_checked >= hour_ago
         assert (
-            updated_license.status == LicenseStatus.unavailable
-        )  # Status should have changed
-        assert (
-            updated_license.checkouts_left == 2
-        )  # Checkouts left should remain unchanged.
-        assert (
-            updated_license.checkouts_available == 3
-        )  # Checkouts available should remain unchanged.
-        assert (
-            f"License {existing_license.identifier} has been removed from feed"
+            f"License {license_b.identifier} is missing from feed so set to be unavailable!"
             in caplog.text
         )
+        assert missing_license.status == LicenseStatus.unavailable
+        assert (
+            missing_license.last_checked is not None
+            and missing_license.last_checked >= hour_ago
+        )
+        assert missing_license.is_missing is True
+        assert (
+            f"License {missing_license.identifier} is missing from feed so set to be unavailable!"
+            in caplog.text
+        )
+        # License D is in the feed but has run out of checkouts and it's status remains unavailable
+        assert expired_license.status == LicenseStatus.unavailable
+        assert expired_license.is_missing is False
+        assert (
+            expired_license.last_checked is not None
+            and expired_license.last_checked >= hour_ago
+        )
+
+        # Second time we see this work (and pool) during the same import: Only license B is in the feed
+        circulation_data = CirculationData(
+            licenses=[
+                LicenseData(
+                    identifier="B",
+                    status=LicenseStatus.available,
+                    checkouts_available=2,
+                    checkout_url="whatever",
+                    status_url="whatever",
+                )
+            ],
+            data_source=edition.data_source,
+            primary_identifier=edition.primary_identifier,
+        )
+
+        with caplog.at_level("WARNING"):
+            circulation_data.apply(db.session, pool.collection)
+            db.session.commit()
+
+        # License A should remain available
+        assert license_a.status == LicenseStatus.available
+        assert license_a.is_missing is False
+        assert license_a.last_checked is not None and license_a.last_checked >= hour_ago
+        # License B should now be available and not missing
+        assert license_b.status == LicenseStatus.available
+        assert license_b.is_missing is False  # type: ignore
+        assert license_b.last_checked is not None and license_b.last_checked >= hour_ago
+        # License C is still missing and unavailable
+        assert missing_license.status == LicenseStatus.unavailable
+        assert missing_license.is_missing is True
+        assert (
+            missing_license.last_checked is not None
+            and missing_license.last_checked >= hour_ago
+        )
+        assert (
+            f"License {missing_license.identifier} is missing from feed so set to be unavailable!"
+            in caplog.text
+        )
+        # The expired license is also missing this time - it remains unavailable but since we saw it
+        # when importing the work the first time, it remains not missing.
+        assert expired_license.status == LicenseStatus.unavailable
+        assert expired_license.is_missing is False
+        assert (
+            expired_license.last_checked is not None
+            and expired_license.last_checked >= hour_ago
+        )
+
+        # Next day during import we see the title with only license A and the expired license D - again.
+        with freeze_time("2025-03-14T07:00:00+00:00"):
+            circulation_data = CirculationData(
+                licenses=[
+                    LicenseData(
+                        identifier="A",
+                        status=LicenseStatus.available,
+                        checkouts_available=3,
+                        checkout_url="whatever",
+                        status_url="whatever",
+                    ),
+                    LicenseData(
+                        identifier="D",
+                        status=LicenseStatus.unavailable,
+                        checkouts_available=0,
+                        checkout_url="whatever",
+                        status_url="whatever",
+                    ),
+                ],
+                data_source=edition.data_source,
+                primary_identifier=edition.primary_identifier,
+            )
+            circulation_data.apply(db.session, pool.collection)
+            db.session.commit()
+
+            next_day = hour_ago + datetime.timedelta(days=1)
+
+            # License A is available
+            assert license_a.status == LicenseStatus.available
+            assert license_a.is_missing is False
+            assert (
+                license_a.last_checked is not None
+                and license_a.last_checked >= next_day
+            )
+            # License B and missing_license are missing again
+            assert license_b.status == LicenseStatus.unavailable
+            assert license_b.is_missing is True
+            assert (
+                license_b.last_checked is not None
+                and license_b.last_checked >= next_day
+            )
+            assert (
+                f"License {license_b.identifier} is missing from feed so set to be unavailable!"
+                in caplog.text
+            )
+            assert missing_license.status == LicenseStatus.unavailable
+            assert (
+                missing_license.last_checked is not None
+                and missing_license.last_checked >= next_day
+            )
+            assert missing_license.is_missing is True
+            assert (
+                f"License {missing_license.identifier} is missing from feed so set to be unavailable!"
+                in caplog.text
+            )
+            # The expired license is still unavailable
+            assert expired_license.status == LicenseStatus.unavailable
+            assert expired_license.is_missing is False
+            assert (
+                expired_license.last_checked is not None
+                and expired_license.last_checked >= next_day
+            )
 
     def test_apply_with_licenses_overrides_availability(
         self, db: DatabaseTransactionFixture
