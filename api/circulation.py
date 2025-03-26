@@ -111,7 +111,10 @@ class CirculationInfo:
         if not d:
             return None
         else:
-            return datetime.datetime.strftime(d, "%Y/%m/%d %H:%M:%S")
+            print(d, "before")
+            date = datetime.datetime.strftime(d, "%Y/%m/%d %H:%M:%S")
+            print(date, "date after")
+            return date
 
 
 class DeliveryMechanismInfo(CirculationInfo):
@@ -1135,9 +1138,11 @@ class CirculationAPI:
                 end=loan_info.end_date,
                 external_identifier=loan_info.external_identifier,
             )
+            print("circ loan: ", loan)
 
             if must_set_delivery_mechanism:
                 loan.fulfillment = delivery_mechanism
+                print("loan fulfill: ", loan.fulfillment)
             existing_hold = get_one(
                 self._db,
                 Hold,
@@ -1376,6 +1381,7 @@ class CirculationAPI:
             license_pool=licensepool,
             on_multiple="interchangeable",
         )
+        print("circ fulfill: ", loan)
         api = self.api_for_license_pool(licensepool)
         if not api:
             raise CannotFulfill()
@@ -1388,6 +1394,7 @@ class CirculationAPI:
                 # TODO: Pass in only the single collection or LicensePool
                 # that needs to be synced.
                 self.sync_bookshelf(patron, pin, force=True)
+                print("ei lainaa eikä voi fulfill ilman")
                 return self.fulfill(
                     patron,
                     pin,
@@ -1416,7 +1423,9 @@ class CirculationAPI:
             licensepool,
             delivery_mechanism=delivery_mechanism,
         )
+        print("circ fulfill: ", fulfillment)
         if not fulfillment or not (fulfillment.content_link or fulfillment.content):
+            print("ei linkkiä")
             raise NoAcceptableFormat()
 
         # Send out an analytics event to record the fact that

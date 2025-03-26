@@ -4,42 +4,25 @@ import sys
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum, auto
-from functools import cached_property
+from dateutil import parser
 
 log = logging.getLogger("License status doc")
 
 
+@dataclass
 class Link:
     """
     https://readium.org/lcp-specs/releases/lsd/latest#25-links
     """
 
-    def __init__(
-        self,
-        href: str = None,
-        rel: str = None,
-        title: str = None,
-        mime_type: str = None,  # Handling 'type' explicitly
-        templated: str = None,
-        profile: str = None
-    ):
-        self.href = href
-        self.rel = rel
-        self.title = title
-        self.mime_type = mime_type
-        self.templated = templated
-        self.profile = profile
+    href: str | None = None
+    rel: str | None = None
+    title: str | None = None
+    content_type: str | None = None
+    templated: str | None = None
+    profile: str | None = None
 
-    @classmethod
-    def from_dict(cls, data: dict):
-        # Handle 'type' mapping to 'content_type'
-        if 'type' in data:
-            data['mime_type'] = data.pop('type')
-        return cls(**data)
-
-    def __repr__(self):
-        return f"<Link(rel={self.rel}, href={self.href}, content_type={self.mime_type})>"
-class Status:
+class Status(Enum):
     """
     https://readium.org/lcp-specs/releases/lsd/latest.html#23-status-of-a-license
     """
@@ -70,15 +53,22 @@ class PotentialRights:
 
     end: datetime | None = None
 
+    def __post_init__(self):
+        if isinstance(self.end, str):
+            try:
+                self.end = parser.isoparse(self.end)
+            except ValueError:
+                self.end = None
 
-class EventType:
+
+class EventType(Enum):
     """
     https://readium.org/lcp-specs/releases/lsd/latest#27-events
     """
 
     REGISTER = "register"
     RENEW = "renew"
-    RETURN = "renew"
+    RETURN = "return"
     REVOKE = "revoke"
     CANCEL = "cancel"
 
@@ -95,6 +85,14 @@ class Event:
     id: str | None = None
     device: str | None = None
 
+    def __post_init__(self):
+        if isinstance(self.timestamp, str):
+            try:
+                self.timestamp = parser.isoparse(self.timestamp)
+            except ValueError:
+                self.timestamp = None
+
+
 
 @dataclass
 class LinkCollection:
@@ -110,10 +108,10 @@ class LinkCollection:
     def append(self, item: Link):
         self.items.append(item)
 
-    def get(self, *, rel: str, mime_type: str) -> Link | None:
+    def get(self, *, rel: str, content_type: str) -> Link | None:
         """Get the first link that matches the given rel and type."""
         return next(
-            (link for link in self.items if link.rel == rel and link.mime_type == mime_type),
+            (link for link in self.items if link.rel == rel and link.content_type == content_type),
             None
         )
 
@@ -144,17 +142,10 @@ class LoanStatus:
     events: list[Event] = field(default_factory=list)
 
     def __post_init__(self):
-        # Ensure that links is a LinkCollection, even if a list is provided
-        # self.links = LinkCollection(
-        #     items=[Link(**{**link, 'mime_type': link.get('type', None)}) if isinstance(link, dict) else link for link in self.links]
-        # )
         self.links = LinkCollection(
-            items=[
-                Link.from_dict(link) if isinstance(link, dict) else link
-                for link in self.links
-            ]
+            items=[Link(**link) if isinstance(link, dict) else link for link in self.links]
         )
-
+        
     @staticmethod
     def content_type() -> str:
         return "application/vnd.readium.license.status.v1.0+json"
@@ -164,13 +155,45 @@ class LoanStatus:
         return self.status in [Status.READY, Status.ACTIVE]
 
     @classmethod
-    def from_json(cls, data: bytes):
-        data_dict = json.loads(data.decode("utf-8"))
-        
-        # If 'type' exists, replace it with 'content_type'
-        if isinstance(data_dict.get('links'), list):
-            for link in data_dict['links']:
-                if 'type' in link:
-                    link['mime_type'] = link.pop('type')
-                    
-        return cls(**data_dict)
+    def from_json(cls, data: str):
+        parsed_data = json.loads(data)
+
+        # Convert `links` dictionaries to `Link` objects within a `LinkCollection`
+        links = LinkCollection(
+            items=[
+                Link(
+                    href=link.get('href'),
+                    rel=link.get('rel'),
+                    title=link.get('title'),
+                    content_type=link.get('type'),  # Map `type` to `content_type`
+                    templated=link.get('templated'),
+                    profile=link.get('profile')
+                )
+                for link in parsed_data.get('links', [])
+            ]
+        )
+
+        # Convert `potential_rights` from dict to object
+        potential_rights = PotentialRights(**parsed_data.get('potential_rights', {}))
+
+        # Convert `events` from list of dicts to list of `Event` objects
+        events = [
+            Event(
+                event_type=EventType(event['type']),  # Convert string to EventType
+                name=event['name'],
+                timestamp=event['timestamp'],
+                id=event.get('id'),
+                device=event.get('device')
+            )
+            for event in parsed_data.get('events', [])
+        ]
+
+        status = Status(parsed_data.get('status'))
+
+        return cls(
+            id=parsed_data['id'],
+            status=status,
+            links=links,
+            potential_rights=potential_rights,
+            events=events
+        )

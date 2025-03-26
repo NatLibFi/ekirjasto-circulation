@@ -361,6 +361,9 @@ class LoanController(CirculationManagerController):
             )
             if isinstance(mechanism, ProblemDetail):
                 return mechanism
+            else:
+                print(f"coming here: {mechanism}")
+                mechanism = mechanism
 
         if (not loan or not loan_license_pool) and not (
             self.can_fulfill_without_loan(
@@ -414,6 +417,7 @@ class LoanController(CirculationManagerController):
         # A subclass of FulfillmentInfo may want to bypass the whole
         # response creation process.
         response = fulfillment.as_response
+        print("fulfill response: ", response)
         if response is not None:
             return response
 
@@ -433,10 +437,12 @@ class LoanController(CirculationManagerController):
                 self.circulation, loan, fulfillment=fulfillment
             )
             if isinstance(feed, ProblemDetail):
+                print("problems")
                 # This should typically never happen, since we've gone through the entire fulfill workflow
                 # But for the sake of return-type completeness we are adding this here
                 return feed
             if isinstance(feed, Response):
+                print("response")
                 return feed
             else:
                 content = etree.tostring(feed)
@@ -444,16 +450,19 @@ class LoanController(CirculationManagerController):
             headers["Content-Type"] = OPDSFeed.ACQUISITION_FEED_TYPE
         elif fulfillment.content_link_redirect is True:
             # The fulfillment API has asked us to not be a proxy and instead redirect the client directly
+            print(f"elif fulfillment.content_link_redirect is True:")
             return redirect(fulfillment.content_link)
         else:
             content = fulfillment.content
             if fulfillment.content_link:
+                print("if fulfillment.content_link: ", fulfillment.content_link)
                 # If we have a link to the content on a remote server, web clients may not
                 # be able to access it if the remote server does not support CORS requests.
 
                 # If the pool is open access though, the web client can link directly to the
                 # file to download it, so it's safe to redirect.
                 if requested_license_pool.open_access:
+                    print("if requested_license_pool.open_access:")
                     return redirect(fulfillment.content_link)
 
                 # Otherwise, we need to fetch the content and return it instead
@@ -464,6 +473,7 @@ class LoanController(CirculationManagerController):
                         fulfillment.content_link, headers=encoding_header
                     )
                     headers = dict(headers)
+                    print(f"loanpy fulfill: code: {status_code}, headers: {headers}, fulfillment.content_link: {fulfillment.content_link}")
                 except RemoteIntegrationException as e:
                     return e.as_problem_detail_document(debug=False)
             else:
@@ -471,6 +481,7 @@ class LoanController(CirculationManagerController):
             if fulfillment.content_type:
                 headers["Content-Type"] = fulfillment.content_type
 
+        print(f"fulfill at end response: {response}, status: {status_code} headers: {headers}")
         return Response(response=content, status=status_code, headers=headers)
 
     def can_fulfill_without_loan(self, library, patron, pool, lpdm):

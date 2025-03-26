@@ -383,10 +383,8 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
         self, url: str, ignored_problem_types: list[str] | None = None
     ) -> LoanStatus:
         try:
-            response = self._get(url, allowed_response_codes=["2xx", "201"])
-            log.info(
-                f"response: {response}, headers: {response.headers}, content: {response.content}"
-            )
+            log.info("url: ", url)
+            response = self._get(url, allowed_response_codes=["2xx"])
             status_doc = LoanStatus.from_json(response.content)
             log.info(f"status_doc: {status_doc}")
         except Exception as e:
@@ -442,49 +440,57 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
 
         self._checkin(loan_result)
 
-    def _checkin(self, loan: Loan) -> bool:
+    def _checkin(self, loan: Loan) -> None:
         _db = Session.object_session(loan)
-        doc = self.get_license_status_document(loan)
-        status = doc.get("status")
-        if status in [
-            self.REVOKED_STATUS,
-            self.RETURNED_STATUS,
-            self.CANCELLED_STATUS,
-            self.EXPIRED_STATUS,
-        ]:
-            # This loan was already returned early or revoked by the distributor, or it expired.
-            self.update_loan(loan, doc)
-            raise NotCheckedOut()
+        if loan.external_identifier is None:
+            # We can't return a loan that doesn't have an external identifier. This should never happen
+            # but if it does, we log an error and continue on, so it doesn't stay on the patrons
+            # bookshelf forever.
+            self.log.error(f"Loan {loan.id} has no external identifier.")
+            return
+        if loan.license is None:
+            # We can't return a loan that doesn't have a license. This should never happen but if it does,
+            # we log an error and continue on, so it doesn't stay on the patrons bookshelf forever.
+            self.log.error(f"Loan {loan.id} has no license.")
+            return
 
-        return_url = None
-        links = doc.get("links", [])
-        for link in links:
-            if link.get("rel") == "return":
-                return_url = link.get("href")
-                break
+        loan_status = self._request_loan_status(loan.external_identifier)
+        if not loan_status.active:
+            self.log.warning(
+                f"Loan {loan.id} was {loan_status.status} was already returned early, revoked by the distributor, or it expired."
+            )
+            loan.license.checkin()
+            loan.license_pool.update_availability_from_licenses()
+            return
 
-        if not return_url:
-            # The distributor didn't provide a link to return this loan.
-            # This may be because the book has already been fulfilled and
-            # must be returned through the DRM system. If that's true, the
-            # app will already be doing that on its own, so we'll silently
-            # do nothing.
-            return False
+        return_link = loan_status.links.get(rel="return", content_type=LoanStatus.content_type())
+        if not return_link:
+            log.info("no return link")
+            # The distributor didn't provide a link to return this loan. This means that the distributor
+            # does not support early returns, and the patron will have to wait until the loan expires.
+            raise CannotReturn()
 
-        # Hit the distributor's return link.
-        self._get(return_url)
-        # Get the status document again to make sure the return was successful,
-        # and if so update the pool availability and delete the local loan.
-        self.update_loan(loan)
+        # The parameters for this link (if its templated) are defined here:
+        # https://readium.org/lcp-specs/releases/lsd/latest.html#34-returning-a-publication
+        # None of them are required, and often the link is not templated. But in the case
+        # of the open source LCP server, the link is templated, so we need to process the
+        # template before we can make the request.
+        return_url = return_link.href
+        log.info("return url: ", return_url)
 
-        # At this point, if the loan still exists, something went wrong.
-        # However, it might be because the loan has already been fulfilled
-        # and must be returned through the DRM system, which the app will
-        # do on its own, so we can ignore the problem.
-        new_loan = get_one(_db, Loan, id=loan.id)
-        if new_loan:
-            return False
-        return True
+        # Hit the distributor's return link, and if it's successful, update the pool
+        # availability.
+        loan_status = self._request_loan_status(return_url)
+        if loan_status.active:
+            # If the distributor says the loan is still active, we didn't return it, and
+            # something went wrong. We log an error and don't delete the loan, so the patron
+            # can try again later.
+            self.log.error(
+                f"Loan {loan.id} was {loan_status.status} not returned. The distributor says it's still active. {loan_status}"
+            )
+            raise CannotReturn()
+        loan.license.checkin()
+        loan.license_pool.update_availability_from_licenses()
 
     def checkout(
         self,
@@ -510,20 +516,7 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
             external_identifier = None
         else:
             hold = get_one(_db, Hold, patron=patron, license_pool_id=licensepool.id)
-            loan_obj = self._checkout(patron, licensepool, hold)
-            loan_start = loan_obj.start
-            loan_end = loan_obj.end
-            external_identifier = loan_obj.external_identifier
-
-        return LoanInfo(
-            licensepool.collection,
-            licensepool.data_source.name,
-            licensepool.identifier.type,
-            licensepool.identifier.identifier,
-            loan_start,
-            loan_end,
-            external_identifier=external_identifier,
-        )
+            return self._checkout(patron, licensepool, hold)
 
     def _checkout(
         self, patron: Patron, licensepool: LicensePool, hold: Hold | None = None
@@ -564,9 +557,9 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
         self._credential_factory.set_hashed_passphrase(db, patron, hashed_pass)
         encoded_pass = base64.b64encode(binascii.unhexlify(hashed_pass.hashed))
 
-        # Create a local loan so its database id can be used to
-        # receive notifications from the distributor.
         licenses = licensepool.best_available_licenses()
+        for l in licenses:
+            print(f"Amount: {len(licenses)}, license {l.identifier}")
 
         license_: License | None = None
         loan_status: LoanStatus | None = None
@@ -602,7 +595,7 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
         # We save the link to the loan status document in the loan's external_identifier field, so
         # we are able to retrieve it later.
         loan_status_document_link: Link | None = loan_status.links.get(
-            rel="self", mime_type=LoanStatus.content_type()
+            rel="self", content_type=LoanStatus.content_type()
         )
         log.info(f"status link: {loan_status_document_link}")
         # The ODL spec requires that a 'self' link be present in the links section of the response.
@@ -615,7 +608,7 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
         if not loan_status_document_link:
             log.info("no link")
             license_document_link = loan_status.links.get(
-                rel="license", mime_type=LicenseDocument.content_type()
+                rel="license", content_type=LicenseDocument.content_type()
             )
             if license_document_link:
                 log.info("is link")
@@ -623,18 +616,39 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
                     license_document_link.href, allowed_response_codes=["2xx"]
                 )
                 loan_status_document_link = license_doc.links.get(
-                    rel="status", mime_type=LoanStatus.content_type()
+                    rel="status", content_type=LoanStatus.content_type()
                 )
 
         if not loan_status_document_link:
             log.info("No loan status link")
             raise CannotLoan()
 
-        loan, ignore = licensepool.loan_to(patron)
+        loan = LoanInfo(
+            licensepool.collection,
+            licensepool.data_source.name,
+            licensepool.identifier.type,
+            licensepool.identifier.identifier,
+            start_date=utc_now(),
+            end_date=loan_status.potential_rights.end,
+            external_identifier=loan_status_document_link.href,
+            # license_identifier=license_.identifier,
+        )
+        print(f"loan info in odl: {loan}")
 
-        log.info(f"License {license_.identifier}: checkouts left before loan: {license_.checkouts_left}")
+        # collection: Collection | int,
+        # data_source_name: str | DataSource | None,
+        # identifier_type: str | None,
+        # identifier: str | None,
+        # start_date: datetime.datetime | None,
+        # end_date: datetime.datetime | None,
+        # fulfillment_info: FulfillmentInfo | None = None,
+        # external_identifier: str | None = None,
+        # locked_to: DeliveryMechanismInfo | None = None,
+
+        license_.loan_to(patron)
         # We also need to update the remaining checkouts for the license.
         license_.checkout()
+
         log.info(f"License {license_.identifier}: checkouts left after loan: {license_.checkouts_left}")
 
         # If there was a hold CirculationAPI will take care of deleting it. So we just need to
@@ -681,10 +695,10 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
                     "http://opds-spec.org/odl/error/checkout/unavailable"
                 ],
             )
-            log.debug(f"Loan status: {loan_status}")
+            log.info(f"Loan status: {loan_status}")
             return loan_status
         except OpdsWithOdlException as e:
-            log.debug("Here?")
+            log.info("Here?")
             if e.type == "http://opds-spec.org/odl/error/checkout/unavailable":
                 # TODO: This would be a good place to do an async availability update, since we know
                 #   the book is unavailable, when we thought it was available. For now, we know that
@@ -710,6 +724,37 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
         ).one()
         return self._fulfill(loan, delivery_mechanism)
 
+    @staticmethod
+    def _get_resource_for_delivery_mechanism(
+        requested_delivery_mechanism: DeliveryMechanism, licensepool: LicensePool
+    ) -> Resource:
+        resource = next(
+            (
+                lpdm.resource
+                for lpdm in licensepool.available_delivery_mechanisms
+                if lpdm.delivery_mechanism == requested_delivery_mechanism
+                and lpdm.resource is not None
+            ),
+            None,
+        )
+        if resource is None:
+            raise FormatNotAvailable()
+        return resource
+
+    # def _unlimited_access_fulfill(
+    #     self, loan: Loan, delivery_mechanism: LicensePoolDeliveryMechanism
+    # ) -> Fulfillment:
+    #     licensepool = loan.license_pool
+    #     resource = self._get_resource_for_delivery_mechanism(
+    #         delivery_mechanism.delivery_mechanism, licensepool
+    #     )
+    #     if resource.representation is None:
+    #         raise FormatNotAvailable()
+    #     content_link = resource.representation.public_url
+    #     content_type = resource.representation.media_type
+    #     return RedirectFulfillment(content_link, content_type) # Tää pitää kattoo, ei ole circulation.py:ssä
+
+    # PITÄÄ POISTAA
     @staticmethod
     def _find_content_link_and_type(
         links: list[dict[str, str]],
@@ -753,6 +798,7 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
         if licensepool.open_access:
             expires = None
             requested_mechanism = delivery_mechanism.delivery_mechanism
+            log.info(f"delivery mech: {requested_mechanism}")
             fulfillment = next(
                 (
                     lpdm
@@ -761,6 +807,7 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
                 ),
                 None,
             )
+            log.info(f"fulfillment: {fulfillment}")
             if fulfillment is None:
                 raise FormatNotAvailable()
             content_link = fulfillment.resource.representation.public_url
@@ -785,6 +832,7 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
             content_link, content_type = self._find_content_link_and_type(
                 links, delivery_mechanism.delivery_mechanism.drm_scheme
             )
+            log.info(f"cont link: {content_link}, type: {content_type}")
 
         return FulfillmentInfo(
             licensepool.collection,
