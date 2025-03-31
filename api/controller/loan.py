@@ -53,7 +53,8 @@ from core.feed.acquisition import OPDSAcquisitionFeed
 from core.model import DataSource, DeliveryMechanism, Loan, Patron, Representation
 from core.util.http import RemoteIntegrationException
 from core.util.opds_writer import OPDSFeed
-from core.util.problem_detail import ProblemDetail
+from core.util.problem_detail import ProblemDetail, BaseProblemDetailException, ProblemDetail
+from core.exceptions import BaseError
 
 
 class LoanController(CirculationManagerController):
@@ -395,95 +396,33 @@ class LoanController(CirculationManagerController):
 
         try:
             fulfillment = self.circulation.fulfill(
-                patron,
+                patron,  # type: ignore[arg-type]
                 credential,
                 requested_license_pool,
                 mechanism,
             )
-        except DeliveryMechanismConflict as e:
-            return DELIVERY_CONFLICT.detailed(str(e))
-        except NoActiveLoan as e:
-            return NO_ACTIVE_LOAN.detailed(
-                _("Can't fulfill loan because you have no active loan for this book."),
-                status_code=e.status_code,
-            )
-        except FormatNotAvailable as e:
-            return NO_ACCEPTABLE_FORMAT.with_debug(str(e), status_code=e.status_code)
-        except CannotFulfill as e:
-            return CANNOT_FULFILL.with_debug(str(e), status_code=e.status_code)
-        except DeliveryMechanismError as e:
-            return BAD_DELIVERY_MECHANISM.with_debug(str(e), status_code=e.status_code)
+        except (CirculationException, RemoteInitiatedServerError) as e:
+            return e.problem_detail
 
-        # A subclass of FulfillmentInfo may want to bypass the whole
-        # response creation process.
-        response = fulfillment.as_response
-        
-        if response is not None:
-            print("fulfill response: ", response)
-            return response
-
-        headers = dict()
-        encoding_header = dict()
-        if (
-            fulfillment.data_source_name == DataSource.ENKI
-            and mechanism.delivery_mechanism.drm_scheme_media_type
-            == DeliveryMechanism.NO_DRM
+        # TODO: This should really be turned into its own Fulfillment class,
+        #   so each integration can choose when to return a feed response like
+        #   this, and when to return a direct response.
+        if mechanism.delivery_mechanism.is_streaming and isinstance(
+            fulfillment, UrlFulfillment
         ):
-            encoding_header["Accept-Encoding"] = "deflate"
-
-        if mechanism.delivery_mechanism.is_streaming:
-            # If this is a streaming delivery mechanism, create an OPDS entry
-            # with a fulfillment link to the streaming reader url.
-            feed = OPDSAcquisitionFeed.single_entry_loans_feed(
+            # If this is a streaming delivery mechanism (note: E-kirjasto does not stream),
+            # create an OPDS entry with a fulfillment link to the streaming reader url.
+            return OPDSAcquisitionFeed.single_entry_loans_feed(
                 self.circulation, loan, fulfillment=fulfillment
             )
-            if isinstance(feed, ProblemDetail):
-                print("problems")
-                # This should typically never happen, since we've gone through the entire fulfill workflow
-                # But for the sake of return-type completeness we are adding this here
-                return feed
-            if isinstance(feed, Response):
-                print("response")
-                return feed
-            else:
-                content = etree.tostring(feed)
-            status_code = 200
-            headers["Content-Type"] = OPDSFeed.ACQUISITION_FEED_TYPE
-        elif fulfillment.content_link_redirect is True:
-            # The fulfillment API has asked us to not be a proxy and instead redirect the client directly
-            print(f"elif fulfillment.content_link_redirect is True:")
-            return redirect(fulfillment.content_link)
-        else:
-            content = fulfillment.content
-            if fulfillment.content_link:
-                print("if fulfillment.content_link: ", fulfillment.content_link)
-                # If we have a link to the content on a remote server, web clients may not
-                # be able to access it if the remote server does not support CORS requests.
 
-                # If the pool is open access though, the web client can link directly to the
-                # file to download it, so it's safe to redirect.
-                if requested_license_pool.open_access:
-                    print("if requested_license_pool.open_access:")
-                    return redirect(fulfillment.content_link)
+        try:
+            resp = fulfillment.response()
+            print("response in loan: ", resp)
+            return resp
+        except BaseError as e:
+            return e.problem_detail
 
-                # Otherwise, we need to fetch the content and return it instead
-                # of redirecting to it, since it may be downloaded through an
-                # indirect acquisition link.
-                try:
-                    status_code, headers, content = do_get(
-                        fulfillment.content_link, headers=encoding_header
-                    )
-                    headers = dict(headers)
-                    print(f"loanpy fulfill: code: {status_code}, headers: {headers}, fulfillment.content_link: {fulfillment.content_link}")
-                except RemoteIntegrationException as e:
-                    return e.as_problem_detail_document(debug=False)
-            else:
-                status_code = 200
-            if fulfillment.content_type:
-                headers["Content-Type"] = fulfillment.content_type
-
-        print(f"fulfill at end response: {response}, status: {status_code} headers: {headers}")
-        return Response(response=content, status=status_code, headers=headers)
 
     def can_fulfill_without_loan(self, library, patron, pool, lpdm):
         """Is it acceptable to fulfill the given LicensePoolDeliveryMechanism

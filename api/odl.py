@@ -436,7 +436,7 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
             raise NotCheckedOut()
         loan_result = loan.one()
 
-        if loan_result.license_pool.open_access:
+        if license_pool.open_access or licensepool.unlimited_access:
             # If this is an open-access book, we don't need to do anything.
             return
 
@@ -512,7 +512,7 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
         if loan.count() > 0:
             raise AlreadyCheckedOut()
 
-        if licensepool.open_access:
+        if licensepool.open_access or licensepool.unlimited_access:
             loan_start = None
             loan_end = None
             external_identifier = None
@@ -756,39 +756,6 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
         content_type = resource.representation.media_type
         return RedirectFulfillment(content_link, content_type) # Tää pitää kattoo, ei ole circulation.py:ssä
 
-    # PITÄÄ POISTAA
-    @staticmethod
-    def _find_content_link_and_type(
-        links: list[dict[str, str]],
-        drm_scheme: str | None,
-    ) -> tuple[str | None, str | None]:
-        """Find a content link with the type information corresponding to the selected delivery mechanism.
-
-        :param links: List of dict-like objects containing information about available links in the LCP license file
-        :param drm_scheme: Selected delivery mechanism DRM scheme
-
-        :return: Two-tuple containing a content link and content type
-        """
-        candidates = []
-        for link in links:
-            # Depending on the format being served, the crucial information
-            # may be in 'manifest' or in 'license'.
-            if link.get("rel") not in ("manifest", "license"):
-                continue
-            href = link.get("href")
-            type = link.get("type")
-            candidates.append((href, type))
-
-        if len(candidates) == 0:
-            # No candidates
-            return None, None
-
-        # For DeMarque audiobook content, we need to translate the type property
-        # to reflect what we have stored in our delivery mechanisms.
-        if drm_scheme == DeliveryMechanism.FEEDBOOKS_AUDIOBOOK_DRM:
-            drm_scheme = ODLImporter.FEEDBOOKS_AUDIO
-
-        return next(filter(lambda x: x[1] == drm_scheme, candidates), (None, None))
 
     def _license_fulfill(
         self, loan: Loan, delivery_mechanism: LicensePoolDeliveryMechanism
@@ -841,67 +808,11 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
         loan: Loan,
         delivery_mechanism: LicensePoolDeliveryMechanism,
     ) -> Fulfillment:
-        if loan.license_pool.open_access:
+        if loan.license_pool.open_access or licensepool.unlimited_access:
                 return self._unlimited_access_fulfill(loan, delivery_mechanism)
         else:
             return self._license_fulfill(loan, delivery_mechanism)
 
-    def _fulfill_old(
-        self,
-        loan: Loan,
-        delivery_mechanism: LicensePoolDeliveryMechanism,
-    ) -> FulfillmentInfo:
-        licensepool = loan.license_pool
-
-        if licensepool.open_access:
-            expires = None
-            requested_mechanism = delivery_mechanism.delivery_mechanism
-            self.log.info(f"delivery mech: {requested_mechanism}")
-            fulfillment = next(
-                (
-                    lpdm
-                    for lpdm in licensepool.delivery_mechanisms
-                    if lpdm.delivery_mechanism == requested_mechanism
-                ),
-                None,
-            )
-            self.log.info(f"fulfillment: {fulfillment}")
-            if fulfillment is None:
-                raise FormatNotAvailable()
-            content_link = fulfillment.resource.representation.public_url
-            content_type = fulfillment.resource.representation.media_type
-        else:
-            doc = self.get_license_status_document(loan)
-            status = doc.get("status")
-
-            if status not in [self.READY_STATUS, self.ACTIVE_STATUS]:
-                # This loan isn't available for some reason. It's possible
-                # the distributor revoked it or the patron already returned it
-                # through the DRM system, and we didn't get a notification
-                # from the distributor yet.
-                self.update_loan(loan, doc)
-                raise CannotFulfill()
-
-            expires = doc.get("potential_rights", {}).get("end")
-            expires = dateutil.parser.parse(expires)
-
-            links = doc.get("links", [])
-
-            content_link, content_type = self._find_content_link_and_type(
-                links, delivery_mechanism.delivery_mechanism.drm_scheme
-            )
-            self.log.info(f"cont link: {content_link}, type: {content_type}")
-
-        return FulfillmentInfo(
-            licensepool.collection,
-            licensepool.data_source.name,
-            licensepool.identifier.type,
-            licensepool.identifier.identifier,
-            content_link,
-            content_type,
-            None,
-            expires,
-        )
 
     def _count_holds_before(self, holdinfo: HoldInfo, pool: LicensePool) -> int:
         # Count holds on the license pool that started before this hold and
@@ -1102,9 +1013,9 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
             licensepool.data_source.name,
             licensepool.identifier.type,
             licensepool.identifier.identifier,
-            utc_now(),
-            None,
-            0,
+            start_date=utc_now(),
+            end_date=None,
+            hold_position=licensepool.patrons_in_hold_queue,
         )
         library = patron.library
         self._update_hold_end_date(holdinfo, licensepool, library=library)

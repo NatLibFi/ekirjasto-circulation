@@ -50,7 +50,7 @@ from core.model.integration import IntegrationConfiguration
 from core.model.patron import LoanCheckout
 from core.util.datetime_helpers import utc_now
 from core.util.log import LoggerMixin
-
+from core.util.http import HTTP, BadResponseException
 
 class CirculationInfo:
     def __init__(
@@ -1496,7 +1496,7 @@ class CirculationAPI:
         :return: A FulfillmentInfo object.
 
         """
-        fulfillment: FulfillmentInfo
+        fulfillment: Fulfillment
         loan = get_one(
             self._db,
             Loan,
