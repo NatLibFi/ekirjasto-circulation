@@ -366,7 +366,7 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
 
     @staticmethod
     def _notification_url(
-        short_name: str | None, patron_id: str, license_id: str
+        short_name: str | None, license_id: str
     ) -> str:
         """Get the notification URL that should be passed in the ODL checkout link.
 
@@ -376,7 +376,6 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
         return url_for(
             "odl_notify",
             library_short_name=short_name,
-            patron_identifier=patron_id,
             license_identifier=license_id,
             _external=True,
         )
@@ -436,7 +435,7 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
             raise NotCheckedOut()
         loan_result = loan.one()
 
-        if license_pool.open_access or licensepool.unlimited_access:
+        if licensepool.open_access or licensepool.unlimited_access:
             # If this is an open-access book, we don't need to do anything.
             return
 
@@ -671,7 +670,6 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
         checkout_id = str(uuid.uuid4())
         notification_url = self._notification_url(
             library_short_name,
-            patron_id,
             identifier,
         )
 
@@ -808,7 +806,7 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
         loan: Loan,
         delivery_mechanism: LicensePoolDeliveryMechanism,
     ) -> Fulfillment:
-        if loan.license_pool.open_access or licensepool.unlimited_access:
+        if loan.license_pool.open_access or loan.license_pool.unlimited_access:
                 return self._unlimited_access_fulfill(loan, delivery_mechanism)
         else:
             return self._license_fulfill(loan, delivery_mechanism)
