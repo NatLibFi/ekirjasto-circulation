@@ -61,7 +61,7 @@ NO_COPIES_WHEN_RESERVED = pd(
     "http://librarysimplified.org/terms/problem/cannot-issue-loan",
     502,
     _("No available license."),
-    _("All copies of this book are loaned out after all. You are still next in line."),
+    _("All copies of this book are loaned out after all. You are next in line."),
 )
 
 NO_ACCEPTABLE_FORMAT = pd(

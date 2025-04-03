@@ -491,7 +491,7 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
             )
             raise CannotReturn()
         loan.license.checkin()
-        loan.license_pool.update_availability_from_licenses()
+        self.update_licensepool(loan.license_pool)
 
     def checkout(
         self,
@@ -530,8 +530,8 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
         # Make sure pool info is updated.
         self.update_licensepool(licensepool)
 
-        if hold:
-            self._update_hold_data(hold)  # tätä ei ollenkaan
+        # if hold:
+        #     self._update_hold_data(hold)  # tätä ei ollenkaan
 
         # If there's a holds queue, the patron must have a non-expired hold
         # with position 0 to check out the book.
@@ -540,6 +540,7 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
             or (hold.position and hold.position > 0)
             or (hold.end and hold.end < utc_now())
         ) and licensepool.licenses_available < 1:
+            print(f"hold position is not 0 or end is in the past or no hold")
             raise NoAvailableCopies()
 
         if self.collection is None:
@@ -576,20 +577,27 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
                 )
                 break
             except NoAvailableCopies:
+                print(f"no available copies after checking the server")
                 # This license had no available copies, so we try the next one.
                 ...
 
         if license_ is None or loan_status is None:
-            # It could be that we have a hold which means we thought the book was available, but it wasn't. We raise a NoAvailableCopies() and have the handler handle the patron's hold
-            # position.
-            self.log.info("NONE appeared")
+            if hold:
+                # If we have a hold, it means we thought the book was available, but it wasn't.
+                # So we need to update its position in the hold queue. We will put it at position
+                # 1, since the patron should be first in line. This may mean that there are two
+                # patrons in position 1 in the hold queue, but this will be resolved next time
+                # the hold queue is recalculated.
+                hold.position = 1
+                hold.end = None
+                print(f"we have a hold and is position 1 {hold.position}")
             licensepool.update_availability_from_licenses()
-            raise NoAvailableCopies()
+            raise NoAvailableCopiesWhenReserved()
 
         if not loan_status.active:
             # Something went wrong with this loan, and we don't actually
             # have the book checked out. This should never happen.
-            print("loan status: ", loan_status.status)
+            self.log.warning(f"Loan status for license {license_.identifier} was {loanstatus.status} instead of active")
             # raise CannotLoan()
             raise CannotLoan()
 
@@ -608,14 +616,13 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
         #   once that is done, we should be able to remove this fallback.
         if not loan_status_document_link:
             self.log.info("no link")
-            license_document_link = loan_status.links.get(
-                rel="license", content_type=LicenseDocument.content_type()
-            )
-            if license_document_link:
+            license_document_link = loan_status.links.get(rel="license", content_type=LicenseDocument.content_type())
+            if license_document_link: # Tarkista miten menee
                 self.log.info("is link")
                 response = self._get(
                     license_document_link.href, allowed_response_codes=["2xx"]
                 )
+                # license_doc = LicenseDocument.model_validate_json(response.content)
                 loan_status_document_link = license_doc.links.get(
                     rel="status", content_type=LoanStatus.content_type()
                 )
@@ -845,6 +852,7 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
         self._update_hold_end_date(holdinfo, pool, library=library)
         hold.end = holdinfo.end_date
         hold.position = holdinfo.hold_position
+        print(f"hold end: {hold.end}, position: {hold.position}")
 
     def _update_hold_end_date(
         self, holdinfo: HoldInfo, pool: LicensePool, library: Library
@@ -854,17 +862,20 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
         # First make sure the hold position is up-to-date, since we'll
         # need it to calculate the end date.
         original_position = holdinfo.hold_position
+        print(f"_update_hold_end_date: original: {original_position}")
         self._update_hold_position(holdinfo, pool)
         assert holdinfo.hold_position is not None
-
+        print("position: ", holdinfo.hold_position)
         if self.collection is None:
             raise ValueError(f"Collection not found: {self.collection_id}")
         default_loan_period = self.collection.default_loan_period(library)
         default_reservation_period = self.collection.default_reservation_period
+        print(f"reserve period: {default_reservation_period}")
 
         # If the hold was already to check out and already has an end date,
         # it doesn't need an update.
         if holdinfo.hold_position == 0 and original_position == 0 and holdinfo.end_date:
+            print("no update needed")
             return
 
         # If the patron is in the queue, we need to estimate when the book
@@ -917,12 +928,14 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
             # after a current reservation is checked out and then expires.
             if len(current_loans) > copy_index:
                 next_cycle_start = current_loans[copy_index].end
+                print("")
             else:
                 reservation = current_reservations[copy_index - len(current_loans)]
                 next_cycle_start = reservation.end + datetime.timedelta(
                     days=default_loan_period
                 )
-
+            self.log.info(f"loans: {current_loans} holds: {current_holds} licenses reserved: {licenses_reserved}")
+            self.log.info(f"current reservations: {current_reservations} cycles: {cycles} copy index: {copy_index} next cycle strt: {next_cycle_start}")
             # Assume all cycles after the first cycle take the maximum time.
             cycle_period = default_loan_period + default_reservation_period
             holdinfo.end_date = next_cycle_start + datetime.timedelta(
@@ -965,9 +978,11 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
             as_of=utc_now(),
         )
         holds = licensepool.get_active_holds()
+        print(f"update_licensepool: holds: {holds}, reserved: {licensepool.licenses_reserved}")
         for hold in holds[: licensepool.licenses_reserved]:
             if hold.position != 0:
                 # This hold just got a reserved license.
+                print(f"holds: {holds}, reserved: {licensepool.licenses_reserved}, position: {hold.position}")
                 self._update_hold_data(hold)
 
     def place_hold(
@@ -1016,7 +1031,7 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
             hold_position=licensepool.patrons_in_hold_queue,
         )
         library = patron.library
-        self._update_hold_end_date(holdinfo, licensepool, library=library)
+        self._update_hold_end_date(holdinfo, licensepool, library=library) # MIKSI feilaa
 
         return holdinfo
 

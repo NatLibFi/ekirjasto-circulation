@@ -711,16 +711,18 @@ class LicensePool(Base):
             for l in self.licenses
             if l.currently_available_loans is not None
         )
-
         holds = self.get_active_holds()
 
         patrons_in_hold_queue = len(holds)
+        print(f"update_availability_from_licenses: owned: {licenses_owned} and available:{licenses_available}, holds: {holds}, queue: {patrons_in_hold_queue}")
+
         if len(holds) > licenses_available:
             licenses_reserved = licenses_available
             licenses_available = 0
         else:
             licenses_reserved = len(holds)
             licenses_available -= licenses_reserved
+        print(f"licensesafter checking reserved: owned: {licenses_owned} reserved: {licenses_reserved} available:{licenses_available}, holds: {holds}, queue: {patrons_in_hold_queue}")
 
         return self.update_availability(
             licenses_owned,

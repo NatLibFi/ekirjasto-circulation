@@ -1098,6 +1098,7 @@ class CirculationAPI:
             license_pool=licensepool,
             on_multiple="interchangeable",
         )
+        print(f"existing hold: {existing_hold}")
 
         loan_info = None
         hold_info = None
@@ -1164,6 +1165,7 @@ class CirculationAPI:
             if isinstance(loan_info, HoldInfo):
                 # If the API couldn't give us a loan, it may have given us
                 # a hold instead of raising an exception.
+                print(f"got a hold {loan_info}")
                 hold_info = loan_info
                 loan_info = None
             else:
@@ -1213,21 +1215,21 @@ class CirculationAPI:
 
             # The patron had a hold and was in the hold queue's 0th position believing
             # there were copies available for them to checkout.
-            if existing_hold and existing_hold.position == 0:
-                # Update the hold so the patron doesn't lose their hold. Extend the hold to expire in the
-                # next 3 days.
-                hold_info = HoldInfo(
-                    licensepool.collection,
-                    licensepool.data_source,
-                    licensepool.identifier.type,
-                    licensepool.identifier.identifier,
-                    existing_hold.start,
-                    datetime.datetime.now() + datetime.timedelta(days=3),
-                    existing_hold.position,
-                )
-                # Update availability information
-                api.update_availability(licensepool)
-                reserved_license_exception = True
+            # if existing_hold and existing_hold.position == 0:
+            #     # Update the hold so the patron doesn't lose their hold. Extend the hold to expire in the
+            #     # next 3 days.
+            #     hold_info = HoldInfo(
+            #         licensepool.collection,
+            #         licensepool.data_source,
+            #         licensepool.identifier.type,
+            #         licensepool.identifier.identifier,
+            #         existing_hold.start,
+            #         datetime.datetime.now() + datetime.timedelta(days=3), # The default RESERVE period is three days
+            #         existing_hold.position,
+            #     )
+            #     # Update availability information
+            #     api.update_availability(licensepool)
+            #     reserved_license_exception = True
             else:
                 # That's fine, we'll just (try to) place a hold.
                 #
@@ -1261,7 +1263,7 @@ class CirculationAPI:
                 end=loan_info.end_date,
                 external_identifier=loan_info.external_identifier,
             )
-            print("circ loan: ", loan)
+            print(f"circ loan: {loan} end: {loan_info.end_date}") # TÄSSÄ EI OLE ERÄPÄIVÄÄ, MIKSI?
 
             if must_set_delivery_mechanism:
                 loan.fulfillment = delivery_mechanism
@@ -1297,11 +1299,13 @@ class CirculationAPI:
             # has reached their hold limit since we did not raise
             # an exception for it earlier when limits were enforced.
             at_hold_limit = self.patron_at_hold_limit(patron)
+            print(f"Not at hold limit so placing a hold")
             if not at_hold_limit:
                 try:
                     hold_info = api.place_hold(
                         patron, pin, licensepool, hold_notification_email
                     )
+                    print(f"trying to place hold and got: {hold_info}")
                 except AlreadyOnHold as e:
                     hold_info = HoldInfo(
                         licensepool.collection,
@@ -1340,7 +1344,7 @@ class CirculationAPI:
             hold_info.hold_position,
             hold_info.external_identifier,
         )
-
+        print(f"circ hold: {hold}")
         if hold and is_new:
             # Send out an analytics event to record the fact that
             # a hold was initiated through the circulation
@@ -1358,8 +1362,8 @@ class CirculationAPI:
 
         # Raise the exception of failed loan when the patron falsely believed
         # there was an available licanse at the top of the hold queue.
-        if reserved_license_exception:
-            raise NoAvailableCopiesWhenReserved
+        # if reserved_license_exception:
+        #     raise NoAvailableCopiesWhenReserved
 
         return None, hold, is_new
 
@@ -1504,9 +1508,10 @@ class CirculationAPI:
             license_pool=licensepool,
             on_multiple="interchangeable",
         )
-        print("circ fulfill: ", loan)
+        print("circ fulfill loan: ", loan)
         api = self.api_for_license_pool(licensepool)
         if not api:
+            print("no api")
             raise CannotFulfill()
 
         if not loan and not self.can_fulfill_without_loan(
@@ -1546,7 +1551,7 @@ class CirculationAPI:
             licensepool,
             delivery_mechanism=delivery_mechanism,
         )
-        print("circ fulfill: ", fulfillment)
+        print("circ fulfill fulfillment: ", fulfillment)
         if not fulfillment or not (fulfillment.content_link or fulfillment.content):
             print("ei linkkiä")
             raise NoAcceptableFormat()
@@ -1565,10 +1570,12 @@ class CirculationAPI:
             and loan.fulfillment is None
             and not delivery_mechanism.delivery_mechanism.is_streaming
         ):
+            print("we have a loan, fulfillment isnt none and its not streaming")
             __transaction = self._db.begin_nested()
             loan.fulfillment = delivery_mechanism
+            print(f"fulfillment: {loan.fulfillment}")
             __transaction.commit()
-
+        print(f"at end of circ fulfill loan: {loan} and {fulfillment}")
         return fulfillment
 
     def revoke_loan(
@@ -1653,11 +1660,17 @@ class CirculationAPI:
         # Any other CannotReleaseHold exception will be propagated
         # upwards at this point
         if hold:
-            __transaction = self._db.begin_nested()
-            self._db.delete(hold)
-            patron.last_loan_activity_sync = None
-            __transaction.commit()
-
+            print(f"hold deleting: {hold} {hold.id}")
+            # Check if the row still exists before attempting to delete
+            existing_hold = self._db.query(Hold).filter(Hold.id == hold.id).first()
+            if existing_hold:
+                print(f"hold found deleting: {hold} {hold.id}")
+                __transaction = self._db.begin_nested()
+                self._db.delete(hold)
+                patron.last_loan_activity_sync = None
+                __transaction.commit()
+            else:
+                print(f"Hold with id {hold.id} does not exist in the database.")
             # Send out an analytics event to record the fact that
             # a hold was revoked through the circulation
             # manager.

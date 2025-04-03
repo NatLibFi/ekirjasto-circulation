@@ -156,7 +156,12 @@ class LoanController(CirculationManagerController):
 
         work = self.load_work(library, identifier_type, identifier)
         selected_book = patron.load_selected_book(work)
-
+        print(OPDSAcquisitionFeed.single_entry_loans_feed(
+            self.circulation,
+            loan_or_hold,
+            selected_book=selected_book,
+            **response_kwargs,
+        ))
         return OPDSAcquisitionFeed.single_entry_loans_feed(
             self.circulation,
             loan_or_hold,
@@ -401,6 +406,7 @@ class LoanController(CirculationManagerController):
                 requested_license_pool,
                 mechanism,
             )
+            print("loan after calling circ.fulfill: ", fulfillment)
         except (CirculationException, RemoteInitiatedServerError) as e:
             return e.problem_detail
 
