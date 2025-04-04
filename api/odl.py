@@ -512,9 +512,15 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
             raise AlreadyCheckedOut()
 
         if licensepool.open_access or licensepool.unlimited_access:
-            loan_start = None
-            loan_end = None
-            external_identifier = None
+            return LoanInfo(
+                licensepool.collection,
+                licensepool.data_source.name,
+                licensepool.identifier.type,
+                licensepool.identifier.identifier,
+                start_date = None,
+                end_date = None,
+                external_identifier = None
+            )
         else:
             hold = get_one(_db, Hold, patron=patron, license_pool_id=licensepool.id)
             return self._checkout(patron, licensepool, hold)
@@ -530,9 +536,6 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
         # Make sure pool info is updated.
         self.update_licensepool(licensepool)
 
-        # if hold:
-        #     self._update_hold_data(hold)  # tätä ei ollenkaan
-
         # If there's a holds queue, the patron must have a non-expired hold
         # with position 0 to check out the book.
         if (
@@ -540,7 +543,6 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
             or (hold.position and hold.position > 0)
             or (hold.end and hold.end < utc_now())
         ) and licensepool.licenses_available < 1:
-            print(f"hold position is not 0 or end is in the past or no hold")
             raise NoAvailableCopies()
 
         if self.collection is None:
@@ -577,28 +579,19 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
                 )
                 break
             except NoAvailableCopies:
-                print(f"no available copies after checking the server")
                 # This license had no available copies, so we try the next one.
                 ...
 
         if license_ is None or loan_status is None:
-            if hold:
-                # If we have a hold, it means we thought the book was available, but it wasn't.
-                # So we need to update its position in the hold queue. We will put it at position
-                # 1, since the patron should be first in line. This may mean that there are two
-                # patrons in position 1 in the hold queue, but this will be resolved next time
-                # the hold queue is recalculated.
-                hold.position = 1
-                hold.end = None
-                print(f"we have a hold and is position 1 {hold.position}")
+            # It could be that we have a hold which means we thought the book was available, but it wasn't. We raise a NoAvailableCopies() and have the handler handle the patron's hold position.
+            self.log.warning(f"License or status was nothing")
             licensepool.update_availability_from_licenses()
-            raise NoAvailableCopiesWhenReserved()
+            raise NoAvailableCopies()
 
         if not loan_status.active:
             # Something went wrong with this loan, and we don't actually
             # have the book checked out. This should never happen.
-            self.log.warning(f"Loan status for license {license_.identifier} was {loanstatus.status} instead of active")
-            # raise CannotLoan()
+            self.log.warning(f"Loan status for license {license_.identifier} was {loan_status.status} instead of active")
             raise CannotLoan()
 
         # We save the link to the loan status document in the loan's external_identifier field, so
@@ -606,29 +599,9 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
         loan_status_document_link: Link | None = loan_status.links.get(
             rel="self", content_type=LoanStatus.content_type()
         )
-        self.log.info(f"status link: {loan_status_document_link}")
-        # The ODL spec requires that a 'self' link be present in the links section of the response.
-        # See: https://drafts.opds.io/odl-1.0.html#54-interacting-with-a-checkout-link
-        # However, the open source LCP license status server does not provide this link, so we make
-        # an extra request to try to get the information we need from the 'status' link in the license
-        # document, which the LCP server does provide.
-        # TODO: Raise this issue with LCP server maintainers, and try to get a fix in place.
-        #   once that is done, we should be able to remove this fallback.
-        if not loan_status_document_link:
-            self.log.info("no link")
-            license_document_link = loan_status.links.get(rel="license", content_type=LicenseDocument.content_type())
-            if license_document_link: # Tarkista miten menee
-                self.log.info("is link")
-                response = self._get(
-                    license_document_link.href, allowed_response_codes=["2xx"]
-                )
-                # license_doc = LicenseDocument.model_validate_json(response.content)
-                loan_status_document_link = license_doc.links.get(
-                    rel="status", content_type=LoanStatus.content_type()
-                )
 
         if not loan_status_document_link:
-            self.log.info("No loan status link")
+            self.log.warning(f"There was no loan status link for license {license_.identifier}")
             raise CannotLoan()
 
         loan = LoanInfo(
@@ -639,7 +612,6 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
             start_date=utc_now(),
             end_date=loan_status.potential_rights.end,
             external_identifier=loan_status_document_link.href,
-            # license_identifier=license_.identifier,
         )
         print(f"loan info in odl: {loan}")
 
@@ -705,7 +677,6 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
             self.log.info(f"Loan status: {loan_status}")
             return loan_status
         except OpdsWithOdlException as e:
-            self.log.info("Here?")
             if e.type == "http://opds-spec.org/odl/error/checkout/unavailable":
                 # TODO: This would be a good place to do an async availability update, since we know
                 #   the book is unavailable, when we thought it was available. For now, we know that
@@ -862,15 +833,12 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
         # First make sure the hold position is up-to-date, since we'll
         # need it to calculate the end date.
         original_position = holdinfo.hold_position
-        print(f"_update_hold_end_date: original: {original_position}")
         self._update_hold_position(holdinfo, pool)
         assert holdinfo.hold_position is not None
-        print("position: ", holdinfo.hold_position)
         if self.collection is None:
             raise ValueError(f"Collection not found: {self.collection_id}")
         default_loan_period = self.collection.default_loan_period(library)
         default_reservation_period = self.collection.default_reservation_period
-        print(f"reserve period: {default_reservation_period}")
 
         # If the hold was already to check out and already has an end date,
         # it doesn't need an update.
@@ -928,7 +896,6 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
             # after a current reservation is checked out and then expires.
             if len(current_loans) > copy_index:
                 next_cycle_start = current_loans[copy_index].end
-                print("")
             else:
                 reservation = current_reservations[copy_index - len(current_loans)]
                 next_cycle_start = reservation.end + datetime.timedelta(

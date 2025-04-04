@@ -55,6 +55,7 @@ from core.util.http import RemoteIntegrationException
 from core.util.opds_writer import OPDSFeed
 from core.util.problem_detail import ProblemDetail, BaseProblemDetailException, ProblemDetail
 from core.exceptions import BaseError
+from api.circulation_exceptions import RemoteInitiatedServerError, CirculationException
 
 
 class LoanController(CirculationManagerController):
@@ -406,7 +407,7 @@ class LoanController(CirculationManagerController):
                 requested_license_pool,
                 mechanism,
             )
-            print("loan after calling circ.fulfill: ", fulfillment)
+            print("loan.py after calling circ.fulfill: ", fulfillment)
         except (CirculationException, RemoteInitiatedServerError) as e:
             return e.problem_detail
 

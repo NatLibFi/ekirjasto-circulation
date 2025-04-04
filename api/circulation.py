@@ -1215,21 +1215,21 @@ class CirculationAPI:
 
             # The patron had a hold and was in the hold queue's 0th position believing
             # there were copies available for them to checkout.
-            # if existing_hold and existing_hold.position == 0:
-            #     # Update the hold so the patron doesn't lose their hold. Extend the hold to expire in the
-            #     # next 3 days.
-            #     hold_info = HoldInfo(
-            #         licensepool.collection,
-            #         licensepool.data_source,
-            #         licensepool.identifier.type,
-            #         licensepool.identifier.identifier,
-            #         existing_hold.start,
-            #         datetime.datetime.now() + datetime.timedelta(days=3), # The default RESERVE period is three days
-            #         existing_hold.position,
-            #     )
-            #     # Update availability information
-            #     api.update_availability(licensepool)
-            #     reserved_license_exception = True
+            if existing_hold and existing_hold.position == 0:
+                # Update the hold so the patron doesn't lose their hold. Extend the hold to expire in the
+                # next 3 days.
+                hold_info = HoldInfo(
+                    licensepool.collection,
+                    licensepool.data_source,
+                    licensepool.identifier.type,
+                    licensepool.identifier.identifier,
+                    existing_hold.start,
+                    datetime.datetime.now() + datetime.timedelta(days=3), # The default RESERVE period is three days
+                    existing_hold.position,
+                )
+                # Update availability information
+                api.update_availability(licensepool)
+                reserved_license_exception = True
             else:
                 # That's fine, we'll just (try to) place a hold.
                 #
@@ -1362,8 +1362,8 @@ class CirculationAPI:
 
         # Raise the exception of failed loan when the patron falsely believed
         # there was an available licanse at the top of the hold queue.
-        # if reserved_license_exception:
-        #     raise NoAvailableCopiesWhenReserved
+        if reserved_license_exception:
+            raise NoAvailableCopiesWhenReserved
 
         return None, hold, is_new
 
