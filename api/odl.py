@@ -168,7 +168,9 @@ LibrarySettingsType = TypeVar(
 )
 
 
-class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType], LoggerMixin, ABC):
+class BaseODLAPI(
+    PatronActivityCirculationAPI[SettingsType, LibrarySettingsType], LoggerMixin, ABC
+):
     """ODL (Open Distribution to Libraries) is a specification that allows
     libraries to manage their own loans and holds. It offers a deeper level
     of control to the library, but it requires the circulation manager to
@@ -365,9 +367,7 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
         return status_doc  # type: ignore[no-any-return]
 
     @staticmethod
-    def _notification_url(
-        short_name: str | None, license_id: str
-    ) -> str:
+    def _notification_url(short_name: str | None, license_id: str, _external: bool | None) -> str:
         """Get the notification URL that should be passed in the ODL checkout link.
 
         This is broken out into a separate function to make it easier to override
@@ -447,24 +447,26 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
             # We can't return a loan that doesn't have an external identifier. This should never happen
             # but if it does, we self.log an error and continue on, so it doesn't stay on the patrons
             # bookshelf forever.
-            self.self.log.error(f"Loan {loan.id} has no external identifier.")
+            self.log.error(f"Loan {loan.id} has no external identifier.")
             return
         if loan.license is None:
             # We can't return a loan that doesn't have a license. This should never happen but if it does,
             # we self.log an error and continue on, so it doesn't stay on the patrons bookshelf forever.
-            self.self.log.error(f"Loan {loan.id} has no license.")
+            self.log.error(f"Loan {loan.id} has no license.")
             return
 
         loan_status = self._request_loan_status(loan.external_identifier)
         if not loan_status.active:
-            self.self.log.warning(
+            self.log.warning(
                 f"Loan {loan.id} was {loan_status.status} was already returned early, revoked by the distributor, or it expired."
             )
             loan.license.checkin()
             loan.license_pool.update_availability_from_licenses()
             return
 
-        return_link = loan_status.links.get(rel="return", content_type=LoanStatus.content_type())
+        return_link = loan_status.links.get(
+            rel="return", content_type=LoanStatus.content_type()
+        )
         if not return_link:
             self.log.info("no return link")
             # The distributor didn't provide a link to return this loan. This means that the distributor
@@ -486,7 +488,7 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
             # If the distributor says the loan is still active, we didn't return it, and
             # something went wrong. We self.log an error and don't delete the loan, so the patron
             # can try again later.
-            self.self.log.error(
+            self.log.error(
                 f"Loan {loan.id} was {loan_status.status} not returned. The distributor says it's still active. {loan_status}"
             )
             raise CannotReturn()
@@ -517,9 +519,9 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
                 licensepool.data_source.name,
                 licensepool.identifier.type,
                 licensepool.identifier.identifier,
-                start_date = None,
-                end_date = None,
-                external_identifier = None
+                start_date=None,
+                end_date=None,
+                external_identifier=None,
             )
         else:
             hold = get_one(_db, Hold, patron=patron, license_pool_id=licensepool.id)
@@ -548,7 +550,9 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
         if self.collection is None:
             raise ValueError(f"Collection not found: {self.collection_id}")
         default_loan_period = self.collection.default_loan_period(patron.library)
-        self.log.info(f"Collection: {self.collection}, Loan period: {default_loan_period}")
+        self.log.info(
+            f"Collection: {self.collection}, Loan period: {default_loan_period}"
+        )
         requested_expiry = utc_now() + datetime.timedelta(days=default_loan_period)
         self.log.info(f"Requested expiry: {requested_expiry}")
         patron_id = patron.identifier_to_remote_service(licensepool.data_source)
@@ -591,7 +595,9 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
         if not loan_status.active:
             # Something went wrong with this loan, and we don't actually
             # have the book checked out. This should never happen.
-            self.log.warning(f"Loan status for license {license_.identifier} was {loan_status.status} instead of active")
+            self.log.warning(
+                f"Loan status for license {license_.identifier} was {loan_status.status} instead of active"
+            )
             raise CannotLoan()
 
         # We save the link to the loan status document in the loan's external_identifier field, so
@@ -601,7 +607,9 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
         )
 
         if not loan_status_document_link:
-            self.log.warning(f"There was no loan status link for license {license_.identifier}")
+            self.log.warning(
+                f"There was no loan status link for license {license_.identifier}"
+            )
             raise CannotLoan()
 
         loan = LoanInfo(
@@ -629,7 +637,9 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
         # We also need to update the remaining checkouts for the license.
         license_.checkout()
 
-        self.log.info(f"License {license_.identifier}: checkouts left after loan: {license_.checkouts_left}")
+        self.log.info(
+            f"License {license_.identifier}: checkouts left after loan: {license_.checkouts_left}"
+        )
 
         # If there was a hold CirculationAPI will take care of deleting it. So we just need to
         # update the license pool to reflect the loan. Since update_availability_from_licenses
@@ -650,6 +660,7 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
         notification_url = self._notification_url(
             library_short_name,
             identifier,
+            _external=True,
         )
 
         # We should never be able to get here if the license doesn't have a checkout_url, but
@@ -730,8 +741,9 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
             raise FormatNotAvailable()
         content_link = resource.representation.public_url
         content_type = resource.representation.media_type
-        return RedirectFulfillment(content_link, content_type) # Tää pitää kattoo, ei ole circulation.py:ssä
-
+        return RedirectFulfillment(
+            content_link, content_type
+        )  # Tää pitää kattoo, ei ole circulation.py:ssä
 
     def _license_fulfill(
         self, loan: Loan, delivery_mechanism: LicensePoolDeliveryMechanism
@@ -766,7 +778,9 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
         elif drm_scheme == DeliveryMechanism.FEEDBOOKS_AUDIOBOOK_DRM:
             # For DeMarque audiobook content using "FEEDBOOKS_AUDIOBOOK_DRM", the link
             # we are looking for is stored in the 'manifest' rel.
-            fulfill_link = loan_status.links.get(rel="manifest", content_type=FEEDBOOKS_AUDIO)
+            fulfill_link = loan_status.links.get(
+                rel="manifest", content_type=FEEDBOOKS_AUDIO
+            )
             fulfill_cls = partial(FetchFulfillment, allowed_response_codes=["2xx"])
         else:
             # We are getting content via a license loan_statusument, so we need to find the link
@@ -785,10 +799,9 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
         delivery_mechanism: LicensePoolDeliveryMechanism,
     ) -> Fulfillment:
         if loan.license_pool.open_access or loan.license_pool.unlimited_access:
-                return self._unlimited_access_fulfill(loan, delivery_mechanism)
+            return self._unlimited_access_fulfill(loan, delivery_mechanism)
         else:
             return self._license_fulfill(loan, delivery_mechanism)
-
 
     def _count_holds_before(self, holdinfo: HoldInfo, pool: LicensePool) -> int:
         # Count holds on the license pool that started before this hold and
@@ -901,8 +914,12 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
                 next_cycle_start = reservation.end + datetime.timedelta(
                     days=default_loan_period
                 )
-            self.log.info(f"loans: {current_loans} holds: {current_holds} licenses reserved: {licenses_reserved}")
-            self.log.info(f"current reservations: {current_reservations} cycles: {cycles} copy index: {copy_index} next cycle strt: {next_cycle_start}")
+            self.log.info(
+                f"loans: {current_loans} holds: {current_holds} licenses reserved: {licenses_reserved}"
+            )
+            self.log.info(
+                f"current reservations: {current_reservations} cycles: {cycles} copy index: {copy_index} next cycle strt: {next_cycle_start}"
+            )
             # Assume all cycles after the first cycle take the maximum time.
             cycle_period = default_loan_period + default_reservation_period
             holdinfo.end_date = next_cycle_start + datetime.timedelta(
@@ -945,11 +962,15 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
             as_of=utc_now(),
         )
         holds = licensepool.get_active_holds()
-        print(f"update_licensepool: holds: {holds}, reserved: {licensepool.licenses_reserved}")
+        print(
+            f"update_licensepool: holds: {holds}, reserved: {licensepool.licenses_reserved}"
+        )
         for hold in holds[: licensepool.licenses_reserved]:
             if hold.position != 0:
                 # This hold just got a reserved license.
-                print(f"holds: {holds}, reserved: {licensepool.licenses_reserved}, position: {hold.position}")
+                print(
+                    f"holds: {holds}, reserved: {licensepool.licenses_reserved}, position: {hold.position}"
+                )
                 self._update_hold_data(hold)
 
     def place_hold(
@@ -998,7 +1019,9 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
             hold_position=licensepool.patrons_in_hold_queue,
         )
         library = patron.library
-        self._update_hold_end_date(holdinfo, licensepool, library=library) # MIKSI feilaa
+        self._update_hold_end_date(
+            holdinfo, licensepool, library=library
+        )  # MIKSI feilaa
 
         return holdinfo
 

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import logging
 import sys
@@ -5,9 +7,6 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum, auto
 from dateutil import parser
-
-log = logging.getLogger("License status doc")
-
 
 @dataclass
 class Link:
@@ -41,8 +40,12 @@ class Updated:
     https://readium.org/lcp-specs/releases/lsd/latest#24-timestamps
     """
 
-    license: datetime
-    status: datetime
+    license: datetime | None = None
+    status: datetime | None = None
+
+    def __post_init__(self):
+        self.license = parse_iso_timestamp(self.license)
+        self.status = parse_iso_timestamp(self.status)
 
 
 @dataclass
@@ -54,11 +57,7 @@ class PotentialRights:
     end: datetime | None = None
 
     def __post_init__(self):
-        if isinstance(self.end, str):
-            try:
-                self.end = parser.isoparse(self.end)
-            except ValueError:
-                self.end = None
+        self.end = parse_iso_timestamp(self.end)
 
 
 class EventType(Enum):
@@ -86,11 +85,7 @@ class Event:
     device: str | None = None
 
     def __post_init__(self):
-        if isinstance(self.timestamp, str):
-            try:
-                self.timestamp = parser.isoparse(self.timestamp)
-            except ValueError:
-                self.timestamp = None
+        self.timestamp = parse_iso_timestamp(self.timestamp)
 
 
 
@@ -135,8 +130,8 @@ class LoanStatus:
 
     id: str
     status: Status
-    # message: str
-    # updated: Updated
+    message: str
+    updated: Updated
     links: LinkCollection
     potential_rights: PotentialRights = field(default_factory=PotentialRights)
     events: list[Event] = field(default_factory=list)
@@ -155,10 +150,9 @@ class LoanStatus:
         return self.status in [Status.READY, Status.ACTIVE]
 
     @classmethod
-    def from_json(cls, data: str):
+    def from_json(cls, data: str) -> LoanStatus:
         parsed_data = json.loads(data)
 
-        # Convert `links` dictionaries to `Link` objects within a `LinkCollection`
         links = LinkCollection(
             items=[
                 Link(
@@ -173,10 +167,8 @@ class LoanStatus:
             ]
         )
 
-        # Convert `potential_rights` from dict to object
         potential_rights = PotentialRights(**parsed_data.get('potential_rights', {}))
 
-        # Convert `events` from list of dicts to list of `Event` objects
         events = [
             Event(
                 event_type=EventType(event['type']),  # Convert string to EventType
@@ -193,7 +185,17 @@ class LoanStatus:
         return cls(
             id=parsed_data['id'],
             status=status,
+            message=parsed_data.get('message') or None, # Missing in Ellibs LCP responses
+            updated=Updated(parsed_data.get('updated')) or None, # Missing in Ellibs LCP responses
             links=links,
             potential_rights=potential_rights,
             events=events
         )
+
+def parse_iso_timestamp(timestamp: str | datetime) -> datetime | None:
+    if isinstance(timestamp, str):
+        try:
+            return parser.isoparse(timestamp)
+        except ValueError:
+            return None
+    return timestamp

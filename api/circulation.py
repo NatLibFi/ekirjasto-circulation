@@ -1386,6 +1386,7 @@ class CirculationAPI:
             return
 
         at_loan_limit = self.patron_at_loan_limit(patron)
+        print(f"is at loan limit? {at_loan_limit}")
         at_hold_limit = self.patron_at_hold_limit(patron)
 
         if not at_loan_limit and not at_hold_limit:
@@ -1427,6 +1428,7 @@ class CirculationAPI:
         :param patron: A Patron.
         """
         loan_limit = patron.library.settings.loan_limit
+        print(f"library limit: {loan_limit} patron loans: {len(patron.loans)}")
         if not loan_limit:
             return False
 
@@ -1437,6 +1439,7 @@ class CirculationAPI:
             for loan in patron.loans
             if loan.license_pool and loan.license_pool.open_access == False and loan.end
         ]
+        print(f"patron loans: {non_open_access_loans_with_end_date}")
         return len(non_open_access_loans_with_end_date) >= loan_limit
 
     def patron_at_hold_limit(self, patron: Patron) -> bool:

@@ -1056,7 +1056,8 @@ class LicensePool(Base):
             license_pool=self,
             create_method_kwargs=kwargs,
         )
-
+        if end:
+            loan.end = end
         if is_new:
             # This action creates uncertainty about what the patron's
             # loan activity actually is. We'll need to sync with the
@@ -1067,6 +1068,7 @@ class LicensePool(Base):
             loan.fulfillment = fulfillment
         if external_identifier:
             loan.external_identifier = external_identifier
+        print(f"loan_to: {loan}")
         return loan, is_new
 
     def on_hold_to(
