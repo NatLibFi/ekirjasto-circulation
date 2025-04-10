@@ -111,9 +111,7 @@ class CirculationInfo:
         if not d:
             return None
         else:
-            print(d, "before")
             date = datetime.datetime.strftime(d, "%Y/%m/%d %H:%M:%S")
-            print(date, "date after")
             return date
 
 
@@ -317,7 +315,7 @@ class FulfillmentInfo(CirculationInfo):
     def content_expires(self, value: datetime.datetime | None) -> None:
         self._content_expires = value
 
-
+# TODO: Remove this class, it's only used by Axis.
 class APIAwareFulfillmentInfo(FulfillmentInfo, ABC):
     """This that acts like FulfillmentInfo but is prepared to make an API
     request on demand to get data, rather than having all the data

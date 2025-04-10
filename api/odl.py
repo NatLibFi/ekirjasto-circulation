@@ -633,7 +633,6 @@ class BaseODLAPI(
         # external_identifier: str | None = None,
         # locked_to: DeliveryMechanismInfo | None = None,
 
-        license_.loan_to(patron)
         # We also need to update the remaining checkouts for the license.
         license_.checkout()
 
