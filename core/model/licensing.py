@@ -1056,8 +1056,8 @@ class LicensePool(Base):
             license_pool=self,
             create_method_kwargs=kwargs,
         )
-        if end:
-            loan.end = end
+        # if end:
+        #     loan.end = end
         if is_new:
             # This action creates uncertainty about what the patron's
             # loan activity actually is. We'll need to sync with the

@@ -145,13 +145,9 @@ def get_one_or_create(
             # These kwargs are supported by get_one() but not by create().
             get_one_keys = ["on_multiple", "constraint"]
             for key in get_one_keys:
-                print(f"key: {key}")
                 if key in kwargs:
-                    print("deleting key: ", key)
                     del kwargs[key]
-            print(f"init: {create_method_kwargs} kwargs: {kwargs}")
             obj = create(db, model, create_method, create_method_kwargs, **kwargs)
-            print(f"object: {obj}")
             __transaction.commit()
             return obj
         except IntegrityError as e:

@@ -467,7 +467,7 @@ class TestLicense:
         assert left == l.checkouts_left
         assert available == l.checkouts_available
 
-    def test_best_available_license(self, licenses: TestLicenseFixture):
+    def test_best_available_licenses(self, licenses: TestLicenseFixture):
         next_week = utc_now() + datetime.timedelta(days=7)
         time_limited_2 = licenses.db.license(
             licenses.pool,
@@ -480,36 +480,36 @@ class TestLicense:
         )
 
         # First, we use the time-limited license that's expiring first.
-        assert time_limited_2 == licenses.pool.best_available_license()
+        assert time_limited_2 == licenses.pool.best_available_licenses()
         time_limited_2.checkout()
 
         # When that's not available, we use the next time-limited license.
-        assert licenses.time_limited == licenses.pool.best_available_license()
+        assert licenses.time_limited == licenses.pool.best_available_licenses()
         licenses.time_limited.checkout()
 
         # The time-and-loan-limited license also counts as time-limited for this.
-        assert licenses.time_and_loan_limited == licenses.pool.best_available_license()
+        assert licenses.time_and_loan_limited == licenses.pool.best_available_licenses()
         licenses.time_and_loan_limited.checkout()
 
         # Next is the perpetual license.
-        assert licenses.perpetual == licenses.pool.best_available_license()
+        assert licenses.perpetual == licenses.pool.best_available_licenses()
         licenses.perpetual.checkout()
 
         # Then the loan-limited license with the most remaining checkouts.
-        assert licenses.loan_limited == licenses.pool.best_available_license()
+        assert licenses.loan_limited == licenses.pool.best_available_licenses()
         licenses.loan_limited.checkout()
 
         # That license allows 2 concurrent checkouts, so it's still the
         # best license until it's checked out again.
-        assert licenses.loan_limited == licenses.pool.best_available_license()
+        assert licenses.loan_limited == licenses.pool.best_available_licenses()
         licenses.loan_limited.checkout()
 
         # There's one more loan-limited license.
-        assert loan_limited_2 == licenses.pool.best_available_license()
+        assert loan_limited_2 == licenses.pool.best_available_licenses()
         loan_limited_2.checkout()
 
         # Now all licenses are either loaned out or expired.
-        assert None == licenses.pool.best_available_license()
+        assert None == licenses.pool.best_available_licenses()
 
 
 class TestLicensePool:
