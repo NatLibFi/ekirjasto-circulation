@@ -1020,7 +1020,7 @@ class BaseODLAPI(
         library = patron.library
         self._update_hold_end_date(
             holdinfo, licensepool, library=library
-        )  # MIKSI feilaa
+        )
 
         return holdinfo
 

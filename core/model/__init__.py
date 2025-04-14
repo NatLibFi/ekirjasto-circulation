@@ -88,10 +88,8 @@ T = TypeVar("T")
 def create(
     db: Session, model: type[T], create_method="", create_method_kwargs=None, **kwargs
 ) -> tuple[T, Literal[True]]:
-    print(f"create: {create_method_kwargs} kwargs={kwargs}")
     kwargs.update(create_method_kwargs or {})
     created = getattr(model, create_method, model)(**kwargs)
-    print(f"created: {created}")
     db.add(created)
     flush(db)
     return created, True
