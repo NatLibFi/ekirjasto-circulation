@@ -1159,11 +1159,9 @@ class CirculationAPI:
             loan_info = api.checkout(
                 patron, pin, licensepool, delivery_mechanism=delivery_mechanism
             )
-            print("circ: ", loan_info)
             if isinstance(loan_info, HoldInfo):
                 # If the API couldn't give us a loan, it may have given us
                 # a hold instead of raising an exception.
-                print(f"got a hold {loan_info}")
                 hold_info = loan_info
                 loan_info = None
             else:
@@ -1239,7 +1237,6 @@ class CirculationAPI:
             # Since the patron incorrectly believed there were
             # licenses available, update availability information
             # immediately.
-            print("circ: no licenses")
             api.update_availability(licensepool)
             raise
         except PatronLoanLimitReached as e:
@@ -1261,11 +1258,9 @@ class CirculationAPI:
                 end=loan_info.end_date,
                 external_identifier=loan_info.external_identifier,
             )
-            print(f"circ loan: {loan} end: {loan_info.end_date}") # TÄSSÄ EI OLE ERÄPÄIVÄÄ, MIKSI?
 
             if must_set_delivery_mechanism:
                 loan.fulfillment = delivery_mechanism
-                print("loan fulfill: ", loan.fulfillment)
             existing_hold = get_one(
                 self._db,
                 Hold,
@@ -1297,13 +1292,11 @@ class CirculationAPI:
             # has reached their hold limit since we did not raise
             # an exception for it earlier when limits were enforced.
             at_hold_limit = self.patron_at_hold_limit(patron)
-            print(f"Not at hold limit so placing a hold")
             if not at_hold_limit:
                 try:
                     hold_info = api.place_hold(
                         patron, pin, licensepool, hold_notification_email
                     )
-                    print(f"trying to place hold and got: {hold_info}")
                 except AlreadyOnHold as e:
                     hold_info = HoldInfo(
                         licensepool.collection,
@@ -1342,7 +1335,6 @@ class CirculationAPI:
             hold_info.hold_position,
             hold_info.external_identifier,
         )
-        print(f"circ hold: {hold}")
         if hold and is_new:
             # Send out an analytics event to record the fact that
             # a hold was initiated through the circulation
@@ -1552,9 +1544,7 @@ class CirculationAPI:
             licensepool,
             delivery_mechanism=delivery_mechanism,
         )
-        print("circ fulfill fulfillment: ", fulfillment)
-        if not fulfillment or not (fulfillment.content_link or fulfillment.content):
-            print("ei linkkiä")
+        if not fulfillment:
             raise NoAcceptableFormat()
 
         # Send out an analytics event to record the fact that
@@ -1571,12 +1561,10 @@ class CirculationAPI:
             and loan.fulfillment is None
             and not delivery_mechanism.delivery_mechanism.is_streaming
         ):
-            print("we have a loan, fulfillment isnt none and its not streaming")
             __transaction = self._db.begin_nested()
             loan.fulfillment = delivery_mechanism
             print(f"fulfillment: {loan.fulfillment}")
             __transaction.commit()
-        print(f"at end of circ fulfill loan: {loan} and {fulfillment}")
         return fulfillment
 
     def revoke_loan(
@@ -1661,17 +1649,10 @@ class CirculationAPI:
         # Any other CannotReleaseHold exception will be propagated
         # upwards at this point
         if hold:
-            print(f"hold deleting: {hold} {hold.id}")
-            # Check if the row still exists before attempting to delete
-            existing_hold = self._db.query(Hold).filter(Hold.id == hold.id).first()
-            if existing_hold:
-                print(f"hold found deleting: {hold} {hold.id}")
-                __transaction = self._db.begin_nested()
-                self._db.delete(hold)
-                patron.last_loan_activity_sync = None
-                __transaction.commit()
-            else:
-                print(f"Hold with id {hold.id} does not exist in the database.")
+            __transaction = self._db.begin_nested()
+            self._db.delete(hold)
+            __transaction.commit()
+
             # Send out an analytics event to record the fact that
             # a hold was revoked through the circulation
             # manager.

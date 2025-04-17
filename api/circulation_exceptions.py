@@ -1,12 +1,13 @@
+from abc import ABC, abstractmethod
 from flask_babel import lazy_gettext as _
 
 from api.problem_details import *
 from core.config import IntegrationException
 from core.problem_details import INTEGRATION_ERROR, INTERNAL_SERVER_ERROR
-from core.util.problem_detail import ProblemDetail
+from core.util.problem_detail import ProblemDetail, BaseProblemDetailException
 
 
-class CirculationException(IntegrationException):
+class CirculationException(IntegrationException, BaseProblemDetailException, ABC):
     """An exception occured when carrying out a circulation operation.
 
     `status_code` is the status code that should be returned to the patron.
@@ -15,8 +16,30 @@ class CirculationException(IntegrationException):
     status_code = 400
 
     def __init__(self, message=None, debug_info=None):
-        message = message or self.__class__.__name__
-        super().__init__(message, debug_info)
+        super().__init__(message or self.__class__.__name__, debug_info)
+        self.message = message
+
+    @property
+    def detail(self) -> str | None:
+        return self.message
+
+    @property
+    @abstractmethod
+    def base(self) -> ProblemDetail:
+        """A ProblemDetail, used as the basis for conversion of this exception into a
+        problem detail document."""
+
+    @property
+    def problem_detail(self) -> ProblemDetail:
+        """Return a suitable problem detail document."""
+        if self.detail is not None:
+            return self.base.detailed(
+                detail=self.detail, debug_message=self.debug_message
+            )
+        elif self.debug_message is not None:
+            return self.base.with_debug(self.debug_message)
+        else:
+            return self.base
 
 
 class InternalServerError(IntegrationException):
@@ -36,13 +59,13 @@ class RemoteInitiatedServerError(InternalServerError):
         super().__init__(message)
         self.service_name = service_name
 
-    def as_problem_detail_document(self, debug=False):
+    def as_problem_detail_document(self, debug=False) -> ProblemDetail:
         """Return a suitable problem detail document."""
         msg = _(
             "Integration error communicating with %(service_name)s",
             service_name=self.service_name,
         )
-        return INTEGRATION_ERROR.detailed(msg)
+        return INTEGRATION_ERROR.detailed(msg, debug_message=str(self))
 
 
 class NoOpenAccessDownload(CirculationException):
@@ -92,6 +115,10 @@ class DeliveryMechanismConflict(DeliveryMechanismError):
     """The patron specified a delivery mechanism that conflicted with
     one already set in stone.
     """
+
+    @property
+    def base(self) -> ProblemDetail:
+        return DELIVERY_CONFLICT
 
 
 class CannotLoan(CirculationException):
@@ -163,7 +190,9 @@ class PatronLoanLimitReached(CannotLoan, LimitReached):
 
 
 class CannotReturn(CirculationException):
-    status_code = 500
+    @property
+    def base(self) -> ProblemDetail:
+        return COULD_NOT_MIRROR_TO_REMOTE
 
 
 class CannotHold(CirculationException):
@@ -176,7 +205,9 @@ class PatronHoldLimitReached(CannotHold, LimitReached):
 
 
 class CannotReleaseHold(CirculationException):
-    status_code = 500
+    @property
+    def base(self) -> ProblemDetail:
+        return CANNOT_RELEASE_HOLD
 
 
 class CannotFulfill(CirculationException):
@@ -270,8 +301,6 @@ class NotOnHold(CannotReleaseHold):
     """The patron can't release a hold for this book because they don't
     have it on hold in the first place.
     """
-
-    status_code = 400
 
 
 class CurrentlyAvailable(CannotHold):

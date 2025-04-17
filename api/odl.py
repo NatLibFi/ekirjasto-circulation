@@ -550,11 +550,7 @@ class BaseODLAPI(
         if self.collection is None:
             raise ValueError(f"Collection not found: {self.collection_id}")
         default_loan_period = self.collection.default_loan_period(patron.library)
-        self.log.info(
-            f"Collection: {self.collection}, Loan period: {default_loan_period}"
-        )
         requested_expiry = utc_now() + datetime.timedelta(days=default_loan_period)
-        self.log.info(f"Requested expiry: {requested_expiry}")
         patron_id = patron.identifier_to_remote_service(licensepool.data_source)
         library_short_name = patron.library.short_name
         hasher = self._get_hasher()
@@ -566,14 +562,12 @@ class BaseODLAPI(
         encoded_pass = base64.b64encode(binascii.unhexlify(hashed_pass.hashed))
 
         licenses = licensepool.best_available_licenses()
-        for l in licenses:
-            print(f"Amount: {len(licenses)}, license {l.identifier}")
 
         license_: License | None = None
         loan_status: LoanStatus | None = None
         for license_ in licenses:
             try:
-                self.log.info(f"Trying license: {license_.identifier}")
+                self.log.info(f"Trying license: {license_.identifier} with {license_.checkouts_available} available checkouts...")
                 loan_status = self._checkout_license(
                     license_,
                     library_short_name,
@@ -583,6 +577,7 @@ class BaseODLAPI(
                 )
                 break
             except NoAvailableCopies:
+                self.log.info(f"No available checkouts after all for license: {license_.identifier}.")
                 # This license had no available copies, so we try the next one.
                 ...
 
@@ -621,24 +616,9 @@ class BaseODLAPI(
             end_date=loan_status.potential_rights.end,
             external_identifier=loan_status_document_link.href,
         )
-        print(f"loan info in odl: {loan}")
-
-        # collection: Collection | int,
-        # data_source_name: str | DataSource | None,
-        # identifier_type: str | None,
-        # identifier: str | None,
-        # start_date: datetime.datetime | None,
-        # end_date: datetime.datetime | None,
-        # fulfillment_info: FulfillmentInfo | None = None,
-        # external_identifier: str | None = None,
-        # locked_to: DeliveryMechanismInfo | None = None,
 
         # We also need to update the remaining checkouts for the license.
         license_.checkout()
-
-        self.log.info(
-            f"License {license_.identifier}: checkouts left after loan: {license_.checkouts_left}"
-        )
 
         # If there was a hold CirculationAPI will take care of deleting it. So we just need to
         # update the license pool to reflect the loan. Since update_availability_from_licenses
@@ -701,7 +681,7 @@ class BaseODLAPI(
         pin: str,
         licensepool: LicensePool,
         delivery_mechanism: LicensePoolDeliveryMechanism,
-    ) -> FulfillmentInfo:
+    ) -> Fulfillment:
         """Get the actual resource file to the patron."""
         _db = Session.object_session(patron)
 
@@ -855,7 +835,6 @@ class BaseODLAPI(
         # If the hold was already to check out and already has an end date,
         # it doesn't need an update.
         if holdinfo.hold_position == 0 and original_position == 0 and holdinfo.end_date:
-            print("no update needed")
             return
 
         # If the patron is in the queue, we need to estimate when the book
@@ -913,12 +892,6 @@ class BaseODLAPI(
                 next_cycle_start = reservation.end + datetime.timedelta(
                     days=default_loan_period
                 )
-            self.log.info(
-                f"loans: {current_loans} holds: {current_holds} licenses reserved: {licenses_reserved}"
-            )
-            self.log.info(
-                f"current reservations: {current_reservations} cycles: {cycles} copy index: {copy_index} next cycle strt: {next_cycle_start}"
-            )
             # Assume all cycles after the first cycle take the maximum time.
             cycle_period = default_loan_period + default_reservation_period
             holdinfo.end_date = next_cycle_start + datetime.timedelta(
@@ -1036,20 +1009,10 @@ class BaseODLAPI(
         )
         if not hold:
             raise NotOnHold()
-        self._release_hold(hold)
-
-    def _release_hold(self, hold: Hold) -> Literal[True]:
-        # If the book was ready and the patron revoked the hold instead
-        # of checking it out, but no one else had the book on hold, the
-        # book is now available for anyone to check out. If someone else
-        # had a hold, the license is now reserved for the next patron.
-        # If someone else had a hold, the license is now reserved for the
-        # next patron, and we need to update that hold.
-        _db = Session.object_session(hold)
-        licensepool = hold.license_pool
-        _db.delete(hold)
+        # The hold itself will be deleted by the caller (usually CirculationAPI),
+        # so we just need to update the license pool to reflect the released hold.
         self.update_licensepool(licensepool)
-        return True
+
 
     def patron_activity(self, patron: Patron, pin: str) -> list[LoanInfo | HoldInfo]:
         """Look up non-expired loans for this collection in the database."""

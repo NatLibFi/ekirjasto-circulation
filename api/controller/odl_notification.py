@@ -21,6 +21,14 @@ class ODLNotificationController(CirculationManagerController):
 
     def notify(self, license_identifier: str) -> Response:
         loan = get_one(self._db, Loan, id=license_identifier)
+        # TOIMISKO paremmin
+        # loan = get_one(
+        #     self._db,
+        #     Loan,
+        #     id=license_identifier,
+        #     patron=patron,
+        # )
+
         print("in notify")
         if not loan:
             print("No loan found in odl_notification")

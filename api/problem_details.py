@@ -435,3 +435,12 @@ PATRON_AUTH_ACCESS_TOKEN_NOT_POSSIBLE = pd(
         "The patron authentication access token is not possible for this type of authentication."
     ),
 )
+
+COULD_NOT_MIRROR_TO_REMOTE = pd(
+    "http://librarysimplified.org/terms/problem/cannot-mirror-to-remote",
+    503,
+    _("Loan deleted locally but remote failed."),
+    _(
+        "Could not convince a third party to accept the change you made. It's likely to show up again soon."
+    ),
+)

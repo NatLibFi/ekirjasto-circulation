@@ -2,9 +2,11 @@ import logging
 import time
 from collections.abc import Callable
 from json import JSONDecodeError
-from typing import Any
+from typing import Any, Literal, Protocol, TypedDict
 from urllib.parse import urlparse
-
+from collections.abc import Callable, Iterable, Mapping
+from io import BytesIO, StringIO
+from requests.auth import AuthBase
 import requests
 from flask_babel import lazy_gettext as _
 from requests import sessions
@@ -16,10 +18,10 @@ from core.exceptions import IntegrationException
 from core.problem_details import INTEGRATION_ERROR
 from core.util.log import LoggerMixin
 from core.util.problem_detail import JSON_MEDIA_TYPE as PROBLEM_DETAIL_JSON_MEDIA_TYPE
-from core.util.problem_detail import ProblemError
+from core.util.problem_detail import ProblemError, BaseProblemDetailException, ProblemDetail
 
 
-class RemoteIntegrationException(IntegrationException):
+class RemoteIntegrationException(IntegrationException, BaseProblemDetailException):
     """An exception that happens when we try and fail to communicate
     with a third-party service over HTTP.
     """
@@ -61,13 +63,21 @@ class RemoteIntegrationException(IntegrationException):
             return _(str(self.detail), service=self.url)
         return None
 
+    # TODO: Remove this and replace with below property, update tests
     def as_problem_detail_document(self, debug):
         return INTEGRATION_ERROR.detailed(
             detail=self.document_detail(debug),
             title=self.title,
             debug_message=self.document_debug_message(debug),
         )
-
+    
+    @property
+    def problem_detail(self) -> ProblemDetail:
+        return INTEGRATION_ERROR.detailed(
+            detail=self.document_detail(),
+            title=self.title,
+            debug_message=self.document_debug_message(),
+        )
 
 class BadResponseException(RemoteIntegrationException):
     """The request seemingly went okay, but we got a bad response."""
@@ -142,6 +152,31 @@ class RequestTimedOut(RequestNetworkException, requests.exceptions.Timeout):
     internal_message = "Timeout accessing %s: %s"
 
 
+_ResponseCodesLiteral = Literal["2xx", "3xx", "4xx", "5xx"]
+ResponseCodesT = Iterable[_ResponseCodesLiteral | int] | None
+
+
+class GetRequestKwargs(TypedDict, total=False):
+    params: Mapping[str, str | int | float | None] | None
+    headers: Mapping[str, str | None] | None
+    auth: tuple[str, str] | AuthBase | None
+    timeout: float | int | None
+    allow_redirects: bool
+    stream: bool | None
+    verify: bool | None
+
+    allowed_response_codes: ResponseCodesT
+    disallowed_response_codes: ResponseCodesT
+    verbose: bool
+    max_retry_count: int
+    backoff_factor: float
+
+
+class RequestKwargs(GetRequestKwargs, total=False):
+    data: Iterable[bytes] | str | bytes | Mapping[str, Any] | None
+    files: Mapping[str, BytesIO | StringIO | str | bytes] | None
+    json: Mapping[str, Any] | None
+
 class HTTP(LoggerMixin):
     """A helper for the `requests` module."""
 
@@ -183,7 +218,7 @@ class HTTP(LoggerMixin):
         exception.
         """
         return cls._request_with_timeout(
-            url, sessions.Session.request, http_method, *args, **kwargs
+            http_method, url, sessions.Session.request, *args, **kwargs
         )
 
     # The set of status codes on which a retry will be attempted (if the number of retries requested is non-zero).
@@ -191,7 +226,7 @@ class HTTP(LoggerMixin):
 
     @classmethod
     def _request_with_timeout(
-        cls, url: str, make_request_with: Callable[..., Response], *args, **kwargs
+        cls, http_method: str, url: str, make_request_with: Callable[..., Response], *args, **kwargs
     ) -> Response:
         """Call some kind of method and turn a timeout into a RequestTimedOut
         exception.
@@ -232,7 +267,7 @@ class HTTP(LoggerMixin):
             version = (
                 core.__version__ if core.__version__ else cls.DEFAULT_USER_AGENT_VERSION
             )
-            headers["User-Agent"] = f"Palace Manager/{version}"
+            headers["User-Agent"] = f"E-kirjasto/{version}"
         new_headers = {}
         for k, v in list(headers.items()):
             if isinstance(k, str):
@@ -245,14 +280,8 @@ class HTTP(LoggerMixin):
         try:
             if verbose:
                 logging.info(
-                    "Sending request to %s: args %r kwargs %r", url, args, kwargs
+                    f"Sending {http_method} request to {url}: kwargs {kwargs!r}"
                 )
-            if len(args) == 1:
-                # requests.request takes two positional arguments,
-                # an HTTP method and a URL. In most cases, the URL
-                # gets added on here. But if you do pass in both
-                # arguments, it will still work.
-                args = args + (url,)
 
             request_start_time = time.time()
             if make_request_with == sessions.Session.request:
@@ -267,20 +296,16 @@ class HTTP(LoggerMixin):
                     session.mount("http://", adapter)
                     session.mount("https://", adapter)
 
-                    response = session.request(*args, **kwargs)
+                    response = session.request(http_method, url, **kwargs)  # type: ignore[misc]
             else:
-                response = make_request_with(*args, **kwargs)
+                response = make_request_with(http_method, url, **kwargs)
             cls.logger().info(
                 f"Request time for {url} took {time.time() - request_start_time:.2f} seconds"
             )
 
             if verbose:
                 logging.info(
-                    "Response from %s: %s %r %r",
-                    url,
-                    response.status_code,
-                    response.headers,
-                    response.content,
+                    f"Response from {url}: {response.status_code} {response.headers!r} {response.content!r}"
                 )
         except requests.exceptions.Timeout as e:
             # Wrap the requests-specific Timeout exception
@@ -326,7 +351,6 @@ class HTTP(LoggerMixin):
             if disallowed_response_codes
             else []
         )
-        print(f"response {response}, code {response.status_code}")
         series = cls.series(response.status_code)
         code = str(response.status_code)
         if code in allowed_response_codes_str or series in allowed_response_codes_str:
@@ -357,7 +381,6 @@ class HTTP(LoggerMixin):
                 % cls._decode_response_content(response, url),
                 response=response,
             )
-        print("RESPONSE: ", response)
         return response
 
     @classmethod
