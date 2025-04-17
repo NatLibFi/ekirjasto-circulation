@@ -205,7 +205,7 @@ class DeliveryMechanismInfo(CirculationInfo):
         loan.fulfillment = lpdm
         return lpdm
 
-
+# TODO: This class can potentially be removed.
 class FulfillmentInfo(CirculationInfo):
     """A record of a technique that can be used *right now* to fulfill
     a loan.
@@ -549,7 +549,7 @@ class LoanInfo(CirculationInfo):
         identifier: str | None,
         start_date: datetime.datetime | None,
         end_date: datetime.datetime | None,
-        fulfillment_info: FulfillmentInfo | None = None,
+        fulfillment: Fulfillment | None = None,
         external_identifier: str | None = None,
         locked_to: DeliveryMechanismInfo | None = None,
     ):
@@ -557,7 +557,7 @@ class LoanInfo(CirculationInfo):
 
         :param start_date: A datetime reflecting when the patron borrowed the book.
         :param end_date: A datetime reflecting when the checked-out book is due.
-        :param fulfillment_info: A FulfillmentInfo object representing an
+        :param fulfillment_info: A Fulfillmen object representing an
             active attempt to fulfill the loan.
         :param locked_to: A DeliveryMechanismInfo object representing the
             delivery mechanism to which this loan is 'locked'.
@@ -565,12 +565,12 @@ class LoanInfo(CirculationInfo):
         super().__init__(collection, data_source_name, identifier_type, identifier)
         self.start_date = start_date
         self.end_date = end_date
-        self.fulfillment_info = fulfillment_info
+        self.fulfillment = fulfillment
         self.locked_to = locked_to
         self.external_identifier = external_identifier
 
     def __repr__(self) -> str:
-        if self.fulfillment_info:
+        if self.fulfillment:
             fulfillment = " Fulfilled by: " + repr(self.fulfillment_info)
         else:
             fulfillment = ""
@@ -1481,7 +1481,7 @@ class CirculationAPI:
         licensepool: LicensePool,
         delivery_mechanism: LicensePoolDeliveryMechanism,
         sync_on_failure: bool = True,
-    ) -> FulfillmentInfo:
+    ) -> Fulfillment:
         """Fulfil a book that a patron has previously checked out.
 
         :param delivery_mechanism: A LicensePoolDeliveryMechanism
@@ -1490,7 +1490,7 @@ class CirculationAPI:
             mechanism, this parameter is ignored and the previously used
             mechanism takes precedence.
 
-        :return: A FulfillmentInfo object.
+        :return: A Fulfillment object.
 
         """
         fulfillment: Fulfillment
@@ -1501,10 +1501,8 @@ class CirculationAPI:
             license_pool=licensepool,
             on_multiple="interchangeable",
         )
-        print("circ fulfill loan: ", loan)
         api = self.api_for_license_pool(licensepool)
         if not api:
-            print("no api")
             raise CannotFulfill()
 
         if not loan and not self.can_fulfill_without_loan(
@@ -1515,7 +1513,6 @@ class CirculationAPI:
                 # TODO: Pass in only the single collection or LicensePool
                 # that needs to be synced.
                 self.sync_bookshelf(patron, pin, force=True)
-                print("ei lainaa eikä voi fulfill ilman")
                 return self.fulfill(
                     patron,
                     pin,
@@ -1563,7 +1560,6 @@ class CirculationAPI:
         ):
             __transaction = self._db.begin_nested()
             loan.fulfillment = delivery_mechanism
-            print(f"fulfillment: {loan.fulfillment}")
             __transaction.commit()
         return fulfillment
 

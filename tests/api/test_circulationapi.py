@@ -3,7 +3,7 @@
 import datetime
 from datetime import timedelta
 from typing import cast
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, create_autospec
 
 import flask
 import pytest
@@ -983,26 +983,18 @@ class TestCirculationAPI:
 
     def test_fulfill_errors(self, circulation_api: CirculationAPIFixture):
         # Here's an open-access title.
-        collection = circulation_api.db.collection(
-            protocol=ExternalIntegration.OPDS_IMPORT,
-            data_source_name="OPDS",
-            external_account_id="http://url/",
-        )
+        collection = circulation_api.db.collection()
         circulation_api.pool.open_access = True
         circulation_api.pool.collection = collection
-
-        circulation_api.circulation.remotes[
-            circulation_api.pool.data_source.name
-        ] = OPDSAPI(circulation_api.db.session, collection)
 
         # The patron has the title on loan.
         circulation_api.pool.loan_to(circulation_api.patron)
 
         # It has a LicensePoolDeliveryMechanism that is broken (has no
         # associated Resource).
-        broken_lpdm = circulation_api.delivery_mechanism
-        assert None == broken_lpdm.resource
-        i_want_an_epub = broken_lpdm.delivery_mechanism
+        circulation_api.circulation.queue_fulfill(
+            circulation_api.pool, FormatNotAvailable()
+        )
 
         # fulfill() will raise FormatNotAvailable.
         pytest.raises(
@@ -1011,72 +1003,7 @@ class TestCirculationAPI:
             circulation_api.patron,
             "1234",
             circulation_api.pool,
-            broken_lpdm,
-            sync_on_failure=False,
-        )
-
-        # Let's add a second LicensePoolDeliveryMechanism of the same
-        # type which has an associated Resource.
-        link, new = circulation_api.pool.identifier.add_link(
-            Hyperlink.OPEN_ACCESS_DOWNLOAD,
-            circulation_api.db.fresh_url(),
-            circulation_api.pool.data_source,
-        )
-
-        working_lpdm = circulation_api.pool.set_delivery_mechanism(
-            i_want_an_epub.content_type,
-            i_want_an_epub.drm_scheme,
-            RightsStatus.GENERIC_OPEN_ACCESS,
-            link.resource,
-        )
-
-        # It's still not going to work because the Resource has no
-        # Representation.
-        assert None == link.resource.representation
-        pytest.raises(
-            FormatNotAvailable,
-            circulation_api.circulation.fulfill,
-            circulation_api.patron,
-            "1234",
-            circulation_api.pool,
-            broken_lpdm,
-            sync_on_failure=False,
-        )
-
-        # Let's add a Representation to the Resource.
-        representation, is_new = circulation_api.db.representation(
-            link.resource.url,
-            i_want_an_epub.content_type,
-            "Dummy content",
-            mirrored=True,
-        )
-        link.resource.representation = representation
-
-        # We can finally fulfill a loan.
-        result = circulation_api.circulation.fulfill(
-            circulation_api.patron, "1234", circulation_api.pool, broken_lpdm
-        )
-        assert isinstance(result, FulfillmentInfo)
-        assert result.content_link == link.resource.representation.public_url
-        assert result.content_type == i_want_an_epub.content_type
-
-        # If we change the working LPDM so that it serves a different
-        # media type than the one we're asking for, we're back to
-        # FormatNotAvailable errors.
-        irrelevant_delivery_mechanism, ignore = DeliveryMechanism.lookup(
-            circulation_api.db.session,
-            "application/some-other-type",
-            DeliveryMechanism.NO_DRM,
-        )
-        working_lpdm.delivery_mechanism = irrelevant_delivery_mechanism
-        pytest.raises(
-            FormatNotAvailable,
-            circulation_api.circulation.fulfill,
-            circulation_api.patron,
-            "1234",
-            circulation_api.pool,
-            broken_lpdm,
-            sync_on_failure=False,
+            circulation_api.delivery_mechanism,
         )
 
     def test_fulfill(self, circulation_api: CirculationAPIFixture):
@@ -1168,6 +1095,33 @@ class TestCirculationAPI:
         # An analytics event was created.
         assert 1 == circulation_api.analytics.count
         assert CirculationEvent.CM_HOLD_RELEASE == circulation_api.analytics.event_type
+
+    def test_can_fulfill_without_loan(self, circulation_api: CirculationAPIFixture):
+        """Can a title can be fulfilled without an active loan?  It depends on
+        the BaseCirculationAPI implementation for that title's collection.
+        """
+
+        pool = circulation_api.db.licensepool(None)
+        mock = create_autospec(BaseCirculationAPI)
+        mock.can_fulfill_without_loan = MagicMock(return_value="yep")
+        circulation = CirculationAPI(
+            circulation_api.db.session,
+            circulation_api.db.default_library(),
+            {pool.collection.id: mock},
+        )
+        assert "yep" == circulation.can_fulfill_without_loan(None, pool, MagicMock())
+
+        # If format data is missing or the BaseCirculationAPI cannot
+        # be found, we assume the title cannot be fulfilled.
+        assert False == circulation.can_fulfill_without_loan(None, pool, None)
+        assert False == circulation.can_fulfill_without_loan(None, None, MagicMock())
+
+        circulation.api_for_collection = {}
+        assert False == circulation.can_fulfill_without_loan(None, pool, None)
+
+        # An open access pool can be fulfilled even without the BaseCirculationAPI.
+        pool.open_access = True
+        assert True == circulation.can_fulfill_without_loan(None, pool, MagicMock())
 
     def test__collect_event(self, circulation_api: CirculationAPIFixture):
         # Test the _collect_event method, which gathers information
