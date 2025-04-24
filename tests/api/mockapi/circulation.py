@@ -36,7 +36,10 @@ class MockPatronActivityCirculationAPI(PatronActivityCirculationAPI, ABC):
 
 class MockRemoteAPI(MockPatronActivityCirculationAPI):
     def __init__(
-        self, set_delivery_mechanism_at=True, can_revoke_hold_when_reserved=True
+        self,
+        _db: Session,
+        set_delivery_mechanism_at=True,
+        can_revoke_hold_when_reserved=True
     ):
         self.SET_DELIVERY_MECHANISM_AT = set_delivery_mechanism_at
         self.CAN_REVOKE_HOLD_WHEN_RESERVED = can_revoke_hold_when_reserved
@@ -107,7 +110,7 @@ class MockRemoteAPI(MockPatronActivityCirculationAPI):
         if isinstance(v, Exception):
             raise v
         return v
-
+    
 
 class MockCirculationAPI(CirculationAPI):
     def __init__(self, *args, **kwargs):
@@ -124,10 +127,10 @@ class MockCirculationAPI(CirculationAPI):
         return self._db.query(Hold).filter(Hold.patron == patron)
 
     def add_remote_loan(self, *args, **kwargs):
-        self.remote_loans.append(LoanInfo(*args, **kwargs))
+        self.remote_loans.append(LoanInfo)
 
     def add_remote_hold(self, *args, **kwargs):
-        self.remote_holds.append(HoldInfo(*args, **kwargs))
+        self.remote_holds.append(HoldInfo)
 
     def patron_activity(self, patron, pin):
         """Return a 3-tuple (loans, holds, completeness)."""

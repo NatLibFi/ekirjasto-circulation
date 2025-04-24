@@ -200,6 +200,9 @@ class License(Base, LicenseFunctions):
             self.checkouts_available = min(available)
         else:
             logging.warning(f"Checking in expired license # {self.identifier}.")
+    
+    def __repr__(self):
+        return f"License id: {self.identifier}, checkouts left: {self.checkouts_left}, available: {self.checkouts_available} active: {self.is_inactive} to borrow: {self.is_available_for_borrowing}"
 
 
 class LicensePool(Base):
@@ -715,13 +718,13 @@ class LicensePool(Base):
 
         patrons_in_hold_queue = len(holds)
 
-        if len(holds) > licenses_available:
+        if patrons_in_hold_queue > licenses_available:
             licenses_reserved = licenses_available
             licenses_available = 0
         else:
-            licenses_reserved = len(holds)
+            licenses_reserved = patrons_in_hold_queue
             licenses_available -= licenses_reserved
-
+        logging.info(f"Collected availablility information for licensepool {self.identifier}: OWNED={licenses_owned} AVAILABLE={licenses_available} RESERVED={licenses_reserved} HOLDS={patrons_in_hold_queue} LOANS={len(self.loans)}")
         return self.update_availability(
             licenses_owned,
             licenses_available,
@@ -1149,6 +1152,9 @@ class LicensePool(Base):
         a license that is only loan-limited. We should choose the license with the most remaining
         loans, so that we'll maximize the number of concurrent checkouts available in the future.
         """
+        print(f"licenses: {len(self.licenses)}")
+        for l in self.licenses:
+            print(f"License: {l.identifier}, Available: {l.is_available_for_borrowing} is_time_limited: {l.is_time_limited} loan_limited {l.is_loan_limited}")
         return sorted(
             (l for l in self.licenses if l.is_available_for_borrowing),
             key=self._license_sort_func,

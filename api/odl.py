@@ -32,7 +32,6 @@ from api.circulation import (
 )
 from api.circulation_exceptions import *
 from api.lcp.hash import Hasher, HasherFactory, HashingAlgorithm
-from api.lcp.license import LicenseDocument
 from api.lcp.status import LoanStatus
 from api.odl_api.auth import OpdsWithOdlException
 from core import util
@@ -56,12 +55,14 @@ from core.model import (
     Hold,
     Hyperlink,
     Library,
+    License,
     LicensePool,
     LicensePoolDeliveryMechanism,
     Loan,
     MediaTypes,
     Representation,
     RightsStatus,
+    Resource,
     Session,
     get_one,
 )
@@ -183,35 +184,6 @@ class BaseODLAPI(
 
     SET_DELIVERY_MECHANISM_AT = BaseCirculationAPI.FULFILL_STEP
 
-    # Possible status values in the License Status Document:
-
-    # The license is available but the user hasn't fulfilled it yet.
-    READY_STATUS = "ready"
-
-    # The license is available and has been fulfilled on at least one device.
-    ACTIVE_STATUS = "active"
-
-    # The license has been revoked by the distributor.
-    REVOKED_STATUS = "revoked"
-
-    # The license has been returned early by the user.
-    RETURNED_STATUS = "returned"
-
-    # The license was returned early and was never fulfilled.
-    CANCELLED_STATUS = "cancelled"
-
-    # The license has expired.
-    EXPIRED_STATUS = "expired"
-
-    STATUS_VALUES = [
-        READY_STATUS,
-        ACTIVE_STATUS,
-        REVOKED_STATUS,
-        RETURNED_STATUS,
-        CANCELLED_STATUS,
-        EXPIRED_STATUS,
-    ]
-
     @inject
     def __init__(
         self,
@@ -273,99 +245,6 @@ class BaseODLAPI(
         """Wrapper around flask's url_for to be overridden for tests."""
         return url_for(*args, **kwargs)
 
-    def get_license_status_document(self, loan: Loan) -> dict[str, Any]:
-        """Get the License Status Document for a loan.
-
-        For a new loan, create a local loan with no external identifier and
-        pass it in to this method.
-
-        This will create the remote loan if one doesn't exist yet. The loan's
-        internal database id will be used to receive notifications from the
-        distributor when the loan's status changes.
-        """
-        _db = Session.object_session(loan)
-
-        if loan.external_identifier:
-            url = loan.external_identifier
-        else:
-            id = loan.license.identifier
-            checkout_id = str(uuid.uuid1())
-            if self.collection is None:
-                raise ValueError(f"Collection not found: {self.collection_id}")
-            default_loan_period = self.collection.default_loan_period(
-                loan.patron.library
-            )
-
-            expires = utc_now() + datetime.timedelta(days=default_loan_period)
-            # The patron UUID is generated randomly on each loan, so the distributor
-            # doesn't know when multiple loans come from the same patron.
-            patron_id = str(uuid.uuid1())
-
-            library_short_name = loan.patron.library.short_name
-
-            db = Session.object_session(loan)
-            patron = loan.patron
-            hasher = self._get_hasher()
-
-            unhashed_pass: LCPUnhashedPassphrase = (
-                self._credential_factory.get_patron_passphrase(db, patron)
-            )
-            hashed_pass: LCPHashedPassphrase = unhashed_pass.hash(hasher)
-            self._credential_factory.set_hashed_passphrase(db, patron, hashed_pass)
-            encoded_pass: str = base64.b64encode(binascii.unhexlify(hashed_pass.hashed))
-
-            notification_url = self._url_for(
-                "odl_notify",
-                library_short_name=library_short_name,
-                loan_id=loan.id,
-                _external=True,
-            )
-
-            checkout_url = str(loan.license.checkout_url)
-            url_template = URITemplate(checkout_url)
-            url = url_template.expand(
-                id=str(id),
-                checkout_id=checkout_id,
-                patron_id=patron_id,
-                expires=expires.isoformat(),
-                notification_url=notification_url,
-                passphrase=encoded_pass,
-                hint=self.settings.passphrase_hint,
-                hint_url=self.settings.passphrase_hint_url,
-            )
-
-        try:
-            response = self._get(url, allowed_response_codes=["2xx"])
-        except BadResponseException as e:
-            response = e.response
-            header_string = ", ".join(
-                {f"{k}: {v}" for k, v in response.headers.items()}
-            )
-            response_string = (
-                response.text
-                if len(response.text) < 100
-                else response.text[:100] + "..."
-            )
-            raise BadResponseException(
-                url,
-                f"Error getting License Status Document for loan ({loan.id}):  Url '{url}' returned "
-                f"status code {response.status_code}. Expected 2XX. Response headers: {header_string}. "
-                f"Response content: {response_string}.",
-                response,
-            )
-
-        try:
-            status_doc = json.loads(response.content)
-        except ValueError as e:
-            raise RemoteIntegrationException(
-                url, "License Status Document was not valid JSON."
-            ) from e
-        if status_doc.get("status") not in self.STATUS_VALUES:
-            raise RemoteIntegrationException(
-                url, "License Status Document had an unknown status value."
-            )
-        return status_doc  # type: ignore[no-any-return]
-
     @staticmethod
     def _notification_url(short_name: str | None, license_id: str, _external: bool | None) -> str:
         """Get the notification URL that should be passed in the ODL checkout link.
@@ -384,10 +263,8 @@ class BaseODLAPI(
         self, url: str, ignored_problem_types: list[str] | None = None
     ) -> LoanStatus:
         try:
-            self.log.info("url: ", url)
             response = self._get(url, allowed_response_codes=["2xx"])
             status_doc = LoanStatus.from_json(response.content)
-            self.log.info(f"status_doc: {status_doc}")
         except Exception as e:
             self.log.exception(
                 f"Error validating Loan Status Document. '{url}' returned and invalid document. {e}"
@@ -452,7 +329,7 @@ class BaseODLAPI(
         if loan.license is None:
             # We can't return a loan that doesn't have a license. This should never happen but if it does,
             # we self.log an error and continue on, so it doesn't stay on the patrons bookshelf forever.
-            self.log.error(f"Loan {loan.id} has no license.")
+            self.log.error(f"Loan {loan} has no license.")
             return
 
         loan_status = self._request_loan_status(loan.external_identifier)
@@ -468,7 +345,6 @@ class BaseODLAPI(
             rel="return", content_type=LoanStatus.content_type()
         )
         if not return_link:
-            self.log.info("no return link")
             # The distributor didn't provide a link to return this loan. This means that the distributor
             # does not support early returns, and the patron will have to wait until the loan expires.
             raise CannotReturn()
@@ -479,7 +355,6 @@ class BaseODLAPI(
         # of the open source LCP server, the link is templated, so we need to process the
         # template before we can make the request.
         return_url = return_link.href
-        self.log.info("return url: ", return_url)
 
         # Hit the distributor's return link, and if it's successful, update the pool
         # availability.
@@ -514,14 +389,9 @@ class BaseODLAPI(
             raise AlreadyCheckedOut()
 
         if licensepool.open_access or licensepool.unlimited_access:
-            return LoanInfo(
-                licensepool.collection,
-                licensepool.data_source.name,
-                licensepool.identifier.type,
-                licensepool.identifier.identifier,
-                start_date=None,
+            return LoanInfo.from_license_pool(
+                licensepool,
                 end_date=None,
-                external_identifier=None,
             )
         else:
             hold = get_one(_db, Hold, patron=patron, license_pool_id=licensepool.id)
@@ -562,6 +432,7 @@ class BaseODLAPI(
         encoded_pass = base64.b64encode(binascii.unhexlify(hashed_pass.hashed))
 
         licenses = licensepool.best_available_licenses()
+        print(f"Amount: {len(licenses)}")
 
         license_: License | None = None
         loan_status: LoanStatus | None = None
@@ -582,8 +453,8 @@ class BaseODLAPI(
                 ...
 
         if license_ is None or loan_status is None:
-            # It could be that we have a hold which means we thought the book was available, but it wasn't. We raise a NoAvailableCopies() and have the handler handle the patron's hold position.
-            self.log.warning(f"License or status was nothing")
+            # It could be that we have a hold which means we thought the book was available, but it wasn't.
+            # We raise a NoAvailableCopies() and have the handler handle the patron's hold position.
             licensepool.update_availability_from_licenses()
             raise NoAvailableCopies()
 
@@ -607,14 +478,11 @@ class BaseODLAPI(
             )
             raise CannotLoan()
 
-        loan = LoanInfo(
-            licensepool.collection,
-            licensepool.data_source.name,
-            licensepool.identifier.type,
-            licensepool.identifier.identifier,
-            start_date=utc_now(),
+        loan = LoanInfo.from_license_pool(
+            licensepool,
             end_date=loan_status.potential_rights.end,
             external_identifier=loan_status_document_link.href,
+            license_identifier=license_.identifier,
         )
 
         # We also need to update the remaining checkouts for the license.
@@ -664,7 +532,7 @@ class BaseODLAPI(
                     "http://opds-spec.org/odl/error/checkout/unavailable"
                 ],
             )
-            self.log.info(f"Loan status: {loan_status}")
+            print("HERE", loan_status)
             return loan_status
         except OpdsWithOdlException as e:
             if e.type == "http://opds-spec.org/odl/error/checkout/unavailable":
@@ -746,6 +614,7 @@ class BaseODLAPI(
             raise CannotFulfill()
 
         drm_scheme = delivery_mechanism.delivery_mechanism.drm_scheme
+        print("DRM scheme: ", drm_scheme)
         fulfill_cls: Callable[[str, str | None], UrlFulfillment]
         if drm_scheme == DeliveryMechanism.NO_DRM:
             # If we have no DRM, we can just redirect to the content link and let the patron download the book.
@@ -755,15 +624,17 @@ class BaseODLAPI(
             )
             fulfill_cls = RedirectFulfillment
         elif drm_scheme == DeliveryMechanism.FEEDBOOKS_AUDIOBOOK_DRM:
+            print("THIS: ", DeliveryMechanism.FEEDBOOKS_AUDIOBOOK_DRM)
             # For DeMarque audiobook content using "FEEDBOOKS_AUDIOBOOK_DRM", the link
             # we are looking for is stored in the 'manifest' rel.
             fulfill_link = loan_status.links.get(
-                rel="manifest", content_type=FEEDBOOKS_AUDIO
+                rel="manifest", content_type=BaseODLImporter.FEEDBOOKS_AUDIO
             )
             fulfill_cls = partial(FetchFulfillment, allowed_response_codes=["2xx"])
         else:
-            # We are getting content via a license loan_statusument, so we need to find the link
+            # We are getting content via a license loan_status document, so we need to find the link
             # that corresponds to the delivery mechanism we are using.
+            print("ELSE license link")
             fulfill_link = loan_status.links.get(rel="license", content_type=drm_scheme)
             fulfill_cls = partial(FetchFulfillment, allowed_response_codes=["2xx"])
 
@@ -802,20 +673,17 @@ class BaseODLAPI(
 
     def _update_hold_data(self, hold: Hold) -> None:
         pool: LicensePool = hold.license_pool
-        holdinfo = HoldInfo(
-            pool.collection,
-            pool.data_source.name,
-            pool.identifier.type,
-            pool.identifier.identifier,
-            hold.start,
-            hold.end,
-            hold.position,
+        holdinfo = HoldInfo.from_license_pool(
+            pool,
+            start_date=hold.start,
+            end_date=hold.end,
+            hold_position=hold.position,
         )
         library = hold.patron.library
         self._update_hold_end_date(holdinfo, pool, library=library)
         hold.end = holdinfo.end_date
         hold.position = holdinfo.hold_position
-        print(f"hold end: {hold.end}, position: {hold.position}")
+        print(f"hold data updated: {holdinfo}, hold: {hold}")
 
     def _update_hold_end_date(
         self, holdinfo: HoldInfo, pool: LicensePool, library: Library
@@ -934,15 +802,10 @@ class BaseODLAPI(
             as_of=utc_now(),
         )
         holds = licensepool.get_active_holds()
-        print(
-            f"update_licensepool: holds: {holds}, reserved: {licensepool.licenses_reserved}"
-        )
+
         for hold in holds[: licensepool.licenses_reserved]:
             if hold.position != 0:
                 # This hold just got a reserved license.
-                print(
-                    f"holds: {holds}, reserved: {licensepool.licenses_reserved}, position: {hold.position}"
-                )
                 self._update_hold_data(hold)
 
     def place_hold(
@@ -981,13 +844,9 @@ class BaseODLAPI(
             else 0
         )
         licensepool.patrons_in_hold_queue = patrons_in_hold_queue + 1
-        holdinfo = HoldInfo(
-            licensepool.collection,
-            licensepool.data_source.name,
-            licensepool.identifier.type,
-            licensepool.identifier.identifier,
+        holdinfo = HoldInfo.from_license_pool(
+            licensepool,
             start_date=utc_now(),
-            end_date=None,
             hold_position=licensepool.patrons_in_hold_queue,
         )
         library = patron.library
@@ -1048,22 +907,16 @@ class BaseODLAPI(
                 remaining_holds.append(hold)
 
         return [
-            LoanInfo(
-                loan.license_pool.collection,
-                loan.license_pool.data_source.name,
-                loan.license_pool.identifier.type,
-                loan.license_pool.identifier.identifier,
-                loan.start,
-                loan.end,
+            LoanInfo.from_license_pool(
+                loan.license_pool,
+                start_date=loan.start,
+                end_date=loan.end,
                 external_identifier=loan.external_identifier,
             )
             for loan in loans
         ] + [
-            HoldInfo(
-                hold.license_pool.collection,
-                hold.license_pool.data_source.name,
-                hold.license_pool.identifier.type,
-                hold.license_pool.identifier.identifier,
+            HoldInfo.from_license_pool(
+                hold.license_pool,
                 start_date=hold.start,
                 end_date=hold.end,
                 hold_position=hold.position,

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 import datetime
 import logging
 import math
@@ -16,6 +17,9 @@ from flask import Response
 from flask_babel import lazy_gettext as _
 from pydantic import PositiveInt
 from sqlalchemy.orm import Query
+from sqlalchemy.orm import Session
+from sqlalchemy import select
+from typing_extensions import Self
 
 from api.circulation_exceptions import *
 from api.integration.registry.license_providers import LicenseProvidersRegistry
@@ -37,6 +41,7 @@ from core.model import (
     DeliveryMechanism,
     Hold,
     Library,
+    License,
     LicensePool,
     LicensePoolDeliveryMechanism,
     Loan,
@@ -51,6 +56,7 @@ from core.model.patron import LoanCheckout
 from core.util.datetime_helpers import utc_now
 from core.util.log import LoggerMixin
 from core.util.http import HTTP, BadResponseException
+from core.metadata_layer import FormatData
 
 class CirculationInfo:
     def __init__(
@@ -114,7 +120,7 @@ class CirculationInfo:
             date = datetime.datetime.strftime(d, "%Y/%m/%d %H:%M:%S")
             return date
 
-
+# TODO: Can be deleted, only used in Overdrive
 class DeliveryMechanismInfo(CirculationInfo):
     """A record of a technique that must be (but is not, currently, being)
     used to fulfill a certain loan.
@@ -538,53 +544,130 @@ class FetchFulfillment(UrlFulfillment, LoggerMixin):
         )
 
 
-class LoanInfo(CirculationInfo):
-    """A record of a loan."""
+class LoanAndHoldInfoMixin:
+    collection_id: int
+    identifier_type: str
+    identifier: str
 
-    def __init__(
-        self,
-        collection: Collection | int,
-        data_source_name: str | DataSource | None,
-        identifier_type: str | None,
-        identifier: str | None,
-        start_date: datetime.datetime | None,
-        end_date: datetime.datetime | None,
-        fulfillment: Fulfillment | None = None,
-        external_identifier: str | None = None,
-        locked_to: DeliveryMechanismInfo | None = None,
-    ):
-        """Constructor.
+    def collection(self, _db: Session) -> Collection:
+        """Find the Collection to which this object belongs."""
+        collection = Collection.by_id(_db, self.collection_id)
+        if collection is None:
+            raise ValueError(
+                f"collection_id {self.collection_id} could not be found."
+            )
+        return collection
 
-        :param start_date: A datetime reflecting when the patron borrowed the book.
-        :param end_date: A datetime reflecting when the checked-out book is due.
-        :param fulfillment_info: A Fulfillmen object representing an
-            active attempt to fulfill the loan.
-        :param locked_to: A DeliveryMechanismInfo object representing the
-            delivery mechanism to which this loan is 'locked'.
-        """
-        super().__init__(collection, data_source_name, identifier_type, identifier)
-        self.start_date = start_date
-        self.end_date = end_date
-        self.fulfillment = fulfillment
-        self.locked_to = locked_to
-        self.external_identifier = external_identifier
-
-    def __repr__(self) -> str:
-        if self.fulfillment:
-            fulfillment = " Fulfilled by: " + repr(self.fulfillment_info)
-        else:
-            fulfillment = ""
-        f = "%Y/%m/%d"
-        return "<LoanInfo for {}/{}, start={} end={}>{}".format(
+    def license_pool(self, _db: Session) -> LicensePool:
+        """Find the LicensePool model object corresponding to this object."""
+        collection = self.collection(_db)
+        pool, is_new = LicensePool.for_foreign_id(
+            _db,
+            collection.data_source,
             self.identifier_type,
             self.identifier,
-            self.fd(self.start_date),
-            self.fd(self.end_date),
-            fulfillment,
+            collection=collection,
+        )
+        return pool
+
+
+@dataclasses.dataclass(kw_only=True)
+class LoanInfo(LoanAndHoldInfoMixin):
+    """A record of a loan."""
+
+    collection_id: int
+    identifier_type: str
+    identifier: str
+    start_date: datetime.datetime | None = None
+    end_date: datetime.datetime | None
+    external_identifier: str | None = None
+    locked_to: FormatData | None = None
+    available_formats: set[FormatData] | None = None
+    license_identifier: str | None = None
+
+    @classmethod
+    def from_license_pool(
+        cls,
+        license_pool: LicensePool,
+        *,
+        start_date: datetime.datetime | None = None,
+        end_date: datetime.datetime | None,
+        external_identifier: str | None = None,
+        locked_to: FormatData | None = None,
+        available_formats: set[FormatData] | None = None,
+        license_identifier: str | None = None,
+    ) -> Self:
+        collection_id = license_pool.collection_id
+        assert collection_id is not None
+        identifier_type = license_pool.identifier.type
+        assert identifier_type is not None
+        identifier = license_pool.identifier.identifier
+        assert identifier is not None
+        return cls(
+            collection_id=collection_id,
+            identifier_type=identifier_type,
+            identifier=identifier,
+            start_date=start_date,
+            end_date=end_date,
+            external_identifier=external_identifier,
+            locked_to=locked_to,
+            available_formats=available_formats,
+            license_identifier=license_identifier,
         )
 
+    def __repr__(self) -> str:
+        return "<LoanInfo for {}/{}, start={} end={}>".format(
+            self.identifier_type,
+            self.identifier,
+            self.start_date.isoformat() if self.start_date else self.start_date,
+            self.end_date.isoformat() if self.end_date else self.end_date,
+        )
 
-class HoldInfo(CirculationInfo):
+    def create_or_update(
+        self, patron: Patron, license_pool: LicensePool | None = None
+    ) -> tuple[Loan, bool]:
+        session = Session.object_session(patron)
+        license_pool = license_pool or self.license_pool(session)
+
+        loanable: LicensePool | License
+        if self.license_identifier is not None:
+            loanable = session.execute(
+                select(License).where(
+                    License.identifier == self.license_identifier,
+                    License.license_pool == license_pool,
+                )
+            ).scalars().first()
+        else:
+            loanable = license_pool
+
+        loan, is_new = loanable.loan_to(
+            patron,
+            start=self.start_date,
+            end=self.end_date,
+            external_identifier=self.external_identifier,
+        )
+        db = Session.object_session(patron)
+
+        if self.available_formats:
+            # We have extra information about the formats that are available
+            # for this licensepool. Sometimes we only get this information
+            # when looking up a loan (e.g. Overdrive) so we capture this
+            # information here.
+            for format in self.available_formats:
+                format.apply(db, license_pool.data_source, license_pool.identifier)
+
+        if self.locked_to is not None:
+            # The loan source is letting us know that the loan is
+            # locked to a specific delivery mechanism. Even if
+            # this is the first we've heard of this loan,
+            # it may have been created in another app or through
+            # a library-website integration.
+            self.locked_to.apply_to_loan(db, loan)
+        return loan, is_new
+
+
+@dataclasses.dataclass(kw_only=True)
+class HoldInfo(LoanAndHoldInfoMixin):
     """A record of a hold.
 
     :param identifier_type: Ex. Identifier.BIBLIOTHECA_ID.
@@ -596,32 +679,57 @@ class HoldInfo(CirculationInfo):
         default to be passed is None, which is equivalent to "first in line".
     """
 
-    def __init__(
-        self,
-        collection: Collection | int,
-        data_source_name: str | DataSource | None,
-        identifier_type: str | None,
-        identifier: str | None,
-        start_date: datetime.datetime | None,
-        end_date: datetime.datetime | None,
+    collection_id: int
+    identifier_type: str
+    identifier: str
+    start_date: datetime.datetime | None = None
+    end_date: datetime.datetime | None = None
+    hold_position: int | None
+
+    @classmethod
+    def from_license_pool(
+        cls,
+        license_pool: LicensePool,
+        *,
+        start_date: datetime.datetime | None = None,
+        end_date: datetime.datetime | None = None,
         hold_position: int | None,
-        external_identifier: str | None = None,
-    ):
-        super().__init__(collection, data_source_name, identifier_type, identifier)
-        self.start_date = start_date
-        self.end_date = end_date
-        self.hold_position = hold_position
-        self.external_identifier = external_identifier
+    ) -> Self:
+        collection_id = license_pool.collection_id
+        assert collection_id is not None
+        identifier_type = license_pool.identifier.type
+        assert identifier_type is not None
+        identifier = license_pool.identifier.identifier
+        assert identifier is not None
+        return cls(
+            collection_id=collection_id,
+            identifier_type=identifier_type,
+            identifier=identifier,
+            start_date=start_date,
+            end_date=end_date,
+            hold_position=hold_position,
+        )
 
     def __repr__(self) -> str:
         return "<HoldInfo for {}/{}, start={} end={}, position={}>".format(
             self.identifier_type,
             self.identifier,
-            self.fd(self.start_date),
-            self.fd(self.end_date),
+            self.start_date.isoformat() if self.start_date else self.start_date,
+            self.end_date.isoformat() if self.end_date else self.end_date,
             self.hold_position,
         )
 
+    def create_or_update(
+        self, patron: Patron, license_pool: LicensePool | None = None
+    ) -> tuple[Hold, bool]:
+        session = Session.object_session(patron)
+        license_pool = license_pool or self.license_pool(session)
+        return license_pool.on_hold_to(  # type: ignore[no-any-return]
+            patron,
+            start=self.start_date,
+            end=self.end_date,
+            position=self.hold_position,
+        )
 
 class BaseCirculationEbookLoanSettings(BaseSettings):
     """A mixin for settings that apply to ebook loans."""
@@ -1096,7 +1204,6 @@ class CirculationAPI:
             license_pool=licensepool,
             on_multiple="interchangeable",
         )
-        print(f"existing hold: {existing_hold}")
 
         loan_info = None
         hold_info = None
@@ -1177,30 +1284,21 @@ class CirculationAPI:
         except AlreadyCheckedOut:
             # This is good, but we didn't get the real loan info.
             # Just fake it.
-            identifier = licensepool.identifier
-            loan_info = LoanInfo(
-                licensepool.collection,
-                licensepool.data_source,
-                identifier.type,
-                identifier.identifier,
+            loan_info = LoanInfo.from_license_pool(
+                licensepool,
                 start_date=None,
                 end_date=now + datetime.timedelta(hours=1),
+                external_identifier=(
+                    existing_loan.external_identifier if existing_loan else None
+                ),
             )
-            if existing_loan:
-                loan_info.external_identifier = existing_loan.external_identifier
         except AlreadyOnHold:
             # We're trying to check out a book that we already have on hold.
-            hold_info = HoldInfo(
-                licensepool.collection,
-                licensepool.data_source,
-                licensepool.identifier.type,
-                licensepool.identifier.identifier,
-                None,
-                None,
-                None,
+            hold_info = HoldInfo.from_license_pool(
+                licensepool,
+                hold_position=None,
             )
         except NoAvailableCopies:
-            print("circ: no available copies")
             if existing_loan:
                 # The patron tried to renew a loan but there are
                 # people waiting in line for them to return the book,
@@ -1214,14 +1312,11 @@ class CirculationAPI:
             if existing_hold and existing_hold.position == 0:
                 # Update the hold so the patron doesn't lose their hold. Extend the hold to expire in the
                 # next 3 days.
-                hold_info = HoldInfo(
-                    licensepool.collection,
-                    licensepool.data_source,
-                    licensepool.identifier.type,
-                    licensepool.identifier.identifier,
-                    existing_hold.start,
-                    datetime.datetime.now() + datetime.timedelta(days=3), # The default RESERVE period is three days
-                    existing_hold.position,
+                            # We're trying to check out a book that we already have on hold.
+                hold_info = HoldInfo.from_license_pool(
+                    licensepool,
+                    hold_position=0,
+                    end_date=datetime.datetime.now() + datetime.timedelta(days=3), # The default RESERVE period is three days
                 )
                 # Update availability information
                 api.update_availability(licensepool)
@@ -1252,12 +1347,8 @@ class CirculationAPI:
             # We successfully secured a loan.  Now create it in our
             # database.
             __transaction = self._db.begin_nested()
-            loan, new_loan_record = licensepool.loan_to(
-                patron,
-                start=loan_info.start_date or now,
-                end=loan_info.end_date,
-                external_identifier=loan_info.external_identifier,
-            )
+
+            loan, new_loan_record = loan_info.create_or_update(patron, licensepool)
 
             if must_set_delivery_mechanism:
                 loan.fulfillment = delivery_mechanism
@@ -1298,14 +1389,9 @@ class CirculationAPI:
                         patron, pin, licensepool, hold_notification_email
                     )
                 except AlreadyOnHold as e:
-                    hold_info = HoldInfo(
-                        licensepool.collection,
-                        licensepool.data_source,
-                        licensepool.identifier.type,
-                        licensepool.identifier.identifier,
-                        None,
-                        None,
-                        None,
+                    hold_info = HoldInfo.from_license_pool(
+                        licensepool,
+                        hold_position=None,
                     )
                 except CurrentlyAvailable:
                     if loan_exception:
@@ -1328,13 +1414,8 @@ class CirculationAPI:
         # It's pretty rare that we'd go from having a loan for a book
         # to needing to put it on hold, but we do check for that case.
         __transaction = self._db.begin_nested()
-        hold, is_new = licensepool.on_hold_to(
-            patron,
-            hold_info.start_date or now,
-            hold_info.end_date,
-            hold_info.hold_position,
-            hold_info.external_identifier,
-        )
+        hold, is_new = hold_info.create_or_update(patron, licensepool)
+
         if hold and is_new:
             # Send out an analytics event to record the fact that
             # a hold was initiated through the circulation
@@ -1602,7 +1683,7 @@ class CirculationAPI:
                 pass
 
             __transaction = self._db.begin_nested()
-            logging.info(f"In revoke_loan(), deleting loan #{loan.id}")
+            logging.info(f"Deleting loan {loan}")
             self._db.delete(loan)
             patron.last_loan_activity_sync = None
             __transaction.commit()
@@ -1646,6 +1727,7 @@ class CirculationAPI:
         # upwards at this point
         if hold:
             __transaction = self._db.begin_nested()
+            logging.info(f"Deleting hold: {hold}")
             self._db.delete(hold)
             __transaction.commit()
 
