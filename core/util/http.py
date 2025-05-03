@@ -53,11 +53,13 @@ class RemoteIntegrationException(IntegrationException, BaseProblemDetailExceptio
         message = super().__str__()
         return self.internal_message % (self.url, message)
 
+    # TODO: Remove this and replace with below temp function
     def document_detail(self, debug=True):
         if debug:
             return _(str(self.detail), service=self.url)
         return _(str(self.detail), service=self.service)
 
+    # TODO: Remove this and replace with below temp function
     def document_debug_message(self, debug=True):
         if debug:
             return _(str(self.detail), service=self.url)
@@ -70,13 +72,19 @@ class RemoteIntegrationException(IntegrationException, BaseProblemDetailExceptio
             title=self.title,
             debug_message=self.document_debug_message(debug),
         )
-    
+
+    def temp_document_detail(self) -> str:
+        return _(str(self.detail), service=self.service)  # type: ignore[no-any-return]
+
+    def temp_document_debug_message(self) -> str:
+        return str(self)
+
     @property
     def problem_detail(self) -> ProblemDetail:
         return INTEGRATION_ERROR.detailed(
-            detail=self.document_detail(),
+            detail=self.temp_document_detail(),
             title=self.title,
-            debug_message=self.document_debug_message(),
+            debug_message=self.temp_document_debug_message(),
         )
 
 class BadResponseException(RemoteIntegrationException):
@@ -261,13 +269,15 @@ class HTTP(LoggerMixin):
             kwdata: str = kwargs["data"]
             kwargs["data"] = kwdata.encode("utf8")
 
-        headers = kwargs.get("headers", {})
         # Set a user-agent if not already present
-        if "User-Agent" not in headers:
-            version = (
+        version = (
                 core.__version__ if core.__version__ else cls.DEFAULT_USER_AGENT_VERSION
             )
-            headers["User-Agent"] = f"E-kirjasto/{version}"
+        headers: dict[str, str | None] = {"User-Agent": f"E-kirjasto/{version}"}
+        if (additional_headers := kwargs.get("headers")) is not None:
+            headers.update(additional_headers)
+        kwargs["headers"] = headers
+
         new_headers = {}
         for k, v in list(headers.items()):
             if isinstance(k, str):

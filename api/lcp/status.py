@@ -1,31 +1,10 @@
-from __future__ import annotations
-
-import json
-import logging
-import sys
-from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum, auto
+from enum import Enum
+from pydantic import BaseModel, Field, HttpUrl, validator
+from typing import List, Optional, Union
 from dateutil import parser
 
-@dataclass
-class Link:
-    """
-    https://readium.org/lcp-specs/releases/lsd/latest#25-links
-    """
-
-    href: str | None = None
-    rel: str | None = None
-    title: str | None = None
-    content_type: str | None = None
-    templated: str | None = None
-    profile: str | None = None
-
-class Status(Enum):
-    """
-    https://readium.org/lcp-specs/releases/lsd/latest.html#23-status-of-a-license
-    """
-
+class Status(str, Enum):
     READY = "ready"
     ACTIVE = "active"
     REVOKED = "revoked"
@@ -34,168 +13,95 @@ class Status(Enum):
     EXPIRED = "expired"
 
 
-@dataclass
-class Updated:
-    """
-    https://readium.org/lcp-specs/releases/lsd/latest#24-timestamps
-    """
+class Updated(BaseModel):
+    license: Optional[datetime] = None
+    status: Optional[datetime] = None
 
-    license: datetime | None = None
-    status: datetime | None = None
+    @validator('license', 'status', pre=True)
+    def parse_iso_timestamp(cls, value):
+        if isinstance(value, str):
+            return parser.isoparse(value)
+        return value
 
-    def __post_init__(self):
-        self.license = parse_iso_timestamp(self.license)
-        self.status = parse_iso_timestamp(self.status)
+class PotentialRights(BaseModel):
+    end: Optional[datetime] = None
 
+    @validator('end', pre=True)
+    def parse_iso_timestamp(cls, value):
+        if isinstance(value, str):
+            return parser.isoparse(value)
+        return value
 
-@dataclass
-class PotentialRights:
-    """
-    https://readium.org/lcp-specs/releases/lsd/latest#26-potential-rights
-    """
-
-    end: datetime | None = None
-
-    def __post_init__(self):
-        self.end = parse_iso_timestamp(self.end)
-
-
-class EventType(Enum):
-    """
-    https://readium.org/lcp-specs/releases/lsd/latest#27-events
-    """
-
+class EventType(str, Enum):
     REGISTER = "register"
     RENEW = "renew"
     RETURN = "return"
     REVOKE = "revoke"
     CANCEL = "cancel"
 
-
-@dataclass
-class Event:
-    """
-    https://readium.org/lcp-specs/releases/lsd/latest#27-events
-    """
-
+class Event(BaseModel):
     event_type: EventType
     name: str
     timestamp: datetime
-    id: str | None = None
-    device: str | None = None
+    id: Optional[str] = None
+    device: Optional[str] = None
 
-    def __post_init__(self):
-        self.timestamp = parse_iso_timestamp(self.timestamp)
+    @validator('timestamp', pre=True)
+    def parse_iso_timestamp(cls, value):
+        if isinstance(value, str):
+            return parser.isoparse(value)
+        return value
 
+class Link(BaseModel):
+    href: Optional[str] = None
+    rel: Optional[str] = None
+    title: Optional[str] = None
+    content_type: Optional[str] = Field(None, alias='type')
+    templated: Optional[str] = None
+    profile: Optional[str] = None
 
+    def to_dict(self):
+        return self.dict(by_alias=True)
 
-@dataclass
-class LinkCollection:
-    """
-    Represents a collection of links.
-    """
+class LinkCollection(BaseModel):
+    __root__: List[Link]
 
-    items: list[Link] = field(default_factory=list)
-
-    def __iter__(self):
-        return iter(self.items)
-
-    def append(self, item: Link):
-        self.items.append(item)
-
-    def get(self, *, rel: str, content_type: str) -> Link | None:
-        """Get the first link that matches the given rel and type."""
+    def get(self, rel: str, content_type: str) -> Optional[Link]:
+        """Get a link by its 'rel' attribute."""
         return next(
-            (link for link in self.items if link.rel == rel and link.content_type == content_type),
+            (link for link in self.__root__ if link.rel == rel and link.content_type == content_type),
             None
         )
 
-@dataclass
-class LoanStatus:
-    """
-    This document is defined as part of the Readium LCP Specifications.
 
-    Readium calls this the License Status Document (LSD), however, that
-    name conflates the concept of License. In the context of ODL and library
-    lends, it's really the loan status document, so we use that name here.
-
-    The spec for it is located here:
-    https://readium.org/lcp-specs/releases/lsd/latest.html
-
-    Technically the spec says that there must be at least one link
-    with rel="license" but this is not always the case in practice,
-    especially when the license is returned or revoked. So we don't
-    enforce that here.
-    """
-
+class LoanStatus(BaseModel):
     id: str
     status: Status
-    message: str
-    updated: Updated
+    message: Optional[str] = None
+    updated: Updated = None
     links: LinkCollection
-    potential_rights: PotentialRights = field(default_factory=PotentialRights)
-    events: list[Event] = field(default_factory=list)
-
-    def __post_init__(self):
-        self.links = LinkCollection(
-            items=[Link(**link) if isinstance(link, dict) else link for link in self.links]
-        )
-        
-    @staticmethod
-    def content_type() -> str:
-        return "application/vnd.readium.license.status.v1.0+json"
+    potential_rights: PotentialRights = Field(default_factory=PotentialRights)
+    events: Optional[List[Event]] = Field(default_factory=list) 
 
     @property
     def active(self) -> bool:
         return self.status in [Status.READY, Status.ACTIVE]
 
-    @classmethod
-    def from_json(cls, data: str) -> LoanStatus:
-        parsed_data = json.loads(data)
+    @staticmethod
+    def content_type() -> str:
+        return "application/vnd.readium.license.status.v1.0+json"
 
-        links = LinkCollection(
-            items=[
-                Link(
-                    href=link.get('href'),
-                    rel=link.get('rel'),
-                    title=link.get('title'),
-                    content_type=link.get('type'),  # Map `type` to `content_type`
-                    templated=link.get('templated'),
-                    profile=link.get('profile')
-                )
-                for link in parsed_data.get('links', [])
-            ]
-        )
-
-        potential_rights = PotentialRights(**parsed_data.get('potential_rights', {}))
-
-        events = [
-            Event(
-                event_type=EventType(event['type']),  # Convert string to EventType
-                name=event['name'],
-                timestamp=event['timestamp'],
-                id=event.get('id'),
-                device=event.get('device')
-            )
-            for event in parsed_data.get('events', [])
-        ]
-
-        status = Status(parsed_data.get('status'))
-
-        return cls(
-            id=parsed_data['id'],
-            status=status,
-            message=parsed_data.get('message') or None, # Missing in Ellibs LCP responses
-            updated=Updated(parsed_data.get('updated')) or None, # Missing in Ellibs LCP responses
-            links=links,
-            potential_rights=potential_rights,
-            events=events
-        )
-
-def parse_iso_timestamp(timestamp: str | datetime) -> datetime | None:
-    if isinstance(timestamp, str):
-        try:
-            return parser.isoparse(timestamp)
-        except ValueError:
-            return None
-    return timestamp
+    def to_serializable(self):
+        return {
+            "id": self.id,
+            "status": self.status.value,
+            "message": self.message,
+            "updated": {
+                "license": self.updated.license.isoformat(),
+                "status": self.updated.status.isoformat(),
+            },
+            "links": [link.to_dict() for link in self.links.__root__],
+            "potential_rights": {
+                "end": self.potential_rights.end.isoformat(),
+            }
+        }

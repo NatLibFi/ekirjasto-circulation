@@ -14,7 +14,7 @@ from dependency_injector.wiring import Provide, inject
 from flask import url_for
 from flask_babel import lazy_gettext as _
 from lxml.etree import Element
-from pydantic import AnyHttpUrl, HttpUrl, PositiveInt
+from pydantic import AnyHttpUrl, HttpUrl, PositiveInt, ValidationError
 from requests import Response
 from sqlalchemy.sql.expression import or_
 from uritemplate import URITemplate
@@ -32,7 +32,7 @@ from api.circulation import (
 )
 from api.circulation_exceptions import *
 from api.lcp.hash import Hasher, HasherFactory, HashingAlgorithm
-from api.lcp.status import LoanStatus
+from api.lcp.status import Link, LoanStatus
 from api.odl_api.auth import OpdsWithOdlException
 from core import util
 from core.integration.settings import (
@@ -237,16 +237,22 @@ class BaseODLAPI(
         auth_header = "Basic %s" % base64.b64encode(f"{username}:{password}")
         headers["Authorization"] = auth_header
 
-        return HTTP.get_with_timeout(
-            url, headers=headers, timeout=30
-        )  # Added a bigger timeout for loan checkouts
+        try:
+            response = HTTP.get_with_timeout(url, headers=headers, timeout=30, *args, **kwargs)
+            return response
+        except BadResponseException as e:
+            response = e.response
+            if opds_exception := OpdsWithOdlException.from_response(response):
+                raise opds_exception from e
+            raise
+
 
     def _url_for(self, *args: Any, **kwargs: Any) -> str:
         """Wrapper around flask's url_for to be overridden for tests."""
         return url_for(*args, **kwargs)
 
     @staticmethod
-    def _notification_url(short_name: str | None, license_id: str, _external: bool | None) -> str:
+    def _notification_url(short_name: str | None, patron_id: str, license_id: str) -> str:
         """Get the notification URL that should be passed in the ODL checkout link.
 
         This is broken out into a separate function to make it easier to override
@@ -255,6 +261,7 @@ class BaseODLAPI(
         return url_for(
             "odl_notify",
             library_short_name=short_name,
+            patron_identifier=patron_id,
             license_identifier=license_id,
             _external=True,
         )
@@ -264,8 +271,8 @@ class BaseODLAPI(
     ) -> LoanStatus:
         try:
             response = self._get(url, allowed_response_codes=["2xx"])
-            status_doc = LoanStatus.from_json(response.content)
-        except Exception as e:
+            status_doc = LoanStatus.parse_raw(response.content)
+        except ValidationError as e:
             self.log.exception(
                 f"Error validating Loan Status Document. '{url}' returned and invalid document. {e}"
             )
@@ -277,13 +284,11 @@ class BaseODLAPI(
             error_message = f"Error requesting Loan Status Document. '{url}' returned status code {response.status_code}."
             if isinstance(e, OpdsWithOdlException):
                 # It this problem type is explicitly ignored, we just raise the exception instead of proceeding with
-                # self.logging the information about it. The caller will handle the exception.
+                # logging the information about it. The caller will handle the exception.
                 if ignored_problem_types and e.type in ignored_problem_types:
-                    self.log.debug(f"ignored: {e.type}")
                     raise
                 error_message += f" Problem Detail: '{e.type}' - {e.title}"
                 if e.detail:
-                    self.log.debug(f"e detail: {e.detail}")
                     error_message += f" - {e.detail}"
             else:
                 header_string = ", ".join(
@@ -312,7 +317,7 @@ class BaseODLAPI(
             raise NotCheckedOut()
         loan_result = loan.one()
 
-        if licensepool.open_access or licensepool.unlimited_access:
+        if licensepool.open_access:
             # If this is an open-access book, we don't need to do anything.
             return
 
@@ -469,7 +474,7 @@ class BaseODLAPI(
         # We save the link to the loan status document in the loan's external_identifier field, so
         # we are able to retrieve it later.
         loan_status_document_link: Link | None = loan_status.links.get(
-            rel="self", content_type=LoanStatus.content_type()
+            rel="self", content_type="application/vnd.readium.license.status.v1.0+json"
         )
 
         if not loan_status_document_link:
@@ -491,7 +496,7 @@ class BaseODLAPI(
         # If there was a hold CirculationAPI will take care of deleting it. So we just need to
         # update the license pool to reflect the loan. Since update_availability_from_licenses
         # takes into account holds, we need to tell it to ignore the hold about to be deleted.
-        licensepool.update_availability_from_licenses()
+        self.update_licensepool(licensepool, ignored_holds={hold} if hold else None)
         return loan
 
     def _checkout_license(
@@ -506,8 +511,8 @@ class BaseODLAPI(
         checkout_id = str(uuid.uuid4())
         notification_url = self._notification_url(
             library_short_name,
+            patron_id,
             identifier,
-            _external=True,
         )
 
         # We should never be able to get here if the license doesn't have a checkout_url, but
@@ -567,7 +572,7 @@ class BaseODLAPI(
         resource = next(
             (
                 lpdm.resource
-                for lpdm in licensepool.available_delivery_mechanisms
+                for lpdm in licensepool.delivery_mechanisms
                 if lpdm.delivery_mechanism == requested_delivery_mechanism
                 and lpdm.resource is not None
             ),
@@ -796,16 +801,18 @@ class BaseODLAPI(
             # Add 1 since position 0 indicates the hold is ready.
             holdinfo.hold_position = holds_count + 1
 
-    def update_licensepool(self, licensepool: LicensePool) -> None:
+    def update_licensepool(self, licensepool: LicensePool, ignored_holds: set[Hold] | None = None) -> None:
         # Update the pool and the next holds in the queue when a license is reserved.
         licensepool.update_availability_from_licenses(
             as_of=utc_now(),
+            ignored_holds=ignored_holds
         )
         holds = licensepool.get_active_holds()
-
+        print(f"update licensepool1: queue: {licensepool.patrons_in_hold_queue} holds: {len(licensepool.holds)}")
         for hold in holds[: licensepool.licenses_reserved]:
             if hold.position != 0:
                 # This hold just got a reserved license.
+                print(f"update licensepool: queue: {licensepool.patrons_in_hold_queue} holds: {len(licensepool.holds)}")
                 self._update_hold_data(hold)
 
     def place_hold(
@@ -844,6 +851,7 @@ class BaseODLAPI(
             else 0
         )
         licensepool.patrons_in_hold_queue = patrons_in_hold_queue + 1
+        print(f"queue: {licensepool.patrons_in_hold_queue} holds: {len(licensepool.holds)}")
         holdinfo = HoldInfo.from_license_pool(
             licensepool,
             start_date=utc_now(),
@@ -868,9 +876,11 @@ class BaseODLAPI(
         )
         if not hold:
             raise NotOnHold()
+        print(f"release hold: queue: {licensepool.patrons_in_hold_queue} holds: {len(licensepool.holds)}")
         # The hold itself will be deleted by the caller (usually CirculationAPI),
         # so we just need to update the license pool to reflect the released hold.
-        self.update_licensepool(licensepool)
+        self.update_licensepool(licensepool, ignored_holds={hold})
+        # hold.license_pool.update_availability_from_licenses(ignored_holds={hold})
 
 
     def patron_activity(self, patron: Patron, pin: str) -> list[LoanInfo | HoldInfo]:

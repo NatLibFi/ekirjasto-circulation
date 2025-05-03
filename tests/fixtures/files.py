@@ -74,3 +74,15 @@ class APIFilesFixture:
 
     def sample_path(self, filename) -> str:
         return os.path.join(self._resource_path, filename)
+
+class OPDS2WithODLFilesFixture(APIFilesFixture):
+    """A fixture providing access to OPDS2 + ODL files."""
+
+    def __init__(self):
+        super().__init__("odl")
+
+
+@pytest.fixture()
+def opds2_with_odl_files_fixture() -> OPDS2WithODLFilesFixture:
+    """A fixture providing access to OPDS2 + ODL files."""
+    return OPDS2WithODLFilesFixture()

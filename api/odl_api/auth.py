@@ -2,6 +2,7 @@ from requests import Response
 from typing_extensions import Self
 
 from core.util.http import BadResponseException
+from core.util.problem_detail import ProblemDetail
 
 
 class OpdsWithOdlException(BadResponseException):
@@ -25,14 +26,14 @@ class OpdsWithOdlException(BadResponseException):
         self.status = status
         self.detail = detail
 
-    # @property
-    # def problem_detail(self) -> ProblemDetail:
-    #     return ProblemDetail(
-    #         uri=self.type,
-    #         status_code=self.status,
-    #         title=self.title,
-    #         detail=self.detail,
-    #     )
+    @property
+    def problem_detail(self) -> ProblemDetail:
+        return ProblemDetail(
+            uri=self.type,
+            status_code=self.status,
+            title=self.title,
+            detail=self.detail,
+        )
 
     @classmethod
     def from_response(cls, response: Response) -> Self | None:
