@@ -697,7 +697,6 @@ class LicensePool(Base):
     def update_availability_from_licenses(
         self,
         as_of: datetime.datetime | None = None,
-        ignored_holds: set[Hold] | None = None,
     ):
         """
         Update the LicensePool with new availability information, based on the
@@ -715,9 +714,8 @@ class LicensePool(Base):
             for l in self.licenses
             if l.currently_available_loans is not None
         )
-        ignored_holds_ids = {h.id for h in (ignored_holds or set())}
-        active_holds_ids = {h.id for h in self.get_active_holds()}
-        patrons_in_hold_queue = len(active_holds_ids - ignored_holds_ids)
+        holds = self.get_active_holds()
+        patrons_in_hold_queue = len(holds)
         
         if patrons_in_hold_queue > licenses_available:
             licenses_reserved = licenses_available
@@ -725,7 +723,7 @@ class LicensePool(Base):
         else:
             licenses_reserved = patrons_in_hold_queue
             licenses_available -= licenses_reserved
-        logging.info(f"Collected availablility information for licensepool {self.identifier}: OWNED={licenses_owned} AVAILABLE={licenses_available} RESERVED={licenses_reserved} HOLDS={patrons_in_hold_queue} LOANS={len(self.loans)}")
+        print(f"Collected availablility information for licensepool {self.identifier}: OWNED={licenses_owned} AVAILABLE={licenses_available} RESERVED={licenses_reserved} HOLDS={patrons_in_hold_queue} LOANS={len(self.loans)}")
         return self.update_availability(
             licenses_owned,
             licenses_available,
@@ -1153,7 +1151,6 @@ class LicensePool(Base):
         a license that is only loan-limited. We should choose the license with the most remaining
         loans, so that we'll maximize the number of concurrent checkouts available in the future.
         """
-        print(f"licenses: {len(self.licenses)}")
         for l in self.licenses:
             print(f"License: {l.identifier}, Available: {l.is_available_for_borrowing} is_time_limited: {l.is_time_limited} loan_limited {l.is_loan_limited}")
         return sorted(

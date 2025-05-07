@@ -313,6 +313,7 @@ class BaseODLAPI(
             .filter(Loan.patron == patron)
             .filter(Loan.license_pool_id == licensepool.id)
         )
+        print("after that")
         if loan.count() < 1:
             raise NotCheckedOut()
         loan_result = loan.one()
@@ -343,7 +344,7 @@ class BaseODLAPI(
                 f"Loan {loan.id} was {loan_status.status} was already returned early, revoked by the distributor, or it expired."
             )
             loan.license.checkin()
-            loan.license_pool.update_availability_from_licenses()
+            self.update_licensepool()
             return
 
         return_link = loan_status.links.get(
@@ -373,6 +374,7 @@ class BaseODLAPI(
             )
             raise CannotReturn()
         loan.license.checkin()
+        print("checkin done,update pool:")
         self.update_licensepool(loan.license_pool)
 
     def checkout(
@@ -453,7 +455,7 @@ class BaseODLAPI(
                 )
                 break
             except NoAvailableCopies:
-                self.log.info(f"No available checkouts after all for license: {license_.identifier}.")
+                self.log.info(f"No available checkouts for license: {license_.identifier}. Checking the next one...")
                 # This license had no available copies, so we try the next one.
                 ...
 
@@ -496,7 +498,7 @@ class BaseODLAPI(
         # If there was a hold CirculationAPI will take care of deleting it. So we just need to
         # update the license pool to reflect the loan. Since update_availability_from_licenses
         # takes into account holds, we need to tell it to ignore the hold about to be deleted.
-        self.update_licensepool(licensepool, ignored_holds={hold} if hold else None)
+        self.update_licensepool(licensepool)
         return loan
 
     def _checkout_license(
@@ -698,7 +700,9 @@ class BaseODLAPI(
         # First make sure the hold position is up-to-date, since we'll
         # need it to calculate the end date.
         original_position = holdinfo.hold_position
+        print(f"original position: {original_position}")
         self._update_hold_position(holdinfo, pool)
+        print(f"and after: {holdinfo.hold_position}")
         assert holdinfo.hold_position is not None
         if self.collection is None:
             raise ValueError(f"Collection not found: {self.collection_id}")
@@ -789,30 +793,32 @@ class BaseODLAPI(
             .count()
         )
         holds_count = self._count_holds_before(holdinfo, pool)
-
+        print("holds before this hold: ", holds_count)
         assert pool.licenses_owned is not None
         remaining_licenses = pool.licenses_owned - loans_count
-
+        print(f"remaining licenses {remaining_licenses}")
         if remaining_licenses > holds_count:
+            print("ready to checkout")
             # The hold is ready to check out.
             holdinfo.hold_position = 0
 
         else:
             # Add 1 since position 0 indicates the hold is ready.
             holdinfo.hold_position = holds_count + 1
+            print("hold is not 0 but ", holdinfo.hold_position)
 
-    def update_licensepool(self, licensepool: LicensePool, ignored_holds: set[Hold] | None = None) -> None:
+    def update_licensepool(self, licensepool: LicensePool) -> None:
         # Update the pool and the next holds in the queue when a license is reserved.
         licensepool.update_availability_from_licenses(
             as_of=utc_now(),
-            ignored_holds=ignored_holds
         )
+        print("pool: ", licensepool)
         holds = licensepool.get_active_holds()
         print(f"update licensepool1: queue: {licensepool.patrons_in_hold_queue} holds: {len(licensepool.holds)}")
         for hold in holds[: licensepool.licenses_reserved]:
             if hold.position != 0:
                 # This hold just got a reserved license.
-                print(f"update licensepool: queue: {licensepool.patrons_in_hold_queue} holds: {len(licensepool.holds)}")
+                print(f"update licensepool, position is {hold.position}: queue: {licensepool.patrons_in_hold_queue} holds: {len(licensepool.holds)}")
                 self._update_hold_data(hold)
 
     def place_hold(
@@ -879,8 +885,7 @@ class BaseODLAPI(
         print(f"release hold: queue: {licensepool.patrons_in_hold_queue} holds: {len(licensepool.holds)}")
         # The hold itself will be deleted by the caller (usually CirculationAPI),
         # so we just need to update the license pool to reflect the released hold.
-        self.update_licensepool(licensepool, ignored_holds={hold})
-        # hold.license_pool.update_availability_from_licenses(ignored_holds={hold})
+        self.update_licensepool(licensepool)
 
 
     def patron_activity(self, patron: Patron, pin: str) -> list[LoanInfo | HoldInfo]:
@@ -898,7 +903,6 @@ class BaseODLAPI(
                 )
             )
         )
-
         # Get the patron's holds. If there are any expired holds, delete them.
         # Update the end date and position for the remaining holds.
         holds = (
@@ -915,7 +919,23 @@ class BaseODLAPI(
             else:
                 self._update_hold_data(hold)
                 remaining_holds.append(hold)
-
+        print([
+            LoanInfo.from_license_pool(
+                loan.license_pool,
+                start_date=loan.start,
+                end_date=loan.end,
+                external_identifier=loan.external_identifier,
+            )
+            for loan in loans
+        ] + [
+            HoldInfo.from_license_pool(
+                hold.license_pool,
+                start_date=hold.start,
+                end_date=hold.end,
+                hold_position=hold.position,
+            )
+            for hold in remaining_holds
+        ])
         return [
             LoanInfo.from_license_pool(
                 loan.license_pool,

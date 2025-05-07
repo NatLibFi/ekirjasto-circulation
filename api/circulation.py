@@ -1664,7 +1664,7 @@ class CirculationAPI:
                 duration = math.floor(time_difference.total_seconds())
 
             except Exception as e:
-                self.log.warn(
+                self.log.warning(
                     f"Could not calculate duration of loan with start time #{loan.start}."
                 )
 
@@ -1683,11 +1683,10 @@ class CirculationAPI:
                 pass
 
             __transaction = self._db.begin_nested()
-            logging.info(f"Deleting loan {loan}")
+            print(f"In revoke_loan(), deleting loan #{loan.id}")
             self._db.delete(loan)
             patron.last_loan_activity_sync = None
             __transaction.commit()
-
             # Send out an analytics event to record the fact that
             # a loan was revoked through the circulation
             # manager.
