@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2024-04-27 23:15+0300\n"
+"POT-Creation-Date: 2025-05-07 08:51+0300\n"
 "PO-Revision-Date: 2016-06-14 13:24-0400\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -29,7 +29,7 @@ msgstr ""
 msgid " The known providers are: %s"
 msgstr ""
 
-#: api/authenticator.py:756
+#: api/authenticator.py:766
 msgid "Library"
 msgstr "Biblioteca"
 
@@ -119,17 +119,17 @@ msgstr ""
 "No se pudo asignar el mecanismo simplificado de entrega "
 "%(mechanism_name)s al mecanismo de distribución interna!"
 
-#: api/circulation.py:1070
+#: api/circulation.py:1084
 msgid "You cannot renew a loan if other patrons have the work on hold."
 msgstr ""
 "No se puede renovar un préstamo si otros usuarios tienen el trabajo en "
 "espera."
 
-#: api/circulation.py:1347
+#: api/circulation.py:1397
 msgid "Cannot find your active loan for this work."
 msgstr "No puede encontrar su préstamo activo para este trabajo."
 
-#: api/circulation.py:1354
+#: api/circulation.py:1404
 #, python-format
 msgid ""
 "You already fulfilled this loan as %(loan_delivery_mechanism)s, you can't"
@@ -143,11 +143,11 @@ msgstr ""
 msgid "Integration error communicating with %(service_name)s"
 msgstr "Error de integración en la comunicación con %(service_name)s"
 
-#: api/circulation_manager.py:158
+#: api/circulation_manager.py:160
 msgid "Lane does not exist"
 msgstr ""
 
-#: api/circulation_manager.py:378
+#: api/circulation_manager.py:381
 msgid "All Books"
 msgstr ""
 
@@ -456,7 +456,7 @@ msgstr "No hay autorizaciones."
 msgid "The library currently has no licenses for this book."
 msgstr ""
 
-#: api/problem_details.py:55
+#: api/problem_details.py:55 api/problem_details.py:63
 msgid "No available license."
 msgstr "No hay licencias disponibles."
 
@@ -464,23 +464,29 @@ msgstr "No hay licencias disponibles."
 msgid "All licenses for this book are loaned out."
 msgstr "Todas las licencias de uso de este libro han sido prestadas."
 
-#: api/problem_details.py:62
+#: api/problem_details.py:64
+msgid ""
+"All copies of this book are loaned out after all. You are still next in "
+"line."
+msgstr ""
+
+#: api/problem_details.py:70
 msgid "No acceptable format."
 msgstr "El formato no es valido"
 
-#: api/problem_details.py:63
+#: api/problem_details.py:71
 msgid "Could not deliver this book in an acceptable format."
 msgstr "No se puede entregar este libro en un formato valido."
 
-#: api/problem_details.py:69
+#: api/problem_details.py:77
 msgid "Already checked out"
 msgstr "Ya obtenido"
 
-#: api/problem_details.py:70
+#: api/problem_details.py:78
 msgid "You have already checked out this book."
 msgstr "Ya ha obtenido este libro."
 
-#: api/problem_details.py:73
+#: api/problem_details.py:81
 msgid ""
 "You have reached your loan limit. You cannot borrow anything further "
 "until you return something."
@@ -488,7 +494,7 @@ msgstr ""
 "Ha llegado a su límite de crédito. No puede pedir más nada hasta que "
 "devuelva algo."
 
-#: api/problem_details.py:76
+#: api/problem_details.py:84
 #, fuzzy, python-format
 msgid ""
 "You have reached your loan limit of %(limit)d. You cannot borrow anything"
@@ -497,11 +503,11 @@ msgstr ""
 "Ha llegado a su límite de crédito. No puede pedir más nada hasta que "
 "devuelva algo."
 
-#: api/problem_details.py:82
+#: api/problem_details.py:90
 msgid "Loan limit reached."
 msgstr "Límite de préstamos alcanzado."
 
-#: api/problem_details.py:86
+#: api/problem_details.py:94
 #, fuzzy
 msgid ""
 "You have reached your hold limit. You cannot place another item on hold "
@@ -510,7 +516,7 @@ msgstr ""
 "Ha llegado a su límite de crédito. No puede pedir más nada hasta que "
 "devuelva algo."
 
-#: api/problem_details.py:89
+#: api/problem_details.py:97
 #, fuzzy, python-format
 msgid ""
 "You have reached your hold limit of %(limit)d. You cannot place another "
@@ -519,101 +525,101 @@ msgstr ""
 "Ha llegado a su límite de crédito. No puede pedir más nada hasta que "
 "devuelva algo."
 
-#: api/problem_details.py:95
+#: api/problem_details.py:103
 #, fuzzy
 msgid "Limit reached."
 msgstr "Límite de préstamos alcanzado."
 
-#: api/problem_details.py:102
+#: api/problem_details.py:110
 msgid "Outstanding fines."
 msgstr "Multas pendientes"
 
-#: api/problem_details.py:103
+#: api/problem_details.py:111
 msgid "You must pay your outstanding fines before you can borrow more books."
 msgstr ""
 "Debe pagar sus multas pendientes antes de que pueda pedir más libros "
 "prestado."
 
-#: api/problem_details.py:109
+#: api/problem_details.py:117
 msgid "Could not issue loan."
 msgstr "No se ha podido emitir el préstamo."
 
-#: api/problem_details.py:110
+#: api/problem_details.py:118
 msgid "Could not issue loan (reason unknown)."
 msgstr "No se ha podido emitir el préstamo (razón desconocida)"
 
-#: api/problem_details.py:116
+#: api/problem_details.py:124
 msgid "Could not place hold."
 msgstr "No se ha podido colocar la retención"
 
-#: api/problem_details.py:117
+#: api/problem_details.py:125
 msgid "Could not place hold (reason unknown)."
 msgstr "No se ha podido colocar la retención (razón desconocida)."
 
-#: api/problem_details.py:123
+#: api/problem_details.py:131
 msgid "Could not renew loan."
 msgstr "No se ha podido renovar el préstamo."
 
-#: api/problem_details.py:124
+#: api/problem_details.py:132
 msgid "Could not renew loan (reason unknown)."
 msgstr "No se ha podido renovar el préstamo (razón desconocida)."
 
-#: api/problem_details.py:130
+#: api/problem_details.py:138
 msgid "No longer in collection."
 msgstr "Ya no está en la colección."
 
-#: api/problem_details.py:131
+#: api/problem_details.py:139
 msgid "This book was recently removed from the collection."
 msgstr "Este libro fue eliminado recientemente de la colección."
 
-#: api/problem_details.py:137
+#: api/problem_details.py:145
 msgid "No active loan."
 msgstr "Ningún préstamo activo"
 
-#: api/problem_details.py:138
+#: api/problem_details.py:146
 msgid "You can't do this without first borrowing this book."
 msgstr "No se puede hacer esto sin antes pedir prestado este libro"
 
-#: api/problem_details.py:144
+#: api/problem_details.py:152
 msgid "No active hold."
 msgstr "Ninguna retención activa"
 
-#: api/problem_details.py:145
+#: api/problem_details.py:153
 msgid "You can't do this without first putting this book on hold."
 msgstr "No puedes hacer esto sin antes poner este libro en retención."
 
-#: api/problem_details.py:151
+#: api/problem_details.py:159
 msgid "No active loan or hold."
 msgstr "Ningún préstamo o retención activa"
 
-#: api/problem_details.py:152
+#: api/problem_details.py:160
 msgid "You can't do this without first borrowing this book or putting it on hold."
 msgstr ""
 "No puedes hacer esto sin antes pedir prestado o poner este libro en "
 "retención."
 
-#: api/problem_details.py:158
+#: api/problem_details.py:166
 msgid "Loan not found."
 msgstr ""
 
-#: api/problem_details.py:159
+#: api/problem_details.py:167
 msgid "You don't have a loan with the provided id."
 msgstr ""
 
-#: api/problem_details.py:165
+#: api/problem_details.py:173
 #, fuzzy
 msgid "Hold not found."
 msgstr "No se ha podido colocar la retención"
 
-#: api/problem_details.py:166
+#: api/problem_details.py:174
 msgid "You don't have a hold with the provided id."
 msgstr ""
 
-#: api/problem_details.py:172
+#: api/problem_details.py:180
 msgid "Could not mirror local state to remote."
 msgstr "No se pudo reflejar el estado local a remoto."
 
-#: api/problem_details.py:173
+#: api/problem_details.py:181
 msgid ""
 "Could not convince a third party to accept the change you made. It's "
 "likely to show up again soon."
@@ -621,64 +627,64 @@ msgstr ""
 "No se pudo convencer a un tercero para aceptar el cambio realizado. Es "
 "probable que aparezca de nuevo pronto."
 
-#: api/problem_details.py:181
+#: api/problem_details.py:189
 msgid "No such lane."
 msgstr "No existe esta vía"
 
-#: api/problem_details.py:182
+#: api/problem_details.py:190
 msgid "You asked for a nonexistent lane."
 msgstr "Usted pidió una vía inexistente"
 
-#: api/problem_details.py:188
+#: api/problem_details.py:196
 #, fuzzy
 msgid "No such list."
 msgstr "No existe esta vía"
 
-#: api/problem_details.py:189
+#: api/problem_details.py:197
 #, fuzzy
 msgid "You asked for a nonexistent list."
 msgstr "Usted pidió una vía inexistente"
 
-#: api/problem_details.py:195
+#: api/problem_details.py:203
 msgid "Cannot delete list."
 msgstr ""
 
-#: api/problem_details.py:196
+#: api/problem_details.py:204
 msgid "It is not possible to delete a shared list."
 msgstr ""
 
-#: api/problem_details.py:202
+#: api/problem_details.py:210
 #, fuzzy
 msgid "No such collection."
 msgstr "Ya no está en la colección."
 
-#: api/problem_details.py:203
+#: api/problem_details.py:211
 #, fuzzy
 msgid "You asked for a nonexistent collection."
 msgstr "Usted pidió una vía inexistente"
 
-#: api/problem_details.py:209
+#: api/problem_details.py:217
 msgid "Forbidden by policy."
 msgstr "Prohibido por política."
 
-#: api/problem_details.py:210
+#: api/problem_details.py:218
 msgid "Library policy prevents us from carrying out your request."
 msgstr "La política de la biblioteca nos impide llevar a cabo su solicitud"
 
-#: api/problem_details.py:214
+#: api/problem_details.py:222
 msgid "Library policy considers this title inappropriate for your patron type."
 msgstr ""
 
-#: api/problem_details.py:221 api/problem_details.py:222
+#: api/problem_details.py:229 api/problem_details.py:230
 #, fuzzy
 msgid "Could not fulfill loan."
 msgstr "No se ha podido cumplir con el préstamo."
 
-#: api/problem_details.py:228
+#: api/problem_details.py:236
 msgid "Delivery mechanism conflict."
 msgstr "Conflicto con el mecanismo de entrega."
 
-#: api/problem_details.py:229
+#: api/problem_details.py:237
 msgid ""
 "The delivery mechanism for this book has been locked in and can't be "
 "changed."
@@ -686,225 +692,225 @@ msgstr ""
 "El mecanismo de entrega de este libro ha sido bloqueado y no se puede "
 "cambiar."
 
-#: api/problem_details.py:235
+#: api/problem_details.py:243
 msgid "Unsupported delivery mechanism."
 msgstr "Mecanismo de entrega no compatible."
 
-#: api/problem_details.py:236
+#: api/problem_details.py:244
 msgid "You selected a delivery mechanism that's not supported by this book."
 msgstr "Seleccionó un mecanismo de entrega que no es compatible con este libro."
 
-#: api/problem_details.py:242 api/problem_details.py:243
+#: api/problem_details.py:250 api/problem_details.py:251
 msgid "Could not release hold."
 msgstr "No se pudo liberar la retención"
 
-#: api/problem_details.py:249
+#: api/problem_details.py:257
 msgid "Unknown SAML provider."
 msgstr ""
 
-#: api/problem_details.py:250
+#: api/problem_details.py:258
 msgid "The specified SAML provider name isn't one of the known providers."
 msgstr ""
 
-#: api/problem_details.py:257
+#: api/problem_details.py:265
 msgid "Ekirjasto provider not configured."
 msgstr ""
 
-#: api/problem_details.py:258
+#: api/problem_details.py:266
 msgid "Ekirjasto provider was not configured for the library"
 msgstr ""
 
-#: api/problem_details.py:265
+#: api/problem_details.py:273
 msgid "Ekirjasto remote method not supported."
 msgstr ""
 
-#: api/problem_details.py:266
+#: api/problem_details.py:274
 msgid "Method for a remote call not supported."
 msgstr ""
 
-#: api/problem_details.py:272
+#: api/problem_details.py:280
 msgid "Invalid SAML bearer token."
 msgstr ""
 
-#: api/problem_details.py:273
+#: api/problem_details.py:281
 msgid "The provided SAML bearer token couldn't be verified."
 msgstr ""
 
-#: api/problem_details.py:280
+#: api/problem_details.py:288
 msgid "Invalid delegate token for ekirjasto authentication provider."
 msgstr ""
 
-#: api/problem_details.py:281
+#: api/problem_details.py:289
 msgid ""
 "The provided delegate token couldn't be verified for ekirjasto "
 "authentication provider or it is expired."
 msgstr ""
 
-#: api/problem_details.py:290
+#: api/problem_details.py:298
 msgid "Invalid ekirjasto token for ekirjasto API."
 msgstr ""
 
-#: api/problem_details.py:291
+#: api/problem_details.py:299
 msgid "The provided ekirjasto token couldn't be verified for ekirjasto API."
 msgstr ""
 
-#: api/problem_details.py:298
+#: api/problem_details.py:306
 msgid "Authentication with ekirjasto API failed."
 msgstr ""
 
-#: api/problem_details.py:299
+#: api/problem_details.py:307
 msgid "Authentication with ekirjasto API failed, for unknown reason."
 msgstr ""
 
-#: api/problem_details.py:306
+#: api/problem_details.py:314
 msgid "Call to ekirjasto API failed."
 msgstr ""
 
-#: api/problem_details.py:307
+#: api/problem_details.py:315
 msgid "Call to ekirjasto API failed, for unknown reason."
 msgstr ""
 
-#: api/problem_details.py:313
+#: api/problem_details.py:321
 #, fuzzy
 msgid "Unsupported authentication mechanism."
 msgstr "Mecanismo de entrega no compatible."
 
-#: api/problem_details.py:314
+#: api/problem_details.py:322
 msgid "The specified authentication mechanism isn't supported."
-msgstr ""
-
-#: api/problem_details.py:320
-#, fuzzy
-msgid "Invalid analytics event type."
-msgstr "Evento de análisis de tipo incompatible."
-
-#: api/problem_details.py:321
-msgid "The analytics event must be a supported type."
-msgstr "El evento de análisis debe ser compatible."
-
-#: api/problem_details.py:327
-msgid "Invalid annotation motivation."
 msgstr ""
 
 #: api/problem_details.py:328
 #, fuzzy
+msgid "Invalid analytics event type."
+msgstr "Evento de análisis de tipo incompatible."
+
+#: api/problem_details.py:329
+msgid "The analytics event must be a supported type."
+msgstr "El evento de análisis debe ser compatible."
+
+#: api/problem_details.py:335
+msgid "Invalid annotation motivation."
+msgstr ""
+
+#: api/problem_details.py:336
+#, fuzzy
 msgid "The annotation must have a supported motivation."
 msgstr "El evento de análisis debe ser compatible."
 
-#: api/problem_details.py:334
+#: api/problem_details.py:342
 #, fuzzy
 msgid "Invalid annotation target."
 msgstr "Evento de análisis de tipo incompatible."
 
-#: api/problem_details.py:335
+#: api/problem_details.py:343
 msgid "The annotation target must be a work in your current loans."
 msgstr ""
 
-#: api/problem_details.py:341
+#: api/problem_details.py:349
 msgid "Invalid annotation format."
 msgstr ""
 
-#: api/problem_details.py:342
+#: api/problem_details.py:350
 msgid "The annotation could not be parsed as JSON-LD."
 msgstr ""
 
-#: api/problem_details.py:348
+#: api/problem_details.py:356
 #, fuzzy
 msgid "No annotation."
 msgstr "Ningún préstamo activo"
 
-#: api/problem_details.py:349
+#: api/problem_details.py:357
 msgid "The annotation you requested does not exist."
 msgstr ""
 
-#: api/problem_details.py:355
+#: api/problem_details.py:363
 #, fuzzy
 msgid "Library not found."
 msgstr "Tarjeta de biblioteca"
 
-#: api/problem_details.py:356
+#: api/problem_details.py:364
 msgid "No library with the requested name on this server."
 msgstr ""
 
-#: api/problem_details.py:362
+#: api/problem_details.py:370
 #, fuzzy
 msgid "Wrong library"
 msgstr "Biblioteca"
 
-#: api/problem_details.py:363
+#: api/problem_details.py:371
 msgid "You are not a patron of the selected library."
 msgstr ""
 
-#: api/problem_details.py:369
+#: api/problem_details.py:377
 msgid "Invalid loan for ODL notification"
 msgstr ""
 
-#: api/problem_details.py:370
+#: api/problem_details.py:378
 msgid "The ODL notification is for a loan that's not from an ODL collection."
 msgstr ""
 
-#: api/problem_details.py:376
+#: api/problem_details.py:384
 #, fuzzy
 msgid "Invalid registration"
 msgstr "Credenciales inválidas"
 
-#: api/problem_details.py:377
+#: api/problem_details.py:385
 msgid "You did not submit enough information to register with the collection."
 msgstr ""
 
-#: api/problem_details.py:383
+#: api/problem_details.py:391
 msgid "Decryption error"
 msgstr ""
 
-#: api/problem_details.py:384
+#: api/problem_details.py:392
 msgid "Failed to decrypt a shared secret retrieved from another computer."
 msgstr ""
 
-#: api/problem_details.py:390
+#: api/problem_details.py:398
 msgid "Device token not found"
 msgstr ""
 
-#: api/problem_details.py:391
+#: api/problem_details.py:399
 msgid "Patron does not have a device registered with this token."
 msgstr ""
 
-#: api/problem_details.py:397
+#: api/problem_details.py:405
 msgid "Device token already exists"
 msgstr ""
 
-#: api/problem_details.py:398
+#: api/problem_details.py:406
 msgid "A device token with the same token already exists."
 msgstr ""
 
-#: api/problem_details.py:404
+#: api/problem_details.py:412
 msgid "Device token type invalid"
 msgstr ""
 
-#: api/problem_details.py:405
+#: api/problem_details.py:413
 msgid "The token type provided is not valid."
 msgstr ""
 
-#: api/problem_details.py:411
+#: api/problem_details.py:419
 msgid "Access token expired"
 msgstr ""
 
-#: api/problem_details.py:412
+#: api/problem_details.py:420
 msgid "The patron authentication access token has expired."
 msgstr ""
 
-#: api/problem_details.py:418
+#: api/problem_details.py:426
 msgid "Access token invalid"
 msgstr ""
 
-#: api/problem_details.py:419
+#: api/problem_details.py:427
 msgid "The patron authentication access token is invalid."
 msgstr ""
 
-#: api/problem_details.py:425
+#: api/problem_details.py:433
 msgid "Access token not possible"
 msgstr ""
 
-#: api/problem_details.py:426
+#: api/problem_details.py:434
 msgid ""
 "The patron authentication access token is not possible for this type of "
 "authentication."

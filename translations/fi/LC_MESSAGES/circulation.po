@@ -2,29 +2,30 @@
 # Copyright (C) 2024 ORGANIZATION
 # This file is distributed under the same license as the PROJECT project.
 # FIRST AUTHOR <EMAIL@ADDRESS>, 2024.
-# 
+#
 # Translators:
 # Paula Sivonen, 2024
 # Marika Kaskinen, 2024
-# 
 msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2024-04-27 23:15+0300\n"
+"POT-Creation-Date: 2025-05-07 08:51+0300\n"
 "PO-Revision-Date: 2024-03-01 11:36+0000\n"
 "Last-Translator: Marika Kaskinen, 2024\n"
-"Language-Team: Finnish (https://app.transifex.com/national-library-of-finland/teams/183401/fi/)\n"
+"Language: fi\n"
+"Language-Team: Finnish (https://app.transifex.com/national-library-of-"
+"finland/teams/183401/fi/)\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.13.0\n"
-"Language: fi\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: api/authenticator.py:324
 msgid ""
-"SAML providers are configured, but secret for signing bearer tokens is not."
+"SAML providers are configured, but secret for signing bearer tokens is "
+"not."
 msgstr ""
 "SAML-palveluntarjoajat on määritetty, mutta salauskoodia bearer tokenien "
 "allekirjoittamista varten ei ole."
@@ -38,7 +39,7 @@ msgstr "SAML-palveluntarjoajia ei ole määritetty."
 msgid " The known providers are: %s"
 msgstr " Tunnetut palveluntarjoajat ovat seuraavat: %s"
 
-#: api/authenticator.py:756
+#: api/authenticator.py:766
 msgid "Library"
 msgstr "Kirjasto"
 
@@ -65,8 +66,8 @@ msgstr "Vahvista SSL-varmenne"
 
 #: api/axis.py:121
 msgid ""
-"This should always be True in production, it may need to be set to False to "
-"use theAxis 360 QA Environment."
+"This should always be True in production, it may need to be set to False "
+"to use theAxis 360 QA Environment."
 msgstr ""
 "Tämän tulisi aina olla Tosi tuotannossa, sen arvoksi on ehkä asetettava "
 "Epätosi, jotta voidaan käyttää Axis 360 QA -ympäristöä."
@@ -92,10 +93,10 @@ msgid "Show/Hide Titles with No Available Loans"
 msgstr "Näytä/piilota teokset, joita ei ole saatavilla lainattavaksi"
 
 #: api/bibliotheca.py:112 api/enki.py:87
-msgid ""
-"Titles with no available loans will not be displayed in the Catalog view."
+msgid "Titles with no available loans will not be displayed in the Catalog view."
 msgstr ""
-"Teokset, joita ei ole saatavilla lainattavaksi, eivät näy luettelonäkymässä."
+"Teokset, joita ei ole saatavilla lainattavaksi, eivät näy "
+"luettelonäkymässä."
 
 #: api/circulation.py:508
 msgid "Ebook Loan Duration (in Days)"
@@ -103,14 +104,15 @@ msgstr "E-kirjan laina-aika (päivinä)"
 
 #: api/circulation.py:510
 msgid ""
-"When a patron uses SimplyE to borrow an ebook from this collection, SimplyE "
-"will ask for a loan that lasts this number of days. This must be equal to or"
-" less than the maximum loan duration negotiated with the distributor."
+"When a patron uses SimplyE to borrow an ebook from this collection, "
+"SimplyE will ask for a loan that lasts this number of days. This must be "
+"equal to or less than the maximum loan duration negotiated with the "
+"distributor."
 msgstr ""
 "Kun asiakas käyttää SimplyE-sovellusta lainatakseen e-kirjan tästä "
-"kokoelmasta, SimplyE pyytää lainaa, jonka pituus on tämä määrä päiviä. Tämän"
-" on oltava yhtä suuri tai pienempi kuin jakelijan kanssa neuvoteltu lainan "
-"enimmäiskesto."
+"kokoelmasta, SimplyE pyytää lainaa, jonka pituus on tämä määrä päiviä. "
+"Tämän on oltava yhtä suuri tai pienempi kuin jakelijan kanssa neuvoteltu "
+"lainan enimmäiskesto."
 
 #: api/circulation.py:523
 msgid "Default Loan Period (in Days)"
@@ -118,16 +120,16 @@ msgstr "Oletuslaina-aika (päivinä)"
 
 #: api/circulation.py:525
 msgid ""
-"Until it hears otherwise from the distributor, this server will assume that "
-"any given loan for this library from this collection will last this number "
-"of days. This number is usually a negotiated value between the library and "
-"the distributor. This only affects estimates&mdash;it cannot affect the "
-"actual length of loans."
+"Until it hears otherwise from the distributor, this server will assume "
+"that any given loan for this library from this collection will last this "
+"number of days. This number is usually a negotiated value between the "
+"library and the distributor. This only affects estimates&mdash;it cannot "
+"affect the actual length of loans."
 msgstr ""
-"Kunnes palvelin kuulee toisin jakelijalta, se olettaa, että tämän kirjaston "
-"laina tästä kokoelmasta kestää tämän määrän päiviä. Tämä luku on yleensä "
-"kirjaston ja jakelijan neuvottelema arvo. Tämä vaikuttaa vain arvioihin – se"
-" ei voi vaikuttaa lainojen todelliseen kestoon."
+"Kunnes palvelin kuulee toisin jakelijalta, se olettaa, että tämän "
+"kirjaston laina tästä kokoelmasta kestää tämän määrän päiviä. Tämä luku "
+"on yleensä kirjaston ja jakelijan neuvottelema arvo. Tämä vaikuttaa vain "
+"arvioihin – se ei voi vaikuttaa lainojen todelliseen kestoon."
 
 #: api/circulation.py:555
 #, python-format
@@ -138,19 +140,19 @@ msgstr ""
 "Toimitusmekanismia %(mechanism_name)s ei voitu määrittää sisäiseksi "
 "toimitusmekanismiksi!"
 
-#: api/circulation.py:1070
+#: api/circulation.py:1084
 msgid "You cannot renew a loan if other patrons have the work on hold."
 msgstr "Et voi uusia lainaa, jos muut asiakkaat jonottavat teosta."
 
-#: api/circulation.py:1347
+#: api/circulation.py:1397
 msgid "Cannot find your active loan for this work."
 msgstr "Aktiivista lainaasi tälle teokselle ei löydy."
 
-#: api/circulation.py:1354
+#: api/circulation.py:1404
 #, python-format
 msgid ""
-"You already fulfilled this loan as %(loan_delivery_mechanism)s, you can't "
-"also do it as %(requested_delivery_mechanism)s"
+"You already fulfilled this loan as %(loan_delivery_mechanism)s, you can't"
+" also do it as %(requested_delivery_mechanism)s"
 msgstr ""
 "Olet jo toteuttanut tämän lainan toimitusmekanismin "
 "%(loan_delivery_mechanism)s kautta, et voi toteuttaa sitä myös "
@@ -161,18 +163,17 @@ msgstr ""
 msgid "Integration error communicating with %(service_name)s"
 msgstr "Integrointivirhe kommunikoinnissa palvelun %(service_name)s kanssa"
 
-#: api/circulation_manager.py:158
+#: api/circulation_manager.py:160
 msgid "Lane does not exist"
 msgstr "Kaistaa ei ole olemassa"
 
-#: api/circulation_manager.py:378
+#: api/circulation_manager.py:381
 msgid "All Books"
 msgstr "Kaikki kirjat"
 
 #: api/config.py:81
 msgid "Internal signing secret for OAuth and SAML bearer tokens"
-msgstr ""
-"OAuthin ja SAML:n bearer tokenien sisäisen allekirjoittamisen salauskoodi"
+msgstr "OAuthin ja SAML:n bearer tokenien sisäisen allekirjoittamisen salauskoodi"
 
 #: api/config.py:86
 msgid "Internal secret key for admin interface cookies"
@@ -184,26 +185,27 @@ msgstr "Isäntänimet verkkosovellusten käyttöä varten"
 
 #: api/config.py:93
 msgid ""
-"Only web applications from these hosts can access this circulation manager. "
-"This can be a single hostname (http://catalog.library.org) or a pipe-"
-"separated list of hostnames "
-"(http://catalog.library.org|https://beta.library.org). You must include the "
-"scheme part of the URI (http:// or https://). You can also set this to '*' "
-"to allow access from any host, but you must not do this in a production "
-"environment -- only during development."
+"Only web applications from these hosts can access this circulation "
+"manager. This can be a single hostname (http://catalog.library.org) or a "
+"pipe-separated list of hostnames "
+"(http://catalog.library.org|https://beta.library.org). You must include "
+"the scheme part of the URI (http:// or https://). You can also set this "
+"to '*' to allow access from any host, but you must not do this in a "
+"production environment -- only during development."
 msgstr ""
 "Vain näiden isäntien verkkosovellukset voivat käyttää tätä lainauksen "
 "hallintaa. Tämä voi olla yksittäisen isännän nimi "
-"(http://catalog.library.org) tai pystyviivalla erotettu luettelo isäntien "
-"nimistä (http://catalog.library.org|https://beta.library.org). Sinun on "
-"sisällytettävä URIn skeema (http:// tai https://). Voit myös asettaa tämän "
-"arvoksi '*', jolloin pääsy sallitaan miltä tahansa isäntäkoneelta, mutta et "
-"voi tehdä tätä tuotantoympäristössä -- vain kehityksen aikana."
+"(http://catalog.library.org) tai pystyviivalla erotettu luettelo isäntien"
+" nimistä (http://catalog.library.org|https://beta.library.org). Sinun on "
+"sisällytettävä URIn skeema (http:// tai https://). Voit myös asettaa "
+"tämän arvoksi '*', jolloin pääsy sallitaan miltä tahansa isäntäkoneelta, "
+"mutta et voi tehdä tätä tuotantoympäristössä -- vain kehityksen aikana."
 
 #: api/config.py:99
 msgid "Cache time for static images and JS and CSS files (in seconds)"
 msgstr ""
-"Staattisten kuvien sekä JS- ja CSS-tiedostojen välimuistiaika (sekunneissa)"
+"Staattisten kuvien sekä JS- ja CSS-tiedostojen välimuistiaika "
+"(sekunneissa)"
 
 #: api/config.py:107
 msgid "Cache time for authentication documents (in seconds)"
@@ -215,10 +217,10 @@ msgstr "Mukautettujen käyttöehtojen linkki"
 
 #: api/config.py:117
 msgid ""
-"If your inclusion in the SimplyE mobile app is governed by terms other than "
-"the default, put the URL to those terms in this link so that librarians will"
-" have access to them. This URL will be used for all libraries on this "
-"circulation manager."
+"If your inclusion in the SimplyE mobile app is governed by terms other "
+"than the default, put the URL to those terms in this link so that "
+"librarians will have access to them. This URL will be used for all "
+"libraries on this circulation manager."
 msgstr ""
 "Jos osallistumistasi SimplyE-mobiilisovellukseen koskevat muut kuin "
 "oletusehdot, lisää näiden ehtojen URL tähän linkkiin, jotta "
@@ -237,8 +239,8 @@ msgid ""
 "will be used for all libraries on this circulation manager."
 msgstr ""
 "Käyttöehtojen linkin mukautettu teksti näiden hallinnollisten "
-"käyttöliittymäsivujen alatunnisteessa. Tämä on hyödyllistä ensisijaisesti "
-"silloin, jos et yhdistä tätä lainauksen hallintaa SimplyE-"
+"käyttöliittymäsivujen alatunnisteessa. Tämä on hyödyllistä ensisijaisesti"
+" silloin, jos et yhdistä tätä lainauksen hallintaa SimplyE-"
 "mobiilisovellukseen. Tätä tekstiä käytetään kaikissa kirjastoissa tässä "
 "lainauksen hallinnassa."
 
@@ -301,12 +303,12 @@ msgstr "Valtuutustunnuksen vanhenemisaika sekunteina"
 #: api/ekirjasto_authentication.py:110
 msgid ""
 "Expire time for a delegate token to authorize in behalf of a ekirjasto "
-"token. This should be less than the expire time for ekirjasto token, so it "
-"can be refreshed."
+"token. This should be less than the expire time for ekirjasto token, so "
+"it can be refreshed."
 msgstr ""
 "Määräaika, jonka kuluessa valtuutustunnuksen on annettava valtuutus "
-"e-kirjaston tunnuksen puolesta. Tämän on oltava lyhyempi kuin e-kirjaston "
-"tunnuksen vanhenemisaika, jotta se voidaan päivittää."
+"e-kirjaston tunnuksen puolesta. Tämän on oltava lyhyempi kuin e-kirjaston"
+" tunnuksen vanhenemisaika, jotta se voidaan päivittää."
 
 #: api/enki.py:74 api/kansas_patron.py:20
 msgid "URL"
@@ -341,8 +343,8 @@ msgid ""
 "The number of days a patron has to check out a book after a hold becomes "
 "available."
 msgstr ""
-"Asiakkaalla on näin monta päivää aikaa lainata kirja sen jälkeen, kun varaus"
-" on tullut saataville."
+"Asiakkaalla on näin monta päivää aikaa lainata kirja sen jälkeen, kun "
+"varaus on tullut saataville."
 
 #: api/odl.py:120
 msgid "Passphrase hint"
@@ -350,19 +352,17 @@ msgstr "Salalausevihje"
 
 #: api/odl.py:121
 msgid "Hint displayed to the user when opening an LCP protected publication."
-msgstr ""
-"Vihje, joka näytetään käyttäjälle, kun hän avaa LCP-suojatun julkaisun."
+msgstr "Vihje, joka näytetään käyttäjälle, kun hän avaa LCP-suojatun julkaisun."
 
 #: api/odl.py:132
 msgid "Passphrase hint URL"
 msgstr "Salalausevihjeen URL-osoite"
 
 #: api/odl.py:133
-msgid ""
-"Hint URL available to the user when opening an LCP protected publication."
+msgid "Hint URL available to the user when opening an LCP protected publication."
 msgstr ""
-"Vihjeen URL-osoite, joka on käyttäjän saatavilla, kun hän avaa LCP-suojatun "
-"julkaisun."
+"Vihjeen URL-osoite, joka on käyttäjän saatavilla, kun hän avaa LCP-"
+"suojatun julkaisun."
 
 #: api/odl.py:144
 msgid "Passphrase encryption algorithm"
@@ -378,7 +378,8 @@ msgstr "Ohitetut lisenssimuodot"
 
 #: api/odl2.py:47
 msgid ""
-"List of license formats that will NOT be imported into Circulation Manager."
+"List of license formats that will NOT be imported into Circulation "
+"Manager."
 msgstr "Luettelo lisenssimuodoista, joita EI tuoda lainauksen hallintaan."
 
 #: api/odl2.py:59
@@ -387,17 +388,16 @@ msgstr "Asiakaskohtainen lainaraja"
 
 #: api/odl2.py:60
 msgid ""
-"The maximum number of books a patron can have loaned out at any given time."
-msgstr ""
-"Asiakkaalla voi olla enintään näin monta kirjaa lainattuna kerrallaan."
+"The maximum number of books a patron can have loaned out at any given "
+"time."
+msgstr "Asiakkaalla voi olla enintään näin monta kirjaa lainattuna kerrallaan."
 
 #: api/odl2.py:72
 msgid "Hold limit per patron"
 msgstr "Asiakaskohtainen varausraja"
 
 #: api/odl2.py:73
-msgid ""
-"The maximum number of books a patron can have on hold at any given time."
+msgid "The maximum number of books a patron can have on hold at any given time."
 msgstr "Asiakkaalla voi olla enintään näin monta kirjaa varattuna kerrallaan."
 
 #: api/opds_for_distributors.py:52
@@ -434,9 +434,9 @@ msgstr "ILS-nimi"
 
 #: api/overdrive.py:185
 msgid ""
-"When multiple libraries share an Overdrive account, Overdrive uses a setting"
-" called 'ILS Name' to determine which ILS to check when validating a given "
-"patron."
+"When multiple libraries share an Overdrive account, Overdrive uses a "
+"setting called 'ILS Name' to determine which ILS to check when validating"
+" a given patron."
 msgstr ""
 "Kun useat kirjastot käyttävät samaa Overdrive-tiliä, Overdrive määrittää "
 "\"ILS-nimi\"-asetuksen perusteella mikä ILS tarkistetaan, kun asiakas "
@@ -448,8 +448,8 @@ msgstr "Kolmannen osapuolen palvelu epäonnistui."
 
 #: api/problem_details.py:10
 msgid ""
-"The library could not complete your request because a third-party service "
-"has failed."
+"The library could not complete your request because a third-party service"
+" has failed."
 msgstr ""
 "Kirjasto ei pystynyt suorittamaan pyyntöäsi, koska kolmannen osapuolen "
 "palvelu epäonnistui."
@@ -498,7 +498,7 @@ msgstr "Ei lisenssejä."
 msgid "The library currently has no licenses for this book."
 msgstr "Kirjastolla ei ole tällä hetkellä lisenssejä tähän kirjaan."
 
-#: api/problem_details.py:55
+#: api/problem_details.py:55 api/problem_details.py:63
 msgid "No available license."
 msgstr "Ei saatavilla olevaa lisenssiä."
 
@@ -506,44 +506,50 @@ msgstr "Ei saatavilla olevaa lisenssiä."
 msgid "All licenses for this book are loaned out."
 msgstr "Kaikki tämän kirjan lisenssit ovat lainassa."
 
-#: api/problem_details.py:62
+#: api/problem_details.py:64
+msgid ""
+"All copies of this book are loaned out after all. You are still next in "
+"line."
+msgstr ""
+
+#: api/problem_details.py:70
 msgid "No acceptable format."
 msgstr "Ei hyväksyttävää muotoa."
 
-#: api/problem_details.py:63
+#: api/problem_details.py:71
 msgid "Could not deliver this book in an acceptable format."
 msgstr "Tätä kirjaa ei voitu toimittaa hyväksyttävässä muodossa."
 
-#: api/problem_details.py:69
+#: api/problem_details.py:77
 msgid "Already checked out"
 msgstr "On jo lainattu"
 
-#: api/problem_details.py:70
+#: api/problem_details.py:78
 msgid "You have already checked out this book."
 msgstr "Olet jo lainannut tämän kirjan."
 
-#: api/problem_details.py:73
+#: api/problem_details.py:81
 msgid ""
-"You have reached your loan limit. You cannot borrow anything further until "
-"you return something."
+"You have reached your loan limit. You cannot borrow anything further "
+"until you return something."
 msgstr ""
-"Olet saavuttanut lainarajasi. Et voi lainata enää mitään ennen kuin palautat"
-" jotain."
+"Olet saavuttanut lainarajasi. Et voi lainata enää mitään ennen kuin "
+"palautat jotain."
 
-#: api/problem_details.py:76
+#: api/problem_details.py:84
 #, python-format
 msgid ""
-"You have reached your loan limit of %(limit)d. You cannot borrow anything "
-"further until you return something."
+"You have reached your loan limit of %(limit)d. You cannot borrow anything"
+" further until you return something."
 msgstr ""
-"Olet saavuttanut lainarajasi, joka on %(limit)d. Et voi lainata enää mitään "
-"ennen kuin palautat jotain."
+"Olet saavuttanut lainarajasi, joka on %(limit)d. Et voi lainata enää "
+"mitään ennen kuin palautat jotain."
 
-#: api/problem_details.py:82
+#: api/problem_details.py:90
 msgid "Loan limit reached."
 msgstr "Lainaraja saavutettu."
 
-#: api/problem_details.py:86
+#: api/problem_details.py:94
 msgid ""
 "You have reached your hold limit. You cannot place another item on hold "
 "until you borrow something or remove a hold."
@@ -551,227 +557,224 @@ msgstr ""
 "Olet saavuttanut varausrajasi. Et voi varata toista teosta ennen kuin "
 "lainaat jotakin tai poistat varauksen."
 
-#: api/problem_details.py:89
+#: api/problem_details.py:97
 #, python-format
 msgid ""
-"You have reached your hold limit of %(limit)d. You cannot place another item"
-" on hold until you borrow something or remove a hold."
+"You have reached your hold limit of %(limit)d. You cannot place another "
+"item on hold until you borrow something or remove a hold."
 msgstr ""
 "Olet saavuttanut varausrajasi, joka on %(limit)d. Et voi varata toista "
 "teosta ennen kuin lainaat jotakin tai poistat varauksen."
 
-#: api/problem_details.py:95
+#: api/problem_details.py:103
 msgid "Limit reached."
 msgstr "Raja saavutettu."
 
-#: api/problem_details.py:102
+#: api/problem_details.py:110
 msgid "Outstanding fines."
 msgstr "Maksamattomia sakkoja."
 
-#: api/problem_details.py:103
+#: api/problem_details.py:111
 msgid "You must pay your outstanding fines before you can borrow more books."
 msgstr ""
 "Sinun on maksettava maksamattomat sakkosi ennen kuin voit lainata lisää "
 "kirjoja."
 
-#: api/problem_details.py:109
+#: api/problem_details.py:117
 msgid "Could not issue loan."
 msgstr "Teosta ei voi lainata."
 
-#: api/problem_details.py:110
+#: api/problem_details.py:118
 msgid "Could not issue loan (reason unknown)."
 msgstr "Teosta ei voi lainata (syy tuntematon)."
 
-#: api/problem_details.py:116
+#: api/problem_details.py:124
 msgid "Could not place hold."
 msgstr "Varausta ei voi tehdä."
 
-#: api/problem_details.py:117
+#: api/problem_details.py:125
 msgid "Could not place hold (reason unknown)."
 msgstr "Varausta ei voi tehdä (syy tuntematon)."
 
-#: api/problem_details.py:123
+#: api/problem_details.py:131
 msgid "Could not renew loan."
 msgstr "Lainaa ei voitu uusia."
 
-#: api/problem_details.py:124
+#: api/problem_details.py:132
 msgid "Could not renew loan (reason unknown)."
 msgstr "Lainaa ei voitu uusia (syy tuntematon)."
 
-#: api/problem_details.py:130
+#: api/problem_details.py:138
 msgid "No longer in collection."
 msgstr "Ei ole enää kokoelmassa."
 
-#: api/problem_details.py:131
+#: api/problem_details.py:139
 msgid "This book was recently removed from the collection."
 msgstr "Tämä kirja poistettiin äskettäin kokoelmasta."
 
-#: api/problem_details.py:137
+#: api/problem_details.py:145
 msgid "No active loan."
 msgstr "Ei aktiivista lainaa."
 
-#: api/problem_details.py:138
+#: api/problem_details.py:146
 msgid "You can't do this without first borrowing this book."
 msgstr "Sinun on ensin lainattava tämä kirja ennen kuin voit tehdä tämän."
 
-#: api/problem_details.py:144
+#: api/problem_details.py:152
 msgid "No active hold."
 msgstr "Ei aktiivista varausta."
 
-#: api/problem_details.py:145
+#: api/problem_details.py:153
 msgid "You can't do this without first putting this book on hold."
 msgstr "Sinun on ensin varattava tämä kirja ennen kuin voit tehdä tämän."
 
-#: api/problem_details.py:151
+#: api/problem_details.py:159
 msgid "No active loan or hold."
 msgstr "Ei aktiivista lainaa tai varausta."
 
-#: api/problem_details.py:152
-msgid ""
-"You can't do this without first borrowing this book or putting it on hold."
+#: api/problem_details.py:160
+msgid "You can't do this without first borrowing this book or putting it on hold."
 msgstr ""
 "Sinun on ensin lainattava tai varattava tämä kirja ennen kuin voit tehdä "
 "tämän."
 
-#: api/problem_details.py:158
+#: api/problem_details.py:166
 msgid "Loan not found."
 msgstr "Lainaa ei löytynyt."
 
-#: api/problem_details.py:159
+#: api/problem_details.py:167
 msgid "You don't have a loan with the provided id."
 msgstr "Sinulla ei ole lainaa annetulla tunnuksella."
 
-#: api/problem_details.py:165
+#: api/problem_details.py:173
 msgid "Hold not found."
 msgstr "Varausta ei löytynyt."
 
-#: api/problem_details.py:166
+#: api/problem_details.py:174
 msgid "You don't have a hold with the provided id."
 msgstr "Sinulla ei ole varausta annetulla tunnuksella."
 
-#: api/problem_details.py:172
+#: api/problem_details.py:180
 msgid "Could not mirror local state to remote."
 msgstr "Paikallista tilaa ei voitu peilata etätilaan."
 
-#: api/problem_details.py:173
+#: api/problem_details.py:181
 msgid ""
-"Could not convince a third party to accept the change you made. It's likely "
-"to show up again soon."
+"Could not convince a third party to accept the change you made. It's "
+"likely to show up again soon."
 msgstr ""
 "Kolmatta osapuolta ei saatu hyväksymään tekemääsi muutosta. Se näkyy "
 "todennäköisesti pian uudelleen."
 
-#: api/problem_details.py:181
+#: api/problem_details.py:189
 msgid "No such lane."
 msgstr "Kaistaa ei ole olemassa."
 
-#: api/problem_details.py:182
+#: api/problem_details.py:190
 msgid "You asked for a nonexistent lane."
 msgstr "Pyysit kaistaa, jota ei ole."
 
-#: api/problem_details.py:188
+#: api/problem_details.py:196
 msgid "No such list."
 msgstr "Listaa ei ole olemassa."
 
-#: api/problem_details.py:189
+#: api/problem_details.py:197
 msgid "You asked for a nonexistent list."
 msgstr "Pyysit listaa, jota ei ole."
 
-#: api/problem_details.py:195
+#: api/problem_details.py:203
 msgid "Cannot delete list."
 msgstr "Listaa ei voi poistaa."
 
-#: api/problem_details.py:196
+#: api/problem_details.py:204
 msgid "It is not possible to delete a shared list."
 msgstr "Jaettua listaa ei voi poistaa."
 
-#: api/problem_details.py:202
+#: api/problem_details.py:210
 msgid "No such collection."
 msgstr "Tällaista kokoelmaa ei ole."
 
-#: api/problem_details.py:203
+#: api/problem_details.py:211
 msgid "You asked for a nonexistent collection."
 msgstr "Pyysit kokoelmaa, jota ei ole."
 
-#: api/problem_details.py:209
+#: api/problem_details.py:217
 msgid "Forbidden by policy."
 msgstr "Käytännöt kieltävät tämän."
 
-#: api/problem_details.py:210
+#: api/problem_details.py:218
 msgid "Library policy prevents us from carrying out your request."
 msgstr "Kirjaston käytännöt estävät meitä toteuttamasta pyyntöäsi."
 
-#: api/problem_details.py:214
-msgid ""
-"Library policy considers this title inappropriate for your patron type."
-msgstr ""
-"Kirjaston käytäntöjen mukaan tämä teos on sopimaton asiakastyypillesi."
+#: api/problem_details.py:222
+msgid "Library policy considers this title inappropriate for your patron type."
+msgstr "Kirjaston käytäntöjen mukaan tämä teos on sopimaton asiakastyypillesi."
 
-#: api/problem_details.py:221 api/problem_details.py:222
+#: api/problem_details.py:229 api/problem_details.py:230
 msgid "Could not fulfill loan."
 msgstr "Lainausta ei voitu suorittaa."
 
-#: api/problem_details.py:228
+#: api/problem_details.py:236
 msgid "Delivery mechanism conflict."
 msgstr "Toimitusmekanismin ristiriita."
 
-#: api/problem_details.py:229
+#: api/problem_details.py:237
 msgid ""
 "The delivery mechanism for this book has been locked in and can't be "
 "changed."
 msgstr "Tämän kirjan toimitusmekanismi on lukittu eikä sitä voi muuttaa."
 
-#: api/problem_details.py:235
+#: api/problem_details.py:243
 msgid "Unsupported delivery mechanism."
 msgstr "Toimitusmekanismia ei tueta."
 
-#: api/problem_details.py:236
+#: api/problem_details.py:244
 msgid "You selected a delivery mechanism that's not supported by this book."
 msgstr "Valitsit toimitusmekanismin, jota tämä kirja ei tue."
 
-#: api/problem_details.py:242 api/problem_details.py:243
+#: api/problem_details.py:250 api/problem_details.py:251
 msgid "Could not release hold."
 msgstr "Varausta ei voitu vapauttaa."
 
-#: api/problem_details.py:249
+#: api/problem_details.py:257
 msgid "Unknown SAML provider."
 msgstr "Tuntematon SAML-palveluntarjoaja."
 
-#: api/problem_details.py:250
+#: api/problem_details.py:258
 msgid "The specified SAML provider name isn't one of the known providers."
 msgstr ""
 "Määritetty SAML-palveluntarjoajan nimi ei kuulu tunnettuihin "
 "palveluntarjoajiin."
 
-#: api/problem_details.py:257
+#: api/problem_details.py:265
 msgid "Ekirjasto provider not configured."
 msgstr "E-kirjaston palveluntarjoajaa ei ole määritetty."
 
-#: api/problem_details.py:258
+#: api/problem_details.py:266
 msgid "Ekirjasto provider was not configured for the library"
 msgstr "E-kirjaston palveluntarjoajaa ei ole määritetty kirjastolle"
 
-#: api/problem_details.py:265
+#: api/problem_details.py:273
 msgid "Ekirjasto remote method not supported."
 msgstr "E-kirjaston etämenetelmää ei tueta."
 
-#: api/problem_details.py:266
+#: api/problem_details.py:274
 msgid "Method for a remote call not supported."
 msgstr "Etäkutsumenetelmää ei tueta."
 
-#: api/problem_details.py:272
+#: api/problem_details.py:280
 msgid "Invalid SAML bearer token."
 msgstr "Virheellinen SAML:n bearer token."
 
-#: api/problem_details.py:273
+#: api/problem_details.py:281
 msgid "The provided SAML bearer token couldn't be verified."
 msgstr "Annettua SAML:n bearer tokenia ei voitu vahvistaa."
 
-#: api/problem_details.py:280
+#: api/problem_details.py:288
 msgid "Invalid delegate token for ekirjasto authentication provider."
 msgstr "E-kirjaston todennuksen tarjoajan virheellinen valtuutustunnus."
 
-#: api/problem_details.py:281
+#: api/problem_details.py:289
 msgid ""
 "The provided delegate token couldn't be verified for ekirjasto "
 "authentication provider or it is expired."
@@ -779,164 +782,163 @@ msgstr ""
 "E-kirjaston todennuksen tarjoajan antamaa valtuutustunnusta ei voitu "
 "vahvistaa tai se on vanhentunut."
 
-#: api/problem_details.py:290
+#: api/problem_details.py:298
 msgid "Invalid ekirjasto token for ekirjasto API."
 msgstr "Virheellinen E-kirjaston tunnus E-kirjaston API:lle."
 
-#: api/problem_details.py:291
+#: api/problem_details.py:299
 msgid "The provided ekirjasto token couldn't be verified for ekirjasto API."
 msgstr "Annettua E-kirjaston tunnusta ei voitu vahvistaa E-kirjaston API:lle."
 
-#: api/problem_details.py:298
+#: api/problem_details.py:306
 msgid "Authentication with ekirjasto API failed."
 msgstr "Todennus E-kirjaston API:lla epäonnistui."
 
-#: api/problem_details.py:299
+#: api/problem_details.py:307
 msgid "Authentication with ekirjasto API failed, for unknown reason."
 msgstr "Todennus E-kirjaston API:lla epäonnistui tuntemattomasta syystä."
 
-#: api/problem_details.py:306
+#: api/problem_details.py:314
 msgid "Call to ekirjasto API failed."
 msgstr "E-kirjaston API-kutsu epäonnistui."
 
-#: api/problem_details.py:307
+#: api/problem_details.py:315
 msgid "Call to ekirjasto API failed, for unknown reason."
 msgstr "E-kirjaston API-kutsu epäonnistui tuntemattomasta syystä."
 
-#: api/problem_details.py:313
+#: api/problem_details.py:321
 msgid "Unsupported authentication mechanism."
 msgstr "Todennusmekanismia ei tueta."
 
-#: api/problem_details.py:314
+#: api/problem_details.py:322
 msgid "The specified authentication mechanism isn't supported."
 msgstr "Määritettyä todennusmekanismia ei tueta."
 
-#: api/problem_details.py:320
+#: api/problem_details.py:328
 msgid "Invalid analytics event type."
 msgstr "Virheellinen analytiikkatapahtuman tyyppi."
 
-#: api/problem_details.py:321
+#: api/problem_details.py:329
 msgid "The analytics event must be a supported type."
 msgstr "Analytiikkatapahtuman tyypin on oltava tuettu."
 
-#: api/problem_details.py:327
+#: api/problem_details.py:335
 msgid "Invalid annotation motivation."
 msgstr "Virheellinen merkinnän peruste."
 
-#: api/problem_details.py:328
+#: api/problem_details.py:336
 msgid "The annotation must have a supported motivation."
 msgstr "Merkinnällä on oltava tuettu peruste."
 
-#: api/problem_details.py:334
+#: api/problem_details.py:342
 msgid "Invalid annotation target."
 msgstr "Virheellinen merkinnän kohde."
 
-#: api/problem_details.py:335
+#: api/problem_details.py:343
 msgid "The annotation target must be a work in your current loans."
 msgstr "Merkinnän kohteen on oltava nykyisissä lainoissasi oleva teos."
 
-#: api/problem_details.py:341
+#: api/problem_details.py:349
 msgid "Invalid annotation format."
 msgstr "Virheellinen merkinnän muoto."
 
-#: api/problem_details.py:342
+#: api/problem_details.py:350
 msgid "The annotation could not be parsed as JSON-LD."
 msgstr "Merkintää ei voitu jäsentää JSON-LD-muodossa."
 
-#: api/problem_details.py:348
+#: api/problem_details.py:356
 msgid "No annotation."
 msgstr "Ei merkintää."
 
-#: api/problem_details.py:349
+#: api/problem_details.py:357
 msgid "The annotation you requested does not exist."
 msgstr "Pyytämääsi merkintää ei ole olemassa."
 
-#: api/problem_details.py:355
+#: api/problem_details.py:363
 msgid "Library not found."
 msgstr "Kirjastoa ei löydy."
 
-#: api/problem_details.py:356
+#: api/problem_details.py:364
 msgid "No library with the requested name on this server."
 msgstr "Tällä palvelimella ei ole pyydetyn nimistä kirjastoa."
 
-#: api/problem_details.py:362
+#: api/problem_details.py:370
 msgid "Wrong library"
 msgstr "Väärä kirjasto"
 
-#: api/problem_details.py:363
+#: api/problem_details.py:371
 msgid "You are not a patron of the selected library."
 msgstr "Et ole valitun kirjaston asiakas."
 
-#: api/problem_details.py:369
+#: api/problem_details.py:377
 msgid "Invalid loan for ODL notification"
 msgstr "Virheellinen laina ODL-ilmoituksessa"
 
-#: api/problem_details.py:370
+#: api/problem_details.py:378
 msgid "The ODL notification is for a loan that's not from an ODL collection."
 msgstr "ODL-ilmoitus koskee lainaa, joka ei ole ODL-kokoelmasta."
 
-#: api/problem_details.py:376
+#: api/problem_details.py:384
 msgid "Invalid registration"
 msgstr "Virheellinen rekisteröinti"
 
-#: api/problem_details.py:377
+#: api/problem_details.py:385
 msgid "You did not submit enough information to register with the collection."
 msgstr "Et antanut riittävästi tietoja kokoelmaan rekisteröitymistä varten."
 
-#: api/problem_details.py:383
+#: api/problem_details.py:391
 msgid "Decryption error"
 msgstr "Salauksenpurkuvirhe"
 
-#: api/problem_details.py:384
+#: api/problem_details.py:392
 msgid "Failed to decrypt a shared secret retrieved from another computer."
-msgstr ""
-"Toisesta tietokoneesta haetun jaetun salauksen purkaminen epäonnistui."
+msgstr "Toisesta tietokoneesta haetun jaetun salauksen purkaminen epäonnistui."
 
-#: api/problem_details.py:390
+#: api/problem_details.py:398
 msgid "Device token not found"
 msgstr "Laitetunnusta ei löydy"
 
-#: api/problem_details.py:391
+#: api/problem_details.py:399
 msgid "Patron does not have a device registered with this token."
 msgstr "Asiakkaalla ei ole tällä tunnuksella rekisteröityä laitetta."
 
-#: api/problem_details.py:397
+#: api/problem_details.py:405
 msgid "Device token already exists"
 msgstr "Laitetunnus on jo olemassa"
 
-#: api/problem_details.py:398
+#: api/problem_details.py:406
 msgid "A device token with the same token already exists."
 msgstr "Laitetunnus samalla tunnuksella on jo olemassa."
 
-#: api/problem_details.py:404
+#: api/problem_details.py:412
 msgid "Device token type invalid"
 msgstr "Virheellinen laitetunnustyyppi"
 
-#: api/problem_details.py:405
+#: api/problem_details.py:413
 msgid "The token type provided is not valid."
 msgstr "Annettu tunnustyyppi ei kelpaa."
 
-#: api/problem_details.py:411
+#: api/problem_details.py:419
 msgid "Access token expired"
 msgstr "Käyttötunnus on vanhentunut"
 
-#: api/problem_details.py:412
+#: api/problem_details.py:420
 msgid "The patron authentication access token has expired."
 msgstr "Asiakkaan todennuksen käyttötunnus on vanhentunut."
 
-#: api/problem_details.py:418
+#: api/problem_details.py:426
 msgid "Access token invalid"
 msgstr "Virheellinen käyttötunnus"
 
-#: api/problem_details.py:419
+#: api/problem_details.py:427
 msgid "The patron authentication access token is invalid."
 msgstr "Asiakkaan todennuksen käyttötunnus on virheellinen."
 
-#: api/problem_details.py:425
+#: api/problem_details.py:433
 msgid "Access token not possible"
 msgstr "Käyttötunnus ei ole mahdollinen"
 
-#: api/problem_details.py:426
+#: api/problem_details.py:434
 msgid ""
 "The patron authentication access token is not possible for this type of "
 "authentication."
@@ -955,3 +957,4 @@ msgstr "Asiakkaan jäsenyys on päättynyt"
 #: api/sirsidynix_authentication_provider.py:34
 msgid "Patron has been blocked."
 msgstr "Asiakas on estetty."
+
