@@ -693,12 +693,12 @@ def client_libraries(library_uuid):
 
 # Loan notifications for ODL distributors, eg. Feedbooks
 @library_route(
-    "/odl_notify/<patron_identifier>/<license_identifier>", methods=["GET", "POST"]
+    "/odl_notify/<license_identifier>", methods=["GET", "POST"]
 )
 @has_library
 @returns_problem_detail
-def odl_notify(patron_identifier: str, license_identifier: str) -> Response:
-    return app.manager.odl_notification_controller.notify(patron_identifier, license_identifier)
+def odl_notify(license_identifier: str) -> Response:
+    return app.manager.odl_notification_controller.notify(license_identifier)
 
 
 # Controllers used for operations purposes

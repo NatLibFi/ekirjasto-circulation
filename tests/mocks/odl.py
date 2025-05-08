@@ -25,6 +25,6 @@ class MockOPDS2WithODLApi(ODLAPI):
 
     @staticmethod
     def _notification_url(
-        short_name: str | None, patron_id: str, license_id: str
+        short_name: str | None, license_id: str
     ) -> str:
-        return f"https://ekirjasto/{short_name}/odl_notify/{patron_id}/{license_id}"
+        return f"https://ekirjasto/{short_name}/odl_notify/{license_id}"

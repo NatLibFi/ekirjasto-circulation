@@ -252,7 +252,7 @@ class BaseODLAPI(
         return url_for(*args, **kwargs)
 
     @staticmethod
-    def _notification_url(short_name: str | None, patron_id: str, license_id: str) -> str:
+    def _notification_url(short_name: str | None, license_id: str) -> str:
         """Get the notification URL that should be passed in the ODL checkout link.
 
         This is broken out into a separate function to make it easier to override
@@ -261,7 +261,6 @@ class BaseODLAPI(
         return url_for(
             "odl_notify",
             library_short_name=short_name,
-            patron_identifier=patron_id,
             license_identifier=license_id,
             _external=True,
         )
@@ -271,6 +270,7 @@ class BaseODLAPI(
     ) -> LoanStatus:
         try:
             response = self._get(url, allowed_response_codes=["2xx"])
+            # self.log.info(f"Response: {json.loads(response.content.decode('utf-8'))}")
             status_doc = LoanStatus.parse_raw(response.content)
         except ValidationError as e:
             self.log.exception(
@@ -313,7 +313,6 @@ class BaseODLAPI(
             .filter(Loan.patron == patron)
             .filter(Loan.license_pool_id == licensepool.id)
         )
-        print("after that")
         if loan.count() < 1:
             raise NotCheckedOut()
         loan_result = loan.one()
@@ -344,7 +343,7 @@ class BaseODLAPI(
                 f"Loan {loan.id} was {loan_status.status} was already returned early, revoked by the distributor, or it expired."
             )
             loan.license.checkin()
-            self.update_licensepool()
+            self.update_licensepool(loan.license_pool)
             return
 
         return_link = loan_status.links.get(
@@ -374,7 +373,6 @@ class BaseODLAPI(
             )
             raise CannotReturn()
         loan.license.checkin()
-        print("checkin done,update pool:")
         self.update_licensepool(loan.license_pool)
 
     def checkout(
@@ -439,7 +437,7 @@ class BaseODLAPI(
         encoded_pass = base64.b64encode(binascii.unhexlify(hashed_pass.hashed))
 
         licenses = licensepool.best_available_licenses()
-        print(f"Amount: {len(licenses)}")
+        self.log.info(f"Available licenses in license pool {licensepool.identifier}: {len(licenses)}")
 
         license_: License | None = None
         loan_status: LoanStatus | None = None
@@ -459,10 +457,12 @@ class BaseODLAPI(
                 # This license had no available copies, so we try the next one.
                 ...
 
+        # No best available licenses were found in the first place or, for some reason, there's no status.
         if license_ is None or loan_status is None:
             # It could be that we have a hold which means we thought the book was available, but it wasn't.
             # We raise a NoAvailableCopies() and have the handler handle the patron's hold position.
-            licensepool.update_availability_from_licenses()
+            self.log.warning(f"No license  or status was none. Raising NoAvailableCopies.")
+            self.update_licensepool(licensepool)
             raise NoAvailableCopies()
 
         if not loan_status.active:
@@ -498,7 +498,8 @@ class BaseODLAPI(
         # If there was a hold CirculationAPI will take care of deleting it. So we just need to
         # update the license pool to reflect the loan. Since update_availability_from_licenses
         # takes into account holds, we need to tell it to ignore the hold about to be deleted.
-        self.update_licensepool(licensepool)
+        self.update_licensepool(licensepool, ignored_holds={hold} if hold else None)
+        self.log.info(f"License {license_.identifier} checked out with LoanInfo {loan}")
         return loan
 
     def _checkout_license(
@@ -513,10 +514,8 @@ class BaseODLAPI(
         checkout_id = str(uuid.uuid4())
         notification_url = self._notification_url(
             library_short_name,
-            patron_id,
             identifier,
         )
-
         # We should never be able to get here if the license doesn't have a checkout_url, but
         # we assert it anyway, to be sure we fail fast if it happens.
         assert license_.checkout_url is not None
@@ -539,7 +538,6 @@ class BaseODLAPI(
                     "http://opds-spec.org/odl/error/checkout/unavailable"
                 ],
             )
-            print("HERE", loan_status)
             return loan_status
         except OpdsWithOdlException as e:
             if e.type == "http://opds-spec.org/odl/error/checkout/unavailable":
@@ -621,7 +619,6 @@ class BaseODLAPI(
             raise CannotFulfill()
 
         drm_scheme = delivery_mechanism.delivery_mechanism.drm_scheme
-        print("DRM scheme: ", drm_scheme)
         fulfill_cls: Callable[[str, str | None], UrlFulfillment]
         if drm_scheme == DeliveryMechanism.NO_DRM:
             # If we have no DRM, we can just redirect to the content link and let the patron download the book.
@@ -641,13 +638,12 @@ class BaseODLAPI(
         else:
             # We are getting content via a license loan_status document, so we need to find the link
             # that corresponds to the delivery mechanism we are using.
-            print("ELSE license link")
             fulfill_link = loan_status.links.get(rel="license", content_type=drm_scheme)
             fulfill_cls = partial(FetchFulfillment, allowed_response_codes=["2xx"])
 
         if fulfill_link is None:
             raise CannotFulfill()
-
+        self.log.info(f"Fulfilling with {drm_scheme}, Link: {fulfill_link.href}")
         return fulfill_cls(fulfill_link.href, fulfill_link.content_type)
 
     def _fulfill(
@@ -700,9 +696,7 @@ class BaseODLAPI(
         # First make sure the hold position is up-to-date, since we'll
         # need it to calculate the end date.
         original_position = holdinfo.hold_position
-        print(f"original position: {original_position}")
         self._update_hold_position(holdinfo, pool)
-        print(f"and after: {holdinfo.hold_position}")
         assert holdinfo.hold_position is not None
         if self.collection is None:
             raise ValueError(f"Collection not found: {self.collection_id}")
@@ -801,16 +795,19 @@ class BaseODLAPI(
             print("ready to checkout")
             # The hold is ready to check out.
             holdinfo.hold_position = 0
+        # Joskus lainoja ei löydy, koska jostain syystä laina ei ole rekisteröitynyt meille, mutta lisenssillä on laina. Miten tämä käsitellään?
+        # Ja miten koko varausjono päivitetään niin, että lainaa yrittänyt käyttäjä säilyttää ykkössijansa 1 (ei 0)?
 
         else:
             # Add 1 since position 0 indicates the hold is ready.
             holdinfo.hold_position = holds_count + 1
             print("hold is not 0 but ", holdinfo.hold_position)
 
-    def update_licensepool(self, licensepool: LicensePool) -> None:
+    def update_licensepool(self, licensepool: LicensePool, ignored_holds: set[Hold] | None = None) -> None:
         # Update the pool and the next holds in the queue when a license is reserved.
         licensepool.update_availability_from_licenses(
             as_of=utc_now(),
+            ignored_holds=ignored_holds
         )
         print("pool: ", licensepool)
         holds = licensepool.get_active_holds()
@@ -885,7 +882,7 @@ class BaseODLAPI(
         print(f"release hold: queue: {licensepool.patrons_in_hold_queue} holds: {len(licensepool.holds)}")
         # The hold itself will be deleted by the caller (usually CirculationAPI),
         # so we just need to update the license pool to reflect the released hold.
-        self.update_licensepool(licensepool)
+        self.update_licensepool(licensepool, ignored_holds={hold})
 
 
     def patron_activity(self, patron: Patron, pin: str) -> list[LoanInfo | HoldInfo]:
@@ -919,23 +916,6 @@ class BaseODLAPI(
             else:
                 self._update_hold_data(hold)
                 remaining_holds.append(hold)
-        print([
-            LoanInfo.from_license_pool(
-                loan.license_pool,
-                start_date=loan.start,
-                end_date=loan.end,
-                external_identifier=loan.external_identifier,
-            )
-            for loan in loans
-        ] + [
-            HoldInfo.from_license_pool(
-                hold.license_pool,
-                start_date=hold.start,
-                end_date=hold.end,
-                hold_position=hold.position,
-            )
-            for hold in remaining_holds
-        ])
         return [
             LoanInfo.from_license_pool(
                 loan.license_pool,
@@ -953,40 +933,6 @@ class BaseODLAPI(
             )
             for hold in remaining_holds
         ]
-
-    def update_loan(self, loan: Loan, status_doc: dict[str, Any] | None = None) -> None:
-        """Check a loan's status, and if it is no longer active, delete the loan
-        and update its pool's availability.
-        """
-        _db = Session.object_session(loan)
-
-        if not status_doc:
-            status_doc = self.get_license_status_document(loan)
-
-        status = status_doc.get("status")
-        # We already check that the status is valid in get_license_status_document,
-        # but if the document came from a notification it hasn't been checked yet.
-        if status not in self.STATUS_VALUES:
-            raise BadResponseException(
-                str(loan.license.checkout_url),
-                "The License Status Document had an unknown status value.",
-            )
-
-        if status in [
-            self.REVOKED_STATUS,
-            self.RETURNED_STATUS,
-            self.CANCELLED_STATUS,
-            self.EXPIRED_STATUS,
-        ]:
-            # This loan is no longer active. Update the pool's availability
-            # and delete the loan.
-
-            # Update the license
-            loan.license.checkin()
-
-            # If there are holds, the license is reserved for the next patron.
-            _db.delete(loan)
-            self.update_licensepool(loan.license_pool)
 
     def update_availability(self, licensepool: LicensePool) -> None:
         pass

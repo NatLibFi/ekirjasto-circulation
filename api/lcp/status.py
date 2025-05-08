@@ -40,9 +40,9 @@ class EventType(str, Enum):
     CANCEL = "cancel"
 
 class Event(BaseModel):
-    event_type: EventType
-    name: str
-    timestamp: datetime
+    event_type: EventType = Field(None, alias='type')
+    name: Optional[str] = None
+    timestamp: Optional[datetime] = None
     id: Optional[str] = None
     device: Optional[str] = None
 
@@ -53,10 +53,10 @@ class Event(BaseModel):
         return value
 
 class Link(BaseModel):
-    href: Optional[str] = None
-    rel: Optional[str] = None
+    href: str
+    rel: Union[str, List[str]]
     title: Optional[str] = None
-    content_type: Optional[str] = Field(None, alias='type')
+    content_type: str = Field(None, alias='type')
     templated: Optional[str] = None
     profile: Optional[str] = None
 
@@ -78,7 +78,7 @@ class LoanStatus(BaseModel):
     id: str
     status: Status
     message: Optional[str] = None
-    updated: Updated = None
+    updated: Optional[Updated] = None
     links: LinkCollection
     potential_rights: PotentialRights = Field(default_factory=PotentialRights)
     events: Optional[List[Event]] = Field(default_factory=list) 
