@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import json
-
 import flask
 from flask import Response
 from flask_babel import lazy_gettext as _
@@ -27,13 +25,11 @@ class ODLNotificationController(CirculationManagerController):
     status of a loan changes.
     """
 
-    def notify(self, loan_id):
-        loan = get_one(self._db, Loan, id=loan_id)
-
+    def notify(self, license_id):
+        loan = get_one(self._db, Loan, id=license_id)
 
         library = flask.request.library
         status_doc_json = flask.request.data
-
         try:
             status_doc = LoanStatus.parse_raw(status_doc_json)
         except ValidationError as e:
@@ -54,16 +50,15 @@ class ODLNotificationController(CirculationManagerController):
         if loan:
             collection = loan.license_pool.collection
             if collection.protocol not in (ODLAPI.label(), ODL2API.label()):
-                return INVALID_LOAN_FOR_ODL_NOTIFICATION
+                raise ProblemDetailException(INVALID_LOAN_FOR_ODL_NOTIFICATION)
 
-            # TODO: This should really just trigger a celery task to do an availability sync on the
-            #   license, since this is flagging that we might be out of sync with the distributor.
-            #   Once we move the OPDS2WithODL scripts to celery this should be possible.
-            #   For now we just mark the loan as expired.
+            # We might be out of sync with the distributor. Mark the loan as expired and update the license pool.
             if not status_doc.active:
                 try:
-                    with self.db.begin_nested():
+                    with self._db.begin_nested():
                         loan.end = utc_now()
+                    api = self.manager.circulation_apis[library.id].api_for_license_pool(loan.license_pool)
+                    api.update_availability(loan.license_pool)
                 except StaleDataError:
                     # This can happen if this callback happened while we were returning this
                     # item. We can fetch the loan, but it's deleted by the time we go to do

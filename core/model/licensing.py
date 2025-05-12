@@ -701,7 +701,8 @@ class LicensePool(Base):
     ):
         """
         Update the LicensePool with new availability information, based on the
-        licenses and holds that are associated with it.
+        licenses and holds that are associated with it. Ignored holds provide more
+        accurate information when a patron releases a hold or checkouts a book.
         """
         _db = Session.object_session(self)
 
@@ -725,7 +726,7 @@ class LicensePool(Base):
             licenses_reserved = patrons_in_hold_queue
             licenses_available -= licenses_reserved
 
-        print(f"Collected availablility information for licensepool {self.identifier}: OWNED={licenses_owned} AVAILABLE={licenses_available} RESERVED={licenses_reserved} HOLDS={patrons_in_hold_queue} LOANS={len(self.loans)}")
+        logging.info(f"Collected availablility information for licensepool:{self.identifier}: OWNED={licenses_owned} AVAILABLE={licenses_available} RESERVED={licenses_reserved} HOLDS={patrons_in_hold_queue} LOANS={len(self.loans)}")
         
         return self.update_availability(
             licenses_owned,
