@@ -485,8 +485,10 @@ class BaseODLAPI(
             )
             raise CannotLoan()
 
+        loan_start = utc_now()
         loan = LoanInfo.from_license_pool(
             licensepool,
+            start_date=loan_start,
             end_date=loan_status.potential_rights.end,
             external_identifier=loan_status_document_link.href,
             license_identifier=license_.identifier,

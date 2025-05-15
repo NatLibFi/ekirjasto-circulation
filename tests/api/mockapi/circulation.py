@@ -126,11 +126,11 @@ class MockCirculationAPI(CirculationAPI):
     def local_holds(self, patron):
         return self._db.query(Hold).filter(Hold.patron == patron)
 
-    def add_remote_loan(self, *args, **kwargs):
-        self.remote_loans.append(LoanInfo)
+    def add_remote_loan(self, loan_info: LoanInfo, *args, **kwargs):
+        self.remote_loans.append(loan_info)
 
-    def add_remote_hold(self, *args, **kwargs):
-        self.remote_holds.append(HoldInfo)
+    def add_remote_hold(self, hold_info: HoldInfo, *args, **kwargs):
+        self.remote_holds.append(hold_info)
 
     def patron_activity(self, patron, pin):
         """Return a 3-tuple (loans, holds, completeness)."""

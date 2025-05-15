@@ -48,7 +48,6 @@ from tests.fixtures.api_odl import (
 )
 from tests.fixtures.database import DatabaseTransactionFixture
 from tests.fixtures.odl import OPDS2WithODLApiFixture
-# from tests.mocks.odl import MockOPDS2WithODLApi
 
 if TYPE_CHECKING:
     from core.model import LicensePool
