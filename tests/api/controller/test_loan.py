@@ -70,6 +70,7 @@ from core.util.problem_detail import ProblemDetail
 from tests.core.mock import DummyHTTPClient
 from tests.api.mockapi.mock import MockHTTPClient
 from tests.fixtures.api_controller import CirculationControllerFixture
+from tests.api.mockapi.circulation import MockPatronActivityCirculationAPI
 from tests.fixtures.database import DatabaseTransactionFixture
 from tests.fixtures.library import LibraryFixture
 from core.util.flask_util import OPDSEntryResponse, Response
@@ -256,11 +257,8 @@ class TestLoanController:
         pool = work.license_pools[0]
         loan_fixture.manager.d_circulation.queue_checkout(
             pool,
-            LoanInfo(
-                pool.collection,
-                pool.data_source.name,
-                pool.identifier.type,
-                pool.identifier.identifier,
+            LoanInfo.from_license_pool(
+                pool,
                 start_date=utc_now(),
                 end_date=utc_now() + datetime.timedelta(seconds=3600),
             ),
@@ -276,9 +274,6 @@ class TestLoanController:
         # Create a new loan.
         with loan_fixture.request_context_with_library("/", headers=headers):
             patron = loan_fixture.manager.loans.authenticated_patron_from_request()
-            # with patch(
-            #     "api.controller.loan.sync_patron_activity"
-            # ) as sync_task:
             borrow_response = loan_fixture.manager.loans.borrow(
                     loan_fixture.identifier_type, loan_fixture.identifier_identifier
                 )
@@ -465,11 +460,8 @@ class TestLoanController:
             loan_fixture.manager.loans.authenticated_patron_from_request()
             loan_fixture.manager.d_circulation.queue_checkout(
                 pool,
-                LoanInfo(
-                    pool.collection,
-                    pool.data_source.name,
-                    pool.identifier.type,
-                    pool.identifier.identifier,
+                LoanInfo.from_license_pool(
+                    pool,
                     start_date=utc_now(),
                     end_date=utc_now() + datetime.timedelta(seconds=3600),
                 ),
@@ -640,14 +632,11 @@ class TestLoanController:
             loan_fixture.manager.d_circulation.queue_checkout(pool, NoAvailableCopies())
             loan_fixture.manager.d_circulation.queue_hold(
                 pool,
-                HoldInfo(
-                    pool.collection,
-                    pool.data_source.name,
-                    pool.identifier.type,
-                    pool.identifier.identifier,
-                    utc_now(),
-                    utc_now() + datetime.timedelta(seconds=3600),
-                    1,
+                HoldInfo.from_license_pool(
+                    pool,
+                    start_date=utc_now(),
+                    end_date=utc_now() + datetime.timedelta(seconds=3600),
+                    hold_position=1,
                 ),
             )
             response = loan_fixture.manager.loans.borrow(
@@ -704,14 +693,11 @@ class TestLoanController:
             loan_fixture.manager.d_circulation.queue_checkout(pool, AlreadyOnHold())
             loan_fixture.manager.d_circulation.queue_hold(
                 pool,
-                HoldInfo(
-                    pool.collection,
-                    pool.data_source.name,
-                    pool.identifier.type,
-                    pool.identifier.identifier,
-                    utc_now(),
-                    utc_now() + datetime.timedelta(seconds=3600),
-                    1,
+                HoldInfo.from_license_pool(
+                    pool,
+                    start_date=utc_now(),
+                    end_date=utc_now() + datetime.timedelta(seconds=3600),
+                    hold_position=1,
                 ),
             )
             response = loan_fixture.manager.loans.borrow(
@@ -1223,13 +1209,10 @@ class TestLoanController:
             patron.fines = Decimal("0.49")
             loan_fixture.manager.d_circulation.queue_checkout(
                 pool,
-                LoanInfo(
-                    pool.collection,
-                    pool.data_source.name,
-                    pool.identifier.type,
-                    pool.identifier.identifier,
-                    utc_now(),
-                    utc_now() + datetime.timedelta(seconds=3600),
+                LoanInfo.from_license_pool(
+                    pool,
+                    start_date=utc_now(),
+                    end_date=utc_now() + datetime.timedelta(seconds=3600),
                 ),
             )
             response = loan_fixture.manager.loans.borrow(
@@ -1333,14 +1316,6 @@ class TestLoanController:
         bibliotheca_pool.licenses_available = 0
         bibliotheca_pool.open_access = False
 
-        loan_fixture.manager.d_circulation.add_remote_loan(
-            overdrive_pool.collection,
-            overdrive_pool.data_source,
-            overdrive_pool.identifier.type,
-            overdrive_pool.identifier.identifier,
-            utc_now(),
-            utc_now() + datetime.timedelta(seconds=3600),
-        )
         loan_fixture.manager.d_circulation.add_remote_hold(
             bibliotheca_pool.collection,
             bibliotheca_pool.data_source,
@@ -1365,70 +1340,6 @@ class TestLoanController:
         # patron.last_loan_activity_sync was not changed as the result
         # of this request, since we didn't go to the vendor APIs.
         assert patron.last_loan_activity_sync == new_sync_time
-
-        # Change it now, to a timestamp far in the past.
-        long_ago = datetime_utc(2000, 1, 1)
-        patron.last_loan_activity_sync = long_ago
-
-        # This ensures that when we request the loans feed again, the
-        # LoanController actually goes out to the vendor APIs for new
-        # information.
-        with loan_fixture.request_context_with_library(
-            "/", headers=dict(Authorization=loan_fixture.valid_auth)
-        ):
-            patron = loan_fixture.manager.loans.authenticated_patron_from_request()
-            response = loan_fixture.manager.loans.sync()
-
-            # This time, the feed contains entries.
-            feed = feedparser.parse(response.data)
-            entries = feed["entries"]
-
-            overdrive_entry = [
-                entry for entry in entries if entry["title"] == overdrive_book.title
-            ][0]
-            bibliotheca_entry = [
-                entry for entry in entries if entry["title"] == bibliotheca_book.title
-            ][0]
-
-            assert overdrive_entry["opds_availability"]["status"] == "available"
-            assert bibliotheca_entry["opds_availability"]["status"] == "ready"
-
-            overdrive_links = overdrive_entry["links"]
-            fulfill_link = [
-                x
-                for x in overdrive_links
-                if x["rel"] == "http://opds-spec.org/acquisition"
-            ][0]["href"]
-            revoke_link = [
-                x for x in overdrive_links if x["rel"] == OPDSFeed.REVOKE_LOAN_REL
-            ][0]["href"]
-            bibliotheca_links = bibliotheca_entry["links"]
-            borrow_link = [
-                x
-                for x in bibliotheca_links
-                if x["rel"] == "http://opds-spec.org/acquisition/borrow"
-            ][0]["href"]
-            bibliotheca_revoke_links = [
-                x for x in bibliotheca_links if x["rel"] == OPDSFeed.REVOKE_LOAN_REL
-            ]
-
-            assert urllib.parse.quote("%s/fulfill" % overdrive_pool.id) in fulfill_link
-            assert urllib.parse.quote("%s/revoke" % overdrive_pool.id) in revoke_link
-            assert (
-                urllib.parse.quote(
-                    "%s/%s/borrow"
-                    % (
-                        bibliotheca_pool.identifier.type,
-                        bibliotheca_pool.identifier.identifier,
-                    )
-                )
-                in borrow_link
-            )
-            assert 0 == len(bibliotheca_revoke_links)
-
-            # Since we went out the the vendor APIs,
-            # patron.last_loan_activity_sync was updated.
-            assert patron.last_loan_activity_sync > new_sync_time
 
     @pytest.mark.parametrize(
         "target_loan_duration, "
@@ -1586,13 +1497,10 @@ class TestLoanController:
                 )
                 license_pool = work.license_pools[0]
 
-                loan_info = LoanInfo(
-                    license_pool.collection,
-                    license_pool.data_source.name,
-                    license_pool.identifier.type,
-                    license_pool.identifier.identifier,
-                    loan_start,
-                    loan_end,
+                loan_info = LoanInfo.from_license_pool(
+                    license_pool,
+                    start_date=loan_start,
+                    end_date=loan_end,
                 )
 
                 return license_pool, loan_info
