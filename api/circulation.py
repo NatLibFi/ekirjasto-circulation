@@ -11,7 +11,7 @@ from collections.abc import Iterable
 from threading import Thread
 from types import TracebackType
 from typing import Any, Literal, TypeVar
-
+from requests import Response
 import flask
 from flask import Response
 from flask_babel import lazy_gettext as _
@@ -511,7 +511,7 @@ class FetchFulfillment(UrlFulfillment, LoggerMixin):
         self.include_headers = include_headers or {}
         self.allowed_response_codes = allowed_response_codes or []
 
-    def get(self, url: str) -> requests.Response:
+    def get(self, url: str) -> Response:
         return HTTP.get_with_timeout(
             url,
             headers=self.include_headers,
@@ -615,14 +615,15 @@ class LoanInfo(LoanAndHoldInfoMixin):
         )
 
     def __repr__(self) -> str:
-        return "<LoanInfo for {}/{}, start={} end={} fulfillment:{} locked to={} license={}>".format(
+        return "<LoanInfo for {}/{}, start={} end={} fulfillment:{} locked to={} license={} collection={}>".format(
             self.identifier_type,
             self.identifier,
             self.start_date.isoformat() if self.start_date else self.start_date,
             self.end_date.isoformat() if self.end_date else self.end_date,
             self.fulfillment_info,
             self.locked_to,
-            self.license_identifier
+            self.license_identifier,
+            self.collection_id
         )
 
     def create_or_update(

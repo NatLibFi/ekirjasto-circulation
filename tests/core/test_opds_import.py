@@ -45,7 +45,7 @@ from core.model import (
 from core.opds_import import OPDSAPI, OPDSImporter, OPDSImportMonitor, OPDSXMLParser
 from core.saml.wayfless import SAMLWAYFlessFulfillmentError
 from core.util import first_or_default
-from core.util.datetime_helpers import datetime_utc
+from core.util.datetime_helpers import datetime_utc, utc_now
 from core.util.http import BadResponseException
 from core.util.opds_writer import AtomFeed, OPDSFeed, OPDSMessage
 from tests.api.mockapi.mock import MockRequestsResponse
@@ -2159,10 +2159,6 @@ class TestOPDSAPI:
     def test_checkout(self, opds_api_fixture: OPDSAPIFixture) -> None:
         # Make sure checkout returns a LoanInfo object with the correct
         # collection id.
-        mock_collection_property = PropertyMock(
-            return_value=opds_api_fixture.collection
-        )
-        type(opds_api_fixture.mock_licensepool).collection = mock_collection_property
         delivery_mechanism = MagicMock(spec=LicensePoolDeliveryMechanism)
         loan = opds_api_fixture.api.checkout(
             opds_api_fixture.mock_patron,
@@ -2171,8 +2167,7 @@ class TestOPDSAPI:
             delivery_mechanism,
         )
         assert isinstance(loan, LoanInfo)
-        assert mock_collection_property.call_count == 1
-        assert loan.collection_id == opds_api_fixture.collection.id
+        assert loan.collection_id == opds_api_fixture.mock_licensepool.collection_id
 
     def test_can_fulfill_without_loan(self, opds_api_fixture: OPDSAPIFixture) -> None:
         # This should always return True.

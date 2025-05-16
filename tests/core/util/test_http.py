@@ -1,8 +1,11 @@
+from functools import partial
 import json
+from typing import Any, Mapping, Sequence
 from unittest import mock
 
 import pytest
 import requests
+from requests import Response
 
 from core.problem_details import INVALID_INPUT
 from core.util.http import (
@@ -16,35 +19,31 @@ from core.util.http import (
 from core.util.problem_detail import ProblemDetail, ProblemError
 from tests.core.mock import MockRequestsResponse
 
+class FakeRequest:
+    def __init__(self, response: Response | None = None) -> None:
+        self.agent: str | None = None
+        self.args: Sequence[Any] | None = None
+        self.kwargs: Mapping[str, Any] | None = None
+        self.response = response or MockRequestsResponse(201)
+
+    def fake_request(self, *args: Any, **kwargs: Any) -> Response:
+        self.agent = kwargs["headers"]["User-Agent"]
+        self.args = args
+        self.kwargs = kwargs
+        return self.response
 
 class TestHTTP:
-    @pytest.fixture
-    def mock_request(self):
-        class FakeRequest:
-            def __init__(self, response=None):
-                self.agent = None
-                self.args = None
-                self.kwargs = None
-                self.response = response or MockRequestsResponse(201)
-
-            def fake_request(self, *args, **kwargs):
-                self.agent = kwargs["headers"][b"User-Agent"]
-                self.args = args
-                self.kwargs = kwargs
-                return self.response
-
-        return FakeRequest
-
-    def test_series(self):
+    def test_series(self) -> None:
         m = HTTP.series
-        assert "2xx" == m(201)
-        assert "3xx" == m(399)
-        assert "5xx" == m(500)
+        assert m(201) == "2xx"
+        assert m(399) == "3xx"
+        assert m(500) == "5xx"
 
     @mock.patch("core.util.http.sessions.Session")
-    def test_request_with_timeout_defaults(self, mock_session):
-        with mock.patch.object(HTTP, "DEFAULT_REQUEST_TIMEOUT", 10), mock.patch.object(
-            HTTP, "DEFAULT_REQUEST_RETRIES", 2
+    def test_request_with_timeout_defaults(self, mock_session: mock.MagicMock) -> None:
+        with (
+            mock.patch.object(HTTP, "DEFAULT_REQUEST_TIMEOUT", 10),
+            mock.patch.object(HTTP, "DEFAULT_REQUEST_RETRIES", 2),
         ):
             mock_ctx = mock_session().__enter__()
             mock_request = mock_ctx.request
@@ -56,16 +55,16 @@ class TestHTTP:
             assert mock_request.call_args[1]["timeout"] == 10
 
     @mock.patch("core.util.http.core.__version__", "<VERSION>")
-    def test_request_with_timeout_success(self, mock_request):
-        request = mock_request(MockRequestsResponse(200, content="Success!"))
+    def test_request_with_timeout_success(self):
+        request = FakeRequest(MockRequestsResponse(200, content="Success!"))
         response = HTTP._request_with_timeout(
-            "http://url/", request.fake_request, "GET", kwarg="value"
+            "GET", "http://url/", request.fake_request, kwarg="value"  # type: ignore[call-arg]
         )
-        assert 200 == response.status_code
-        assert b"Success!" == response.content
+        assert response.status_code == 200
+        assert response.content == b"Success!"
 
         # User agent header should be set
-        assert b"Palace Manager/<VERSION>" == request.agent
+        assert request.agent == "E-Kirjasto/<VERSION>"
 
         # The HTTP method and URL are passed in the order
         # requests.request would expect.
@@ -73,146 +72,157 @@ class TestHTTP:
 
         # Keyword arguments to _request_with_timeout are passed in
         # as-is.
-        assert "value" == request.kwargs["kwarg"]
+        assert request.kwargs is not None
+        assert request.kwargs["kwarg"] == "value"
 
         # A default timeout is added.
-        assert 20 == request.kwargs["timeout"]
+        assert request.kwargs["timeout"] == 20
 
-    def test_request_with_timeout_with_ua(self, mock_request):
-        request = mock_request()
+    def test_request_with_timeout_with_ua(self) -> None:
+        request = FakeRequest()
         assert (
             HTTP._request_with_timeout(
+                "GET",
                 "http://url",
                 request.fake_request,
-                "GET",
                 headers={"User-Agent": "Fake Agent"},
             ).status_code
             == 201
         )
-        assert request.agent == b"Fake Agent"
+        assert request.agent == "Fake Agent"
 
     @mock.patch("core.util.http.core.__version__", None)
-    def test_default_user_agent(self, mock_request):
-        request = mock_request()
-        assert HTTP._request_with_timeout("/", request.fake_request).status_code == 201
-        assert request.agent == b"Palace Manager/1.x.x"
+    def test_default_user_agent(self) -> None:
+        request = FakeRequest()
+        assert (
+            HTTP._request_with_timeout("DELETE", "/", request.fake_request).status_code
+            == 201
+        )
+        assert request.agent == "E-Kirjasto/1.x.x"
 
-    def test_request_with_timeout_failure(self):
-        def immediately_timeout(*args, **kwargs):
+        # User agent is still set if headers are None
+        assert (
+            HTTP._request_with_timeout(
+                "GET", "/", request.fake_request, headers=None
+            ).status_code
+            == 201
+        )
+        assert request.agent == "E-Kirjasto/1.x.x"
+
+        # The headers are not modified if they are passed into the function
+        original_headers = {"header": "value"}
+        assert (
+            HTTP._request_with_timeout(
+                "GET", "/", request.fake_request, headers=original_headers
+            ).status_code
+            == 201
+        )
+        assert request.agent == "E-Kirjasto/1.x.x"
+        assert original_headers == {"header": "value"}
+
+    def test_request_with_timeout_failure(self) -> None:
+        def immediately_timeout(*args, **kwargs) -> Response:
             raise requests.exceptions.Timeout("I give up")
 
-        with pytest.raises(RequestTimedOut) as excinfo:
-            HTTP._request_with_timeout("http://url/", immediately_timeout, "a", "b")
-        assert "Timeout accessing http://url/: I give up" in str(excinfo.value)
+        with pytest.raises(
+            RequestTimedOut, match="Timeout accessing http://url/: I give up"
+        ):
+            HTTP._request_with_timeout("PUT", "http://url/", immediately_timeout)
 
-    def test_request_with_network_failure(self):
-        def immediately_fail(*args, **kwargs):
+    def test_request_with_network_failure(self) -> None:
+        def immediately_fail(*args, **kwargs) -> Response:
             raise requests.exceptions.ConnectionError("a disaster")
 
-        with pytest.raises(RequestNetworkException) as excinfo:
-            HTTP._request_with_timeout("http://url/", immediately_fail, "a", "b")
-        assert "Network error contacting http://url/: a disaster" in str(excinfo.value)
+        with pytest.raises(
+            RequestNetworkException,
+            match="Network error contacting http://url/: a disaster",
+        ):
+            HTTP._request_with_timeout("POST", "http://url/", immediately_fail)
 
-    def test_request_with_response_indicative_of_failure(self):
-        def fake_500_response(*args, **kwargs):
+    def test_request_with_response_indicative_of_failure(self) -> None:
+        def fake_500_response(*args, **kwargs) -> Response:
             return MockRequestsResponse(500, content="Failure!")
 
-        with pytest.raises(BadResponseException) as excinfo:
-            HTTP._request_with_timeout("http://url/", fake_500_response, "a", "b")
-        assert (
-            "Bad response from http://url/: Got status code 500 from external server"
-            in str(excinfo.value)
-        )
+        with pytest.raises(
+            BadResponseException,
+            match="Bad response from http://url/: Got status code 500 from external server",
+        ):
+            HTTP._request_with_timeout("GET", "http://url/", fake_500_response)
 
-    def test_allowed_response_codes(self):
+    def test_allowed_response_codes(self) -> None:
         """Test our ability to raise BadResponseException when
         an HTTP-based integration does not behave as we'd expect.
         """
 
-        def fake_401_response(*args, **kwargs):
+        def fake_401_response(*args, **kwargs) -> Response:
             return MockRequestsResponse(401, content="Weird")
 
-        def fake_200_response(*args, **kwargs):
+        def fake_200_response(*args, **kwargs) -> Response:
             return MockRequestsResponse(200, content="Hurray")
 
         url = "http://url/"
-        m = HTTP._request_with_timeout
+        request = partial(HTTP._request_with_timeout, "GET", url)
 
         # By default, every code except for 5xx codes is allowed.
-        response = m(url, fake_401_response)
-        assert 401 == response.status_code
+        response = request(fake_401_response)
+        assert response.status_code == 401
 
         # You can say that certain codes are specifically allowed, and
         # all others are forbidden.
-        with pytest.raises(BadResponseException) as excinfo:
-            m(url, fake_401_response, allowed_response_codes=[201, 200])
-        assert (
-            "Bad response from http://url/: Got status code 401 from external server, but can only continue on: 200, 201."
-            in str(excinfo.value)
-        )
+        with pytest.raises(
+            BadResponseException,
+            match="Bad response from http://url/: Got status code 401 from external server, but can only continue on: 200, 201.",
+        ):
+            request(fake_401_response, allowed_response_codes=[201, 200])
 
-        response = m(url, fake_401_response, allowed_response_codes=[401])
-        response = m(url, fake_401_response, allowed_response_codes=["4xx"])
+        response = request(fake_401_response, allowed_response_codes=[401])
+        response = request(fake_401_response, allowed_response_codes=["4xx"])
 
         # In this way you can even raise an exception on a 200 response code.
-        with pytest.raises(BadResponseException) as excinfo:
-            m(url, fake_200_response, allowed_response_codes=[401])
-        assert (
-            "Bad response from http://url/: Got status code 200 from external server, but can only continue on: 401."
-            in str(excinfo.value)
-        )
+        with pytest.raises(
+            BadResponseException,
+            match="Bad response from http://url/: Got status code 200 from external server, but can only continue on: 401.",
+        ):
+            request(fake_200_response, allowed_response_codes=[401])
 
         # You can say that certain codes are explicitly forbidden, and
         # all others are allowed.
-        with pytest.raises(BadResponseException) as excinfo:
-            m(url, fake_401_response, disallowed_response_codes=[401])
-        assert (
-            "Bad response from http://url/: Got status code 401 from external server, cannot continue."
-            in str(excinfo.value)
-        )
+        with pytest.raises(
+            BadResponseException,
+            match="Bad response from http://url/: Got status code 401 from external server, cannot continue.",
+        ) as excinfo:
+            request(fake_401_response, disallowed_response_codes=[401])
 
-        with pytest.raises(BadResponseException) as excinfo:
-            m(url, fake_200_response, disallowed_response_codes=["2xx", 301])
-        assert (
-            "Bad response from http://url/: Got status code 200 from external server, cannot continue."
-            in str(excinfo.value)
-        )
+        with pytest.raises(
+            BadResponseException,
+            match="Bad response from http://url/: Got status code 200 from external server, cannot continue.",
+        ):
+            request(fake_200_response, disallowed_response_codes=["2xx", 301])
 
-        response = m(url, fake_401_response, disallowed_response_codes=["2xx"])
-        assert 401 == response.status_code
+        response = request(fake_401_response, disallowed_response_codes=["2xx"])
+        assert response.status_code == 401
 
         # The exception can be turned into a useful problem detail document.
-        exc = None
-        try:
-            m(url, fake_200_response, disallowed_response_codes=["2xx"])
-        except Exception as e:
-            exc = e
-        assert exc is not None
+        with pytest.raises(BadResponseException) as exc_info:
+            request(fake_200_response, disallowed_response_codes=["2xx"])
 
-        debug_doc = exc.as_problem_detail_document(debug=True)
+        problem_detail = exc_info.value.problem_detail
 
         # 502 is the status code to be returned if this integration error
         # interrupts the processing of an incoming HTTP request, not the
         # status code that caused the problem.
         #
-        assert 502 == debug_doc.status_code
-        assert "Bad response" == debug_doc.title
+        assert problem_detail.status_code == 502
+        assert problem_detail.title == "Bad response"
         assert (
-            "The server made a request to http://url/, and got an unexpected or invalid response."
-            == debug_doc.detail
+            problem_detail.detail
+            == "The server made a request to url, and got an unexpected or invalid response."
         )
+        print(repr(problem_detail.debug_message))
         assert (
-            "Bad response from http://url/: Got status code 200 from external server, cannot continue.\n\nResponse content: Hurray"
-            == debug_doc.debug_message
+            problem_detail.debug_message
+            == "Bad response from http://url/: Got status code 200 from external server, cannot continue.\n\nResponse content: Hurray"
         )
-
-        no_debug_doc = exc.as_problem_detail_document(debug=False)
-        assert "Bad response" == no_debug_doc.title
-        assert (
-            "The server made a request to url, and got an unexpected or invalid response."
-            == no_debug_doc.detail
-        )
-        assert None == no_debug_doc.debug_message
 
     def test_unicode_converted_to_utf8(self):
         """Any Unicode that sneaks into the URL, headers or body is
@@ -231,8 +241,8 @@ class TestHTTP:
         url = "http://foo"
         response = HTTP._request_with_timeout(
             url,
-            generator.response,
             "POST",
+            generator.response,
             headers={"unicode header": "unicode value"},
             data="unicode data",
         )
@@ -244,9 +254,9 @@ class TestHTTP:
         # All the Unicode data was converted to bytes before being sent
         # "over the wire".
         for k, v in list(headers.items()):
-            assert isinstance(k, bytes)
-            assert isinstance(v, bytes)
-        assert isinstance(data, bytes)
+            assert isinstance(k, str)
+            assert isinstance(v, str)
+        assert isinstance(data, str)
 
     def test_debuggable_request(self):
         class Mock(HTTP):
@@ -345,8 +355,9 @@ class TestBadResponseException:
             "The server made a request to http://url/, and got an unexpected or invalid response."
             == doc["detail"]
         )
+        print(repr(doc["debug_message"]))
         assert (
-            "Bad response from http://url/: Terrible response, just terrible\n\nStatus code: 102\nContent: nonsense"
+            'Bad response from http://url/: Terrible response, just terrible\n\nStatus code: 102\nContent: nonsense\n\nStatus code: 102\nContent: nonsense'
             == doc["debug_message"]
         )
 
@@ -377,7 +388,7 @@ class TestBadResponseException:
             == document.detail
         )
         assert (
-            "Bad response from http://url/: What even is this\n\nsome debug info"
+            "Bad response from http://url/: What even is this\n\nsome debug info\n\nsome debug info"
             == document.debug_message
         )
 

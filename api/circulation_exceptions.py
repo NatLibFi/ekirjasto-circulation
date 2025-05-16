@@ -42,25 +42,21 @@ class CirculationException(IntegrationException, BaseProblemDetailException, ABC
             return self.base
 
 
-class InternalServerError(IntegrationException):
-    status_code = 500
-
-    def as_problem_detail_document(self, debug=False):
-        """Return a suitable problem detail document."""
+class InternalServerError(IntegrationException, BaseProblemDetailException):
+    @property
+    def problem_detail(self) -> ProblemDetail:
         return INTERNAL_SERVER_ERROR
 
 
 class RemoteInitiatedServerError(InternalServerError):
     """One of the servers we communicate with had an internal error."""
 
-    status_code = 502
-
-    def __init__(self, message, service_name):
-        super().__init__(message)
+    def __init__(self, debug_info: str, service_name: str):
+        super().__init__(debug_info)
         self.service_name = service_name
 
-    def as_problem_detail_document(self, debug=False) -> ProblemDetail:
-        """Return a suitable problem detail document."""
+    @property
+    def problem_detail(self) -> ProblemDetail:
         msg = _(
             "Integration error communicating with %(service_name)s",
             service_name=self.service_name,

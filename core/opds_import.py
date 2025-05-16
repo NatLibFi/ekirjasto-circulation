@@ -332,11 +332,11 @@ class BaseOPDSAPI(
     def checkout(
         self,
         patron: Patron,
-        pin: str,
+        pin: str | None,
         licensepool: LicensePool,
-        delivery_mechanism: LicensePoolDeliveryMechanism,
+        delivery_mechanism: LicensePoolDeliveryMechanism | None,
     ) -> LoanInfo:
-        return LoanInfo(licensepool.collection, None, None, None, None, None)
+        return LoanInfo.from_license_pool(licensepool, end_date=None)
 
     def can_fulfill_without_loan(
         self,

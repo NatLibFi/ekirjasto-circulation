@@ -3,6 +3,7 @@ import time
 from collections.abc import Callable
 from json import JSONDecodeError
 from typing import Any, Literal, Protocol, TypedDict
+from typing_extensions import Unpack
 from urllib.parse import urlparse
 from collections.abc import Callable, Iterable, Mapping
 from io import BytesIO, StringIO
@@ -51,6 +52,8 @@ class RemoteIntegrationException(IntegrationException, BaseProblemDetailExceptio
 
     def __str__(self):
         message = super().__str__()
+        if self.debug_message:
+            message += "\n\n" + self.debug_message
         return self.internal_message % (self.url, message)
 
     # TODO: Remove this and replace with below temp function
@@ -185,6 +188,14 @@ class RequestKwargs(GetRequestKwargs, total=False):
     files: Mapping[str, BytesIO | StringIO | str | bytes] | None
     json: Mapping[str, Any] | None
 
+class _ProcessResponseCallable(Protocol):
+    def __call__(
+        self,
+        url: str,
+        response: Response,
+        allowed_response_codes: ResponseCodesT = None,
+        disallowed_response_codes: ResponseCodesT = None,
+    ) -> Response: ...
 class HTTP(LoggerMixin):
     """A helper for the `requests` module."""
 
@@ -234,7 +245,12 @@ class HTTP(LoggerMixin):
 
     @classmethod
     def _request_with_timeout(
-        cls, http_method: str, url: str, make_request_with: Callable[..., Response], *args, **kwargs
+        cls,
+        http_method: str,
+        url: str,
+        make_request_with: Callable[..., Response],
+        process_response_with: _ProcessResponseCallable | None = None,
+        **kwargs: Unpack[RequestKwargs],
     ) -> Response:
         """Call some kind of method and turn a timeout into a RequestTimedOut
         exception.
@@ -247,13 +263,11 @@ class HTTP(LoggerMixin):
         :param args: Positional arguments for the request function.
         :param kwargs: Keyword arguments for the request function.
         """
-        process_response_with = kwargs.pop(
-            "process_response_with", cls._process_response
-        )
+        process_response_with = process_response_with or cls._process_response
+
         allowed_response_codes = kwargs.pop("allowed_response_codes", [])
         disallowed_response_codes = kwargs.pop("disallowed_response_codes", [])
         verbose = kwargs.pop("verbose", False)
-        expected_encoding = kwargs.pop("expected_encoding", "utf-8")
 
         if not "timeout" in kwargs:
             kwargs["timeout"] = cls.DEFAULT_REQUEST_TIMEOUT
@@ -263,29 +277,14 @@ class HTTP(LoggerMixin):
         )
         backoff_factor: float = float(kwargs.pop("backoff_factor", 1.0))
 
-        # Unicode data can't be sent over the wire. Convert it
-        # to UTF-8.
-        if "data" in kwargs and isinstance(kwargs["data"], str):
-            kwdata: str = kwargs["data"]
-            kwargs["data"] = kwdata.encode("utf8")
-
         # Set a user-agent if not already present
         version = (
                 core.__version__ if core.__version__ else cls.DEFAULT_USER_AGENT_VERSION
             )
-        headers: dict[str, str | None] = {"User-Agent": f"E-kirjasto/{version}"}
+        headers: dict[str, str | None] = {"User-Agent": f"E-Kirjasto/{version}"}
         if (additional_headers := kwargs.get("headers")) is not None:
             headers.update(additional_headers)
         kwargs["headers"] = headers
-
-        new_headers = {}
-        for k, v in list(headers.items()):
-            if isinstance(k, str):
-                k = k.encode("utf8")
-            if isinstance(v, str):
-                v = v.encode("utf8")
-            new_headers[k] = v
-        kwargs["headers"] = new_headers
 
         try:
             if verbose:
@@ -320,11 +319,11 @@ class HTTP(LoggerMixin):
         except requests.exceptions.Timeout as e:
             # Wrap the requests-specific Timeout exception
             # in a generic RequestTimedOut exception.
-            raise RequestTimedOut(url, e)
+            raise RequestTimedOut(url, str(e)) from e
         except requests.exceptions.RequestException as e:
             # Wrap all other requests-specific exceptions in
             # a generic RequestNetworkException.
-            raise RequestNetworkException(url, e)
+            raise RequestNetworkException(url, str(e)) from e
 
         return process_response_with(
             url,
@@ -333,25 +332,26 @@ class HTTP(LoggerMixin):
             disallowed_response_codes,
         )
 
+
     @classmethod
     def _process_response(
         cls,
         url: str,
-        response,
-        allowed_response_codes=None,
-        disallowed_response_codes=None,
-    ):
+        response: Response,
+        allowed_response_codes: ResponseCodesT = None,
+        disallowed_response_codes: ResponseCodesT = None,
+    ) -> Response:
         """Raise a RequestNetworkException if the response code indicates a
         server-side failure, or behavior so unpredictable that we can't
         continue.
 
         :param allowed_response_codes If passed, then only the responses with
             http status codes in this list are processed.  The rest generate
-            BadResponseExceptions.
+            BadResponseExceptions. If both allowed_response_codes and
+            disallowed_response_codes are passed, then the allowed_response_codes
+            list is used.
         :param disallowed_response_codes The values passed are added to 5xx, as
             http status codes that would generate BadResponseExceptions.
-        :param expected_encoding Typically we expect HTTP responses to be UTF-8
-            encoded, but for certain requests we can change the encoding type.
         """
         allowed_response_codes_str = (
             list(map(str, allowed_response_codes)) if allowed_response_codes else []
@@ -361,12 +361,15 @@ class HTTP(LoggerMixin):
             if disallowed_response_codes
             else []
         )
+
         series = cls.series(response.status_code)
         code = str(response.status_code)
+
         if code in allowed_response_codes_str or series in allowed_response_codes_str:
             # The code or series has been explicitly allowed. Allow
             # the request to be processed.
             return response
+
         error_message = None
         if (
             series == "5xx"

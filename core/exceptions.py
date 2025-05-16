@@ -1,4 +1,4 @@
-# TODO: Remove this once all BAseError calls can be switched to BasePalaceExceptions
+# TODO: Remove this once all BaseError calls can be switched to BasePalaceExceptions
 class BaseError(Exception):
     """Base class for all errors"""
 
