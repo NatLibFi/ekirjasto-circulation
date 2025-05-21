@@ -20,6 +20,7 @@ from api.circulation_exceptions import (
     CannotLoan,
     CurrentlyAvailable,
     NoAvailableCopies,
+    NoAvailableCopiesWhenReserved,
     NoLicenses,
     NotCheckedOut,
     NotOnHold,
@@ -47,7 +48,7 @@ from tests.fixtures.api_odl import (
     OdlImportTemplatedFixture,
 )
 from tests.fixtures.database import DatabaseTransactionFixture
-from tests.fixtures.odl import OPDS2WithODLApiFixture
+from tests.fixtures.odl import OPDS2WithODLApiFixture, ODLTestFixture
 
 if TYPE_CHECKING:
     from core.model import LicensePool
@@ -663,7 +664,7 @@ class TestODLAPI:
 
         assert loan_info.license_identifier == license_lent.identifier
 
-
+    @freeze_time()
     def test_checkout_ready_hold_no_available_copies(
         self,
         db: DatabaseTransactionFixture,
@@ -673,6 +674,7 @@ class TestODLAPI:
         We think there is a hold ready for us, but we are out of sync with the distributor,
         so there actually isn't a copy ready for our hold.
         """
+        now = utc_now()
         # We think there is a copy available for this hold.
         hold, _ = opds2_with_odl_api_fixture.pool.on_hold_to(
             opds2_with_odl_api_fixture.patron,
@@ -680,34 +682,59 @@ class TestODLAPI:
             end=utc_now() + datetime.timedelta(days=1),
             position=0,
         )
+        # Set the reservation period and loan period.
+        library = hold.patron.library
+        config = opds2_with_odl_api_fixture.collection.integration_configuration.for_library(
+            library.id
+        )
+        assert config is not None
+        DatabaseTransactionFixture.set_settings(
+            config,
+            **{
+                Collection.DEFAULT_RESERVATION_PERIOD_KEY: 3,
+                Collection.EBOOK_LOAN_DURATION_KEY: 6,
+            },
+        )
+        opds2_with_odl_api_fixture.db.session.commit()
+        loan_period = now + datetime.timedelta(days=opds2_with_odl_api_fixture.collection.default_loan_period(library))
+
+        print(opds2_with_odl_api_fixture.pool)
         opds2_with_odl_api_fixture.setup_license(concurrency=1, available=1)
 
         assert opds2_with_odl_api_fixture.pool.licenses_available == 0
         assert opds2_with_odl_api_fixture.pool.licenses_reserved == 1
         assert opds2_with_odl_api_fixture.pool.patrons_in_hold_queue == 1
 
-        # But the distributor says there are no available copies.
+        # We have another hold in the queue.
+        hold2, _ = opds2_with_odl_api_fixture.pool.on_hold_to(
+            db.patron(),
+            start=now - datetime.timedelta(days=1),
+            end=now + datetime.timedelta(days=365),
+            position=1,
+        )
+
+        # The patron tries to checkout but the distributor says there are no available copies after all.
         opds2_with_odl_api_fixture.mock_http.queue_response(
             400,
             "application/api-problem+json",
             content=opds2_with_odl_api_fixture.files.sample_text("unavailable.json"),
         )
-
         with opds2_with_odl_api_fixture.mock_http.patch():
             with pytest.raises(NoAvailableCopies):
                 opds2_with_odl_api_fixture.api_checkout()
-
-        assert db.session.query(Loan).count() == 0
-        assert db.session.query(Hold).count() == 1
+        assert db.session.query(Hold).count() == 2
 
         # The availability has been updated.
         assert opds2_with_odl_api_fixture.pool.licenses_available == 0
         assert opds2_with_odl_api_fixture.pool.licenses_reserved == 0
-        assert opds2_with_odl_api_fixture.pool.patrons_in_hold_queue == 1
+        assert opds2_with_odl_api_fixture.pool.patrons_in_hold_queue == 2
 
-        # The hold has been updated to reflect the new availability.
-        assert hold.position == 0 # TODO: It should be 1 so that they don't end up losing their loan potentially. Will fix this later.
-        assert hold.end == hold.end # Also wrong
+        # The first hold gets back to position 1 with a new end date.
+        assert hold.position == 1
+        assert hold.end == loan_period
+        # And the second hold position moves a position down but the end date remains.
+        assert hold2.position == 2
+        assert hold2.end == now + datetime.timedelta(days=365)
 
 
     def test_checkout_failures(
@@ -1078,314 +1105,7 @@ class TestODLAPI:
             hold_position=hold.position,
         )
 
-    def test_count_holds_before(
-        self, db: DatabaseTransactionFixture, opds2_with_odl_api_fixture: OPDS2WithODLApiFixture
-    ) -> None:
-        now = utc_now()
-        yesterday = now - datetime.timedelta(days=1)
-        tomorrow = now + datetime.timedelta(days=1)
-        last_week = now - datetime.timedelta(weeks=1)
-
-        hold, ignore = opds2_with_odl_api_fixture.pool.on_hold_to(
-            opds2_with_odl_api_fixture.patron, start=now
-        )
-
-        info = self._holdinfo_from_hold(hold)
-        assert 0 == opds2_with_odl_api_fixture.api._count_holds_before(
-            info, hold.license_pool
-        )
-
-        # A previous hold.
-        opds2_with_odl_api_fixture.pool.on_hold_to(db.patron(), start=yesterday)
-        assert 1 == opds2_with_odl_api_fixture.api._count_holds_before(
-            info, hold.license_pool
-        )
-
-        # Expired holds don't count.
-        opds2_with_odl_api_fixture.pool.on_hold_to(
-            db.patron(), start=last_week, end=yesterday, position=0
-        )
-        assert 1 == opds2_with_odl_api_fixture.api._count_holds_before(
-            info, hold.license_pool
-        )
-
-        # Later holds don't count.
-        opds2_with_odl_api_fixture.pool.on_hold_to(db.patron(), start=tomorrow)
-        assert 1 == opds2_with_odl_api_fixture.api._count_holds_before(
-            info, hold.license_pool
-        )
-
-        # Holds on another pool don't count.
-        other_pool = db.licensepool(None)
-        other_pool.on_hold_to(opds2_with_odl_api_fixture.patron, start=yesterday)
-        assert 1 == opds2_with_odl_api_fixture.api._count_holds_before(
-            info, hold.license_pool
-        )
-
-        for i in range(3):
-            opds2_with_odl_api_fixture.pool.on_hold_to(
-                db.patron(), start=yesterday, end=tomorrow, position=1
-            )
-        assert 4 == opds2_with_odl_api_fixture.api._count_holds_before(
-            info, hold.license_pool
-        )
-
-    def test_update_hold_end_date(
-        self, db: DatabaseTransactionFixture, opds2_with_odl_api_fixture: OPDS2WithODLApiFixture
-    ) -> None:
-        now = utc_now()
-        tomorrow = now + datetime.timedelta(days=1)
-        yesterday = now - datetime.timedelta(days=1)
-        next_week = now + datetime.timedelta(days=7)
-        last_week = now - datetime.timedelta(days=7)
-
-        opds2_with_odl_api_fixture.pool.licenses_owned = 1
-        opds2_with_odl_api_fixture.pool.licenses_reserved = 1
-
-        hold, ignore = opds2_with_odl_api_fixture.pool.on_hold_to(
-            opds2_with_odl_api_fixture.patron, start=now, position=0
-        )
-        info = self._holdinfo_from_hold(hold)
-        library = hold.patron.library
-
-        # Set the reservation period and loan period.
-        config = opds2_with_odl_api_fixture.collection.integration_configuration.for_library(
-            library.id
-        )
-        assert config is not None
-        DatabaseTransactionFixture.set_settings(
-            config,
-            **{
-                Collection.DEFAULT_RESERVATION_PERIOD_KEY: 3,
-                Collection.EBOOK_LOAN_DURATION_KEY: 6,
-            },
-        )
-        opds2_with_odl_api_fixture.db.session.commit()
-
-        # A hold that's already reserved and has an end date doesn't change.
-        info.end_date = tomorrow
-        opds2_with_odl_api_fixture.api._update_hold_end_date(
-            info, hold.license_pool, library=library
-        )
-        assert tomorrow == info.end_date
-        info.end_date = yesterday
-        opds2_with_odl_api_fixture.api._update_hold_end_date(
-            info, hold.license_pool, library=library
-        )
-        assert yesterday == info.end_date
-
-        # Updating a hold that's reserved but doesn't have an end date starts the
-        # reservation period.
-        info.end_date = None
-        opds2_with_odl_api_fixture.api._update_hold_end_date(
-            info, hold.license_pool, library=library
-        )
-        assert info.end_date is not None
-        assert info.end_date < next_week  # type: ignore[unreachable]
-        assert info.end_date > now
-
-        # Updating a hold that has an end date but just became reserved starts
-        # the reservation period.
-        info.end_date = yesterday
-        info.hold_position = 1
-        opds2_with_odl_api_fixture.api._update_hold_end_date(
-            info, hold.license_pool, library=library
-        )
-        assert info.end_date < next_week
-        assert info.end_date > now
-
-        # When there's a holds queue, the end date is the maximum time it could take for
-        # a license to become available.
-
-        # One copy, one loan, hold position 1.
-        # The hold will be available as soon as the loan expires.
-        opds2_with_odl_api_fixture.pool.licenses_available = 0
-        opds2_with_odl_api_fixture.pool.licenses_reserved = 0
-        opds2_with_odl_api_fixture.pool.licenses_owned = 1
-        loan, ignore = opds2_with_odl_api_fixture.license.loan_to(db.patron(), end=tomorrow)
-        opds2_with_odl_api_fixture.api._update_hold_end_date(
-            info, hold.license_pool, library=library
-        )
-        assert tomorrow == info.end_date
-
-        # One copy, one loan, hold position 2.
-        # The hold will be available after the loan expires + 1 cycle.
-        first_hold, ignore = opds2_with_odl_api_fixture.pool.on_hold_to(
-            db.patron(), start=last_week
-        )
-        opds2_with_odl_api_fixture.api._update_hold_end_date(
-            info, hold.license_pool, library=library
-        )
-        assert tomorrow + datetime.timedelta(days=9) == info.end_date
-
-        # Two copies, one loan, one reserved hold, hold position 2.
-        # The hold will be available after the loan expires.
-        opds2_with_odl_api_fixture.pool.licenses_reserved = 1
-        opds2_with_odl_api_fixture.pool.licenses_owned = 2
-        opds2_with_odl_api_fixture.license.checkouts_available = 2
-        opds2_with_odl_api_fixture.api._update_hold_end_date(
-            info, hold.license_pool, library=library
-        )
-        assert tomorrow == info.end_date
-
-        # Two copies, one loan, one reserved hold, hold position 3.
-        # The hold will be available after the reserved hold is checked out
-        # at the latest possible time and that loan expires.
-        second_hold, ignore = opds2_with_odl_api_fixture.pool.on_hold_to(
-            db.patron(), start=yesterday
-        )
-        first_hold.end = next_week
-        opds2_with_odl_api_fixture.api._update_hold_end_date(
-            info, hold.license_pool, library=library
-        )
-        assert next_week + datetime.timedelta(days=6) == info.end_date
-
-        # One copy, no loans, one reserved hold, hold position 3.
-        # The hold will be available after the reserved hold is checked out
-        # at the latest possible time and that loan expires + 1 cycle.
-        db.session.delete(loan)
-        opds2_with_odl_api_fixture.pool.licenses_owned = 1
-        opds2_with_odl_api_fixture.api._update_hold_end_date(
-            info, hold.license_pool, library=library
-        )
-        assert next_week + datetime.timedelta(days=15) == info.end_date
-
-        # One copy, no loans, one reserved hold, hold position 2.
-        # The hold will be available after the reserved hold is checked out
-        # at the latest possible time and that loan expires.
-        db.session.delete(second_hold)
-        opds2_with_odl_api_fixture.pool.licenses_owned = 1
-        opds2_with_odl_api_fixture.api._update_hold_end_date(
-            info, hold.license_pool, library=library
-        )
-        assert next_week + datetime.timedelta(days=6) == info.end_date
-
-        db.session.delete(first_hold)
-
-        # Ten copies, seven loans, three reserved holds, hold position 9.
-        # The hold will be available after the sixth loan expires.
-        opds2_with_odl_api_fixture.pool.licenses_owned = 10
-        for i in range(5):
-            opds2_with_odl_api_fixture.pool.loan_to(db.patron(), end=next_week)
-        opds2_with_odl_api_fixture.pool.loan_to(
-            db.patron(), end=next_week + datetime.timedelta(days=1)
-        )
-        opds2_with_odl_api_fixture.pool.loan_to(
-            db.patron(), end=next_week + datetime.timedelta(days=2)
-        )
-        opds2_with_odl_api_fixture.pool.licenses_reserved = 3
-        for i in range(3):
-            opds2_with_odl_api_fixture.pool.on_hold_to(
-                db.patron(),
-                start=last_week + datetime.timedelta(days=i),
-                end=next_week + datetime.timedelta(days=i),
-                position=0,
-            )
-        for i in range(5):
-            opds2_with_odl_api_fixture.pool.on_hold_to(db.patron(), start=yesterday)
-        opds2_with_odl_api_fixture.api._update_hold_end_date(
-            info, hold.license_pool, library=library
-        )
-        assert next_week + datetime.timedelta(days=1) == info.end_date
-
-        # Ten copies, seven loans, three reserved holds, hold position 12.
-        # The hold will be available after the second reserved hold is checked
-        # out and that loan expires.
-        for i in range(3):
-            opds2_with_odl_api_fixture.pool.on_hold_to(db.patron(), start=yesterday)
-        opds2_with_odl_api_fixture.api._update_hold_end_date(
-            info, hold.license_pool, library=library
-        )
-        assert next_week + datetime.timedelta(days=7) == info.end_date
-
-        # Ten copies, seven loans, three reserved holds, hold position 29.
-        # The hold will be available after the sixth loan expires + 2 cycles.
-        for i in range(17):
-            opds2_with_odl_api_fixture.pool.on_hold_to(db.patron(), start=yesterday)
-        opds2_with_odl_api_fixture.api._update_hold_end_date(
-            info, hold.license_pool, library=library
-        )
-        assert next_week + datetime.timedelta(days=19) == info.end_date
-
-        # Ten copies, seven loans, three reserved holds, hold position 32.
-        # The hold will be available after the second reserved hold is checked
-        # out and that loan expires + 2 cycles.
-        for i in range(3):
-            opds2_with_odl_api_fixture.pool.on_hold_to(db.patron(), start=yesterday)
-        opds2_with_odl_api_fixture.api._update_hold_end_date(
-            info, hold.license_pool, library=library
-        )
-        assert next_week + datetime.timedelta(days=25) == info.end_date
-
-    def test_update_hold_position(
-        self, db: DatabaseTransactionFixture, opds2_with_odl_api_fixture: OPDS2WithODLApiFixture
-    ) -> None:
-        now = utc_now()
-        yesterday = now - datetime.timedelta(days=1)
-        tomorrow = now + datetime.timedelta(days=1)
-
-        hold, ignore = opds2_with_odl_api_fixture.pool.on_hold_to(
-            opds2_with_odl_api_fixture.patron, start=now
-        )
-        info = self._holdinfo_from_hold(hold)
-
-        opds2_with_odl_api_fixture.pool.licenses_owned = 1
-
-        # When there are no other holds and no licenses reserved, hold position is 1.
-        loan, _ = opds2_with_odl_api_fixture.license.loan_to(db.patron())
-        opds2_with_odl_api_fixture.api._update_hold_position(info, hold.license_pool)
-        assert 1 == info.hold_position
-
-        # When a license is reserved, position is 0.
-        db.session.delete(loan)
-        opds2_with_odl_api_fixture.api._update_hold_position(info, hold.license_pool)
-        assert 0 == info.hold_position
-
-        # If another hold has the reserved licenses, position is 2.
-        opds2_with_odl_api_fixture.pool.on_hold_to(db.patron(), start=yesterday)
-        opds2_with_odl_api_fixture.api._update_hold_position(info, hold.license_pool)
-        assert 2 == info.hold_position
-
-        # If another license is reserved, position goes back to 0.
-        opds2_with_odl_api_fixture.pool.licenses_owned = 2
-        opds2_with_odl_api_fixture.license.checkouts_available = 2
-        opds2_with_odl_api_fixture.api._update_hold_position(info, hold.license_pool)
-        assert 0 == info.hold_position
-
-        # If there's an earlier hold but it expired, it doesn't
-        # affect the position.
-        opds2_with_odl_api_fixture.pool.on_hold_to(
-            db.patron(), start=yesterday, end=yesterday, position=0
-        )
-        opds2_with_odl_api_fixture.api._update_hold_position(info, hold.license_pool)
-        assert 0 == info.hold_position
-
-        # Hold position is after all earlier non-expired holds...
-        for i in range(3):
-            opds2_with_odl_api_fixture.pool.on_hold_to(db.patron(), start=yesterday)
-        opds2_with_odl_api_fixture.api._update_hold_position(info, hold.license_pool)
-        assert 5 == info.hold_position
-
-        # and before any later holds.
-        for i in range(2):
-            opds2_with_odl_api_fixture.pool.on_hold_to(db.patron(), start=tomorrow)
-        opds2_with_odl_api_fixture.api._update_hold_position(info, hold.license_pool)
-        assert 5 == info.hold_position
-
-    def test_update_hold_data(
-        self, db: DatabaseTransactionFixture, opds2_with_odl_api_fixture: OPDS2WithODLApiFixture
-    ) -> None:
-        hold, is_new = opds2_with_odl_api_fixture.pool.on_hold_to(
-            opds2_with_odl_api_fixture.patron,
-            utc_now(),
-            utc_now() + datetime.timedelta(days=100),
-            9,
-        )
-        opds2_with_odl_api_fixture.api._update_hold_data(hold)
-        assert hold.position == 0
-        assert hold.end.date() == (hold.start + datetime.timedelta(days=3)).date()
-
-    def test_update_hold_queue(
+    def test_update_licensepool_and_hold_queue(
         self, db: DatabaseTransactionFixture, opds2_with_odl_api_fixture: OPDS2WithODLApiFixture
     ) -> None:
         licenses = [opds2_with_odl_api_fixture.license]
@@ -1403,7 +1123,7 @@ class TestODLAPI:
         opds2_with_odl_api_fixture.pool.patrons_in_hold_queue = 0
         last_update = utc_now() - datetime.timedelta(minutes=5)
         opds2_with_odl_api_fixture.work.last_update_time = last_update
-        opds2_with_odl_api_fixture.api.update_licensepool(opds2_with_odl_api_fixture.pool)
+        opds2_with_odl_api_fixture.api.update_licensepool_and_hold_queue(opds2_with_odl_api_fixture.pool)
         assert 1 == opds2_with_odl_api_fixture.pool.licenses_available
         assert 0 == opds2_with_odl_api_fixture.pool.licenses_reserved
         assert 0 == opds2_with_odl_api_fixture.pool.patrons_in_hold_queue
@@ -1418,7 +1138,7 @@ class TestODLAPI:
         later_hold, _ = opds2_with_odl_api_fixture.pool.on_hold_to(
             db.patron(), start=utc_now() + datetime.timedelta(days=1), position=2
         )
-        opds2_with_odl_api_fixture.api.update_licensepool(opds2_with_odl_api_fixture.pool)
+        opds2_with_odl_api_fixture.api.update_licensepool_and_hold_queue(opds2_with_odl_api_fixture.pool)
 
         # The pool's licenses were updated.
         assert 0 == opds2_with_odl_api_fixture.pool.licenses_available
@@ -1431,8 +1151,8 @@ class TestODLAPI:
             hours=1
         )
 
-        # The later hold is the same.
-        assert 2 == later_hold.position
+        # The later hold also moved one position.
+        assert 1 == later_hold.position
 
         # Now there's a reserved hold. If we add another license, it's reserved and,
         # the later hold is also updated.
@@ -1440,7 +1160,7 @@ class TestODLAPI:
             opds2_with_odl_api_fixture.pool, terms_concurrency=1, checkouts_available=1
         )
         licenses.append(l)
-        opds2_with_odl_api_fixture.api.update_licensepool(opds2_with_odl_api_fixture.pool)
+        opds2_with_odl_api_fixture.api.update_licensepool_and_hold_queue(opds2_with_odl_api_fixture.pool)
 
         assert 0 == opds2_with_odl_api_fixture.pool.licenses_available
         assert 2 == opds2_with_odl_api_fixture.pool.licenses_reserved
@@ -1456,7 +1176,7 @@ class TestODLAPI:
             opds2_with_odl_api_fixture.pool, terms_concurrency=1, checkouts_available=1
         )
         licenses.append(l)
-        opds2_with_odl_api_fixture.api.update_licensepool(opds2_with_odl_api_fixture.pool)
+        opds2_with_odl_api_fixture.api.update_licensepool_and_hold_queue(opds2_with_odl_api_fixture.pool)
         assert 1 == opds2_with_odl_api_fixture.pool.licenses_available
         assert 2 == opds2_with_odl_api_fixture.pool.licenses_reserved
         assert 2 == opds2_with_odl_api_fixture.pool.patrons_in_hold_queue
@@ -1464,7 +1184,7 @@ class TestODLAPI:
         # License pool is updated when the holds are removed.
         db.session.delete(hold)
         db.session.delete(later_hold)
-        opds2_with_odl_api_fixture.api.update_licensepool(opds2_with_odl_api_fixture.pool)
+        opds2_with_odl_api_fixture.api.update_licensepool_and_hold_queue(opds2_with_odl_api_fixture.pool)
         assert 3 == opds2_with_odl_api_fixture.pool.licenses_available
         assert 0 == opds2_with_odl_api_fixture.pool.licenses_reserved
         assert 0 == opds2_with_odl_api_fixture.pool.patrons_in_hold_queue
@@ -1492,13 +1212,13 @@ class TestODLAPI:
                 position=i + 1,
             )
             holds.append(hold)
-        opds2_with_odl_api_fixture.api.update_licensepool(opds2_with_odl_api_fixture.pool)
+        opds2_with_odl_api_fixture.api.update_licensepool_and_hold_queue(opds2_with_odl_api_fixture.pool)
         assert 2 == opds2_with_odl_api_fixture.pool.licenses_reserved
         assert 0 == opds2_with_odl_api_fixture.pool.licenses_available
         assert 3 == opds2_with_odl_api_fixture.pool.patrons_in_hold_queue
         assert 0 == holds[0].position
         assert 0 == holds[1].position
-        assert 3 == holds[2].position
+        assert 1 == holds[2].position
         assert holds[0].end - utc_now() - datetime.timedelta(
             days=3
         ) < datetime.timedelta(hours=1)
@@ -1516,7 +1236,7 @@ class TestODLAPI:
         assert 3 == opds2_with_odl_api_fixture.pool.patrons_in_hold_queue
         assert 0 == holds[0].position
         assert 0 == holds[1].position
-        assert 3 == holds[2].position # The position does not change yet because the loans are deleted by CirculationAPI
+        assert 0 == holds[2].position # The last hold also became ready for checkout.
 
     def test_patron_activity_loan(
         self, db: DatabaseTransactionFixture, opds2_with_odl_api_fixture: OPDS2WithODLApiFixture
@@ -1612,7 +1332,6 @@ class TestODLAPI:
         )
         assert 2 == len(activity)
         [l1, h1] = sorted(activity, key=lambda x: x.start_date)
-        print(f"h1: {h1}, pool2: {pool2}")
         assert opds2_with_odl_api_fixture.collection == h1.collection(db.session)
         assert pool2.identifier.type == h1.identifier_type
         assert pool2.identifier.identifier == h1.identifier

@@ -682,6 +682,9 @@ class Hold(Base, LoanAndHoldMixin):
 
     def __lt__(self, other):
         return self.id < other.id
+    
+    def __repr__(self):
+        return(f"Hold id={self.id} start={self.start}->{self.end} position={self.position}")
 
     @classmethod
     def _calculate_until(

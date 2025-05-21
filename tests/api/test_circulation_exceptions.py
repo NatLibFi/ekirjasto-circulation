@@ -13,7 +13,7 @@ class TestCirculationExceptions:
         """
 
         e = RemoteInitiatedServerError("message", "some service")
-        doc = e.as_problem_detail_document()
+        doc = e.problem_detail
         assert "Integration error communicating with some service" == doc.detail
 
         e = AuthorizationExpired()

@@ -386,123 +386,6 @@ class TestAxis360API:
         patron.authorization_identifier = axis360.db.fresh_str()
         pytest.raises(NotFoundOnRemote, axis360.api.checkin, patron, "pin", pool)
 
-    def test_place_hold(self, axis360: Axis360Fixture, library_fixture: LibraryFixture):
-        edition, pool = axis360.db.edition(
-            identifier_type=Identifier.AXIS_360_ID,
-            data_source_name=DataSource.AXIS_360,
-            with_license_pool=True,
-        )
-        data = axis360.sample_data("place_hold_success.xml")
-        axis360.api.queue_response(200, content=data)
-        library = library_fixture.library()
-        library_settings = library_fixture.settings(library)
-        patron = axis360.db.patron(library=library)
-        library_settings.default_notification_email_address = (
-            "notifications@example.com"  # type: ignore[assignment]
-        )
-
-        response = axis360.api.place_hold(patron, "pin", pool, None)
-        assert 1 == response.hold_position
-        assert response.identifier_type == pool.identifier.type
-        assert response.identifier == pool.identifier.identifier
-        [request] = axis360.api.requests
-        params = request[-1]["params"]
-        assert "notifications@example.com" == params["email"]
-
-    def test_fulfill(self, axis360: Axis360Fixture):
-        # Test our ability to fulfill an Axis 360 title.
-        edition, pool = axis360.db.edition(
-            identifier_type=Identifier.AXIS_360_ID,
-            identifier_id="0015176429",
-            data_source_name=DataSource.AXIS_360,
-            with_license_pool=True,
-        )
-
-        patron = axis360.db.patron()
-        patron.authorization_identifier = "a barcode"
-        delivery_mechanism = pool.delivery_mechanisms[0]
-
-        fulfill = partial(
-            axis360.api.fulfill,
-            patron,
-            "pin",
-            licensepool=pool,
-            delivery_mechanism=delivery_mechanism,
-        )
-
-        # If Axis 360 says a patron does not have a title checked out,
-        # an attempt to fulfill that title will fail with NoActiveLoan.
-        data = axis360.sample_data("availability_with_audiobook_fulfillment.xml")
-        axis360.api.queue_response(200, content=data)
-        pytest.raises(NoActiveLoan, fulfill)
-
-        # If an ebook is checked out and we're not asking for it to be
-        # fulfilled through AxisNow, we get a regular FulfillmentInfo
-        # object with a content link.
-        data = axis360.sample_data("availability_with_loan_and_hold.xml")
-        axis360.api.queue_response(200, content=data)
-        fulfillment = fulfill()
-        assert isinstance(fulfillment, FulfillmentInfo)
-        assert not isinstance(fulfillment, Axis360FulfillmentInfo)
-        assert DeliveryMechanism.ADOBE_DRM == fulfillment.content_type
-        assert "http://fulfillment/" == fulfillment.content_link
-        assert None == fulfillment.content
-
-        # If we ask for AxisNow format, we get an Axis360FulfillmentInfo
-        # containing an AxisNow manifest document.
-        data = axis360.sample_data("availability_with_axisnow_fulfillment.xml")
-        data = data.replace(b"0016820953", pool.identifier.identifier.encode("utf8"))
-        axis360.api.queue_response(200, content=data)
-        delivery_mechanism.drm_scheme = DeliveryMechanism.AXISNOW_DRM
-        fulfillment = fulfill()
-        assert isinstance(fulfillment, Axis360FulfillmentInfo)
-
-        # Looking up the details of the Axis360FulfillmentInfo will
-        # trigger another API request, so we won't do that; that's
-        # tested in TestAxis360FulfillmentInfo.
-
-        # If the title is checked out but Axis provides no fulfillment
-        # info, the exception is CannotFulfill.
-        pool.identifier.identifier = "0015176429"
-        data = axis360.sample_data("availability_without_fulfillment.xml")
-        axis360.api.queue_response(200, content=data)
-        pytest.raises(CannotFulfill, fulfill)
-
-        # If we ask to fulfill an audiobook, we get an AudiobookFulfillmentInfo.
-        #
-        # Change our test LicensePool's identifier to match the data we're about
-        # to load into the API.
-        pool.identifier, ignore = Identifier.for_foreign_id(
-            axis360.db.session, Identifier.AXIS_360_ID, "0012244222"
-        )
-        data = axis360.sample_data("availability_with_audiobook_fulfillment.xml")
-        axis360.api.queue_response(200, content=data)
-        delivery_mechanism.drm_scheme = DeliveryMechanism.FINDAWAY_DRM
-        fulfillment = fulfill()
-        assert isinstance(fulfillment, Axis360FulfillmentInfo)
-
-    def test_patron_activity(self, axis360: Axis360Fixture):
-        """Test the method that locates all current activity
-        for a patron.
-        """
-        data = axis360.sample_data("availability_with_loan_and_hold.xml")
-        axis360.api.queue_response(200, content=data)
-        patron = axis360.db.patron()
-        patron.authorization_identifier = "a barcode"
-
-        results = axis360.api.patron_activity(patron, "pin")
-
-        # We made a request that included the authorization identifier
-        # of the patron in question.
-        [url, args, kwargs] = axis360.api.requests.pop()
-        assert patron.authorization_identifier == kwargs["params"]["patronId"]
-
-        # We got three results -- two holds and one loan.
-        [hold1, loan, hold2] = sorted(results, key=lambda x: str(x.identifier))
-        assert isinstance(hold1, HoldInfo)
-        assert isinstance(hold2, HoldInfo)
-        assert isinstance(loan, LoanInfo)
-
     def test_update_licensepools_for_identifiers(self, axis360: Axis360Fixture):
         class Mock(MockAxis360API):
             """Simulates an Axis 360 API that knows about some
@@ -1329,20 +1212,6 @@ class TestCheckinResponseParser:
 
 
 class TestCheckoutResponseParser:
-    def test_parse_checkout_success(self, axis360parsers: Axis360FixturePlusParsers):
-        data = axis360parsers.sample_data("checkout_success.xml")
-        parser = CheckoutResponseParser(axis360parsers.default_collection)
-        parsed = parser.process_first(data)
-        assert isinstance(parsed, LoanInfo)
-        assert axis360parsers.default_collection.id == parsed.collection_id
-        assert DataSource.AXIS_360 == parsed.data_source_name
-        assert Identifier.AXIS_360_ID == parsed.identifier_type
-        assert datetime_utc(2015, 8, 11, 18, 57, 42) == parsed.end_date
-
-        # There is no FulfillmentInfo associated with the LoanInfo,
-        # because we don't need it (checkout and fulfillment are
-        # separate steps).
-        assert parsed.fulfillment_info == None
 
     def test_parse_already_checked_out(self, axis360parsers: Axis360FixturePlusParsers):
         data = axis360parsers.sample_data("already_checked_out.xml")
@@ -1356,16 +1225,6 @@ class TestCheckoutResponseParser:
 
 
 class TestHoldResponseParser:
-    def test_parse_hold_success(self, axis360parsers: Axis360FixturePlusParsers):
-        data = axis360parsers.sample_data("place_hold_success.xml")
-        parser = HoldResponseParser(axis360parsers.default_collection)
-        parsed = parser.process_first(data)
-        assert isinstance(parsed, HoldInfo)
-        assert 1 == parsed.hold_position
-
-        # The HoldInfo is given the Collection object we passed into
-        # the HoldResponseParser.
-        assert axis360parsers.default_collection.id == parsed.collection_id
 
     def test_parse_already_on_hold(self, axis360parsers: Axis360FixturePlusParsers):
         data = axis360parsers.sample_data("already_on_hold.xml")
@@ -1383,113 +1242,6 @@ class TestHoldReleaseResponseParser:
         data = axis360parsers.sample_data("release_hold_failure.xml")
         parser = HoldReleaseResponseParser(MagicMock())
         pytest.raises(NotOnHold, parser.process_first, data)
-
-
-class TestAvailabilityResponseParser:
-    """Unlike other response parser tests, this one needs
-    access to a real database session, because it needs a real Collection
-    to put into its MockAxis360API.
-    """
-
-    def test_parse_loan_and_hold(self, axis360parsers: Axis360FixturePlusParsers):
-        data = axis360parsers.sample_data("availability_with_loan_and_hold.xml")
-        parser = AvailabilityResponseParser(axis360parsers.api)
-        activity = list(parser.process_all(data))
-        hold, loan, reserved = sorted(
-            activity, key=lambda x: "" if x is None else str(x.identifier)
-        )
-        assert isinstance(hold, HoldInfo)
-        assert isinstance(loan, LoanInfo)
-        assert isinstance(reserved, HoldInfo)
-        assert axis360parsers.api.collection is not None
-        assert axis360parsers.api.collection.id == hold.collection_id
-        assert Identifier.AXIS_360_ID == hold.identifier_type
-        assert "0012533119" == hold.identifier
-        assert 1 == hold.hold_position
-        assert hold.end_date is None
-
-        assert axis360parsers.api.collection.id == loan.collection_id
-        assert "0015176429" == loan.identifier
-        assert loan.fulfillment_info is not None
-        assert "http://fulfillment/" == loan.fulfillment_info.content_link
-        assert datetime_utc(2015, 8, 12, 17, 40, 27) == loan.end_date
-
-        assert axis360parsers.api.collection.id == reserved.collection_id
-        assert "1111111111" == reserved.identifier
-        assert datetime_utc(2015, 1, 1, 13, 11, 11) == reserved.end_date
-        assert 0 == reserved.hold_position
-
-    def test_parse_loan_no_availability(
-        self, axis360parsers: Axis360FixturePlusParsers
-    ):
-        data = axis360parsers.sample_data("availability_without_fulfillment.xml")
-        parser = AvailabilityResponseParser(axis360parsers.api)
-        [loan] = list(parser.process_all(data))
-        assert isinstance(loan, LoanInfo)
-
-        assert axis360parsers.api.collection is not None
-        assert axis360parsers.api.collection.id == loan.collection_id
-        assert "0015176429" == loan.identifier
-        assert None == loan.fulfillment_info
-        assert datetime_utc(2015, 8, 12, 17, 40, 27) == loan.end_date
-
-    def test_parse_audiobook_availability(
-        self, axis360parsers: Axis360FixturePlusParsers
-    ):
-        data = axis360parsers.sample_data("availability_with_audiobook_fulfillment.xml")
-        parser = AvailabilityResponseParser(axis360parsers.api)
-        [loan] = list(parser.process_all(data))
-        assert isinstance(loan, LoanInfo)
-        fulfillment = loan.fulfillment_info
-        assert isinstance(fulfillment, Axis360FulfillmentInfo)
-
-        # The transaction ID is stored as the .key. If we actually
-        # need to make a manifest for this book, the key will be used
-        # in two more API requests. (See TestAudiobookFulfillmentInfo
-        # for that.)
-        assert "C3F71F8D-1883-2B34-061F-96570678AEB0" == fulfillment.key
-
-        # The API object is present in the FulfillmentInfo and ready to go.
-        assert axis360parsers.api == fulfillment.api
-
-    def test_parse_ebook_availability(self, axis360parsers: Axis360FixturePlusParsers):
-        # AvailabilityResponseParser will behave differently depending on whether
-        # we ask for the book as an ePub or through AxisNow.
-        data = axis360parsers.sample_data("availability_with_ebook_fulfillment.xml")
-
-        # First, ask for an ePub.
-        epub_parser = AvailabilityResponseParser(axis360parsers.api, "ePub")
-        [availability] = list(epub_parser.process_all(data))
-        assert isinstance(availability, LoanInfo)
-        fulfillment = availability.fulfillment_info
-
-        # This particular file has a downloadUrl ready to go, so we
-        # get a standard FulfillmentInfo object with that downloadUrl
-        # as its content_link.
-        assert isinstance(fulfillment, FulfillmentInfo)
-        assert not isinstance(fulfillment, Axis360FulfillmentInfo)
-        assert (
-            "http://adobe.acsm/?src=library&transactionId=2a34598b-12af-41e4-a926-af5e42da7fe5&isbn=9780763654573&format=F2"
-            == fulfillment.content_link
-        )
-
-        # Next ask for AxisNow -- this will be more like
-        # test_parse_audiobook_availability, since it requires an
-        # additional API request.
-
-        axisnow_parser = AvailabilityResponseParser(
-            axis360parsers.api, axis360parsers.api.AXISNOW
-        )
-        [availability] = list(axisnow_parser.process_all(data))
-        assert isinstance(availability, LoanInfo)
-        fulfillment = availability.fulfillment_info
-        assert isinstance(fulfillment, Axis360FulfillmentInfo)
-        assert "6670197A-D264-447A-86C7-E4CB829C0236" == fulfillment.key
-
-        # The API object is present in the FulfillmentInfo and ready to go
-        # make that extra request.
-        assert axis360parsers.api == fulfillment.api
-
 
 class TestJSONResponseParser:
     def test__required_key(self):

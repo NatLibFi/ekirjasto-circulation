@@ -286,9 +286,14 @@ class LicensePool(Base):
 
     open_access = Column(Boolean, index=True)
     last_checked = Column(DateTime(timezone=True), index=True)
+
+    # Total amount of copies (basically changes only when a license is added to or removed from the pool)
     licenses_owned: int = Column(Integer, default=0, index=True)
+    # Amount of available copies at the moment
     licenses_available: int = Column(Integer, default=0, index=True)
+    # Depends on patrons in hold queue and available copies
     licenses_reserved: int = Column(Integer, default=0)
+    # Holds registered in the pool
     patrons_in_hold_queue = Column(Integer, default=0)
     should_track_playtime = Column(Boolean, default=False, nullable=False)
 
@@ -706,6 +711,7 @@ class LicensePool(Base):
         """
         _db = Session.object_session(self)
 
+        # How many copies (=lukuoikeus) of a license we have
         licenses_owned = sum(
             l.total_remaining_loans
             for l in self.licenses
@@ -717,11 +723,11 @@ class LicensePool(Base):
             if l.currently_available_loans is not None
         )
         ignored_holds_ids = {h.id for h in (ignored_holds or set())}
-        active_holds_ids = {h.id for h in self.get_active_holds()}
+        active_holds_ids = {h.id for h in self.holds_by_start_date()}
         patrons_in_hold_queue = len(active_holds_ids - ignored_holds_ids)
         if patrons_in_hold_queue > licenses_available:
             licenses_reserved = licenses_available
-            licenses_available = 0
+            licenses_available = 0 
         else:
             licenses_reserved = patrons_in_hold_queue
             licenses_available -= licenses_reserved
@@ -736,7 +742,7 @@ class LicensePool(Base):
             as_of=as_of,
         )
 
-    def get_active_holds(self):
+    def holds_by_start_date(self):
         _db = Session.object_session(self)
         return (
             _db.query(Hold)
@@ -1154,7 +1160,7 @@ class LicensePool(Base):
         loans, so that we'll maximize the number of concurrent checkouts available in the future.
         """
         for l in self.licenses:
-            print(f"License: {l.identifier}, Available: {l.is_available_for_borrowing} is_time_limited: {l.is_time_limited} loan_limited {l.is_loan_limited}")
+            print(f"License: {l.identifier}, Available={l.is_available_for_borrowing}")
         return sorted(
             (l for l in self.licenses if l.is_available_for_borrowing),
             key=self._license_sort_func,

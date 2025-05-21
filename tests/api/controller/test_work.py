@@ -10,7 +10,7 @@ import flask
 import pytest
 from flask import url_for
 
-from api.circulation import FulfillmentInfo, LoanInfo
+from api.circulation import Fulfillment, FulfillmentInfo, LoanInfo
 from api.lanes import (
     ContributorFacets,
     ContributorLane,
@@ -397,7 +397,7 @@ class TestWorkController:
     ):
         auth = dict(Authorization=work_fixture.valid_auth)
 
-        with work_fixture.request_context_with_library("/", headers=auth):
+        with work_fixture.request_context_with_library("/", headers=auth) as ctx:
             content_link = "https://content"
 
             # We have two patrons.
@@ -407,7 +407,7 @@ class TestWorkController:
             patron_2 = work_fixture.db.patron()
 
             # But the request was initiated by the first patron.
-            flask.request.patron = patron_1  # type: ignore
+            setattr(ctx.request, "patron", patron_1)
 
             identifier_type = Identifier.GUTENBERG_ID
             identifier = "1234567890"
@@ -423,27 +423,16 @@ class TestWorkController:
             pool = work.license_pools[0]
             [delivery_mechanism] = pool.delivery_mechanisms
 
-            loan_info = LoanInfo(
-                pool.collection,
-                pool.data_source.name,
-                pool.identifier.type,
-                pool.identifier.identifier,
-                utc_now(),
-                utc_now() + datetime.timedelta(seconds=3600),
+            loan_info = LoanInfo.from_license_pool(
+                pool,
+                start_date=utc_now(),
+                end_date=utc_now() + datetime.timedelta(seconds=3600),
             )
             work_fixture.manager.d_circulation.queue_checkout(pool, loan_info)
 
-            fulfillment = FulfillmentInfo(
-                pool.collection,
-                pool.data_source,
-                pool.identifier.type,
-                pool.identifier.identifier,
-                content_link=content_link,
-                content_type=MediaTypes.EPUB_MEDIA_TYPE,
-                content=None,
-                content_expires=None,
+            work_fixture.manager.d_circulation.queue_fulfill(
+                pool, create_autospec(Fulfillment)
             )
-            work_fixture.manager.d_circulation.queue_fulfill(pool, fulfillment)
 
             # Both patrons have loans:
             # - the first patron's loan and fulfillment will be created via API.
@@ -461,7 +450,7 @@ class TestWorkController:
             patron1_loan = pool.loans[0]
             # We have to create a Resource object manually
             # to assign a URL to the fulfillment that will be used to generate an acquisition link.
-            patron1_loan.fulfillment.resource = Resource(url=fulfillment.content_link)
+            patron1_loan.fulfillment.resource = Resource(url=content_link)
 
             patron2_loan, _ = pool.loan_to(patron_2)
 

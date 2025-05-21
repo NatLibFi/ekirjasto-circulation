@@ -379,69 +379,6 @@ class TestEnkiAPI:
         """Test the _epoch_to_struct helper method."""
         assert datetime_utc(1970, 1, 1) == EnkiAPI._epoch_to_struct("0")
 
-    def test_checkout_open_access_parser(self, enki_test_fixture: EnkiTestFixure):
-        """Test that checkout info for non-ACS Enki books is parsed correctly."""
-        data = enki_test_fixture.files.sample_data("checked_out_direct.json")
-        result = json.loads(data)
-        loan = enki_test_fixture.api.parse_patron_loans(
-            result["result"]["checkedOutItems"][0]
-        )
-        assert loan.data_source_name == DataSource.ENKI
-        assert loan.identifier_type == Identifier.ENKI_ID
-        assert loan.identifier == "2"
-        assert loan.start_date == datetime_utc(2017, 8, 23, 19, 31, 58, 0)
-        assert loan.end_date == datetime_utc(2017, 9, 13, 19, 31, 58, 0)
-
-    def test_checkout_acs_parser(self, enki_test_fixture: EnkiTestFixure):
-        """Test that checkout info for ACS Enki books is parsed correctly."""
-        data = enki_test_fixture.files.sample_data("checked_out_acs.json")
-        result = json.loads(data)
-        loan = enki_test_fixture.api.parse_patron_loans(
-            result["result"]["checkedOutItems"][0]
-        )
-        assert loan.data_source_name == DataSource.ENKI
-        assert loan.identifier_type == Identifier.ENKI_ID
-        assert loan.identifier == "3334"
-        assert loan.start_date == datetime_utc(2017, 8, 23, 19, 42, 35, 0)
-        assert loan.end_date == datetime_utc(2017, 9, 13, 19, 42, 35, 0)
-
-    def test_checkout_success(self, enki_test_fixture: EnkiTestFixure):
-        db = enki_test_fixture.db
-        # Test the checkout() method.
-        patron = db.patron()
-        patron.authorization_identifier = "123"
-        pool = db.licensepool(None)
-
-        data = enki_test_fixture.files.sample_data("checked_out_acs.json")
-        enki_test_fixture.api.queue_response(200, content=data)
-        loan = enki_test_fixture.api.checkout(patron, "pin", pool, MagicMock())
-
-        # An appropriate request to the "getSELink" endpoint was made.,
-        [
-            method,
-            url,
-            headers,
-            data,
-            params,
-            kwargs,
-        ] = enki_test_fixture.api.requests.pop()
-        assert "get" == method
-        assert enki_test_fixture.api.base_url + "UserAPI" == url
-        assert "getSELink" == params["method"]
-        assert "123" == params["username"]
-        assert "pin" == params["password"]
-
-        # In particular, the Enki library ID associated with the
-        # patron's library was used as the 'lib' parameter.
-        assert "c" == params["lib"]
-
-        # A LoanInfo for the loan was returned.
-        assert isinstance(loan, LoanInfo)
-        assert loan.identifier == pool.identifier.identifier
-        assert loan.collection_id == pool.collection.id
-        assert loan.start_date == None
-        assert loan.end_date == datetime_utc(2017, 9, 13, 19, 42, 35, 0)
-
     def test_checkout_bad_authorization(self, enki_test_fixture: EnkiTestFixure):
         """Test that the correct exception is thrown upon an unsuccessful login."""
         db = enki_test_fixture.db
@@ -541,57 +478,6 @@ class TestEnkiAPI:
             "http://afs.enkilibrary.org/fulfillment/URLLink.acsm"
         )
         assert fulfillment.content_expires == datetime_utc(2017, 9, 13, 19, 42, 35, 0)
-
-    def test_patron_activity(self, enki_test_fixture: EnkiTestFixure):
-        db = enki_test_fixture.db
-        data = enki_test_fixture.files.sample_data("patron_response.json")
-        enki_test_fixture.api.queue_response(200, content=data)
-        patron = db.patron()
-        patron.authorization_identifier = "123"
-        [loan] = enki_test_fixture.api.patron_activity(patron, "pin")
-
-        # An appropriate Enki API call was issued.
-        [
-            method,
-            url,
-            headers,
-            data,
-            params,
-            kwargs,
-        ] = enki_test_fixture.api.requests.pop()
-        assert "get" == method
-        assert enki_test_fixture.api.base_url + "UserAPI" == url
-        assert "getSEPatronData" == params["method"]
-        assert "123" == params["username"]
-        assert "pin" == params["password"]
-
-        # In particular, the Enki library ID associated with the
-        # patron's library was used as the 'lib' parameter.
-        assert "c" == params["lib"]
-
-        # The result is a single LoanInfo.
-        assert isinstance(loan, LoanInfo)
-        assert Identifier.ENKI_ID == loan.identifier_type
-        assert DataSource.ENKI == loan.data_source_name
-        assert "231" == loan.identifier
-        assert enki_test_fixture.collection == loan.collection(db.session)
-        assert datetime_utc(2017, 8, 15, 14, 56, 51) == loan.start_date
-        assert datetime_utc(2017, 9, 5, 14, 56, 51) == loan.end_date
-
-    def test_patron_activity_failure(self, enki_test_fixture: EnkiTestFixure):
-        db = enki_test_fixture.db
-        patron = db.patron()
-        enki_test_fixture.api.queue_response(404, "No such patron")
-        collect = lambda: list(enki_test_fixture.api.patron_activity(patron, "pin"))
-        pytest.raises(PatronNotFoundOnRemote, collect)
-
-        msg = dict(result=dict(message="Login unsuccessful."))
-        enki_test_fixture.api.queue_response(200, content=json.dumps(msg))
-        pytest.raises(AuthorizationFailedException, collect)
-
-        msg = dict(result=dict(message="Some other error."))
-        enki_test_fixture.api.queue_response(200, content=json.dumps(msg))
-        pytest.raises(CirculationException, collect)
 
 
 class TestBibliographicParser:

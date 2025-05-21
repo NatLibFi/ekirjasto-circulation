@@ -1190,7 +1190,7 @@ class CirculationAPI:
             license_pool=licensepool,
             on_multiple="interchangeable",
         )
-
+        print("circulation hold: ", existing_hold)
         loan_info = None
         hold_info = None
         new_loan = False
@@ -1275,18 +1275,6 @@ class CirculationAPI:
 
             # The patron had a hold and was in the hold queue's 0th position believing
             # there were copies available for them to checkout.
-            if existing_hold and existing_hold.position == 0:
-                # Update the hold so the patron doesn't lose their hold. Extend the hold to expire in the
-                # next 3 days.
-                            # We're trying to check out a book that we already have on hold.
-                hold_info = HoldInfo.from_license_pool(
-                    licensepool,
-                    hold_position=0,
-                    end_date=datetime.datetime.now() + datetime.timedelta(days=3), # The default RESERVE period is three days
-                )
-                # Update availability information
-                api.update_availability(licensepool)
-                reserved_license_exception = True
             else:
                 # That's fine, we'll just (try to) place a hold.
                 #
@@ -1397,11 +1385,6 @@ class CirculationAPI:
         if existing_loan:
             self._db.delete(existing_loan)
         __transaction.commit()
-
-        # Raise the exception of failed loan when the patron falsely believed
-        # there was an available licanse at the top of the hold queue.
-        if reserved_license_exception:
-            raise NoAvailableCopiesWhenReserved
 
         return None, hold, is_new
 
