@@ -1190,7 +1190,6 @@ class CirculationAPI:
             license_pool=licensepool,
             on_multiple="interchangeable",
         )
-        print("circulation hold: ", existing_hold)
         loan_info = None
         hold_info = None
         new_loan = False
@@ -1618,7 +1617,7 @@ class CirculationAPI:
                 pass
 
             __transaction = self._db.begin_nested()
-            print(f"In revoke_loan(), deleting loan #{loan.id}")
+            self.log.info(f"In revoke_loan(), deleting loan #{loan.id}")
             self._db.delete(loan)
             patron.last_loan_activity_sync = None
             __transaction.commit()
@@ -1899,5 +1898,4 @@ class CirculationAPI:
             patron.last_loan_activity_sync = last_loan_activity_sync
 
         __transaction.commit()
-        print(f"active loans: {active_loans} holds: {active_holds}")
         return active_loans, active_holds

@@ -273,7 +273,7 @@ class TestHTTP:
             "method", "url", make_request_with=mock_request, key="value"
         )
         (args, kwargs) = Mock.called_with
-        assert args == ("url", mock_request, "method")
+        assert args == ("method", "url", mock_request)
         assert kwargs["key"] == "value"
         assert kwargs["process_response_with"] == Mock.process_debuggable_response
 

@@ -423,7 +423,6 @@ class BaseODLAPI(
         if self.collection is None:
             raise ValueError(f"Collection not found: {self.collection_id}")
         default_loan_period = self.collection.default_loan_period(patron.library)
-        print("loan period ", default_loan_period)
         requested_expiry = utc_now() + datetime.timedelta(days=default_loan_period)
         patron_id = patron.identifier_to_remote_service(licensepool.data_source)
         library_short_name = patron.library.short_name
@@ -461,11 +460,10 @@ class BaseODLAPI(
             # It could be that we have a hold which means we thought the book was available, but it wasn't.
             # We raise a NoAvailableCopies() and have the handler handle the patron's hold position.
             self.log.info(f"No license  or status was none. Raising NoAvailableCopies.")
-            print("this is here")
             licensepool.update_availability_from_licenses()
             if hold:
                 hold.position = 1
-                hold.end = utc_now() + datetime.timedelta(days=default_loan_period)
+                hold.end = utc_now() + datetime.timedelta(days=default_loan_period) # The license should be available at most by loan period
                 self._recalculate_holds_in_license_pool(licensepool)
             raise NoAvailableCopies()
 
@@ -729,10 +727,9 @@ class BaseODLAPI(
         holdinfo = HoldInfo.from_license_pool(
             licensepool,
             start_date=utc_now(),
-            end_date=utc_now() + datetime.timedelta(days=365), # New holds 
+            end_date=utc_now() + datetime.timedelta(days=365), # E-Kirjasto
             hold_position=licensepool.patrons_in_hold_queue,
         )
-        print("holdinfo ", holdinfo)
         return holdinfo
 
     def release_hold(self, patron: Patron, pin: str, licensepool: LicensePool) -> None:
@@ -747,7 +744,6 @@ class BaseODLAPI(
         )
         if not hold:
             raise NotOnHold()
-        print(f"Released hold")
         # The hold itself will be deleted by the caller (usually CirculationAPI),
         # so we just need to update the license pool to reflect the released hold.
         self.update_licensepool_and_hold_queue(licensepool, ignored_holds={hold})
@@ -779,7 +775,6 @@ class BaseODLAPI(
         remaining_holds = []
         for hold in holds:
             licensepool = hold.license_pool
-            print("Checking holds: ", holds)
             # Delete expired holds and update the pool and queue to reflect the change.
             if hold.end and hold.end < utc_now():
                 _db.delete(hold)
