@@ -729,6 +729,8 @@ class TestODLAPI:
         assert opds2_with_odl_api_fixture.pool.licenses_reserved == 0
         assert opds2_with_odl_api_fixture.pool.patrons_in_hold_queue == 2
 
+        print("hold ", hold.position)
+        print("hold2 ", hold2.position)
         # The first hold gets back to position 1 with a new end date.
         assert hold.position == 1
         assert hold.end == loan_period

@@ -29,8 +29,7 @@ from api.circulation import HoldInfo, LoanInfo
 from api.lcp.status import LoanStatus, Link, LinkCollection
 from core.model.configuration import ExternalIntegration
 from core.util.http import HTTP
-from tests.api.mockapi.mock import MockHTTPClient
-from tests.core.mock import MockRequestsResponse
+from tests.api.mockapi.mock import MockHTTPClient, MockRequestsResponse
 from tests.fixtures.api_odl import ODL2APIFilesFixture, ODLAPIFilesFixture
 from tests.fixtures.database import DatabaseTransactionFixture
 from tests.fixtures.files import OPDS2WithODLFilesFixture, APIFilesFixture

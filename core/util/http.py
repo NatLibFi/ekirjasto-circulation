@@ -449,9 +449,9 @@ class HTTP(LoggerMixin):
         )
         make_request_with = make_request_with or requests.request
         return cls._request_with_timeout(
+            http_method,
             url,
             make_request_with,
-            http_method,
             process_response_with=cls.process_debuggable_response,
             **kwargs,
         )
