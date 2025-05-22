@@ -4,8 +4,6 @@ from collections.abc import Generator
 from contextlib import contextmanager
 from typing import Any
 
-from core.model.patron import Patron
-import flask
 import pytest
 from flask.ctx import RequestContext
 from flask_babel import Babel
@@ -13,6 +11,7 @@ from werkzeug.datastructures import ImmutableMultiDict
 
 from api.util.flask import PalaceFlask
 from core.model import Admin, AdminRole, Library, get_one_or_create
+from core.model.patron import Patron
 from tests.fixtures.database import DatabaseTransactionFixture
 
 

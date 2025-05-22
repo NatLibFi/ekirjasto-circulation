@@ -3,7 +3,7 @@ from __future__ import annotations
 import random
 from functools import partial
 from io import StringIO
-from unittest.mock import MagicMock, PropertyMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 import requests_mock
@@ -45,7 +45,7 @@ from core.model import (
 from core.opds_import import OPDSAPI, OPDSImporter, OPDSImportMonitor, OPDSXMLParser
 from core.saml.wayfless import SAMLWAYFlessFulfillmentError
 from core.util import first_or_default
-from core.util.datetime_helpers import datetime_utc, utc_now
+from core.util.datetime_helpers import datetime_utc
 from core.util.http import BadResponseException
 from core.util.opds_writer import AtomFeed, OPDSFeed, OPDSMessage
 from tests.api.mockapi.mock import MockRequestsResponse

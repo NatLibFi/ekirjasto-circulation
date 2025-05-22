@@ -1,17 +1,17 @@
 import logging
 import time
-from collections.abc import Callable
-from json import JSONDecodeError
-from typing import Any, Literal, Protocol, TypedDict
-from typing_extensions import Unpack
-from urllib.parse import urlparse
 from collections.abc import Callable, Iterable, Mapping
 from io import BytesIO, StringIO
-from requests.auth import AuthBase
+from json import JSONDecodeError
+from typing import Any, Literal, Protocol, TypedDict
+from urllib.parse import urlparse
+
 import requests
 from flask_babel import lazy_gettext as _
 from requests import sessions
 from requests.adapters import HTTPAdapter, Response
+from requests.auth import AuthBase
+from typing_extensions import Unpack
 from urllib3 import Retry
 
 import core
@@ -19,7 +19,11 @@ from core.exceptions import IntegrationException
 from core.problem_details import INTEGRATION_ERROR
 from core.util.log import LoggerMixin
 from core.util.problem_detail import JSON_MEDIA_TYPE as PROBLEM_DETAIL_JSON_MEDIA_TYPE
-from core.util.problem_detail import ProblemError, BaseProblemDetailException, ProblemDetail
+from core.util.problem_detail import (
+    BaseProblemDetailException,
+    ProblemDetail,
+    ProblemError,
+)
 
 
 class RemoteIntegrationException(IntegrationException, BaseProblemDetailException):
@@ -89,6 +93,7 @@ class RemoteIntegrationException(IntegrationException, BaseProblemDetailExceptio
             title=self.title,
             debug_message=self.temp_document_debug_message(),
         )
+
 
 class BadResponseException(RemoteIntegrationException):
     """The request seemingly went okay, but we got a bad response."""
@@ -188,6 +193,7 @@ class RequestKwargs(GetRequestKwargs, total=False):
     files: Mapping[str, BytesIO | StringIO | str | bytes] | None
     json: Mapping[str, Any] | None
 
+
 class _ProcessResponseCallable(Protocol):
     def __call__(
         self,
@@ -195,7 +201,10 @@ class _ProcessResponseCallable(Protocol):
         response: Response,
         allowed_response_codes: ResponseCodesT = None,
         disallowed_response_codes: ResponseCodesT = None,
-    ) -> Response: ...
+    ) -> Response:
+        ...
+
+
 class HTTP(LoggerMixin):
     """A helper for the `requests` module."""
 
@@ -279,8 +288,8 @@ class HTTP(LoggerMixin):
 
         # Set a user-agent if not already present
         version = (
-                core.__version__ if core.__version__ else cls.DEFAULT_USER_AGENT_VERSION
-            )
+            core.__version__ if core.__version__ else cls.DEFAULT_USER_AGENT_VERSION
+        )
         headers: dict[str, str | None] = {"User-Agent": f"E-Kirjasto/{version}"}
         if (additional_headers := kwargs.get("headers")) is not None:
             headers.update(additional_headers)
@@ -331,7 +340,6 @@ class HTTP(LoggerMixin):
             allowed_response_codes,
             disallowed_response_codes,
         )
-
 
     @classmethod
     def _process_response(

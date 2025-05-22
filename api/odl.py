@@ -6,8 +6,8 @@ import json
 import uuid
 from abc import ABC
 from collections.abc import Callable
-from typing import Any, Literal, TypeVar
-from functools import cached_property, partial
+from functools import partial
+from typing import Any, TypeVar
 
 import dateutil
 from dependency_injector.wiring import Provide, inject
@@ -54,15 +54,14 @@ from core.model import (
     ExternalIntegration,
     Hold,
     Hyperlink,
-    Library,
     License,
     LicensePool,
     LicensePoolDeliveryMechanism,
     Loan,
     MediaTypes,
     Representation,
-    RightsStatus,
     Resource,
+    RightsStatus,
     Session,
     get_one,
 )
@@ -238,14 +237,15 @@ class BaseODLAPI(
         headers["Authorization"] = auth_header
 
         try:
-            response = HTTP.get_with_timeout(url, headers=headers, timeout=30, *args, **kwargs)
+            response = HTTP.get_with_timeout(
+                url, headers=headers, timeout=30, *args, **kwargs
+            )
             return response
         except BadResponseException as e:
             response = e.response
             if opds_exception := OpdsWithOdlException.from_response(response):
                 raise opds_exception from e
             raise
-
 
     def _url_for(self, *args: Any, **kwargs: Any) -> str:
         """Wrapper around flask's url_for to be overridden for tests."""
@@ -435,13 +435,17 @@ class BaseODLAPI(
         encoded_pass = base64.b64encode(binascii.unhexlify(hashed_pass.hashed))
 
         licenses = licensepool.best_available_licenses()
-        self.log.info(f"Available licenses in license pool {licensepool.identifier}: {len(licenses)}")
+        self.log.info(
+            f"Available licenses in license pool {licensepool.identifier}: {len(licenses)}"
+        )
 
         license_: License | None = None
         loan_status: LoanStatus | None = None
         for license_ in licenses:
             try:
-                self.log.info(f"Trying license: {license_.identifier} with {license_.checkouts_available} checkouts...")
+                self.log.info(
+                    f"Trying license: {license_.identifier} with {license_.checkouts_available} checkouts..."
+                )
                 loan_status = self._checkout_license(
                     license_,
                     library_short_name,
@@ -451,7 +455,9 @@ class BaseODLAPI(
                 )
                 break
             except NoAvailableCopies:
-                self.log.info(f"No available checkouts for license: {license_.identifier}. Checking the next one...")
+                self.log.info(
+                    f"No available checkouts for license: {license_.identifier}. Checking the next one..."
+                )
                 # This license had no available copies, so we try the next one.
                 ...
 
@@ -463,7 +469,9 @@ class BaseODLAPI(
             licensepool.update_availability_from_licenses()
             if hold:
                 hold.position = 1
-                hold.end = utc_now() + datetime.timedelta(days=default_loan_period) # The license should be available at most by loan period
+                hold.end = utc_now() + datetime.timedelta(
+                    days=default_loan_period
+                )  # The license should be available at most by loan period
                 self._recalculate_holds_in_license_pool(licensepool)
             raise NoAvailableCopies()
 
@@ -502,7 +510,9 @@ class BaseODLAPI(
         # If there was a hold CirculationAPI will take care of deleting it. So we just need to
         # update the license pool to reflect the loan. Since update_availability_from_licenses
         # takes into account holds, we need to tell it to ignore the hold about to be deleted.
-        self.update_licensepool_and_hold_queue(licensepool, ignored_holds={hold} if hold else None)
+        self.update_licensepool_and_hold_queue(
+            licensepool, ignored_holds={hold} if hold else None
+        )
         self.log.info(f"License {license_.identifier} checked out with LoanInfo {loan}")
         return loan
 
@@ -663,8 +673,10 @@ class BaseODLAPI(
         """Set any holds ready for checkout and update the position for all other holds in the queue."""
         holds = licensepool.holds_by_start_date()
         ready_for_checkout = holds[: licensepool.licenses_reserved]
-        waiting = holds[licensepool.licenses_reserved:]
-        self.log.info(f"{len(holds)} holds / {len(ready_for_checkout)} ready / {len(waiting)} waiting")
+        waiting = holds[licensepool.licenses_reserved :]
+        self.log.info(
+            f"{len(holds)} holds / {len(ready_for_checkout)} ready / {len(waiting)} waiting"
+        )
 
         default_reservation_period = self.collection.default_reservation_period
         # If we had available copies, reserve them for the same amount of holds at the top of the queue.
@@ -672,7 +684,9 @@ class BaseODLAPI(
             if hold.position != 0:
                 hold.position = 0
                 # And start the reservation period.
-                hold.end = utc_now() + datetime.timedelta(days=default_reservation_period)
+                hold.end = utc_now() + datetime.timedelta(
+                    days=default_reservation_period
+                )
 
         # Update the rest of the queue.
         for idx, hold in enumerate(waiting):
@@ -681,10 +695,11 @@ class BaseODLAPI(
                 hold.position = position
         self.log.info(f"Recalculated holds in license pool {licensepool}")
 
-    def update_licensepool_and_hold_queue(self, licensepool: LicensePool, ignored_holds: set[Hold] | None = None) -> None:
+    def update_licensepool_and_hold_queue(
+        self, licensepool: LicensePool, ignored_holds: set[Hold] | None = None
+    ) -> None:
         licensepool.update_availability_from_licenses(
-            as_of=utc_now(),
-            ignored_holds=ignored_holds
+            as_of=utc_now(), ignored_holds=ignored_holds
         )
         self._recalculate_holds_in_license_pool(licensepool)
 
@@ -727,7 +742,7 @@ class BaseODLAPI(
         holdinfo = HoldInfo.from_license_pool(
             licensepool,
             start_date=utc_now(),
-            end_date=utc_now() + datetime.timedelta(days=365), # E-Kirjasto
+            end_date=utc_now() + datetime.timedelta(days=365),  # E-Kirjasto
             hold_position=licensepool.patrons_in_hold_queue,
         )
         return holdinfo
@@ -747,7 +762,6 @@ class BaseODLAPI(
         # The hold itself will be deleted by the caller (usually CirculationAPI),
         # so we just need to update the license pool to reflect the released hold.
         self.update_licensepool_and_hold_queue(licensepool, ignored_holds={hold})
-
 
     def patron_activity(self, patron: Patron, pin: str) -> list[LoanInfo | HoldInfo]:
         """Look up non-expired loans for this collection in the database and update holds."""
@@ -803,7 +817,6 @@ class BaseODLAPI(
 
     def update_availability(self, licensepool: LicensePool) -> None:
         licensepool.update_availability_from_licenses()
-        pass
 
 
 class ODLAPI(

@@ -4,21 +4,22 @@ import flask
 from flask import Response
 from flask_babel import lazy_gettext as _
 from pydantic import ValidationError
-from sqlalchemy import select
-from sqlalchemy.orm import Session
 from sqlalchemy.orm.exc import StaleDataError
-from core.util.datetime_helpers import utc_now
+
 from api.controller.circulation_manager import CirculationManagerController
+from api.lcp.status import LoanStatus
 from api.odl import ODLAPI
 from api.odl2 import ODL2API
-from api.problem_details import INVALID_LOAN_FOR_ODL_NOTIFICATION, NO_ACTIVE_LOAN, INVALID_INPUT
+from api.problem_details import (
+    INVALID_INPUT,
+    INVALID_LOAN_FOR_ODL_NOTIFICATION,
+    NO_ACTIVE_LOAN,
+)
 from core.model import get_one
-from core.model.patron import Loan, Patron
-from core.model.credential import Credential
-from core.model.licensing import License
-from api.integration.registry.license_providers import LicenseProvidersRegistry
-from api.lcp.status import LoanStatus
+from core.model.patron import Loan
+from core.util.datetime_helpers import utc_now
 from core.util.problem_detail import ProblemDetailException
+
 
 class ODLNotificationController(CirculationManagerController):
     """Receive notifications from an ODL distributor when the
@@ -46,7 +47,7 @@ class ODLNotificationController(CirculationManagerController):
             raise ProblemDetailException(
                 NO_ACTIVE_LOAN.detailed(_("No loan was found."), status_code=404)
             )
-        
+
         if loan:
             collection = loan.license_pool.collection
             if collection.protocol not in (ODLAPI.label(), ODL2API.label()):
@@ -57,7 +58,9 @@ class ODLNotificationController(CirculationManagerController):
                 try:
                     with self._db.begin_nested():
                         loan.end = utc_now()
-                    api = self.manager.circulation_apis[library.id].api_for_license_pool(loan.license_pool)
+                    api = self.manager.circulation_apis[
+                        library.id
+                    ].api_for_license_pool(loan.license_pool)
                     api.update_availability(loan.license_pool)
                 except StaleDataError:
                     # This can happen if this callback happened while we were returning this

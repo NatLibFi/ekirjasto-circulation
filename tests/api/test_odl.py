@@ -3,14 +3,14 @@ from __future__ import annotations
 import datetime
 import json
 import urllib.parse
-from typing import TYPE_CHECKING, Any
+import uuid
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock
+from urllib.parse import parse_qs, urlparse
+
 import dateutil
-from api.lcp.status import LoanStatus
 import pytest
 from freezegun import freeze_time
-import uuid
-from urllib.parse import parse_qs, urlparse
 from sqlalchemy import delete
 
 from api.circulation import FetchFulfillment, HoldInfo, RedirectFulfillment
@@ -18,15 +18,15 @@ from api.circulation_exceptions import (
     AlreadyOnHold,
     CannotFulfill,
     CannotLoan,
+    CannotReturn,
     CurrentlyAvailable,
     NoAvailableCopies,
-    NoAvailableCopiesWhenReserved,
     NoLicenses,
     NotCheckedOut,
     NotOnHold,
-    CannotReturn
 )
-from api.odl import ODLHoldReaper, ODLImporter, ODLAPI, BaseODLImporter
+from api.lcp.status import LoanStatus
+from api.odl import ODLAPI, BaseODLImporter, ODLHoldReaper, ODLImporter
 from core.model import (
     Collection,
     DataSource,
@@ -48,18 +48,16 @@ from tests.fixtures.api_odl import (
     OdlImportTemplatedFixture,
 )
 from tests.fixtures.database import DatabaseTransactionFixture
-from tests.fixtures.odl import OPDS2WithODLApiFixture, ODLTestFixture
+from tests.fixtures.odl import ODLTestFixture, OPDS2WithODLApiFixture
 
 if TYPE_CHECKING:
     from core.model import LicensePool
 
 
 class TestODLAPI:
-
     @pytest.mark.parametrize(
         "status_code",
-        [pytest.param(200, id="existing loan"),
-         pytest.param(200, id="new loan")],
+        [pytest.param(200, id="existing loan"), pytest.param(200, id="new loan")],
     )
     def test__request_loan_status_success(
         self, opds2_with_odl_api_fixture: OPDS2WithODLApiFixture, status_code: int
@@ -76,7 +74,6 @@ class TestODLAPI:
 
         assert "http://loan" == opds2_with_odl_api_fixture.mock_http.requests.pop()
         assert requested_document == expected_document
-
 
     @pytest.mark.parametrize(
         "status, headers, content, exception, expected_log_message",
@@ -170,7 +167,6 @@ class TestODLAPI:
         # The license on the pool has also been updated
         assert 7 == opds2_with_odl_api_fixture.license.checkouts_available
 
-
     def test_checkin_success_with_holds_queue(
         self,
         db: DatabaseTransactionFixture,
@@ -202,7 +198,6 @@ class TestODLAPI:
         assert 0 == opds2_with_odl_api_fixture.pool.licenses_available
         assert 1 == opds2_with_odl_api_fixture.pool.licenses_reserved
         assert 1 == opds2_with_odl_api_fixture.pool.patrons_in_hold_queue
-
 
     def test_checkin_not_checked_out(
         self,
@@ -239,7 +234,6 @@ class TestODLAPI:
                 "pin",
                 opds2_with_odl_api_fixture.pool,
             )
-
 
     def test_checkin_cannot_return(
         self,
@@ -306,7 +300,6 @@ class TestODLAPI:
                 opds2_with_odl_api_fixture.patron, "pin", pool
             )
 
-
     def test__notification_url(self):
         short_name = "short_name"
         patron_id = str(uuid.uuid4())
@@ -321,23 +314,16 @@ class TestODLAPI:
 
         # Test that we generated the expected URL
         with app.test_request_context():
-            notification_url = ODLAPI._notification_url(
-                short_name, license_id
-            )
+            notification_url = ODLAPI._notification_url(short_name, license_id)
             print(notification_url)
 
-        assert (
-            get_path(notification_url)
-            == f"/{short_name}/odl_notify/{license_id}"
-        )
+        assert get_path(notification_url) == f"/{short_name}/odl_notify/{license_id}"
 
         # Test that our mock generates the same URL
         with app.test_request_context():
             assert get_path(
                 ODLAPI._notification_url(short_name, license_id)
-            ) == get_path(
-                ODLAPI._notification_url(short_name, license_id)
-            )
+            ) == get_path(ODLAPI._notification_url(short_name, license_id))
 
     def test_checkout_success(
         self,
@@ -416,7 +402,6 @@ class TestODLAPI:
         )
         assert notification_url == expected_notification_url
 
-
     def test_checkout_open_access(
         self,
         db: DatabaseTransactionFixture,
@@ -437,7 +422,6 @@ class TestODLAPI:
         assert loan.start_date is None
         assert loan.end_date is None
         assert loan.external_identifier is None
-
 
     def test_checkout_success_with_hold(
         self,
@@ -472,8 +456,9 @@ class TestODLAPI:
         # The book is no longer reserved for the patron.
         assert 0 == opds2_with_odl_api_fixture.pool.licenses_reserved
         assert 0 == opds2_with_odl_api_fixture.pool.licenses_available
-        assert 0 == opds2_with_odl_api_fixture.pool.patrons_in_hold_queue # CirculationAPI removes the hold.
-
+        assert (
+            0 == opds2_with_odl_api_fixture.pool.patrons_in_hold_queue
+        )  # CirculationAPI removes the hold.
 
     def test_checkout_expired_hold(
         self,
@@ -496,7 +481,6 @@ class TestODLAPI:
         with opds2_with_odl_api_fixture.mock_http.patch():
             with pytest.raises(NoAvailableCopies):
                 opds2_with_odl_api_fixture.api_checkout()
-
 
     def test_checkout_no_available_copies(
         self,
@@ -550,7 +534,6 @@ class TestODLAPI:
 
         assert 0 == db.session.query(Loan).count()
 
-
     @pytest.mark.parametrize(
         "response_type",
         ["application/api-problem+json", "application/problem+json"],
@@ -592,7 +575,6 @@ class TestODLAPI:
         assert opds2_with_odl_api_fixture.pool.licenses_available == 0
         assert license_1.checkouts_available == 0
         assert license_2.checkouts_available == 0
-
 
     def test_checkout_many_licenses(
         self,
@@ -684,8 +666,10 @@ class TestODLAPI:
         )
         # Set the reservation period and loan period.
         library = hold.patron.library
-        config = opds2_with_odl_api_fixture.collection.integration_configuration.for_library(
-            library.id
+        config = (
+            opds2_with_odl_api_fixture.collection.integration_configuration.for_library(
+                library.id
+            )
         )
         assert config is not None
         DatabaseTransactionFixture.set_settings(
@@ -696,7 +680,9 @@ class TestODLAPI:
             },
         )
         opds2_with_odl_api_fixture.db.session.commit()
-        loan_period = now + datetime.timedelta(days=opds2_with_odl_api_fixture.collection.default_loan_period(library))
+        loan_period = now + datetime.timedelta(
+            days=opds2_with_odl_api_fixture.collection.default_loan_period(library)
+        )
 
         print(opds2_with_odl_api_fixture.pool)
         opds2_with_odl_api_fixture.setup_license(concurrency=1, available=1)
@@ -738,7 +724,6 @@ class TestODLAPI:
         assert hold2.position == 2
         assert hold2.end == now + datetime.timedelta(days=365)
 
-
     def test_checkout_failures(
         self,
         db: DatabaseTransactionFixture,
@@ -764,7 +749,6 @@ class TestODLAPI:
         with pytest.raises(BadResponseException):
             opds2_with_odl_api_fixture.api_checkout()
 
-
     def test_checkout_no_licenses(
         self,
         db: DatabaseTransactionFixture,
@@ -776,7 +760,6 @@ class TestODLAPI:
             opds2_with_odl_api_fixture.api_checkout()
 
         assert 0 == db.session.query(Loan).count()
-
 
     def test_checkout_when_all_licenses_expired(
         self, opds2_with_odl_api_fixture: OPDS2WithODLApiFixture
@@ -802,7 +785,6 @@ class TestODLAPI:
 
         with pytest.raises(NoLicenses):
             opds2_with_odl_api_fixture.api_checkout()
-
 
     def test_checkout_cannot_loan(
         self,
@@ -831,7 +813,6 @@ class TestODLAPI:
             with pytest.raises(CannotLoan):
                 opds2_with_odl_api_fixture.api_checkout()
         assert 0 == db.session.query(Loan).count()
-
 
     @pytest.mark.parametrize(
         "drm_scheme, correct_type, correct_link, links",
@@ -968,7 +949,6 @@ class TestODLAPI:
         assert fulfillment.content_link == pool.open_access_download_url
         assert fulfillment.content_type == lpdm.delivery_mechanism.content_type
 
-
     @pytest.mark.parametrize(
         "status_document",
         [
@@ -1018,7 +998,9 @@ class TestODLAPI:
         opds2_with_odl_api_fixture: OPDS2WithODLApiFixture,
     ) -> None:
         with opds2_with_odl_api_fixture.mock_http.patch():
-            loan = opds2_with_odl_api_fixture.checkout(patron=db.patron(), create_loan=True)
+            loan = opds2_with_odl_api_fixture.checkout(
+                patron=db.patron(), create_loan=True
+            )
             hold = opds2_with_odl_api_fixture.place_hold()
 
         assert 1 == opds2_with_odl_api_fixture.pool.patrons_in_hold_queue
@@ -1028,7 +1010,6 @@ class TestODLAPI:
         assert hold.start_date is not None
         assert hold.start_date == utc_now()
         assert 1 == hold.hold_position
-
 
     def test_place_hold_already_on_hold(
         self, opds2_with_odl_api_fixture: OPDS2WithODLApiFixture
@@ -1046,7 +1027,6 @@ class TestODLAPI:
             with pytest.raises(CurrentlyAvailable):
                 opds2_with_odl_api_fixture.place_hold()
 
-
     def test_release_hold_success(
         self,
         db: DatabaseTransactionFixture,
@@ -1059,7 +1039,7 @@ class TestODLAPI:
             opds2_with_odl_api_fixture.checkout(patron=loan_patron, create_loan=True)
             opds2_with_odl_api_fixture.place_hold(patron=hold1_patron, create_hold=True)
             opds2_with_odl_api_fixture.place_hold(patron=hold2_patron, create_hold=True)
-        
+
         assert 0 == opds2_with_odl_api_fixture.pool.licenses_available
         assert 0 == opds2_with_odl_api_fixture.pool.licenses_reserved
         assert 2 == opds2_with_odl_api_fixture.pool.patrons_in_hold_queue
@@ -1077,14 +1057,13 @@ class TestODLAPI:
         assert 1 == opds2_with_odl_api_fixture.pool.licenses_reserved
         assert 1 == opds2_with_odl_api_fixture.pool.patrons_in_hold_queue
 
-        with opds2_with_odl_api_fixture.mock_http.patch():    
+        with opds2_with_odl_api_fixture.mock_http.patch():
             opds2_with_odl_api_fixture.api.release_hold(
                 hold2_patron, "pin", opds2_with_odl_api_fixture.pool
             )
         assert 1 == opds2_with_odl_api_fixture.pool.licenses_available
         assert 0 == opds2_with_odl_api_fixture.pool.licenses_reserved
         assert 0 == opds2_with_odl_api_fixture.pool.patrons_in_hold_queue
-
 
     def test_release_hold_not_on_hold(
         self, opds2_with_odl_api_fixture: OPDS2WithODLApiFixture
@@ -1097,7 +1076,6 @@ class TestODLAPI:
             opds2_with_odl_api_fixture.pool,
         )
 
-
     def _holdinfo_from_hold(self, hold: Hold) -> HoldInfo:
         pool: LicensePool = hold.license_pool
         return HoldInfo.from_license_pool(
@@ -1108,7 +1086,9 @@ class TestODLAPI:
         )
 
     def test_update_licensepool_and_hold_queue(
-        self, db: DatabaseTransactionFixture, opds2_with_odl_api_fixture: OPDS2WithODLApiFixture
+        self,
+        db: DatabaseTransactionFixture,
+        opds2_with_odl_api_fixture: OPDS2WithODLApiFixture,
     ) -> None:
         licenses = [opds2_with_odl_api_fixture.license]
 
@@ -1125,7 +1105,9 @@ class TestODLAPI:
         opds2_with_odl_api_fixture.pool.patrons_in_hold_queue = 0
         last_update = utc_now() - datetime.timedelta(minutes=5)
         opds2_with_odl_api_fixture.work.last_update_time = last_update
-        opds2_with_odl_api_fixture.api.update_licensepool_and_hold_queue(opds2_with_odl_api_fixture.pool)
+        opds2_with_odl_api_fixture.api.update_licensepool_and_hold_queue(
+            opds2_with_odl_api_fixture.pool
+        )
         assert 1 == opds2_with_odl_api_fixture.pool.licenses_available
         assert 0 == opds2_with_odl_api_fixture.pool.licenses_reserved
         assert 0 == opds2_with_odl_api_fixture.pool.patrons_in_hold_queue
@@ -1140,7 +1122,9 @@ class TestODLAPI:
         later_hold, _ = opds2_with_odl_api_fixture.pool.on_hold_to(
             db.patron(), start=utc_now() + datetime.timedelta(days=1), position=2
         )
-        opds2_with_odl_api_fixture.api.update_licensepool_and_hold_queue(opds2_with_odl_api_fixture.pool)
+        opds2_with_odl_api_fixture.api.update_licensepool_and_hold_queue(
+            opds2_with_odl_api_fixture.pool
+        )
 
         # The pool's licenses were updated.
         assert 0 == opds2_with_odl_api_fixture.pool.licenses_available
@@ -1162,7 +1146,9 @@ class TestODLAPI:
             opds2_with_odl_api_fixture.pool, terms_concurrency=1, checkouts_available=1
         )
         licenses.append(l)
-        opds2_with_odl_api_fixture.api.update_licensepool_and_hold_queue(opds2_with_odl_api_fixture.pool)
+        opds2_with_odl_api_fixture.api.update_licensepool_and_hold_queue(
+            opds2_with_odl_api_fixture.pool
+        )
 
         assert 0 == opds2_with_odl_api_fixture.pool.licenses_available
         assert 2 == opds2_with_odl_api_fixture.pool.licenses_reserved
@@ -1178,7 +1164,9 @@ class TestODLAPI:
             opds2_with_odl_api_fixture.pool, terms_concurrency=1, checkouts_available=1
         )
         licenses.append(l)
-        opds2_with_odl_api_fixture.api.update_licensepool_and_hold_queue(opds2_with_odl_api_fixture.pool)
+        opds2_with_odl_api_fixture.api.update_licensepool_and_hold_queue(
+            opds2_with_odl_api_fixture.pool
+        )
         assert 1 == opds2_with_odl_api_fixture.pool.licenses_available
         assert 2 == opds2_with_odl_api_fixture.pool.licenses_reserved
         assert 2 == opds2_with_odl_api_fixture.pool.patrons_in_hold_queue
@@ -1186,7 +1174,9 @@ class TestODLAPI:
         # License pool is updated when the holds are removed.
         db.session.delete(hold)
         db.session.delete(later_hold)
-        opds2_with_odl_api_fixture.api.update_licensepool_and_hold_queue(opds2_with_odl_api_fixture.pool)
+        opds2_with_odl_api_fixture.api.update_licensepool_and_hold_queue(
+            opds2_with_odl_api_fixture.pool
+        )
         assert 3 == opds2_with_odl_api_fixture.pool.licenses_available
         assert 0 == opds2_with_odl_api_fixture.pool.licenses_reserved
         assert 0 == opds2_with_odl_api_fixture.pool.patrons_in_hold_queue
@@ -1214,7 +1204,9 @@ class TestODLAPI:
                 position=i + 1,
             )
             holds.append(hold)
-        opds2_with_odl_api_fixture.api.update_licensepool_and_hold_queue(opds2_with_odl_api_fixture.pool)
+        opds2_with_odl_api_fixture.api.update_licensepool_and_hold_queue(
+            opds2_with_odl_api_fixture.pool
+        )
         assert 2 == opds2_with_odl_api_fixture.pool.licenses_reserved
         assert 0 == opds2_with_odl_api_fixture.pool.licenses_available
         assert 3 == opds2_with_odl_api_fixture.pool.patrons_in_hold_queue
@@ -1238,10 +1230,12 @@ class TestODLAPI:
         assert 3 == opds2_with_odl_api_fixture.pool.patrons_in_hold_queue
         assert 0 == holds[0].position
         assert 0 == holds[1].position
-        assert 0 == holds[2].position # The last hold also became ready for checkout.
+        assert 0 == holds[2].position  # The last hold also became ready for checkout.
 
     def test_patron_activity_loan(
-        self, db: DatabaseTransactionFixture, opds2_with_odl_api_fixture: OPDS2WithODLApiFixture
+        self,
+        db: DatabaseTransactionFixture,
+        opds2_with_odl_api_fixture: OPDS2WithODLApiFixture,
     ) -> None:
         # No loans yet.
         assert [] == opds2_with_odl_api_fixture.api.patron_activity(
@@ -1249,22 +1243,36 @@ class TestODLAPI:
         )
 
         # One loan.
-        loan, _ = opds2_with_odl_api_fixture.pool.loan_to(opds2_with_odl_api_fixture.patron, end=utc_now() + datetime.timedelta(weeks=2))
+        loan, _ = opds2_with_odl_api_fixture.pool.loan_to(
+            opds2_with_odl_api_fixture.patron,
+            end=utc_now() + datetime.timedelta(weeks=2),
+        )
 
         activity = opds2_with_odl_api_fixture.api.patron_activity(
             opds2_with_odl_api_fixture.patron, "pin"
         )
         assert 1 == len(activity)
-        assert opds2_with_odl_api_fixture.collection == activity[0].collection(db.session)
-        assert opds2_with_odl_api_fixture.pool.identifier.type == activity[0].identifier_type
-        assert opds2_with_odl_api_fixture.pool.identifier.identifier == activity[0].identifier
+        assert opds2_with_odl_api_fixture.collection == activity[0].collection(
+            db.session
+        )
+        assert (
+            opds2_with_odl_api_fixture.pool.identifier.type
+            == activity[0].identifier_type
+        )
+        assert (
+            opds2_with_odl_api_fixture.pool.identifier.identifier
+            == activity[0].identifier
+        )
         assert loan.start == activity[0].start_date
         assert loan.end == activity[0].end_date
         assert loan.external_identifier == activity[0].external_identifier
 
         # Two loans.
         pool2 = db.licensepool(None, collection=opds2_with_odl_api_fixture.collection)
-        loan2, _ = pool2.loan_to(opds2_with_odl_api_fixture.patron, end=utc_now() + datetime.timedelta(weeks=2))
+        loan2, _ = pool2.loan_to(
+            opds2_with_odl_api_fixture.patron,
+            end=utc_now() + datetime.timedelta(weeks=2),
+        )
         license2 = db.license(pool2, terms_concurrency=1, checkouts_available=1)
         activity = opds2_with_odl_api_fixture.api.patron_activity(
             opds2_with_odl_api_fixture.patron, "pin"
@@ -1294,10 +1302,14 @@ class TestODLAPI:
         assert 1 == len(activity)
         # Open access loans are included.
         oa_work = db.work(
-            with_open_access_download=True, collection=opds2_with_odl_api_fixture.collection
+            with_open_access_download=True,
+            collection=opds2_with_odl_api_fixture.collection,
         )
         pool3 = oa_work.license_pools[0]
-        loan3, _ = pool3.loan_to(opds2_with_odl_api_fixture.patron, end=utc_now() + datetime.timedelta(weeks=2))
+        loan3, _ = pool3.loan_to(
+            opds2_with_odl_api_fixture.patron,
+            end=utc_now() + datetime.timedelta(weeks=2),
+        )
 
         activity = opds2_with_odl_api_fixture.api.patron_activity(
             opds2_with_odl_api_fixture.patron, "pin"
@@ -1356,6 +1368,7 @@ class TestODLAPI:
         assert 0 == db.session.query(Hold).count()
         assert 1 == pool2.licenses_available
         assert 0 == pool2.licenses_reserved
+
 
 class TestODLImporter:
     @freeze_time("2019-01-01T00:00:00+00:00")

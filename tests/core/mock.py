@@ -1,8 +1,5 @@
 import json
 import logging
-from typing import Any
-
-from requests import Request, Response
 
 from core.coverage import (
     BibliographicCoverageProvider,

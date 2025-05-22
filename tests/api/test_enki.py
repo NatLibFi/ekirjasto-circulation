@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from api.circulation import FulfillmentInfo, LoanInfo
+from api.circulation import FulfillmentInfo
 from api.circulation_exceptions import *
 from api.enki import BibliographicParser, EnkiAPI, EnkiCollectionReaper, EnkiImport
 from core.analytics import Analytics

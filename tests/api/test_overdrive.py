@@ -6,7 +6,6 @@ import json
 import logging
 import os
 import random
-from datetime import timedelta
 from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, create_autospec, patch
 
@@ -14,7 +13,7 @@ import pytest
 from requests import Response
 from sqlalchemy.orm.exc import StaleDataError
 
-from api.circulation import CirculationAPI, FulfillmentInfo, HoldInfo, LoanInfo
+from api.circulation import CirculationAPI, FulfillmentInfo
 from api.circulation_exceptions import *
 from api.config import Configuration
 from api.overdrive import (
@@ -2200,6 +2199,7 @@ class TestExtractData:
             "http://patron.api.overdrive.com/v1/patrons/me/checkouts/76C1B7D0-17F4-4C05-8397-C66C17411584/formats/ebook-epub-adobe/downloadlink?errorpageurl=http://foo.com/"
             == url
         )
+
 
 class TestOverdriveManifestFulfillmentInfo:
     def test_as_response(self, overdrive_api_fixture: OverdriveAPIFixture):

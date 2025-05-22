@@ -3,25 +3,19 @@ from __future__ import annotations
 from typing import Any
 
 import flask
-from flask import Response, redirect
+from flask import Response
 from flask_babel import lazy_gettext as _
-from lxml import etree
 from werkzeug import Response as wkResponse
 
+from api.circulation import UrlFulfillment
 from api.circulation_exceptions import (
     AuthorizationBlocked,
     AuthorizationExpired,
-    CannotFulfill,
     CannotHold,
     CannotLoan,
-    CannotReleaseHold,
     CannotRenew,
-    CannotReturn,
     CirculationException,
-    DeliveryMechanismConflict,
     DeliveryMechanismError,
-    FormatNotAvailable,
-    NoActiveLoan,
     NoAvailableCopiesWhenReserved,
     NoOpenAccessDownload,
     NotFoundOnRemote,
@@ -29,19 +23,15 @@ from api.circulation_exceptions import (
     PatronAuthorizationFailedException,
     PatronHoldLimitReached,
     PatronLoanLimitReached,
-    RemoteRefusedReturn,
+    RemoteInitiatedServerError,
 )
 from api.controller.circulation_manager import CirculationManagerController
 from api.problem_details import (
     BAD_DELIVERY_MECHANISM,
-    CANNOT_FULFILL,
     CANNOT_RELEASE_HOLD,
     CHECKOUT_FAILED,
-    COULD_NOT_MIRROR_TO_REMOTE,
-    DELIVERY_CONFLICT,
     HOLD_FAILED,
     INVALID_CREDENTIALS,
-    NO_ACCEPTABLE_FORMAT,
     NO_ACTIVE_LOAN,
     NO_ACTIVE_LOAN_OR_HOLD,
     NO_LICENSES,
@@ -50,16 +40,12 @@ from api.problem_details import (
     RENEW_FAILED,
 )
 from core.feed.acquisition import OPDSAcquisitionFeed
-from core.model import DataSource, DeliveryMechanism, Hold, Loan, Patron, Representation
-from core.util.http import RemoteIntegrationException
-from core.util.opds_writer import OPDSFeed
-from core.util.problem_detail import ProblemDetail, BaseProblemDetailException
-from core.exceptions import BaseError
-from api.circulation_exceptions import RemoteInitiatedServerError, CirculationException
-from api.circulation import UrlFulfillment
-from core.util.flask_util import OPDSEntryResponse
-from core.model.licensing import LicensePool, LicensePoolDeliveryMechanism
+from core.model import Hold, Loan, Patron, Representation
 from core.model.library import Library
+from core.model.licensing import LicensePool, LicensePoolDeliveryMechanism
+from core.util.flask_util import OPDSEntryResponse
+from core.util.problem_detail import BaseProblemDetailException, ProblemDetail
+
 
 class LoanController(CirculationManagerController):
     def sync(self) -> Response:
@@ -440,7 +426,6 @@ class LoanController(CirculationManagerController):
             return fulfillment.response()
         except BaseProblemDetailException as e:
             return e.problem_detail
-
 
     def can_fulfill_without_loan(
         self,

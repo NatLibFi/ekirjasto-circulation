@@ -692,9 +692,7 @@ def client_libraries(library_uuid):
 
 
 # Loan notifications for ODL distributors, eg. Feedbooks
-@library_route(
-    "/odl_notify/<license_identifier>", methods=["GET", "POST"]
-)
+@library_route("/odl_notify/<license_identifier>", methods=["GET", "POST"])
 @has_library
 @returns_problem_detail
 def odl_notify(license_identifier: str) -> Response:

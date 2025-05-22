@@ -10,7 +10,7 @@ import flask
 import pytest
 from flask import url_for
 
-from api.circulation import Fulfillment, FulfillmentInfo, LoanInfo
+from api.circulation import Fulfillment, LoanInfo
 from api.lanes import (
     ContributorFacets,
     ContributorLane,
@@ -35,7 +35,6 @@ from core.model import (
     Edition,
     Identifier,
     LicensePool,
-    MediaTypes,
     Resource,
     get_one,
     tuple_to_numericrange,

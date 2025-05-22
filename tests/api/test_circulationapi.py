@@ -8,15 +8,16 @@ from unittest.mock import MagicMock, create_autospec
 import flask
 import pytest
 from flask import Flask
+from freezegun import freeze_time
 
 from api.circulation import (
     APIAwareFulfillmentInfo,
     BaseCirculationAPI,
     CirculationAPI,
     CirculationInfo,
+    FulfillmentInfo,
     HoldInfo,
     LoanInfo,
-    FulfillmentInfo
 )
 from api.circulation_exceptions import *
 from core.analytics import Analytics
@@ -27,16 +28,11 @@ from core.mock_analytics_provider import MockAnalyticsProvider
 from core.model import (
     CirculationEvent,
     DataSource,
-    DeliveryMechanism,
     ExternalIntegration,
     Hold,
-    Hyperlink,
     Identifier,
     Loan,
-    Representation,
-    RightsStatus,
 )
-from core.opds_import import OPDSAPI
 from core.util.datetime_helpers import utc_now
 from tests.api.mockapi.bibliotheca import MockBibliothecaAPI
 from tests.api.mockapi.circulation import (
@@ -44,10 +40,9 @@ from tests.api.mockapi.circulation import (
     MockPatronActivityCirculationAPI,
     MockRemoteAPI,
 )
-from tests.fixtures.api_bibliotheca_files import BibliothecaFilesFixture
 from tests.fixtures.database import DatabaseTransactionFixture
 from tests.fixtures.library import LibraryFixture
-from freezegun import freeze_time
+
 
 class CirculationAPIFixture:
     def __init__(self, db: DatabaseTransactionFixture):
@@ -843,7 +838,7 @@ class TestCirculationAPI:
             circulation_api.pool,
             hold_position=10,
             start_date=now,
-            end_date=now + timedelta(seconds=3600)
+            end_date=now + timedelta(seconds=3600),
         )
         circulation_api.remote.queue_hold(holdinfo)
         loan, hold, is_new = self.borrow(circulation_api)
@@ -1219,7 +1214,6 @@ class TestCirculationAPI:
         )
         assert [] == circulation_api.patron.loans
         assert circulation_api.patron.last_loan_activity_sync > updated
-
 
     def test_can_fulfill_without_loan(self, circulation_api: CirculationAPIFixture):
         """Can a title can be fulfilled without an active loan?  It depends on

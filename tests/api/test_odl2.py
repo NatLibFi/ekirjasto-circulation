@@ -21,10 +21,8 @@ from core.model import (
     LicensePoolDeliveryMechanism,
     MediaTypes,
     Work,
-    create,
 )
 from core.model.constants import IdentifierConstants
-from core.model.patron import Hold
 from core.model.resource import Hyperlink
 from tests.fixtures.api_odl import (
     LicenseHelper,
@@ -33,7 +31,7 @@ from tests.fixtures.api_odl import (
     ODL2APIFilesFixture,
 )
 from tests.fixtures.database import DatabaseTransactionFixture
-from tests.fixtures.odl import ODL2APITestFixture, ODL2ApiFixture, OPDS2WithODLApiFixture
+from tests.fixtures.odl import ODL2ApiFixture
 
 
 class TestODL2Importer:
@@ -381,8 +379,10 @@ class TestODL2API:
 
         with odl2_api_fixture.mock_http.patch():
             response = odl2_api_fixture.checkout(
-                    patron=odl2_api_fixture.patron, pool=odl2_api_fixture.work.active_license_pool(), create_loan=True
-                )
+                patron=odl2_api_fixture.patron,
+                pool=odl2_api_fixture.work.active_license_pool(),
+                create_loan=True,
+            )
         # Did the loan take place correctly?
         assert (
             response.identifier
@@ -393,7 +393,9 @@ class TestODL2API:
         work2: Work = odl2_api_fixture.create_work(odl2_api_fixture.collection)
         with pytest.raises(PatronLoanLimitReached) as exc:
             with odl2_api_fixture.mock_http.patch():
-                odl2_api_fixture.checkout(patron=odl2_api_fixture.patron, pool=work2.active_license_pool())
+                odl2_api_fixture.checkout(
+                    patron=odl2_api_fixture.patron, pool=work2.active_license_pool()
+                )
         assert exc.value.limit == 1
 
     def test_hold_limit(
@@ -414,7 +416,9 @@ class TestODL2API:
             == odl2_api_fixture.work.presentation_edition.primary_identifier.identifier
         )
 
-        hold_response = odl2_api_fixture.place_hold(odl2_api_fixture.patron, pool, create_hold=True)
+        hold_response = odl2_api_fixture.place_hold(
+            odl2_api_fixture.patron, pool, create_hold=True
+        )
         # Hold was successful
         assert hold_response.hold_position == 1
 

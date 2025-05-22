@@ -11,14 +11,14 @@ from collections.abc import Iterable
 from threading import Thread
 from types import TracebackType
 from typing import Any, Literal, TypeVar
-from requests import Response
+
 import flask
 from flask import Response
 from flask_babel import lazy_gettext as _
 from pydantic import PositiveInt
-from sqlalchemy.orm import Query
-from sqlalchemy.orm import Session
+from requests import Response
 from sqlalchemy import select
+from sqlalchemy.orm import Query, Session
 from typing_extensions import Self
 
 from api.circulation_exceptions import *
@@ -54,9 +54,9 @@ from core.model import (
 from core.model.integration import IntegrationConfiguration
 from core.model.patron import LoanCheckout
 from core.util.datetime_helpers import utc_now
-from core.util.log import LoggerMixin
 from core.util.http import HTTP, BadResponseException
-from core.metadata_layer import FormatData
+from core.util.log import LoggerMixin
+
 
 class CirculationInfo:
     def __init__(
@@ -119,6 +119,7 @@ class CirculationInfo:
         else:
             date = datetime.datetime.strftime(d, "%Y/%m/%d %H:%M:%S")
             return date
+
 
 # TODO: Can be deleted, only used in Overdrive
 class DeliveryMechanismInfo(CirculationInfo):
@@ -210,6 +211,7 @@ class DeliveryMechanismInfo(CirculationInfo):
         )
         loan.fulfillment = lpdm
         return lpdm
+
 
 class FulfillmentInfo(CirculationInfo):
     """A record of a technique that can be used *right now* to fulfill
@@ -320,6 +322,7 @@ class FulfillmentInfo(CirculationInfo):
     def content_expires(self, value: datetime.datetime | None) -> None:
         self._content_expires = value
 
+
 # TODO: Remove this class, it's only used by Axis.
 class APIAwareFulfillmentInfo(FulfillmentInfo, ABC):
     """This that acts like FulfillmentInfo but is prepared to make an API
@@ -418,6 +421,7 @@ class APIAwareFulfillmentInfo(FulfillmentInfo, ABC):
     @content_expires.setter
     def content_expires(self, value: datetime.datetime | None) -> None:
         raise NotImplementedError()
+
 
 class Fulfillment(ABC):
     """
@@ -552,9 +556,7 @@ class LoanAndHoldInfoMixin:
         """Find the Collection to which this object belongs."""
         collection = Collection.by_id(_db, self.collection_id)
         if collection is None:
-            raise ValueError(
-                f"collection_id {self.collection_id} could not be found."
-            )
+            raise ValueError(f"collection_id {self.collection_id} could not be found.")
         return collection
 
     def license_pool(self, _db: Session) -> LicensePool:
@@ -581,7 +583,7 @@ class LoanInfo(LoanAndHoldInfoMixin):
     end_date: datetime.datetime | None
     external_identifier: str | None = None
     locked_to: DeliveryMechanismInfo | None = None
-    fulfillment_info: FulfillmentInfo | None = None,
+    fulfillment_info: FulfillmentInfo | None = (None,)
     license_identifier: str | None = None
 
     @classmethod
@@ -623,7 +625,7 @@ class LoanInfo(LoanAndHoldInfoMixin):
             self.fulfillment_info,
             self.locked_to,
             self.license_identifier,
-            self.collection_id
+            self.collection_id,
         )
 
     def create_or_update(
@@ -634,12 +636,16 @@ class LoanInfo(LoanAndHoldInfoMixin):
 
         loanable: LicensePool | License
         if self.license_identifier is not None:
-            loanable = session.execute(
-                select(License).where(
-                    License.identifier == self.license_identifier,
-                    License.license_pool == license_pool,
+            loanable = (
+                session.execute(
+                    select(License).where(
+                        License.identifier == self.license_identifier,
+                        License.license_pool == license_pool,
+                    )
                 )
-            ).scalars().first()
+                .scalars()
+                .first()
+            )
         else:
             loanable = license_pool
 
@@ -716,6 +722,7 @@ class HoldInfo(LoanAndHoldInfoMixin):
             end=self.end_date,
             position=self.hold_position,
         )
+
 
 class BaseCirculationEbookLoanSettings(BaseSettings):
     """A mixin for settings that apply to ebook loans."""

@@ -1,11 +1,14 @@
 import json
-from typing import Any
 from collections.abc import Generator
 from contextlib import contextmanager
+from typing import Any
 from unittest.mock import patch
-from typing_extensions import Unpack
+
 from requests import Request, Response
+from typing_extensions import Unpack
+
 from core.util.http import HTTP, GetRequestKwargs, RequestKwargs
+
 
 class MockHTTPClient:
     def __init__(self) -> None:
@@ -63,6 +66,7 @@ class MockRequestsRequest:
         self.url = url
         self.method = method
         self.headers = headers or dict()
+
 
 class MockRequestsResponse(Response):
     """A mock object that simulates an HTTP response from the

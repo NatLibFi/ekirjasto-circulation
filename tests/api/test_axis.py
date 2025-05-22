@@ -13,7 +13,6 @@ import pytest
 
 from api.axis import (
     AudiobookMetadataParser,
-    AvailabilityResponseParser,
     Axis360AcsFulfillmentInfo,
     Axis360API,
     Axis360APIConstants,
@@ -31,7 +30,6 @@ from api.axis import (
     HoldResponseParser,
     JSONResponseParser,
 )
-from api.circulation import FulfillmentInfo, HoldInfo, LoanInfo
 from api.circulation_exceptions import *
 from api.web_publication_manifest import FindawayManifest, SpineItem
 from core.analytics import Analytics
@@ -67,7 +65,6 @@ from core.util.flask_util import Response
 from core.util.http import RemoteIntegrationException
 from core.util.problem_detail import ProblemDetail, ProblemError
 from tests.api.mockapi.axis import MockAxis360API
-from tests.fixtures.library import LibraryFixture
 
 if TYPE_CHECKING:
     from tests.fixtures.api_axis_files import AxisFilesFixture
@@ -1212,7 +1209,6 @@ class TestCheckinResponseParser:
 
 
 class TestCheckoutResponseParser:
-
     def test_parse_already_checked_out(self, axis360parsers: Axis360FixturePlusParsers):
         data = axis360parsers.sample_data("already_checked_out.xml")
         parser = CheckoutResponseParser(MagicMock())
@@ -1225,7 +1221,6 @@ class TestCheckoutResponseParser:
 
 
 class TestHoldResponseParser:
-
     def test_parse_already_on_hold(self, axis360parsers: Axis360FixturePlusParsers):
         data = axis360parsers.sample_data("already_on_hold.xml")
         parser = HoldResponseParser(MagicMock())
@@ -1242,6 +1237,7 @@ class TestHoldReleaseResponseParser:
         data = axis360parsers.sample_data("release_hold_failure.xml")
         parser = HoldReleaseResponseParser(MagicMock())
         pytest.raises(NotOnHold, parser.process_first, data)
+
 
 class TestJSONResponseParser:
     def test__required_key(self):

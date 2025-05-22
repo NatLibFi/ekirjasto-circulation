@@ -493,6 +493,7 @@ class TestOPDSForDistributorsAPI:
             < 5
         )
 
+
 class TestOPDSForDistributorsImporter:
     def test_import(self, opds_dist_api_fixture: OPDSForDistributorsAPIFixture):
         feed = opds_dist_api_fixture.files.sample_data("biblioboard_mini_feed.opds")

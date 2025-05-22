@@ -1,6 +1,7 @@
-from functools import partial
 import json
-from typing import Any, Mapping, Sequence
+from collections.abc import Mapping, Sequence
+from functools import partial
+from typing import Any
 from unittest import mock
 
 import pytest
@@ -19,6 +20,7 @@ from core.util.http import (
 from core.util.problem_detail import ProblemDetail, ProblemError
 from tests.core.mock import MockRequestsResponse
 
+
 class FakeRequest:
     def __init__(self, response: Response | None = None) -> None:
         self.agent: str | None = None
@@ -31,6 +33,7 @@ class FakeRequest:
         self.args = args
         self.kwargs = kwargs
         return self.response
+
 
 class TestHTTP:
     def test_series(self) -> None:
@@ -357,7 +360,7 @@ class TestBadResponseException:
         )
         print(repr(doc["debug_message"]))
         assert (
-            'Bad response from http://url/: Terrible response, just terrible\n\nStatus code: 102\nContent: nonsense\n\nStatus code: 102\nContent: nonsense'
+            "Bad response from http://url/: Terrible response, just terrible\n\nStatus code: 102\nContent: nonsense\n\nStatus code: 102\nContent: nonsense"
             == doc["debug_message"]
         )
 

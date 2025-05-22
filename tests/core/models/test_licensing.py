@@ -6,7 +6,6 @@ from unittest.mock import MagicMock, PropertyMock
 import pytest
 from sqlalchemy.exc import IntegrityError
 
-from core.util import first_or_default
 from core.mock_analytics_provider import MockAnalyticsProvider
 from core.model import create
 from core.model.circulationevent import CirculationEvent
@@ -27,6 +26,7 @@ from core.model.licensing import (
     RightsStatus,
 )
 from core.model.resource import Hyperlink, Representation
+from core.util import first_or_default
 from core.util.datetime_helpers import utc_now
 from tests.fixtures.database import DatabaseTransactionFixture
 

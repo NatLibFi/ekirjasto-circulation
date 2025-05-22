@@ -1,16 +1,19 @@
-import json
 import types
 
-from core.util.problem_detail import ProblemDetailException
 import flask
-from flask import Response
 import pytest
+from flask import Response
 from freezegun import freeze_time
-from core.util.datetime_helpers import utc_now
+
 from api.odl import ODLAPI
 from api.odl2 import ODL2API
-from api.problem_details import INVALID_LOAN_FOR_ODL_NOTIFICATION, NO_ACTIVE_LOAN, INVALID_INPUT
+from api.problem_details import (
+    INVALID_INPUT,
+    INVALID_LOAN_FOR_ODL_NOTIFICATION,
+    NO_ACTIVE_LOAN,
+)
 from core.model import Collection
+from core.util.datetime_helpers import utc_now
 from tests.fixtures.api_controller import ControllerFixture
 from tests.fixtures.database import DatabaseTransactionFixture
 from tests.fixtures.odl import OPDS2WithODLApiFixture
@@ -64,6 +67,7 @@ class ODLFixture:
 def odl_fixture(db: DatabaseTransactionFixture) -> ODLFixture:
     return ODLFixture(db)
 
+
 @freeze_time()
 class TestODLNotificationController:
     """Test that an ODL distributor can notify the circulation manager
@@ -91,9 +95,7 @@ class TestODLNotificationController:
         loan.external_identifier = db.fresh_str()
 
         status_doc = odl_fixture.loan_status_document("active")
-        with controller_fixture.request_context_with_library(
-            "/",
-            method="POST"):
+        with controller_fixture.request_context_with_library("/", method="POST"):
             flask.request.data = status_doc.json()
             response = controller_fixture.manager.odl_notification_controller.notify(
                 loan.id
@@ -104,9 +106,7 @@ class TestODLNotificationController:
         assert loan.end != utc_now()
 
         status_doc = odl_fixture.loan_status_document("revoked")
-        with controller_fixture.request_context_with_library(
-            "/",
-            method="POST"):
+        with controller_fixture.request_context_with_library("/", method="POST"):
             flask.request.data = status_doc.json()
             response = controller_fixture.manager.odl_notification_controller.notify(
                 loan.id
@@ -122,15 +122,14 @@ class TestODLNotificationController:
         ].api_for_license_pool(loan.license_pool)
         assert [loan.license_pool] == api.availability_updated_for
 
-
-    def test_notify_errors(self, controller_fixture: ControllerFixture, odl_fixture: ODLFixture, db):
+    def test_notify_errors(
+        self, controller_fixture: ControllerFixture, odl_fixture: ODLFixture, db
+    ):
         db = controller_fixture.db
 
         # Bad JSON.
         with (
-            controller_fixture.request_context_with_library(
-            "/",
-            method="POST"),
+            controller_fixture.request_context_with_library("/", method="POST"),
             raises_problem_detail(pd=INVALID_INPUT),
         ):
             assert odl_fixture.license.identifier is not None
@@ -145,16 +144,12 @@ class TestODLNotificationController:
         loan.external_identifier = db.fresh_str()
         print(loan)
         with (
-            controller_fixture.request_context_with_library(
-            "/",
-            method="POST"),
+            controller_fixture.request_context_with_library("/", method="POST"),
             raises_problem_detail(pd=INVALID_LOAN_FOR_ODL_NOTIFICATION),
         ):
             flask.request.data = odl_fixture.loan_status_document("active").json()
             assert odl_fixture.license.identifier is not None
-            controller_fixture.manager.odl_notification_controller.notify(
-                loan.id
-            )
+            controller_fixture.manager.odl_notification_controller.notify(loan.id)
 
         # No loan, but distributor thinks it isn't active
         NON_EXISTENT_LICENSE_IDENTIFIER = "123"

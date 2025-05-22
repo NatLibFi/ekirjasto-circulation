@@ -1,17 +1,19 @@
-import json
-import uuid
-import types
-from collections.abc import Callable
-from typing import Any, Literal
-from functools import partial
-from unittest.mock import MagicMock
 import datetime
+import json
+import types
+import uuid
+from collections.abc import Callable
+from functools import partial
+from typing import Any, Literal
+from unittest.mock import MagicMock
+
 import pytest
 from _pytest.monkeypatch import MonkeyPatch
-from core.util.datetime_helpers import utc_now
+
+from api.circulation import HoldInfo, LoanInfo
+from api.lcp.status import LoanStatus
 
 # from _pytest.monkeypatch import MonkeyPatch
-from requests import Response
 from api.odl import ODLAPI, BaseODLAPI
 from api.odl2 import ODL2API
 from core.model import (
@@ -24,16 +26,14 @@ from core.model import (
     Representation,
     Work,
 )
-from api.odl import BaseODLAPI
-from api.circulation import HoldInfo, LoanInfo
-from api.lcp.status import LoanStatus, Link, LinkCollection
 from core.model.configuration import ExternalIntegration
 from core.util.http import HTTP
 from tests.api.mockapi.mock import MockHTTPClient, MockRequestsResponse
 from tests.fixtures.api_odl import ODL2APIFilesFixture, ODLAPIFilesFixture
 from tests.fixtures.database import DatabaseTransactionFixture
-from tests.fixtures.files import OPDS2WithODLFilesFixture, APIFilesFixture
-from tests.mocks.odl import MockOPDS2WithODLApi, MockODL2Api
+from tests.fixtures.files import APIFilesFixture, OPDS2WithODLFilesFixture
+from tests.mocks.odl import MockODL2Api, MockOPDS2WithODLApi
+
 
 class OPDS2WithODLApiFixture:
     def __init__(
@@ -62,7 +62,6 @@ class OPDS2WithODLApiFixture:
 
     def create_work(self, collection: Collection) -> Work:
         return self.db.work(with_license_pool=True, collection=collection)
-
 
     def create_collection(self, library, api_class=ODLAPI):
         """Create a mock ODL collection to use in tests."""
@@ -142,16 +141,16 @@ class OPDS2WithODLApiFixture:
                 }
             )
         return LoanStatus(
-                id=str(uuid.uuid4()),
-                status=status,
-                message="This is a message",
-                updated={
-                    "license": "2025-04-25T11:12:13Z",
-                    "status": "2025-04-25T11:12:13Z",
-                },
-                links=links,
-                potential_rights={"end": "3017-10-21T11:12:13Z"},
-            )
+            id=str(uuid.uuid4()),
+            status=status,
+            message="This is a message",
+            updated={
+                "license": "2025-04-25T11:12:13Z",
+                "status": "2025-04-25T11:12:13Z",
+            },
+            links=links,
+            potential_rights={"end": "3017-10-21T11:12:13Z"},
+        )
 
     def checkin(
         self, patron: Patron | None = None, pool: LicensePool | None = None
@@ -278,6 +277,7 @@ class LicenseInfoHelper:
         if self.left is not None:
             output["checkouts"]["left"] = self.left
         return output
+
 
 # OLD FIXTURES
 class MonkeyPatchedODLFixture:
@@ -571,7 +571,6 @@ def odl2_api_test_fixture(odl2_test_fixture: ODL2TestFixture) -> ODL2APITestFixt
     )
 
 
-
 class ODL2ApiFixture:
     def __init__(
         self,
@@ -597,7 +596,6 @@ class ODL2ApiFixture:
 
     def create_work(self, collection: Collection) -> Work:
         return self.db.work(with_license_pool=True, collection=collection)
-
 
     def create_collection(self, library, api_class=ODL2API):
         """Create a mock ODL collection to use in tests."""
@@ -677,16 +675,16 @@ class ODL2ApiFixture:
                 }
             )
         return LoanStatus(
-                id=str(uuid.uuid4()),
-                status=status,
-                message="This is a message",
-                updated={
-                    "license": "2025-04-25T11:12:13Z",
-                    "status": "2025-04-25T11:12:13Z",
-                },
-                links=links,
-                potential_rights={"end": "3017-10-21T11:12:13Z"},
-            )
+            id=str(uuid.uuid4()),
+            status=status,
+            message="This is a message",
+            updated={
+                "license": "2025-04-25T11:12:13Z",
+                "status": "2025-04-25T11:12:13Z",
+            },
+            links=links,
+            potential_rights={"end": "3017-10-21T11:12:13Z"},
+        )
 
     def checkin(
         self, patron: Patron | None = None, pool: LicensePool | None = None

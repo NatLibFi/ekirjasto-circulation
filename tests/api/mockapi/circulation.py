@@ -39,7 +39,7 @@ class MockRemoteAPI(MockPatronActivityCirculationAPI):
         self,
         _db: Session,
         set_delivery_mechanism_at=True,
-        can_revoke_hold_when_reserved=True
+        can_revoke_hold_when_reserved=True,
     ):
         self.SET_DELIVERY_MECHANISM_AT = set_delivery_mechanism_at
         self.CAN_REVOKE_HOLD_WHEN_RESERVED = can_revoke_hold_when_reserved
@@ -110,7 +110,7 @@ class MockRemoteAPI(MockPatronActivityCirculationAPI):
         if isinstance(v, Exception):
             raise v
         return v
-    
+
 
 class MockCirculationAPI(CirculationAPI):
     def __init__(self, *args, **kwargs):

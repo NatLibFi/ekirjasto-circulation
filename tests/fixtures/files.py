@@ -75,6 +75,7 @@ class APIFilesFixture:
     def sample_path(self, filename) -> str:
         return os.path.join(self._resource_path, filename)
 
+
 class OPDS2WithODLFilesFixture(APIFilesFixture):
     """A fixture providing access to OPDS2 + ODL files."""
 

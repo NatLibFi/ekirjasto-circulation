@@ -23,9 +23,8 @@ from api.bibliotheca import (
     ErrorParser,
     EventParser,
     ItemListParser,
-    PatronCirculationParser,
 )
-from api.circulation import CirculationAPI, FulfillmentInfo, HoldInfo, LoanInfo
+from api.circulation import FulfillmentInfo
 from api.circulation_exceptions import (
     AlreadyCheckedOut,
     AlreadyOnHold,
@@ -42,8 +41,6 @@ from api.circulation_exceptions import (
 )
 from api.web_publication_manifest import FindawayManifest
 from core.analytics import Analytics
-from core.integration.goals import Goals
-from core.integration.registry import IntegrationRegistry
 from core.metadata_layer import ReplacementPolicy, TimestampData
 from core.mock_analytics_provider import MockAnalyticsProvider
 from core.model import (
@@ -775,6 +772,7 @@ class TestEventParser:
         assert None == end_time
         assert "distributor_license_add" == internal_event_type
 
+
 class TestCheckoutResponseParser:
     def test_parse(self, bibliotheca_fixture: BibliothecaAPITestFixture):
         data = bibliotheca_fixture.files.sample_data("successful_checkout.xml")
@@ -893,6 +891,7 @@ class TestErrorParser:
             problem = error.as_problem_detail_document()
             assert problem_detail_code == problem.status_code
             assert problem_detail_title == problem.title
+
 
 class TestBibliothecaEventParser:
     # Sample event feed to test out the parser.

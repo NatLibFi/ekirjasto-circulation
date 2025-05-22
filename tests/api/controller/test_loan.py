@@ -1,5 +1,4 @@
 import datetime
-import urllib.parse
 from collections.abc import Generator
 from decimal import Decimal
 from unittest.mock import MagicMock, create_autospec, patch
@@ -10,17 +9,15 @@ from flask import Response as FlaskResponse
 from flask import url_for
 from werkzeug import Response as wkResponse
 
-from api.axis import Axis360API, Axis360FulfillmentInfo
 from api.circulation import (
     BaseCirculationAPI,
     CirculationAPI,
+    DirectFulfillment,
+    FetchFulfillment,
     Fulfillment,
     HoldInfo,
     LoanInfo,
     RedirectFulfillment,
-    UrlFulfillment,
-    DirectFulfillment,
-    FetchFulfillment
 )
 from api.circulation_exceptions import (
     AlreadyOnHold,
@@ -42,6 +39,7 @@ from api.problem_details import (
     NOT_FOUND_ON_REMOTE,
     OUTSTANDING_FINES,
 )
+from core.feed.serializer.opds2 import OPDS2Serializer
 from core.model import (
     Collection,
     DataSource,
@@ -60,20 +58,17 @@ from core.model import (
     get_one,
     get_one_or_create,
 )
-from core.feed.serializer.opds2 import OPDS2Serializer
 from core.problem_details import INTEGRATION_ERROR, INVALID_INPUT
-from core.util.datetime_helpers import datetime_utc, utc_now
-from core.util.flask_util import Response
+from core.util.datetime_helpers import utc_now
+from core.util.flask_util import OPDSEntryResponse, Response
 from core.util.http import RemoteIntegrationException
-from core.util.opds_writer import OPDSFeed, AtomFeed
+from core.util.opds_writer import AtomFeed, OPDSFeed
 from core.util.problem_detail import ProblemDetail
-from tests.core.mock import DummyHTTPClient
 from tests.api.mockapi.mock import MockHTTPClient
 from tests.fixtures.api_controller import CirculationControllerFixture
-from tests.api.mockapi.circulation import MockPatronActivityCirculationAPI
 from tests.fixtures.database import DatabaseTransactionFixture
 from tests.fixtures.library import LibraryFixture
-from core.util.flask_util import OPDSEntryResponse, Response
+
 
 class LoanFixture(CirculationControllerFixture):
     identifier: Identifier
@@ -112,6 +107,7 @@ def loan_fixture(db: DatabaseTransactionFixture) -> Generator[LoanFixture, None,
     with fixture.wired_container():
         yield fixture
 
+
 class OPDSSerializationTestHelper:
     PARAMETRIZED_SINGLE_ENTRY_ACCEPT_HEADERS = (
         "accept_header,expected_content_type",
@@ -149,6 +145,7 @@ class OPDSSerializationTestHelper:
         # Ensure that the response content parsed correctly.
         assert "links" in entry
         return entry["links"]
+
 
 class TestLoanController:
     def test_can_fulfill_without_loan(self, loan_fixture: LoanFixture):
@@ -275,8 +272,8 @@ class TestLoanController:
         with loan_fixture.request_context_with_library("/", headers=headers):
             patron = loan_fixture.manager.loans.authenticated_patron_from_request()
             borrow_response = loan_fixture.manager.loans.borrow(
-                    loan_fixture.identifier_type, loan_fixture.identifier_identifier
-                )
+                loan_fixture.identifier_type, loan_fixture.identifier_identifier
+            )
             loan = get_one(
                 loan_fixture.db.session, Loan, license_pool=loan_fixture.pool
             )
@@ -435,7 +432,6 @@ class TestLoanController:
             assert isinstance(fulfill_response, ProblemDetail)
             assert 502 == fulfill_response.status_code
 
-
     def test_borrow_and_fulfill_with_streaming_delivery_mechanism(
         self, loan_fixture: LoanFixture
     ):
@@ -467,8 +463,8 @@ class TestLoanController:
                 ),
             )
             borrow_response = loan_fixture.manager.loans.borrow(
-                    identifier.type, identifier.identifier
-                )
+                identifier.type, identifier.identifier
+            )
             assert isinstance(borrow_response, Response)
 
             # A loan has been created for this license pool.
@@ -598,7 +594,6 @@ class TestLoanController:
                 == fulfill_links[0]["type"]
             )
             assert "http://streaming-content-link" == fulfill_links[0]["href"]
-
 
     def test_borrow_nonexistent_delivery_mechanism(self, loan_fixture: LoanFixture):
         with loan_fixture.request_context_with_library(
@@ -925,7 +920,6 @@ class TestLoanController:
             assert "here's your book" == response.get_data(as_text=True)
             assert [] == loan_fixture.db.session.query(Loan).all()
 
-
     def test_fulfill_without_single_item_feed(self, loan_fixture: LoanFixture):
         """A streaming fulfillment fails due to the feed method failing"""
         controller = loan_fixture.manager.loans
@@ -1001,7 +995,6 @@ class TestLoanController:
         assert response.status_code == 302
         assert response.location == "https://example.org/redirect_to_epub"
 
-
     @pytest.mark.parametrize(
         *OPDSSerializationTestHelper.PARAMETRIZED_SINGLE_ENTRY_ACCEPT_HEADERS
     )
@@ -1031,7 +1024,6 @@ class TestLoanController:
         assert 200 == response.status_code
         serialization_helper.verify_and_get_single_entry_feed_links(response)
 
-
     def test_revoke_loan_exception(
         self,
         loan_fixture: LoanFixture,
@@ -1052,16 +1044,13 @@ class TestLoanController:
         assert response == COULD_NOT_MIRROR_TO_REMOTE
         assert response.status_code == 503
 
-
     def test_revoke_loan_licensepool_no_work(
         self,
         loan_fixture: LoanFixture,
     ):
         # Revoke loan where the license pool has no work
-        with (
-            loan_fixture.request_context_with_library(
-                "/", headers=dict(Authorization=loan_fixture.valid_auth)
-            )
+        with loan_fixture.request_context_with_library(
+            "/", headers=dict(Authorization=loan_fixture.valid_auth)
         ):
             patron = loan_fixture.manager.loans.authenticated_patron_from_request()
             loan_fixture.manager.d_circulation.queue_checkin(loan_fixture.pool, True)
@@ -1072,7 +1061,6 @@ class TestLoanController:
 
         assert isinstance(response, ProblemDetail)
         assert response == NOT_FOUND_ON_REMOTE
-
 
     @pytest.mark.parametrize(
         *OPDSSerializationTestHelper.PARAMETRIZED_SINGLE_ENTRY_ACCEPT_HEADERS
@@ -1095,7 +1083,9 @@ class TestLoanController:
             assert isinstance(patron, Patron)
             hold, newly_created = loan_fixture.pool.on_hold_to(patron, position=0)
 
-            loan_fixture.manager.d_circulation.queue_release_hold(loan_fixture.pool, True)
+            loan_fixture.manager.d_circulation.queue_release_hold(
+                loan_fixture.pool, True
+            )
 
             response = loan_fixture.manager.loans.revoke(loan_fixture.pool_id)
 
@@ -1129,7 +1119,6 @@ class TestLoanController:
             response = loan_fixture.manager.loans.revoke(-10)
             assert isinstance(response, ProblemDetail)
             assert INVALID_INPUT.uri == response.uri
-
 
     def test_hold_fails_when_patron_is_at_hold_limit(self, loan_fixture: LoanFixture):
         edition, pool = loan_fixture.db.edition(with_license_pool=True)
@@ -1220,7 +1209,6 @@ class TestLoanController:
             )
 
             assert 201 == response.status_code
-
 
     def test_active_loans(self, loan_fixture: LoanFixture):
         # First, verify that this controller supports conditional HTTP

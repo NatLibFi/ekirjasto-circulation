@@ -200,7 +200,7 @@ class License(Base, LicenseFunctions):
             self.checkouts_available = min(available)
         else:
             logging.warning(f"Checking in expired license # {self.identifier}.")
-    
+
     def __repr__(self):
         return f"License id: {self.identifier}, checkouts left: {self.checkouts_left}, available: {self.checkouts_available} active: {self.is_inactive} to borrow: {self.is_available_for_borrowing}"
 
@@ -727,13 +727,15 @@ class LicensePool(Base):
         patrons_in_hold_queue = len(active_holds_ids - ignored_holds_ids)
         if patrons_in_hold_queue > licenses_available:
             licenses_reserved = licenses_available
-            licenses_available = 0 
+            licenses_available = 0
         else:
             licenses_reserved = patrons_in_hold_queue
             licenses_available -= licenses_reserved
 
-        logging.info(f"Collected availablility information for licensepool:{self.identifier}: OWNED={licenses_owned} AVAILABLE={licenses_available} RESERVED={licenses_reserved} HOLDS={patrons_in_hold_queue} LOANS={len(self.loans)}")
-        
+        logging.info(
+            f"Collected availablility information for licensepool:{self.identifier}: OWNED={licenses_owned} AVAILABLE={licenses_available} RESERVED={licenses_reserved} HOLDS={patrons_in_hold_queue} LOANS={len(self.loans)}"
+        )
+
         return self.update_availability(
             licenses_owned,
             licenses_available,

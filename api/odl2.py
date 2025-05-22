@@ -112,7 +112,7 @@ class ODL2API(BaseODLAPI[ODL2Settings, ODLLibrarySettings]):
                     patron.loans,
                 )
             )
-            if len(loans) >= self.loan_limit: # Changed back operator > to >=
+            if len(loans) >= self.loan_limit:  # Changed back operator > to >=
                 raise PatronLoanLimitReached(limit=self.loan_limit)
         return super()._checkout(patron, licensepool, hold)
 

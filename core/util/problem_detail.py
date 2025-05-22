@@ -6,8 +6,8 @@ from __future__ import annotations
 
 import json as j
 import logging
-
 from abc import ABC, abstractmethod
+
 from flask_babel import LazyString
 from pydantic import BaseModel
 
@@ -148,6 +148,7 @@ class ProblemDetail:
             and self.debug_message == other.debug_message
         )
 
+
 # TODO: This should be removed once BaseError is removed.
 class ProblemError(BaseError):
     """Exception class allowing to raise and catch ProblemDetail objects."""
@@ -171,6 +172,7 @@ class ProblemError(BaseError):
         :return: ProblemDetail object associated with this exception
         """
         return self._problem_detail
+
 
 class BaseProblemDetailException(BasePalaceException, ABC):
     """Mixin for exceptions that can be converted into a ProblemDetail."""
