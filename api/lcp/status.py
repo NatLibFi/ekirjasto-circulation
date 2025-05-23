@@ -1,6 +1,5 @@
 from datetime import datetime
 from enum import Enum
-from typing import Optional
 
 from dateutil import parser
 from pydantic import BaseModel, Field, validator
@@ -45,7 +44,7 @@ class EventType(str, Enum):
 
 
 class Event(BaseModel):
-    event_type: Optional[EventType] = Field(None, alias="type")
+    event_type: EventType | None = Field(None, alias="type")
     name: str | None = None
     timestamp: datetime | None = None
     id: str | None = None

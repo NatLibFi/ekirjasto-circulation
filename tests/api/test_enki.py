@@ -8,7 +8,6 @@ from unittest.mock import MagicMock
 import pytest
 
 from api.circulation import FulfillmentInfo
-from api.circulation_exceptions import *
 from api.enki import BibliographicParser, EnkiAPI, EnkiCollectionReaper, EnkiImport
 from core.analytics import Analytics
 from core.metadata_layer import CirculationData, Metadata, TimestampData
@@ -378,7 +377,6 @@ class TestEnkiAPI:
     def test__epoch_to_struct(self, enki_test_fixture: EnkiTestFixure):
         """Test the _epoch_to_struct helper method."""
         assert datetime_utc(1970, 1, 1) == EnkiAPI._epoch_to_struct("0")
-
 
     def test_fulfillment_open_access_parser(self, enki_test_fixture: EnkiTestFixure):
         """Test that fulfillment info for non-ACS Enki books is parsed correctly."""

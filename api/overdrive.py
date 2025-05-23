@@ -1534,8 +1534,8 @@ class OverdriveAPI(
                     content_type=media_type, drm_scheme=drm_scheme
                 )
 
-        return LoanInfo( # type: ignore
-            collection, # type: ignore
+        return LoanInfo(  # type: ignore
+            collection,  # type: ignore
             DataSource.OVERDRIVE,
             Identifier.OVERDRIVE_ID,
             overdrive_identifier,

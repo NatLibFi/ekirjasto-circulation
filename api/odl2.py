@@ -4,13 +4,13 @@ import logging
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
-from api.circulation import LoanInfo
 from flask_babel import lazy_gettext as _
 from pydantic import PositiveInt
 from sqlalchemy.orm import Session
 from webpub_manifest_parser.odl import ODLFeedParserFactory
 from webpub_manifest_parser.opds2.registry import OPDS2LinkRelationsRegistry
 
+from api.circulation import LoanInfo
 from api.circulation_exceptions import PatronHoldLimitReached, PatronLoanLimitReached
 from api.odl import BaseODLAPI, BaseODLImporter, ODLLibrarySettings, ODLSettings
 from core.integration.settings import (
@@ -36,7 +36,7 @@ if TYPE_CHECKING:
 
     from api.circulation import HoldInfo
     from core.model import Collection, LicensePool
-    from core.model.patron import Hold, Loan, Patron
+    from core.model.patron import Hold, Patron
 
 
 class ODL2Settings(ODLSettings, OPDS2ImporterSettings):

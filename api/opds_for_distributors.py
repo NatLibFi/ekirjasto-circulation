@@ -357,7 +357,7 @@ class OPDSForDistributorsAPI(
                 loan.license_pool.identifier.identifier,
                 loan.start,
                 loan.end,
-            ) # type: ignore
+            )  # type: ignore
             for loan in loans
         ]
 
@@ -457,7 +457,7 @@ class OPDSForDistributorsImportMonitor(OPDSImportMonitor):
 
         self.api = OPDSForDistributorsAPI(_db, collection)
 
-    def _get(self, url: str, headers: Mapping[str, str]) -> Response: # type: ignore
+    def _get(self, url: str, headers: Mapping[str, str]) -> Response:  # type: ignore
         """Make a normal HTTP request for an OPDS feed, but add in an
         auth header with the credentials for the collection.
         """

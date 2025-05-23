@@ -193,12 +193,14 @@ class RequestKwargs(GetRequestKwargs, total=False):
     files: Mapping[str, BytesIO | StringIO | str | bytes] | None
     json: Mapping[str, Any] | None
 
+
 class GetRequestCallable(Protocol):
     def __call__(
         self,
         url: str,
         **kwargs: Unpack[GetRequestKwargs],
-    ) -> Response: ...
+    ) -> Response:
+        ...
 
 
 class MakeRequestCallable(Protocol):
@@ -207,7 +209,9 @@ class MakeRequestCallable(Protocol):
         method: str,
         url: str,
         **kwargs: Unpack[RequestKwargs],
-    ) -> Response: ...
+    ) -> Response:
+        ...
+
 
 class _ProcessResponseCallable(Protocol):
     def __call__(

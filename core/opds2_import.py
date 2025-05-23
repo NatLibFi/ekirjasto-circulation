@@ -316,7 +316,7 @@ class OPDS2API(BaseOPDSAPI):
         fufillment_info = super().fulfill(patron, pin, licensepool, delivery_mechanism)
         if self.token_auth_configuration:
             fufillment_info = self.fulfill_token_auth(
-                patron, licensepool, fufillment_info # type: ignore
+                patron, licensepool, fufillment_info  # type: ignore
             )
         return fufillment_info
 

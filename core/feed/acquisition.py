@@ -8,8 +8,8 @@ from typing import TYPE_CHECKING, Any
 from dependency_injector.wiring import Provide, inject
 from sqlalchemy.orm import Query, Session
 
+from api.circulation import Fulfillment, FulfillmentInfo
 from api.problem_details import NOT_FOUND_ON_REMOTE
-from api.circulation import FulfillmentInfo, Fulfillment
 from core.entrypoint import EntryPoint
 from core.external_search import ExternalSearchIndex, QueryParseException
 from core.facets import FacetConstants

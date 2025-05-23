@@ -28,7 +28,7 @@ def raises_problem_detail(
     *,
     pd: ProblemDetail | None = None,
     detail: str | None = None,
-) -> Generator[ProblemDetailInfo]: # type: ignore
+) -> Generator[ProblemDetailInfo]:  # type: ignore
     info = ProblemDetailInfo()
     with pytest.raises(ProblemDetailException) as e:
         yield info

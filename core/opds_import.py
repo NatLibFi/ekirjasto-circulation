@@ -1728,7 +1728,7 @@ class OPDSImportMonitor(CollectionMonitor):
         if not url.startswith("http"):
             url = urljoin(self._feed_base_url, url)
         return HTTP.get_with_timeout(url, headers=headers, **kwargs)
-    
+
     def _get_accept_header(self) -> str:
         return ",".join(
             [

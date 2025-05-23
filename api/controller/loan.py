@@ -8,10 +8,7 @@ from flask_babel import lazy_gettext as _
 from werkzeug import Response as wkResponse
 
 from api.circulation import UrlFulfillment
-from api.circulation_exceptions import (
-    CirculationException,
-    RemoteInitiatedServerError,
-)
+from api.circulation_exceptions import CirculationException, RemoteInitiatedServerError
 from api.controller.circulation_manager import CirculationManagerController
 from api.problem_details import (
     BAD_DELIVERY_MECHANISM,
@@ -37,7 +34,7 @@ class LoanController(CirculationManagerController):
 
         :return: A Response containing an OPDS feed with up-to-date information.
         """
-        patron = flask.request.patron # type: ignore
+        patron = flask.request.patron  # type: ignore
 
         # Save some time if we don't believe the patron's loans or holds have
         # changed since the last time the client requested this feed.
@@ -88,8 +85,8 @@ class LoanController(CirculationManagerController):
            "http://opds-spec.org/acquisition", which can be used to fetch the
            book or the license file.
         """
-        patron = flask.request.patron # type: ignore
-        library = flask.request.library # type: ignore
+        patron = flask.request.patron  # type: ignore
+        library = flask.request.library  # type: ignore
 
         header = self.authorization_header()
         credential = self.manager.auth.get_credential_from_header(header)
@@ -134,7 +131,12 @@ class LoanController(CirculationManagerController):
 
         work = self.load_work(library, identifier_type, identifier)
         selected_book = patron.load_selected_book(work)
-        return OPDSAcquisitionFeed.single_entry_loans_feed(self.circulation, loan_or_hold, selected_book=selected_book, **response_kwargs,) # type: ignore[arg-type]
+        return OPDSAcquisitionFeed.single_entry_loans_feed(
+            self.circulation,
+            loan_or_hold,
+            selected_book=selected_book,
+            **response_kwargs,
+        )  # type: ignore[arg-type]
 
     def _borrow(
         self,
@@ -242,7 +244,7 @@ class LoanController(CirculationManagerController):
             # to pick the one that will get the book to the patron
             # with the shortest wait.
             if (
-                not best # type: ignore[unreachable]
+                not best  # type: ignore[unreachable]
                 or pool.licenses_available > best.licenses_available
                 or pool.patrons_in_hold_queue < best.patrons_in_hold_queue
             ):
@@ -363,7 +365,7 @@ class LoanController(CirculationManagerController):
             # create an OPDS entry with a fulfillment link to the streaming reader url.
             return OPDSAcquisitionFeed.single_entry_loans_feed(
                 self.circulation, loan, fulfillment=fulfillment
-            ) # type: ignore[return-value]
+            )  # type: ignore[return-value]
 
         try:
             return fulfillment.response()
@@ -405,7 +407,7 @@ class LoanController(CirculationManagerController):
         return self.circulation.can_fulfill_without_loan(patron, pool, lpdm)
 
     def revoke(self, license_pool_id: int) -> OPDSEntryResponse | ProblemDetail:
-        patron = flask.request.patron # type: ignore[attr-defined]
+        patron = flask.request.patron  # type: ignore[attr-defined]
         pool = self.load_licensepool(license_pool_id)
         if isinstance(pool, ProblemDetail):
             return pool
@@ -459,15 +461,15 @@ class LoanController(CirculationManagerController):
         annotator = self.manager.annotator(None)
         single_entry_feed = OPDSAcquisitionFeed.single_entry(work, annotator)
         return OPDSAcquisitionFeed.entry_as_response(
-            entry=single_entry_feed, # type: ignore
+            entry=single_entry_feed,  # type: ignore
             mime_types=flask.request.accept_mimetypes,
         )
 
     def detail(
         self, identifier_type: str, identifier: str
     ) -> OPDSEntryResponse | ProblemDetail | None:
-        patron = flask.request.patron # type: ignore[attr-defined]
-        library = flask.request.library # type: ignore[attr-defined]
+        patron = flask.request.patron  # type: ignore[attr-defined]
+        library = flask.request.library  # type: ignore[attr-defined]
         pools = self.load_licensepools(library, identifier_type, identifier)
         if isinstance(pools, ProblemDetail):
             return pools

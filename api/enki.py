@@ -415,7 +415,7 @@ class EnkiAPI(
                     "User validation against Enki server with %s / %s was unsuccessful."
                     % (patron.authorization_identifier, pin)
                 )
-                raise AuthorizationFailedException() # type: ignore
+                raise AuthorizationFailedException()  # type: ignore
         due_date = result["checkedOutItems"][0]["duedate"]
         expires = self._epoch_to_struct(due_date)
 
@@ -478,7 +478,7 @@ class EnkiAPI(
                     "User validation against Enki server with %s / %s was unsuccessful."
                     % (patron.authorization_identifier, pin)
                 )
-                raise AuthorizationFailedException() # type: ignore
+                raise AuthorizationFailedException()  # type: ignore
 
         url, item_type, expires = self.parse_fulfill_result(result)
         # We don't know for sure which DRM scheme is in use, (that is,
@@ -526,12 +526,12 @@ class EnkiAPI(
         if not result.get("success"):
             message = result.get("message", "")
             if "Login unsuccessful" in message:
-                raise AuthorizationFailedException() # type: ignore
+                raise AuthorizationFailedException()  # type: ignore
             else:
                 self.log.error(
                     "Unexpected error in patron_activity: %r", response.content
                 )
-                raise CirculationException(response.content) # type: ignore
+                raise CirculationException(response.content)  # type: ignore
         for loan in result["checkedOutItems"]:
             yield self.parse_patron_loans(loan)
         for type, holds in list(result["holds"].items()):
@@ -562,7 +562,7 @@ class EnkiAPI(
         if self.collection is None:
             raise ValueError("Collection is None")
         return LoanInfo(
-            collection_id=self.collection_id, # type: ignore
+            collection_id=self.collection_id,  # type: ignore
             identifier_type=Identifier.ENKI_ID,
             identifier=enki_id,
             start_date=start_date,

@@ -60,7 +60,7 @@ from tests.api.mockapi.overdrive import MockOverdriveAPI
 from tests.core.mock import DummyHTTPClient, MockRequestsResponse
 from tests.fixtures.database import DatabaseTransactionFixture
 from tests.fixtures.library import LibraryFixture
-from tests.fixtures.webserver import MockAPIServer, MockAPIServerResponse
+from tests.fixtures.webserver import MockAPIServer
 
 if TYPE_CHECKING:
     from tests.fixtures.api_overdrive_files import OverdriveAPIFilesFixture
@@ -127,7 +127,6 @@ def overdrive_api_fixture(
 
 
 class TestOverdriveAPI:
-
     def test_constructor_makes_no_requests(
         self,
         overdrive_api_fixture: OverdriveAPIFixture,

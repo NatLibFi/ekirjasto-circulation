@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import base64
 import datetime
-import html
 import json
 import re
 import ssl
@@ -390,7 +389,7 @@ class Axis360API(
                 response.content
             )
         except etree.XMLSyntaxError as e:
-            raise RemoteInitiatedServerError(response.content, self.label()) # type: ignore
+            raise RemoteInitiatedServerError(response.content, self.label())  # type: ignore
 
     def _checkin(self, title_id: str | None, patron_id: str | None) -> RequestsResponse:
         """Make a request to the EarlyCheckInTitle endpoint."""
@@ -432,7 +431,7 @@ class Axis360API(
                 raise CannotLoan()
             return loan_info
         except etree.XMLSyntaxError as e:
-            raise RemoteInitiatedServerError(response.content, self.label()) # type: ignore
+            raise RemoteInitiatedServerError(response.content, self.label())  # type: ignore
 
     def _checkout(
         self, title_id: str | None, patron_id: str | None, internal_format: str
@@ -505,8 +504,8 @@ class Axis360API(
             # The Axis 360 API doesn't return the identifier of the
             # item that was placed on hold, so we have to fill it in
             # based on our own knowledge.
-            hold_info.identifier_type = identifier.type # type: ignore
-            hold_info.identifier = identifier.identifier # type: ignore
+            hold_info.identifier_type = identifier.type  # type: ignore
+            hold_info.identifier = identifier.identifier  # type: ignore
         return hold_info
 
     def release_hold(self, patron: Patron, pin: str, licensepool: LicensePool) -> None:
@@ -542,7 +541,7 @@ class Axis360API(
             patron_id=patron.authorization_identifier, title_ids=title_ids
         )
         return list(
-            AvailabilityResponseParser(self, internal_format).process_all( # type: ignore
+            AvailabilityResponseParser(self, internal_format).process_all(  # type: ignore
                 availability.content
             )
         )
@@ -1437,7 +1436,7 @@ class CheckoutResponseParser(XMLResponseParser[LoanInfo]):
             collection=self.collection,
             data_source_name=DataSource.AXIS_360,
             identifier_type=self.id_type,
-            identifier=None, # type: ignore
+            identifier=None,  # type: ignore
             start_date=loan_start,
             end_date=expiration_date,
         )
@@ -1477,7 +1476,7 @@ class HoldResponseParser(XMLResponseParser[HoldInfo]):
             start_date=hold_start,
             end_date=None,
             hold_position=queue_position,
-        ) # type: ignore
+        )  # type: ignore
         return hold
 
 
@@ -1518,6 +1517,7 @@ class AvailabilityResponseParser(XMLResponseParser[Union[LoanInfo, HoldInfo]]):
     @property
     def xpath_expression(self) -> str:
         return "//axis:title"
+
 
 class JSONResponseParser(Generic[T], ResponseParser, ABC):
     """Most ResponseParsers parse XML documents; subclasses of

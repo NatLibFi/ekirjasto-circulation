@@ -4,7 +4,7 @@ import json
 import random
 from datetime import datetime, timedelta
 from io import BytesIO, StringIO
-from typing import TYPE_CHECKING, ClassVar, Protocol, cast, runtime_checkable
+from typing import TYPE_CHECKING, cast
 from unittest import mock
 from unittest.mock import MagicMock, create_autospec
 
@@ -20,23 +20,12 @@ from api.bibliotheca import (
     BibliothecaParser,
     BibliothecaPurchaseMonitor,
     CheckoutResponseParser,
-    ErrorParser,
     EventParser,
     ItemListParser,
 )
 from api.circulation import FulfillmentInfo
 from api.circulation_exceptions import (
-    AlreadyCheckedOut,
-    AlreadyOnHold,
-    CannotHold,
-    CirculationException,
-    CurrentlyAvailable,
-    NoAvailableCopies,
-    NoLicenses,
-    NotCheckedOut,
-    NotOnHold,
     PatronHoldLimitReached,
-    PatronLoanLimitReached,
     RemoteInitiatedServerError,
 )
 from api.web_publication_manifest import FindawayManifest
@@ -65,7 +54,6 @@ from core.model import (
 from core.scripts import RunCollectionCoverageProviderScript
 from core.util.datetime_helpers import datetime_utc, utc_now
 from core.util.http import BadResponseException
-from core.util.problem_detail import ProblemDetail
 from core.util.web_publication_manifest import AudiobookManifest
 from tests.api.mockapi.bibliotheca import MockBibliothecaAPI
 
@@ -778,6 +766,7 @@ class TestCheckoutResponseParser:
         data = bibliotheca_fixture.files.sample_data("successful_checkout.xml")
         due_date = CheckoutResponseParser().process_first(data)
         assert datetime_utc(2015, 4, 16, 0, 32, 36) == due_date
+
 
 class TestBibliothecaEventParser:
     # Sample event feed to test out the parser.

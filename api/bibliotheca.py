@@ -453,12 +453,12 @@ class BibliothecaAPI(
 
         # At this point we know we have a loan.
         loan_expires = CheckoutResponseParser().process_first(response.content)
-        loan = LoanInfo( # type: ignore
-            licensepool.collection, # type: ignore
+        loan = LoanInfo(  # type: ignore
+            licensepool.collection,  # type: ignore
             DataSource.BIBLIOTHECA,
-            licensepool.identifier.type, # type: ignore
-            licensepool.identifier.identifier, # type: ignore
-            start_date=None, 
+            licensepool.identifier.type,  # type: ignore
+            licensepool.identifier.identifier,  # type: ignore
+            start_date=None,
             end_date=loan_expires,
         )
         return loan
@@ -942,7 +942,7 @@ class ErrorParser(BibliothecaParser[Exception]):
         except Exception as e:
             # The server sent us an error with an incorrect or
             # nonstandard syntax.
-            return RemoteInitiatedServerError(string, BibliothecaAPI.SERVICE_NAME) # type: ignore
+            return RemoteInitiatedServerError(string, BibliothecaAPI.SERVICE_NAME)  # type: ignore
 
         if return_val is None:
             # We were not able to interpret the result as an error.

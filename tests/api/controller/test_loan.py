@@ -1,6 +1,5 @@
 import datetime
 from collections.abc import Generator
-from decimal import Decimal
 from unittest.mock import MagicMock, create_autospec, patch
 
 import feedparser
@@ -38,7 +37,6 @@ from api.problem_details import (
     NO_COPIES_WHEN_RESERVED,
     NO_LICENSES,
     NOT_FOUND_ON_REMOTE,
-    OUTSTANDING_FINES,
 )
 from core.feed.serializer.opds2 import OPDS2Serializer
 from core.model import (
@@ -68,7 +66,6 @@ from core.util.problem_detail import ProblemDetail
 from tests.api.mockapi.mock import MockHTTPClient
 from tests.fixtures.api_controller import CirculationControllerFixture
 from tests.fixtures.database import DatabaseTransactionFixture
-from tests.fixtures.library import LibraryFixture
 
 
 class LoanFixture(CirculationControllerFixture):
@@ -161,7 +158,7 @@ class TestLoanController:
         patron = object()
         pool = object()
         lpdm = object()
-        assert False == m(library=loan_fixture.db.default_library(), patron=patron, pool=pool, lpdm=lpdm) # type: ignore
+        assert False == m(library=loan_fixture.db.default_library(), patron=patron, pool=pool, lpdm=lpdm)  # type: ignore
 
         # If the library does not authenticate patrons, then this
         # _may_ be possible, but
@@ -184,7 +181,7 @@ class TestLoanController:
             loan_fixture.manager.loans.circulation.can_fulfill_without_loan = (
                 mock_can_fulfill_without_loan
             )
-            assert True == m(library=loan_fixture.db.default_library(), patron=patron, pool=pool, lpdm=lpdm) # type: ignore
+            assert True == m(library=loan_fixture.db.default_library(), patron=patron, pool=pool, lpdm=lpdm)  # type: ignore
             assert (patron, pool, lpdm) == self.called_with
 
     def test_patron_circulation_retrieval(self, loan_fixture: LoanFixture):
@@ -601,7 +598,7 @@ class TestLoanController:
             "/", headers=dict(Authorization=loan_fixture.valid_auth)
         ):
             loan_fixture.manager.loans.authenticated_patron_from_request()
-            response = loan_fixture.manager.loans.borrow(loan_fixture.identifier.type, loan_fixture.identifier.identifier, -100) # type: ignore
+            response = loan_fixture.manager.loans.borrow(loan_fixture.identifier.type, loan_fixture.identifier.identifier, -100)  # type: ignore
             assert BAD_DELIVERY_MECHANISM == response
 
     def test_borrow_creates_hold_when_no_available_copies(
@@ -636,7 +633,7 @@ class TestLoanController:
             response = loan_fixture.manager.loans.borrow(
                 pool.identifier.type, pool.identifier.identifier
             )
-            assert 201 == response.status_code # type: ignore
+            assert 201 == response.status_code  # type: ignore
 
             # A hold has been created for this license pool.
             hold = get_one(loan_fixture.db.session, Hold, license_pool=pool)
@@ -659,7 +656,7 @@ class TestLoanController:
             response = loan_fixture.manager.loans.borrow(
                 pool.identifier.type, pool.identifier.identifier
             )
-            assert 404 == response.status_code # type: ignore
+            assert 404 == response.status_code  # type: ignore
             assert NO_LICENSES == response
 
     def test_borrow_creates_local_hold_if_remote_hold_exists(
@@ -697,7 +694,7 @@ class TestLoanController:
             response = loan_fixture.manager.loans.borrow(
                 pool.identifier.type, pool.identifier.identifier
             )
-            assert 201 == response.status_code # type: ignore
+            assert 201 == response.status_code  # type: ignore
 
             # A hold has been created for this license pool.
             hold = get_one(loan_fixture.db.session, Hold, license_pool=pool)
@@ -726,10 +723,10 @@ class TestLoanController:
             response = loan_fixture.manager.loans.borrow(
                 pool.identifier.type, pool.identifier.identifier
             )
-            assert 404 == response.status_code # type: ignore
+            assert 404 == response.status_code  # type: ignore
             assert (
                 "http://librarysimplified.org/terms/problem/not-found-on-remote"
-                == response.uri # type: ignore
+                == response.uri  # type: ignore
             )
 
     def test_borrow_succeeds_when_work_already_checked_out(
@@ -756,7 +753,7 @@ class TestLoanController:
 
             mock_remote = circulation.api_for_license_pool(loan.license_pool)
             assert 1 == len(mock_remote.responses["checkout"])
-            response = loan_fixture.manager.loans.borrow(loan_fixture.identifier.type, loan_fixture.identifier.identifier) # type: ignore
+            response = loan_fixture.manager.loans.borrow(loan_fixture.identifier.type, loan_fixture.identifier.identifier)  # type: ignore
 
             # No checkout request was actually made to the remote.
             assert 1 == len(mock_remote.responses["checkout"])
@@ -764,8 +761,8 @@ class TestLoanController:
             # We got an OPDS entry that includes at least one
             # fulfillment link, which is what we expect when we ask
             # about an active loan.
-            assert 200 == response.status_code # type: ignore[union-attr]
-            [entry] = feedparser.parse(response.response[0])["entries"] # type: ignore
+            assert 200 == response.status_code  # type: ignore[union-attr]
+            [entry] = feedparser.parse(response.response[0])["entries"]  # type: ignore
             assert any(
                 [
                     x

@@ -42,7 +42,6 @@ class CirculationException(IntegrationException, BaseProblemDetailException, ABC
 
 
 class InternalServerError(IntegrationException, BaseProblemDetailException):
-
     @property
     def problem_detail(self) -> ProblemDetail:
         return INTERNAL_SERVER_ERROR
@@ -63,24 +62,24 @@ class RemoteInitiatedServerError(InternalServerError):
         )
         return INTEGRATION_ERROR.detailed(msg, debug_message=str(self))
 
+
 class PatronAuthorizationFailedException(CirculationException):
-    
     @property
     def base(self) -> ProblemDetail:
         return INVALID_CREDENTIALS
 
 
 class RemotePatronCreationFailedException(CirculationException):
-
     @property
     def base(self) -> ProblemDetail:
         return MISSING_USER_INFO
 
-class LibraryAuthorizationFailedException(CirculationException):
 
+class LibraryAuthorizationFailedException(CirculationException):
     @property
     def base(self) -> ProblemDetail:
         return INTEGRATION_ERROR
+
 
 class InvalidInputException(CirculationException):
     """The patron gave invalid input to the library."""
@@ -88,6 +87,7 @@ class InvalidInputException(CirculationException):
     @property
     def base(self) -> ProblemDetail:
         return INVALID_INPUT.detailed("The patron gave invalid input to the library.")
+
 
 class LibraryInvalidInputException(InvalidInputException):
     """The library gave invalid input to the book provider."""
@@ -98,12 +98,14 @@ class LibraryInvalidInputException(InvalidInputException):
             "The library gave invalid input to the book provider."
         )
 
+
 class DeliveryMechanismError(InvalidInputException):
     """The patron broke the rules about delivery mechanisms."""
 
     @property
     def base(self) -> ProblemDetail:
         return BAD_DELIVERY_MECHANISM
+
 
 class DeliveryMechanismMissing(DeliveryMechanismError):
     """The patron needed to specify a delivery mechanism and didn't."""
@@ -120,19 +122,19 @@ class DeliveryMechanismConflict(DeliveryMechanismError):
 
 
 class CannotLoan(CirculationException):
-
     @property
     def base(self) -> ProblemDetail:
         return CHECKOUT_FAILED
+
 
 class OutstandingFines(CannotLoan):
     """The patron has outstanding fines above the limit in the library's
     policy."""
 
-
     @property
     def base(self) -> ProblemDetail:
         return OUTSTANDING_FINES
+
 
 class AuthorizationExpired(CannotLoan):
     """The patron's authorization has expired."""
@@ -183,7 +185,6 @@ class LimitReached(CirculationException):
 
 
 class PatronLoanLimitReached(CannotLoan, LimitReached):
-
     @property
     def base(self) -> ProblemDetail:
         return LOAN_LIMIT_REACHED
@@ -194,21 +195,18 @@ class PatronLoanLimitReached(CannotLoan, LimitReached):
 
 
 class CannotReturn(CirculationException):
-
     @property
     def base(self) -> ProblemDetail:
         return COULD_NOT_MIRROR_TO_REMOTE
 
 
 class CannotHold(CirculationException):
-
     @property
     def base(self) -> ProblemDetail:
         return HOLD_FAILED
 
 
 class PatronHoldLimitReached(CannotHold, LimitReached):
-
     @property
     def base(self) -> ProblemDetail:
         return HOLD_LIMIT_REACHED
@@ -217,18 +215,19 @@ class PatronHoldLimitReached(CannotHold, LimitReached):
     def message_with_limit(self) -> str:
         return SPECIFIC_HOLD_LIMIT_MESSAGE
 
-class CannotReleaseHold(CirculationException):
 
+class CannotReleaseHold(CirculationException):
     @property
     def base(self) -> ProblemDetail:
         return CANNOT_RELEASE_HOLD
 
-class CannotFulfill(CirculationException):
 
+class CannotFulfill(CirculationException):
     @property
     def base(self) -> ProblemDetail:
         return CANNOT_FULFILL
-    
+
+
 class FormatNotAvailable(CannotFulfill):
     """Our format information for this book was outdated, and it's
     no longer available in the requested format."""
@@ -236,6 +235,7 @@ class FormatNotAvailable(CannotFulfill):
     @property
     def base(self) -> ProblemDetail:
         return NO_ACCEPTABLE_FORMAT
+
 
 class NotFoundOnRemote(CirculationException):
     """We know about this book but the remote site doesn't seem to."""
@@ -262,6 +262,7 @@ class CannotRenew(CirculationException):
     @property
     def base(self) -> ProblemDetail:
         return RENEW_FAILED
+
 
 class NoAvailableCopiesWhenReserved(CannotLoan):
     """The patron can't check this book out because all available
@@ -295,6 +296,7 @@ class AlreadyCheckedOut(CannotLoan):
             detail="You already have this book checked out."
         )
 
+
 class AlreadyOnHold(CannotHold):
     """The patron can't put this book on hold because they already have
     it on hold.
@@ -303,6 +305,7 @@ class AlreadyOnHold(CannotHold):
     @property
     def base(self) -> ProblemDetail:
         return HOLD_FAILED.detailed(detail="You already have this book on hold.")
+
 
 class NotCheckedOut(CannotReturn):
     """The patron can't return this book because they don't
@@ -314,6 +317,7 @@ class NotCheckedOut(CannotReturn):
         return COULD_NOT_MIRROR_TO_REMOTE.detailed(
             title="Unable to return", detail="You don't have this book checked out."
         )
+
 
 class NotOnHold(CannotReleaseHold):
     """The patron can't release a hold for this book because they don't
@@ -328,6 +332,7 @@ class CurrentlyAvailable(CannotHold):
     def base(self) -> ProblemDetail:
         return HOLD_FAILED.detailed(detail="Cannot place a hold on an available title.")
 
+
 class NoAcceptableFormat(CannotFulfill):
     """We can't fulfill the patron's loan because the book is not available
     in an acceptable format.
@@ -336,6 +341,7 @@ class NoAcceptableFormat(CannotFulfill):
     @property
     def base(self) -> ProblemDetail:
         return super().base.detailed("No acceptable format", status_code=400)
+
 
 class FulfilledOnIncompatiblePlatform(CannotFulfill):
     """We can't fulfill the patron's loan because the loan was already
@@ -349,6 +355,7 @@ class FulfilledOnIncompatiblePlatform(CannotFulfill):
             "Fulfilled on an incompatible platform", status_code=451
         )
 
+
 class NoActiveLoan(CannotFulfill):
     """We can't fulfill the patron's loan because they don't have an
     active loan.
@@ -360,8 +367,8 @@ class NoActiveLoan(CannotFulfill):
             "Can't fulfill loan because you have no active loan for this book.",
         )
 
+
 class PatronNotFoundOnRemote(NotFoundOnRemote):
-    
     @property
     def base(self) -> ProblemDetail:
         return PATRON_NOT_FOUND_ON_REMOTE

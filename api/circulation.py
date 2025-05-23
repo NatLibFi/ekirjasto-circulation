@@ -13,13 +13,13 @@ from types import TracebackType
 from typing import Any, Literal, TypeVar
 
 import flask
+import requests
 from flask import Response
 from flask_babel import lazy_gettext as _
 from pydantic import PositiveInt
 from sqlalchemy import select
 from sqlalchemy.orm import Query, Session
 from typing_extensions import Self
-import requests
 
 from api.circulation_exceptions import *
 from api.integration.registry.license_providers import LicenseProvidersRegistry
@@ -637,7 +637,7 @@ class LoanInfo(LoanAndHoldInfoMixin):
         loanable: LicensePool | License
         if self.license_identifier is not None:
             loanable = (
-                session.execute( # type: ignore
+                session.execute(  # type: ignore
                     select(License).where(
                         License.identifier == self.license_identifier,
                         License.license_pool == license_pool,
@@ -1311,7 +1311,7 @@ class CirculationAPI:
             loan, new_loan_record = loan_info.create_or_update(patron, licensepool)
 
             if must_set_delivery_mechanism:
-                loan.fulfillment = delivery_mechanism # type: ignore
+                loan.fulfillment = delivery_mechanism  # type: ignore
             existing_hold = get_one(
                 self._db,
                 Hold,
@@ -1331,7 +1331,7 @@ class CirculationAPI:
                 # manager.
                 self._collect_checkout_history(patron, licensepool)
                 self._collect_checkout_event(patron, licensepool)
-            return loan, None, new_loan_record # type: ignore
+            return loan, None, new_loan_record  # type: ignore
 
         # At this point we know that we neither successfully
         # transacted a loan, nor discovered a preexisting loan.
@@ -1560,7 +1560,7 @@ class CirculationAPI:
             pin,
             licensepool,
             delivery_mechanism=delivery_mechanism,
-        ) # type: ignore
+        )  # type: ignore
         if not fulfillment:
             raise NoAcceptableFormat()
 

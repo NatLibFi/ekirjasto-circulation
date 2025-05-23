@@ -4,10 +4,9 @@ from flask_babel import lazy_gettext as _
 from api.circulation_exceptions import *
 from api.problem_details import *
 from core.util.problem_detail import ProblemDetail
-from tests.fixtures.database import DatabaseTransactionFixture
+
 
 class TestCirculationExceptions:
-
     @pytest.mark.parametrize(
         "exception",
         [
@@ -62,6 +61,7 @@ class TestCirculationExceptions:
         assert e_with_detail_and_debug.problem_detail == expected_pd.detailed(
             "A message"
         ).with_debug("A debug message")
+
 
 class TestLimitReached:
     """Test LimitReached, which may send different messages depending on the value of a
