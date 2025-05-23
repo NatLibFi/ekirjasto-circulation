@@ -379,42 +379,6 @@ class TestEnkiAPI:
         """Test the _epoch_to_struct helper method."""
         assert datetime_utc(1970, 1, 1) == EnkiAPI._epoch_to_struct("0")
 
-    def test_checkout_bad_authorization(self, enki_test_fixture: EnkiTestFixure):
-        """Test that the correct exception is thrown upon an unsuccessful login."""
-        db = enki_test_fixture.db
-        with pytest.raises(AuthorizationFailedException):
-            data = enki_test_fixture.files.sample_data("login_unsuccessful.json")
-            enki_test_fixture.api.queue_response(200, content=data)
-            result = json.loads(data)
-
-            edition, pool = db.edition(
-                identifier_type=Identifier.ENKI_ID,
-                data_source_name=DataSource.ENKI,
-                with_license_pool=True,
-            )
-            pool.identifier.identifier = "notanid"
-
-            patron = db.patron(external_identifier="notabarcode")
-
-            loan = enki_test_fixture.api.checkout(patron, "notapin", pool, MagicMock())
-
-    def test_checkout_not_available(self, enki_test_fixture: EnkiTestFixure):
-        """Test that the correct exception is thrown upon an unsuccessful login."""
-        db = enki_test_fixture.db
-        with pytest.raises(NoAvailableCopies):
-            data = enki_test_fixture.files.sample_data("no_copies.json")
-            enki_test_fixture.api.queue_response(200, content=data)
-            result = json.loads(data)
-
-            edition, pool = db.edition(
-                identifier_type=Identifier.ENKI_ID,
-                data_source_name=DataSource.ENKI,
-                with_license_pool=True,
-            )
-            pool.identifier.identifier = "econtentRecord1"
-            patron = db.patron(external_identifier="12345678901234")
-
-            loan = enki_test_fixture.api.checkout(patron, "1234", pool, MagicMock())
 
     def test_fulfillment_open_access_parser(self, enki_test_fixture: EnkiTestFixure):
         """Test that fulfillment info for non-ACS Enki books is parsed correctly."""

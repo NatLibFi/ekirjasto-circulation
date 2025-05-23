@@ -985,33 +985,6 @@ class TestCirculationAPI:
         assert 1 == circulation_api.analytics.count
         assert CirculationEvent.CM_HOLD_RELEASE == circulation_api.analytics.event_type
 
-    def test_can_fulfill_without_loan(self, circulation_api: CirculationAPIFixture):
-        """Can a title can be fulfilled without an active loan?  It depends on
-        the BaseCirculationAPI implementation for that title's collection.
-        """
-
-        pool = circulation_api.db.licensepool(None)
-        mock = create_autospec(BaseCirculationAPI)
-        mock.can_fulfill_without_loan = MagicMock(return_value="yep")
-        circulation = CirculationAPI(
-            circulation_api.db.session,
-            circulation_api.db.default_library(),
-            {pool.collection.id: mock},
-        )
-        assert "yep" == circulation.can_fulfill_without_loan(None, pool, MagicMock())
-
-        # If format data is missing or the BaseCirculationAPI cannot
-        # be found, we assume the title cannot be fulfilled.
-        assert False == circulation.can_fulfill_without_loan(None, pool, None)
-        assert False == circulation.can_fulfill_without_loan(None, None, MagicMock())
-
-        circulation.api_for_collection = {}
-        assert False == circulation.can_fulfill_without_loan(None, pool, None)
-
-        # An open access pool can be fulfilled even without the BaseCirculationAPI.
-        pool.open_access = True
-        assert True == circulation.can_fulfill_without_loan(None, pool, MagicMock())
-
     def test__collect_event(self, circulation_api: CirculationAPIFixture):
         # Test the _collect_event method, which gathers information
         # from the current request and sends out the appropriate

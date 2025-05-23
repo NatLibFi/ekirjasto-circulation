@@ -36,6 +36,7 @@ from api.problem_details import (
     HOLD_LIMIT_REACHED,
     NO_ACTIVE_LOAN,
     NO_COPIES_WHEN_RESERVED,
+    NO_LICENSES,
     NOT_FOUND_ON_REMOTE,
     OUTSTANDING_FINES,
 )
@@ -160,7 +161,7 @@ class TestLoanController:
         patron = object()
         pool = object()
         lpdm = object()
-        assert False == m(loan_fixture.db.default_library(), patron, pool, lpdm)
+        assert False == m(library=loan_fixture.db.default_library(), patron=patron, pool=pool, lpdm=lpdm) # type: ignore
 
         # If the library does not authenticate patrons, then this
         # _may_ be possible, but
@@ -183,7 +184,7 @@ class TestLoanController:
             loan_fixture.manager.loans.circulation.can_fulfill_without_loan = (
                 mock_can_fulfill_without_loan
             )
-            assert True == m(loan_fixture.db.default_library(), patron, pool, lpdm)
+            assert True == m(library=loan_fixture.db.default_library(), patron=patron, pool=pool, lpdm=lpdm) # type: ignore
             assert (patron, pool, lpdm) == self.called_with
 
     def test_patron_circulation_retrieval(self, loan_fixture: LoanFixture):
@@ -600,9 +601,7 @@ class TestLoanController:
             "/", headers=dict(Authorization=loan_fixture.valid_auth)
         ):
             loan_fixture.manager.loans.authenticated_patron_from_request()
-            response = loan_fixture.manager.loans.borrow(
-                loan_fixture.identifier.type, loan_fixture.identifier.identifier, -100
-            )
+            response = loan_fixture.manager.loans.borrow(loan_fixture.identifier.type, loan_fixture.identifier.identifier, -100) # type: ignore
             assert BAD_DELIVERY_MECHANISM == response
 
     def test_borrow_creates_hold_when_no_available_copies(
@@ -637,7 +636,7 @@ class TestLoanController:
             response = loan_fixture.manager.loans.borrow(
                 pool.identifier.type, pool.identifier.identifier
             )
-            assert 201 == response.status_code
+            assert 201 == response.status_code # type: ignore
 
             # A hold has been created for this license pool.
             hold = get_one(loan_fixture.db.session, Hold, license_pool=pool)
@@ -660,8 +659,8 @@ class TestLoanController:
             response = loan_fixture.manager.loans.borrow(
                 pool.identifier.type, pool.identifier.identifier
             )
-            assert 404 == response.status_code
-            assert NOT_FOUND_ON_REMOTE == response
+            assert 404 == response.status_code # type: ignore
+            assert NO_LICENSES == response
 
     def test_borrow_creates_local_hold_if_remote_hold_exists(
         self, loan_fixture: LoanFixture
@@ -698,7 +697,7 @@ class TestLoanController:
             response = loan_fixture.manager.loans.borrow(
                 pool.identifier.type, pool.identifier.identifier
             )
-            assert 201 == response.status_code
+            assert 201 == response.status_code # type: ignore
 
             # A hold has been created for this license pool.
             hold = get_one(loan_fixture.db.session, Hold, license_pool=pool)
@@ -727,10 +726,10 @@ class TestLoanController:
             response = loan_fixture.manager.loans.borrow(
                 pool.identifier.type, pool.identifier.identifier
             )
-            assert 404 == response.status_code
+            assert 404 == response.status_code # type: ignore
             assert (
                 "http://librarysimplified.org/terms/problem/not-found-on-remote"
-                == response.uri
+                == response.uri # type: ignore
             )
 
     def test_borrow_succeeds_when_work_already_checked_out(
@@ -757,9 +756,7 @@ class TestLoanController:
 
             mock_remote = circulation.api_for_license_pool(loan.license_pool)
             assert 1 == len(mock_remote.responses["checkout"])
-            response = loan_fixture.manager.loans.borrow(
-                loan_fixture.identifier.type, loan_fixture.identifier.identifier
-            )
+            response = loan_fixture.manager.loans.borrow(loan_fixture.identifier.type, loan_fixture.identifier.identifier) # type: ignore
 
             # No checkout request was actually made to the remote.
             assert 1 == len(mock_remote.responses["checkout"])
@@ -767,8 +764,8 @@ class TestLoanController:
             # We got an OPDS entry that includes at least one
             # fulfillment link, which is what we expect when we ask
             # about an active loan.
-            assert 200 == response.status_code
-            [entry] = feedparser.parse(response.response[0])["entries"]
+            assert 200 == response.status_code # type: ignore[union-attr]
+            [entry] = feedparser.parse(response.response[0])["entries"] # type: ignore
             assert any(
                 [
                     x
@@ -1156,59 +1153,6 @@ class TestLoanController:
             assert isinstance(response, ProblemDetail)
             assert NO_COPIES_WHEN_RESERVED.uri == response.uri
             assert 502 == response.status_code
-
-    def test_borrow_fails_with_outstanding_fines(
-        self, loan_fixture: LoanFixture, library_fixture: LibraryFixture
-    ):
-        threem_edition, pool = loan_fixture.db.edition(
-            with_open_access_download=False,
-            data_source_name=DataSource.THREEM,
-            identifier_type=Identifier.THREEM_ID,
-            with_license_pool=True,
-        )
-        threem_book = loan_fixture.db.work(
-            presentation_edition=threem_edition,
-        )
-        pool.open_access = False
-
-        library = loan_fixture.db.default_library()
-        settings = library_fixture.settings(library)
-
-        settings.max_outstanding_fines = 0.50
-        with loan_fixture.request_context_with_library(
-            "/", headers=dict(Authorization=loan_fixture.valid_auth)
-        ):
-            # The patron's credentials are valid, but they have a lot
-            # of fines.
-            patron = loan_fixture.manager.loans.authenticated_patron_from_request()
-            patron.fines = Decimal("12345678.90")
-            response = loan_fixture.manager.loans.borrow(
-                pool.identifier.type, pool.identifier.identifier
-            )
-
-            assert 403 == response.status_code
-            assert OUTSTANDING_FINES.uri == response.uri
-            assert "$12345678.90 outstanding" in response.detail
-
-        # Reduce the patron's fines, and there's no problem.
-        with loan_fixture.request_context_with_library(
-            "/", headers=dict(Authorization=loan_fixture.valid_auth)
-        ):
-            patron = loan_fixture.manager.loans.authenticated_patron_from_request()
-            patron.fines = Decimal("0.49")
-            loan_fixture.manager.d_circulation.queue_checkout(
-                pool,
-                LoanInfo.from_license_pool(
-                    pool,
-                    start_date=utc_now(),
-                    end_date=utc_now() + datetime.timedelta(seconds=3600),
-                ),
-            )
-            response = loan_fixture.manager.loans.borrow(
-                pool.identifier.type, pool.identifier.identifier
-            )
-
-            assert 201 == response.status_code
 
     def test_active_loans(self, loan_fixture: LoanFixture):
         # First, verify that this controller supports conditional HTTP

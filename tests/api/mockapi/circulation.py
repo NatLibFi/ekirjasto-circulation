@@ -43,8 +43,8 @@ class MockRemoteAPI(MockPatronActivityCirculationAPI):
     ):
         self.SET_DELIVERY_MECHANISM_AT = set_delivery_mechanism_at
         self.CAN_REVOKE_HOLD_WHEN_RESERVED = can_revoke_hold_when_reserved
-        self.responses = defaultdict(list)
-        self.availability_updated_for = []
+        self.responses = defaultdict(list) # type: ignore[var-annotated]
+        self.availability_updated_for: list = []
 
     def checkout(self, patron_obj, patron_password, licensepool, delivery_mechanism):
         # Should be a LoanInfo.

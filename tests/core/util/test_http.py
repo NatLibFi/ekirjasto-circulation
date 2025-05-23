@@ -32,7 +32,7 @@ class FakeRequest:
         self.agent = kwargs["headers"]["User-Agent"]
         self.args = args
         self.kwargs = kwargs
-        return self.response
+        return self.response # type: ignore
 
 
 class TestHTTP:
@@ -61,7 +61,7 @@ class TestHTTP:
     def test_request_with_timeout_success(self):
         request = FakeRequest(MockRequestsResponse(200, content="Success!"))
         response = HTTP._request_with_timeout(
-            "GET", "http://url/", request.fake_request, kwarg="value"  # type: ignore[call-arg]
+            "GET", "http://url/", request.fake_request, kwarg="value"
         )
         assert response.status_code == 200
         assert response.content == b"Success!"
@@ -144,7 +144,7 @@ class TestHTTP:
 
     def test_request_with_response_indicative_of_failure(self) -> None:
         def fake_500_response(*args, **kwargs) -> Response:
-            return MockRequestsResponse(500, content="Failure!")
+            return MockRequestsResponse(500, content="Failure!") # type: ignore
 
         with pytest.raises(
             BadResponseException,
@@ -158,10 +158,10 @@ class TestHTTP:
         """
 
         def fake_401_response(*args, **kwargs) -> Response:
-            return MockRequestsResponse(401, content="Weird")
+            return MockRequestsResponse(401, content="Weird") # type: ignore
 
         def fake_200_response(*args, **kwargs) -> Response:
-            return MockRequestsResponse(200, content="Hurray")
+            return MockRequestsResponse(200, content="Hurray") # type: ignore
 
         url = "http://url/"
         request = partial(HTTP._request_with_timeout, "GET", url)

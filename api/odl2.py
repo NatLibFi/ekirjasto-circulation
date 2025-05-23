@@ -4,6 +4,7 @@ import logging
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
+from api.circulation import LoanInfo
 from flask_babel import lazy_gettext as _
 from pydantic import PositiveInt
 from sqlalchemy.orm import Session
@@ -103,7 +104,7 @@ class ODL2API(BaseODLAPI[ODL2Settings, ODLLibrarySettings]):
 
     def _checkout(
         self, patron: Patron, licensepool: LicensePool, hold: Hold | None = None
-    ) -> Loan:
+    ) -> LoanInfo:
         # If the loan limit is not None or 0
         if self.loan_limit:
             loans = list(

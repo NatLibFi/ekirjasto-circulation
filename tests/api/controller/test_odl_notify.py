@@ -96,7 +96,7 @@ class TestODLNotificationController:
 
         status_doc = odl_fixture.loan_status_document("active")
         with controller_fixture.request_context_with_library("/", method="POST"):
-            flask.request.data = status_doc.json()
+            flask.request.data = status_doc.json() # type: ignore[assignment]
             response = controller_fixture.manager.odl_notification_controller.notify(
                 loan.id
             )
@@ -107,7 +107,7 @@ class TestODLNotificationController:
 
         status_doc = odl_fixture.loan_status_document("revoked")
         with controller_fixture.request_context_with_library("/", method="POST"):
-            flask.request.data = status_doc.json()
+            flask.request.data = status_doc.json() # type: ignore[assignment]
             response = controller_fixture.manager.odl_notification_controller.notify(
                 loan.id
             )
@@ -147,7 +147,7 @@ class TestODLNotificationController:
             controller_fixture.request_context_with_library("/", method="POST"),
             raises_problem_detail(pd=INVALID_LOAN_FOR_ODL_NOTIFICATION),
         ):
-            flask.request.data = odl_fixture.loan_status_document("active").json()
+            flask.request.data = odl_fixture.loan_status_document("active").json() # type: ignore[assignment]
             assert odl_fixture.license.identifier is not None
             controller_fixture.manager.odl_notification_controller.notify(loan.id)
 
@@ -158,7 +158,7 @@ class TestODLNotificationController:
             method="POST",
             library=odl_fixture.library,
         ):
-            flask.request.data = odl_fixture.loan_status_document("returned").json()
+            flask.request.data = odl_fixture.loan_status_document("returned").json() # type: ignore[assignment]
             response = controller_fixture.manager.odl_notification_controller.notify(
                 NON_EXISTENT_LICENSE_IDENTIFIER
             )
@@ -176,7 +176,7 @@ class TestODLNotificationController:
                 pd=NO_ACTIVE_LOAN.detailed("No loan was found.", 404)
             ),
         ):
-            flask.request.data = odl_fixture.loan_status_document("active").json()
+            flask.request.data = odl_fixture.loan_status_document("active").json() # type: ignore[assignment]
             controller_fixture.manager.odl_notification_controller.notify(
                 NON_EXISTENT_LICENSE_IDENTIFIER
             )

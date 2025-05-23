@@ -710,12 +710,10 @@ class ODL2ApiFixture:
         patron = patron or self.patron
         pool = pool or self.pool
         loan_url = loan_url or self.db.fresh_url()
-        print("nothere?")
         self.mock_http.queue_response(
             201, content=self.loan_status_document(self_link=loan_url).to_serializable()
         )
         loan_info = self.api_checkout(patron=patron, licensepool=pool)
-        print("jshdgf", loan_info)
         if create_loan:
             loan_info.create_or_update(patron, pool)
         return loan_info

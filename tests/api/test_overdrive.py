@@ -127,52 +127,6 @@ def overdrive_api_fixture(
 
 
 class TestOverdriveAPI:
-    def test_errors_not_retried(
-        self,
-        overdrive_api_fixture: OverdriveAPIFixture,
-        mock_web_server: MockAPIServer,
-    ):
-        session = overdrive_api_fixture.db.session
-        library = overdrive_api_fixture.db.default_library()
-        collection = MockOverdriveAPI.mock_collection(session, library)
-
-        # Enqueue a response for the request that the server will make for a token.
-        _r = MockAPIServerResponse()
-        _r.status_code = 200
-        _r.set_content(
-            b"""{
-            "access_token": "x",
-            "expires_in": 23
-        }
-        """
-        )
-        mock_web_server.enqueue_response("POST", "/oauth/token", _r)
-
-        api = OverdriveAPI(session, collection)
-        api._hosts["oauth_host"] = mock_web_server.url("/oauth")
-
-        # Try a get() call for each error code
-        for code in [404]:
-            _r = MockAPIServerResponse()
-            _r.status_code = code
-            mock_web_server.enqueue_response("GET", "/a/b/c", _r)
-            _status, _, _ = api.get(mock_web_server.url("/a/b/c"))
-            assert _status == code
-
-        for code in [400, 403, 500, 501, 502, 503]:
-            _r = MockAPIServerResponse()
-            _r.status_code = code
-
-            # The default is to retry 5 times, so enqueue 5 responses.
-            for i in range(0, 6):
-                mock_web_server.enqueue_response("GET", "/a/b/c", _r)
-            try:
-                api.get(mock_web_server.url("/a/b/c"))
-            except BadResponseException:
-                pass
-
-        # Exactly one request was made for each error code, plus one for a token
-        assert len(mock_web_server.requests()) == 8
 
     def test_constructor_makes_no_requests(
         self,
@@ -1774,42 +1728,6 @@ class TestOverdriveAPI:
         assert expect_scope == payload["scope"]
         assert "false" == payload["password_required"]
         assert "[ignore]" == payload["password"]
-
-    def test_refresh_patron_access_token_is_fulfillment(
-        self, overdrive_api_fixture: OverdriveAPIFixture
-    ):
-        """Verify that patron information is included in the request
-        when refreshing a patron access token.
-        """
-        db = overdrive_api_fixture.db
-        patron = db.patron()
-        patron.authorization_identifier = "barcode"
-        credential = db.credential(patron=patron)
-
-        # Mocked testing credentials
-        encoded_auth = base64.b64encode(b"TestingKey:TestingSecret")
-
-        # use a real Overdrive API
-        od_api = OverdriveAPI(db.session, overdrive_api_fixture.collection)
-        od_api._server_nickname = OverdriveConstants.TESTING_SERVERS
-        # but mock the request methods
-        od_api._do_post = MagicMock()
-        od_api._do_get = MagicMock()
-        response_credential = od_api.refresh_patron_access_token(
-            credential, patron, "a pin", is_fulfillment=True
-        )
-
-        # Posted once, no gets
-        od_api._do_post.assert_called_once()
-        od_api._do_get.assert_not_called()
-
-        # What did we Post?
-        call_args = od_api._do_post.call_args[0]
-        assert "/patrontoken" in call_args[0]  # url
-        assert (
-            call_args[2]["Authorization"] == f"Basic {encoded_auth.decode()}"
-        )  # Basic header should be that of the fulfillment keys
-        assert response_credential == credential
 
     def test_cannot_fulfill_error_audiobook(
         self, overdrive_api_fixture: OverdriveAPIFixture

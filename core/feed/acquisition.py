@@ -9,6 +9,7 @@ from dependency_injector.wiring import Provide, inject
 from sqlalchemy.orm import Query, Session
 
 from api.problem_details import NOT_FOUND_ON_REMOTE
+from api.circulation import FulfillmentInfo, Fulfillment
 from core.entrypoint import EntryPoint
 from core.external_search import ExternalSearchIndex, QueryParseException
 from core.facets import FacetConstants
@@ -558,7 +559,7 @@ class OPDSAcquisitionFeed(BaseOPDSFeed):
         circulation: Any,
         item: LicensePool | Loan,
         annotator: LibraryAnnotator | None = None,
-        fulfillment: FulfillmentInfo | None = None,
+        fulfillment: FulfillmentInfo | Fulfillment | None = None,
         selected_book: SelectedBook | None = None,
         **response_kwargs: Any,
     ) -> OPDSEntryResponse | ProblemDetail | None:

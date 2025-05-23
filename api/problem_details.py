@@ -300,6 +300,22 @@ INVALID_EKIRJASTO_TOKEN = pd(
 )
 
 # Finland
+MISSING_USER_INFO = pd(
+    "http://librarysimplified.org/terms/problem/credentials-invalid",
+    status_code=500,
+    title=_("Missing permanent id"),
+    detail="Value for permanent_id is missing in remote user info."
+)
+
+# Finland
+PATRON_NOT_FOUND_ON_REMOTE = pd(
+    "",
+    status_code=404,
+    title=("Patron not found"),
+    detail=("Remote patron is conflicting with delegate patron.")
+)
+
+# Finland
 EKIRJASTO_REMOTE_AUTHENTICATION_FAILED = pd(
     "http://librarysimplified.org/terms/problem/credentials-invalid",
     status_code=400,

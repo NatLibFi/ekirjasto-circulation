@@ -1,5 +1,6 @@
 from datetime import datetime
 from enum import Enum
+from typing import Optional
 
 from dateutil import parser
 from pydantic import BaseModel, Field, validator
@@ -44,7 +45,7 @@ class EventType(str, Enum):
 
 
 class Event(BaseModel):
-    event_type: EventType = Field(None, alias="type")
+    event_type: Optional[EventType] = Field(None, alias="type")
     name: str | None = None
     timestamp: datetime | None = None
     id: str | None = None
@@ -61,7 +62,7 @@ class Link(BaseModel):
     href: str
     rel: str | list[str]
     title: str | None = None
-    content_type: str = Field(None, alias="type")
+    content_type: str | None = Field(None, alias="type")
     templated: str | None = None
     profile: str | None = None
 

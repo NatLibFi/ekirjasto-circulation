@@ -35,7 +35,7 @@ from webpub_manifest_parser.opds2.registry import (
 )
 from webpub_manifest_parser.utils import encode, first_or_default
 
-from api.circulation import FulfillmentInfo
+from api.circulation import Fulfillment, FulfillmentInfo
 from api.circulation_exceptions import CannotFulfill
 from core.coverage import CoverageFailure
 from core.integration.settings import (
@@ -312,11 +312,11 @@ class OPDS2API(BaseOPDSAPI):
         pin: str,
         licensepool: LicensePool,
         delivery_mechanism: LicensePoolDeliveryMechanism,
-    ) -> FulfillmentInfo:
+    ) -> Fulfillment | FulfillmentInfo:
         fufillment_info = super().fulfill(patron, pin, licensepool, delivery_mechanism)
         if self.token_auth_configuration:
             fufillment_info = self.fulfill_token_auth(
-                patron, licensepool, fufillment_info
+                patron, licensepool, fufillment_info # type: ignore
             )
         return fufillment_info
 

@@ -1265,7 +1265,7 @@ class TestODLAPI:
         )
         assert loan.start == activity[0].start_date
         assert loan.end == activity[0].end_date
-        assert loan.external_identifier == activity[0].external_identifier
+        assert loan.external_identifier == activity[0].external_identifier # type: ignore[union-attr]
 
         # Two loans.
         pool2 = db.licensepool(None, collection=opds2_with_odl_api_fixture.collection)
@@ -1278,21 +1278,21 @@ class TestODLAPI:
             opds2_with_odl_api_fixture.patron, "pin"
         )
         assert 2 == len(activity)
-        [l1, l2] = sorted(activity, key=lambda x: x.start_date)
+        [l1, l2] = sorted(activity, key=lambda x: x.start_date) # type: ignore
 
         assert opds2_with_odl_api_fixture.collection == l1.collection(db.session)
         assert opds2_with_odl_api_fixture.pool.identifier.type == l1.identifier_type
         assert opds2_with_odl_api_fixture.pool.identifier.identifier == l1.identifier
         assert loan.start == l1.start_date
         assert loan.end == l1.end_date
-        assert loan.external_identifier == l1.external_identifier
+        assert loan.external_identifier == l1.external_identifier # type: ignore[union-attr]
 
         assert opds2_with_odl_api_fixture.collection == l2.collection(db.session)
         assert pool2.identifier.type == l2.identifier_type
         assert pool2.identifier.identifier == l2.identifier
         assert loan2.start == l2.start_date
         assert loan2.end == l2.end_date
-        assert loan2.external_identifier == l2.external_identifier
+        assert loan2.external_identifier == l2.external_identifier # type: ignore[union-attr]
 
         # If a loan is expired already, it's left out.
         loan2.end = utc_now() - datetime.timedelta(days=1)
@@ -1315,21 +1315,21 @@ class TestODLAPI:
             opds2_with_odl_api_fixture.patron, "pin"
         )
         assert 2 == len(activity)
-        [l1, l2] = sorted(activity, key=lambda x: x.start_date)
+        [l1, l2] = sorted(activity, key=lambda x: x.start_date) # type: ignore
 
         assert opds2_with_odl_api_fixture.collection == l1.collection(db.session)
         assert opds2_with_odl_api_fixture.pool.identifier.type == l1.identifier_type
         assert opds2_with_odl_api_fixture.pool.identifier.identifier == l1.identifier
         assert loan.start == l1.start_date
         assert loan.end == l1.end_date
-        assert loan.external_identifier == l1.external_identifier
+        assert loan.external_identifier == l1.external_identifier # type: ignore[union-attr]
 
         assert opds2_with_odl_api_fixture.collection == l2.collection(db.session)
         assert pool3.identifier.type == l2.identifier_type
         assert pool3.identifier.identifier == l2.identifier
         assert loan3.start == l2.start_date
         assert loan3.end == l2.end_date
-        assert loan3.external_identifier == l2.external_identifier
+        assert loan3.external_identifier == l2.external_identifier # type: ignore[union-attr]
 
         # remove the open access loan
         db.session.delete(loan3)
@@ -1345,14 +1345,14 @@ class TestODLAPI:
             opds2_with_odl_api_fixture.patron, "pin"
         )
         assert 2 == len(activity)
-        [l1, h1] = sorted(activity, key=lambda x: x.start_date)
+        [l1, h1] = sorted(activity, key=lambda x: x.start_date) # type: ignore
         assert opds2_with_odl_api_fixture.collection == h1.collection(db.session)
         assert pool2.identifier.type == h1.identifier_type
         assert pool2.identifier.identifier == h1.identifier
         assert hold.start == h1.start_date
         assert hold.end == h1.end_date
         # Hold position was updated.
-        assert 1 == h1.hold_position
+        assert 1 == h1.hold_position # type: ignore[union-attr]
         assert 1 == hold.position
 
         # If the hold is expired, it's deleted right away and the license

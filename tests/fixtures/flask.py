@@ -59,7 +59,7 @@ class FlaskAppFixture:
     @contextmanager
     def test_request_context_system_admin(
         self, *args: Any, **kwargs: Any
-    ) -> Generator[RequestContext]:
+    ) -> Generator[RequestContext]: # type: ignore[type-arg]
         admin = self.admin_user()
         with self.test_request_context(*args, **kwargs, admin=admin) as c:
             yield c

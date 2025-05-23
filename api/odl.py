@@ -333,7 +333,7 @@ class BaseODLAPI(
         if loan.license is None:
             # We can't return a loan that doesn't have a license. This should never happen but if it does,
             # we self.log an error and continue on, so it doesn't stay on the patrons bookshelf forever.
-            self.log.error(f"Loan {loan} has no license.")
+            self.log.error(f"Loan {loan.id} has no license.") # type: ignore
             return
 
         loan_status = self._request_loan_status(loan.external_identifier)
@@ -403,7 +403,7 @@ class BaseODLAPI(
 
     def _checkout(
         self, patron: Patron, licensepool: LicensePool, hold: Hold | None = None
-    ) -> Loan:
+    ) -> LoanInfo:
         db = Session.object_session(patron)
 
         if not any(l for l in licensepool.licenses if not l.is_inactive):
@@ -637,7 +637,7 @@ class BaseODLAPI(
             # If we have no DRM, we can just redirect to the content link and let the patron download the book.
             fulfill_link = loan_status.links.get(
                 rel="publication",
-                content_type=delivery_mechanism.delivery_mechanism.content_type,
+                content_type=delivery_mechanism.delivery_mechanism.content_type, # type: ignore
             )
             fulfill_cls = RedirectFulfillment
         elif drm_scheme == DeliveryMechanism.FEEDBOOKS_AUDIOBOOK_DRM:
@@ -650,7 +650,7 @@ class BaseODLAPI(
         else:
             # We are getting content via a license loan_status document, so we need to find the link
             # that corresponds to the delivery mechanism we are using.
-            fulfill_link = loan_status.links.get(rel="license", content_type=drm_scheme)
+            fulfill_link = loan_status.links.get(rel="license", content_type=drm_scheme) # type: ignore
             fulfill_cls = partial(FetchFulfillment, allowed_response_codes=["2xx"])
 
         if fulfill_link is None:
@@ -678,6 +678,7 @@ class BaseODLAPI(
             f"{len(holds)} holds / {len(ready_for_checkout)} ready / {len(waiting)} waiting"
         )
 
+        assert self.collection is not None
         default_reservation_period = self.collection.default_reservation_period
         # If we had available copies, reserve them for the same amount of holds at the top of the queue.
         for hold in ready_for_checkout:

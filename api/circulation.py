@@ -16,10 +16,10 @@ import flask
 from flask import Response
 from flask_babel import lazy_gettext as _
 from pydantic import PositiveInt
-from requests import Response
 from sqlalchemy import select
 from sqlalchemy.orm import Query, Session
 from typing_extensions import Self
+import requests
 
 from api.circulation_exceptions import *
 from api.integration.registry.license_providers import LicenseProvidersRegistry
@@ -54,7 +54,7 @@ from core.model import (
 from core.model.integration import IntegrationConfiguration
 from core.model.patron import LoanCheckout
 from core.util.datetime_helpers import utc_now
-from core.util.http import HTTP, BadResponseException
+from core.util.http import HTTP, BadResponseException, ResponseCodesT
 from core.util.log import LoggerMixin
 
 
@@ -509,13 +509,13 @@ class FetchFulfillment(UrlFulfillment, LoggerMixin):
         content_type: str | None = None,
         *,
         include_headers: dict[str, str] | None = None,
-        allowed_response_codes: list[str | int] | None = None,
+        allowed_response_codes: ResponseCodesT = None,
     ) -> None:
         super().__init__(content_link, content_type)
         self.include_headers = include_headers or {}
         self.allowed_response_codes = allowed_response_codes or []
 
-    def get(self, url: str) -> Response:
+    def get(self, url: str) -> requests.Response:
         return HTTP.get_with_timeout(
             url,
             headers=self.include_headers,
@@ -583,7 +583,7 @@ class LoanInfo(LoanAndHoldInfoMixin):
     end_date: datetime.datetime | None
     external_identifier: str | None = None
     locked_to: DeliveryMechanismInfo | None = None
-    fulfillment_info: FulfillmentInfo | None = (None,)
+    fulfillment_info: FulfillmentInfo | None = None
     license_identifier: str | None = None
 
     @classmethod
@@ -637,7 +637,7 @@ class LoanInfo(LoanAndHoldInfoMixin):
         loanable: LicensePool | License
         if self.license_identifier is not None:
             loanable = (
-                session.execute(
+                session.execute( # type: ignore
                     select(License).where(
                         License.identifier == self.license_identifier,
                         License.license_pool == license_pool,
@@ -916,7 +916,7 @@ class BaseCirculationAPI(
         pin: str,
         licensepool: LicensePool,
         delivery_mechanism: LicensePoolDeliveryMechanism,
-    ) -> FulfillmentInfo:
+    ) -> Fulfillment | FulfillmentInfo:
         """Get the actual resource file to the patron."""
         ...
 
@@ -1311,7 +1311,7 @@ class CirculationAPI:
             loan, new_loan_record = loan_info.create_or_update(patron, licensepool)
 
             if must_set_delivery_mechanism:
-                loan.fulfillment = delivery_mechanism
+                loan.fulfillment = delivery_mechanism # type: ignore
             existing_hold = get_one(
                 self._db,
                 Hold,
@@ -1331,8 +1331,7 @@ class CirculationAPI:
                 # manager.
                 self._collect_checkout_history(patron, licensepool)
                 self._collect_checkout_event(patron, licensepool)
-                self.log.info(f"Loan made: {loan} ")
-            return loan, None, new_loan_record
+            return loan, None, new_loan_record # type: ignore
 
         # At this point we know that we neither successfully
         # transacted a loan, nor discovered a preexisting loan.
@@ -1514,7 +1513,7 @@ class CirculationAPI:
         pin: str,
         licensepool: LicensePool,
         delivery_mechanism: LicensePoolDeliveryMechanism,
-    ) -> Fulfillment:
+    ) -> Fulfillment | FulfillmentInfo:
         """Fulfil a book that a patron has previously checked out.
 
         :param delivery_mechanism: A LicensePoolDeliveryMechanism
@@ -1561,7 +1560,7 @@ class CirculationAPI:
             pin,
             licensepool,
             delivery_mechanism=delivery_mechanism,
-        )
+        ) # type: ignore
         if not fulfillment:
             raise NoAcceptableFormat()
 

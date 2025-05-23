@@ -81,7 +81,7 @@ class RemoteIntegrationException(IntegrationException, BaseProblemDetailExceptio
         )
 
     def temp_document_detail(self) -> str:
-        return _(str(self.detail), service=self.service)  # type: ignore[no-any-return]
+        return _(str(self.detail), service=self.service)
 
     def temp_document_debug_message(self) -> str:
         return str(self)
@@ -193,6 +193,21 @@ class RequestKwargs(GetRequestKwargs, total=False):
     files: Mapping[str, BytesIO | StringIO | str | bytes] | None
     json: Mapping[str, Any] | None
 
+class GetRequestCallable(Protocol):
+    def __call__(
+        self,
+        url: str,
+        **kwargs: Unpack[GetRequestKwargs],
+    ) -> Response: ...
+
+
+class MakeRequestCallable(Protocol):
+    def __call__(
+        self,
+        method: str,
+        url: str,
+        **kwargs: Unpack[RequestKwargs],
+    ) -> Response: ...
 
 class _ProcessResponseCallable(Protocol):
     def __call__(
@@ -222,31 +237,37 @@ class HTTP(LoggerMixin):
         cls.DEFAULT_REQUEST_TIMEOUT = 5
 
     @classmethod
-    def get_with_timeout(cls, url: str, *args, **kwargs) -> Response:
+    def get_with_timeout(cls, url: str, **kwargs: Unpack[GetRequestKwargs]) -> Response:
         """Make a GET request with timeout handling."""
-        return cls.request_with_timeout("GET", url, *args, **kwargs)
+        return cls.request_with_timeout("GET", url, **kwargs)
 
     @classmethod
-    def post_with_timeout(cls, url: str, payload, *args, **kwargs) -> Response:
+    def post_with_timeout(
+        cls,
+        url: str,
+        **kwargs: Unpack[RequestKwargs],
+    ) -> Response:
         """Make a POST request with timeout handling."""
-        kwargs["data"] = payload
-        return cls.request_with_timeout("POST", url, *args, **kwargs)
+        return cls.request_with_timeout("POST", url, **kwargs)
 
     @classmethod
-    def put_with_timeout(cls, url: str, payload, *args, **kwargs) -> Response:
+    def put_with_timeout(
+        cls,
+        url: str,
+        **kwargs: Unpack[RequestKwargs],
+    ) -> Response:
         """Make a PUT request with timeout handling."""
-        kwargs["data"] = payload
-        return cls.request_with_timeout("PUT", url, *args, **kwargs)
+        return cls.request_with_timeout("PUT", url, **kwargs)
 
     @classmethod
     def request_with_timeout(
-        cls, http_method: str, url: str, *args, **kwargs
+        cls, http_method: str, url: str, **kwargs: Unpack[RequestKwargs]
     ) -> Response:
         """Call requests.request and turn a timeout into a RequestTimedOut
         exception.
         """
         return cls._request_with_timeout(
-            http_method, url, sessions.Session.request, *args, **kwargs
+            http_method, url, sessions.Session.request, **kwargs
         )
 
     # The set of status codes on which a retry will be attempted (if the number of retries requested is non-zero).
@@ -412,12 +433,12 @@ class HTTP(LoggerMixin):
             raise RequestNetworkException(url, str(e)) from e
 
     @classmethod
-    def series(cls, status_code):
+    def series(cls, status_code: int) -> _ResponseCodesLiteral:
         """Return the HTTP series for the given status code."""
-        return "%sxx" % (int(status_code) // 100)
+        return "%sxx" % (int(status_code) // 100)  # type: ignore[return-value]
 
     @classmethod
-    def debuggable_get(cls, url: str, **kwargs: Any) -> Response:
+    def debuggable_get(cls, url: str, **kwargs: Unpack[GetRequestKwargs]) -> Response:
         """Make a GET request that returns a detailed problem
         detail document on error.
         """
@@ -425,12 +446,13 @@ class HTTP(LoggerMixin):
 
     @classmethod
     def debuggable_post(
-        cls, url: str, payload: str | dict[str, Any], **kwargs: Any
+        cls,
+        url: str,
+        **kwargs: Unpack[RequestKwargs],
     ) -> Response:
         """Make a POST request that returns a detailed problem
         detail document on error.
         """
-        kwargs["data"] = payload
         return cls.debuggable_request("POST", url, **kwargs)
 
     @classmethod
@@ -439,7 +461,7 @@ class HTTP(LoggerMixin):
         http_method: str,
         url: str,
         make_request_with: Callable[..., Response] | None = None,
-        **kwargs: Any,
+        **kwargs: Unpack[RequestKwargs],
     ) -> Response:
         """Make a request that raises a ProblemError with a detailed problem detail
         document on error, rather than a generic "an integration error occurred"
@@ -469,17 +491,12 @@ class HTTP(LoggerMixin):
         cls,
         url: str,
         response: Response,
-        allowed_response_codes: list[str | int] | None = None,
-        disallowed_response_codes: list[str | int] | None = None,
-        expected_encoding: str = "utf-8",
+        allowed_response_codes: ResponseCodesT = None,
+        disallowed_response_codes: ResponseCodesT = None,
     ) -> Response:
         """If there was a problem with an integration request,
         raise ProblemError with an appropriate ProblemDetail. Otherwise, return the
         response to the original request.
-
-        :param response: A Response object from the requests library.
-        :param expected_encoding: Typically, we expect HTTP responses to be UTF-8
-            encoded, but for certain requests we can change the encoding type.
         """
 
         allowed_response_codes = allowed_response_codes or ["2xx", "3xx"]
