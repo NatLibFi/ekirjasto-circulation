@@ -468,8 +468,9 @@ class BaseODLAPI(
             self.log.info(f"No license  or status was none. Raising NoAvailableCopies.")
             licensepool.update_availability_from_licenses()
             if hold:
-                # The license should be available at most by the default loan period in E-Kirjasto
+                # The license should be available at most by the default loan period in E-Kirjasto.
                 hold.end = utc_now() + datetime.timedelta(days=default_loan_period)
+                # Instantly recalculate the holds queue so that this hold goes to position 1 and not 0.
                 self._recalculate_holds_in_license_pool(licensepool)
             raise NoAvailableCopies()
 
