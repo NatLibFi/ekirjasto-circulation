@@ -133,9 +133,9 @@ class LoanController(CirculationManagerController):
         selected_book = patron.load_selected_book(work)
         return OPDSAcquisitionFeed.single_entry_loans_feed(
             self.circulation,
-            loan_or_hold, # type: ignore[arg-type]
+            loan_or_hold,  # type: ignore[arg-type]
             selected_book=selected_book,
-            **response_kwargs, # type: ignore[arg-type]
+            **response_kwargs,  # type: ignore[arg-type]
         )
 
     def _borrow(
