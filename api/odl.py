@@ -468,10 +468,8 @@ class BaseODLAPI(
             self.log.info(f"No license  or status was none. Raising NoAvailableCopies.")
             licensepool.update_availability_from_licenses()
             if hold:
-                hold.position = 1
-                hold.end = utc_now() + datetime.timedelta(
-                    days=default_loan_period
-                )  # The license should be available at most by loan period
+                # The license should be available at most by the default loan period in E-Kirjasto
+                hold.end = utc_now() + datetime.timedelta(days=default_loan_period)
                 self._recalculate_holds_in_license_pool(licensepool)
             raise NoAvailableCopies()
 
@@ -960,6 +958,10 @@ class BaseODLImporter(BaseOPDSImporter[SettingsType], ABC):
             elif isinstance(document_format, list):
                 content_types = document_format
 
+        cls.logger().info(
+            f"License identifier {identifier} / status {status} / concurrency {concurrency} / expires {expires} / checkouts left {left} / available / {available} / content types {content_types}"
+        )
+
         return LicenseData(
             identifier=identifier,
             checkout_url=checkout_link,
@@ -986,7 +988,7 @@ class BaseODLImporter(BaseOPDSImporter[SettingsType], ABC):
 
         if not license_info_document:
             return None
-
+        cls.logger().info(f"Parsing License Info Document {license_info_link}")
         parsed_license = cls.parse_license_info(
             license_info_document, license_info_link, checkout_link
         )
