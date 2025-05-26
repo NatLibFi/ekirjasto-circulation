@@ -272,7 +272,9 @@ class NoAvailableCopiesWhenReserved(CannotLoan):
 
     @property
     def base(self) -> ProblemDetail:
-        return NO_COPIES_WHEN_RESERVED
+        return CHECKOUT_FAILED.detailed(
+            detail="No copies available to check out, you are still next in line."
+        )
 
 
 class NoAvailableCopies(CannotLoan):

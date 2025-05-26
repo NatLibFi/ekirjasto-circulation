@@ -463,15 +463,14 @@ class BaseODLAPI(
 
         # No best available licenses were found in the first place or, for some reason, there's no status.
         if license_ is None or loan_status is None:
-            # It could be that we have a hold which means we thought the book was available, but it wasn't.
-            # We raise a NoAvailableCopies() and have the handler handle the patron's hold position.
-            self.log.info(f"No license  or status was none. Raising NoAvailableCopies.")
             licensepool.update_availability_from_licenses()
+            # If we have a hold, it means we thought the book was available, but it wasn't.
+            # So we need to update availability and the hold queue.
             if hold:
                 # The license should be available at most by the default loan period in E-Kirjasto.
                 hold.end = utc_now() + datetime.timedelta(days=default_loan_period)
-                # Instantly recalculate the holds queue so that this hold goes to position 1 and not 0.
                 self._recalculate_holds_in_license_pool(licensepool)
+                raise NoAvailableCopiesWhenReserved()
             raise NoAvailableCopies()
 
         if not loan_status.active:

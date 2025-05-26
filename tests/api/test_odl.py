@@ -21,6 +21,7 @@ from api.circulation_exceptions import (
     CannotReturn,
     CurrentlyAvailable,
     NoAvailableCopies,
+    NoAvailableCopiesWhenReserved,
     NoLicenses,
     NotCheckedOut,
     NotOnHold,
@@ -706,7 +707,7 @@ class TestODLAPI:
             content=opds2_with_odl_api_fixture.files.sample_text("unavailable.json"),
         )
         with opds2_with_odl_api_fixture.mock_http.patch():
-            with pytest.raises(NoAvailableCopies):
+            with pytest.raises(NoAvailableCopiesWhenReserved):
                 opds2_with_odl_api_fixture.api_checkout()
         assert db.session.query(Hold).count() == 2
 
