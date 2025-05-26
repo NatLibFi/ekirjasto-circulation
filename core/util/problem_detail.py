@@ -6,11 +6,12 @@ from __future__ import annotations
 
 import json as j
 import logging
+from abc import ABC, abstractmethod
 
 from flask_babel import LazyString
 from pydantic import BaseModel
 
-from core.exceptions import BaseError
+from core.exceptions import BaseError, BasePalaceException
 
 JSON_MEDIA_TYPE = "application/api-problem+json"
 
@@ -39,7 +40,6 @@ class ProblemDetailModel(BaseModel):
 
 
 class ProblemDetail:
-
     """A common type of problem."""
 
     JSON_MEDIA_TYPE = JSON_MEDIA_TYPE
@@ -131,7 +131,25 @@ class ProblemDetail:
             self.debug_message,
         )
 
+    def __eq__(self, other: object) -> bool:
+        """Compares two ProblemDetail objects.
 
+        :param other: ProblemDetail object
+        :return: Boolean value indicating whether two items are equal
+        """
+        if not isinstance(other, ProblemDetail):
+            return False
+
+        return (
+            self.uri == other.uri
+            and self.title == other.title
+            and self.status_code == other.status_code
+            and self.detail == other.detail
+            and self.debug_message == other.debug_message
+        )
+
+
+# TODO: This should be removed once BaseError is removed.
 class ProblemError(BaseError):
     """Exception class allowing to raise and catch ProblemDetail objects."""
 
@@ -145,6 +163,40 @@ class ProblemError(BaseError):
                 'Argument "problem_detail" must be an instance of ProblemDetail class'
             )
 
+        self._problem_detail = problem_detail
+
+    @property
+    def problem_detail(self) -> ProblemDetail:
+        """Return the ProblemDetail object associated with this exception.
+
+        :return: ProblemDetail object associated with this exception
+        """
+        return self._problem_detail
+
+
+class BaseProblemDetailException(BasePalaceException, ABC):
+    """Mixin for exceptions that can be converted into a ProblemDetail."""
+
+    @property
+    @abstractmethod
+    def problem_detail(self) -> ProblemDetail:
+        """Convert this object into a ProblemDetail."""
+        ...
+
+
+class ProblemDetailException(BaseProblemDetailException):
+    """Exception class allowing to raise and catch ProblemDetail objects."""
+
+    def __init__(self, problem_detail: ProblemDetail) -> None:
+        """Initialize a new instance of ProblemError class.
+
+        :param problem_detail: ProblemDetail object
+        """
+        if not isinstance(problem_detail, ProblemDetail):
+            raise ValueError(
+                'Argument "problem_detail" must be an instance of ProblemDetail class'
+            )
+        super().__init__(problem_detail.title)
         self._problem_detail = problem_detail
 
     @property
