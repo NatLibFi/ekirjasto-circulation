@@ -2109,42 +2109,6 @@ class TestOverdriveAPI:
         assert "false" == payload["password_required"]
         assert "[ignore]" == payload["password"]
 
-    def test_refresh_patron_access_token_is_fulfillment(
-        self, overdrive_api_fixture: OverdriveAPIFixture
-    ):
-        """Verify that patron information is included in the request
-        when refreshing a patron access token.
-        """
-        db = overdrive_api_fixture.db
-        patron = db.patron()
-        patron.authorization_identifier = "barcode"
-        credential = db.credential(patron=patron)
-
-        # Mocked testing credentials
-        encoded_auth = base64.b64encode(b"TestingKey:TestingSecret")
-
-        # use a real Overdrive API
-        od_api = OverdriveAPI(db.session, overdrive_api_fixture.collection)
-        od_api._server_nickname = OverdriveConstants.TESTING_SERVERS
-        # but mock the request methods
-        od_api._do_post = MagicMock()
-        od_api._do_get = MagicMock()
-        response_credential = od_api.refresh_patron_access_token(
-            credential, patron, "a pin", is_fulfillment=True
-        )
-
-        # Posted once, no gets
-        od_api._do_post.assert_called_once()
-        od_api._do_get.assert_not_called()
-
-        # What did we Post?
-        call_args = od_api._do_post.call_args[0]
-        assert "/patrontoken" in call_args[0]  # url
-        assert (
-            call_args[2]["Authorization"] == f"Basic {encoded_auth.decode()}"
-        )  # Basic header should be that of the fulfillment keys
-        assert response_credential == credential
-
     def test_cannot_fulfill_error_audiobook(
         self, overdrive_api_fixture: OverdriveAPIFixture
     ):

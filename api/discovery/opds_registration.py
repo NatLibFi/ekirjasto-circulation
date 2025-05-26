@@ -130,7 +130,7 @@ class OpdsRegistrationService(
     def post_request(
         url: str, payload: str | dict[str, Any], **kwargs: Any
     ) -> Response:
-        return HTTP.debuggable_post(url, payload, **kwargs)
+        return HTTP.debuggable_post(url, **kwargs)
 
     @classmethod
     def for_protocol_goal_and_url(

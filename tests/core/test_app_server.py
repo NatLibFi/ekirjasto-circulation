@@ -302,7 +302,7 @@ class TestURNLookupController:
         controller = Mock(session)
         with data.app.test_request_context("/?urn=foobar"):
             response = controller.work_lookup(annotator=object())
-            assert INVALID_INPUT == response
+            assert response is INVALID_INPUT
 
     def test_permalink(self, urn_lookup_controller_fixture: URNLookupControllerFixture):
         data, session = (

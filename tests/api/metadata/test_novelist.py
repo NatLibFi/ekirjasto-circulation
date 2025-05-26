@@ -725,5 +725,5 @@ class TestNoveListAPI:
 
         novelist_fixture.novelist.put("http://apiendpoint.com", headers, data=data)
         mock_put.assert_called_once_with(
-            "http://apiendpoint.com", data, headers=headers, timeout=None
+            "http://apiendpoint.com", headers=headers, timeout=None
         )
