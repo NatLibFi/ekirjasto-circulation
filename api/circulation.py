@@ -1286,14 +1286,11 @@ class CirculationAPI:
                 loan_info.external_identifier = existing_loan.external_identifier
         except AlreadyOnHold:
             # We're trying to check out a book that we already have on hold.
-            hold_info = HoldInfo(
-                licensepool.collection,
-                licensepool.data_source,
-                licensepool.identifier.type,
-                licensepool.identifier.identifier,
-                None,
-                None,
-                None,
+            hold_info = HoldInfo.from_license_pool(
+                licensepool,
+                start_date=None,
+                end_date=None,
+                hold_position=None,
             )
         except NoAvailableCopies:
             if existing_loan:
@@ -1309,14 +1306,11 @@ class CirculationAPI:
             if existing_hold and existing_hold.position == 0:
                 # Update the hold so the patron doesn't lose their hold. Extend the hold to expire in the
                 # next 3 days.
-                hold_info = HoldInfo(
-                    licensepool.collection,
-                    licensepool.data_source,
-                    licensepool.identifier.type,
-                    licensepool.identifier.identifier,
-                    existing_hold.start,
-                    datetime.datetime.now() + datetime.timedelta(days=3),
-                    existing_hold.position,
+                hold_info = HoldInfo.from_license_pool(
+                    licensepool,
+                    start_date=existing_hold.start,
+                    end_date=datetime.datetime.now() + datetime.timedelta(days=3),
+                    hold_position=existing_hold.position,
                 )
                 # Update availability information
                 api.update_availability(licensepool)
@@ -1393,14 +1387,11 @@ class CirculationAPI:
                         patron, pin, licensepool, hold_notification_email
                     )
                 except AlreadyOnHold as e:
-                    hold_info = HoldInfo(
-                        licensepool.collection,
-                        licensepool.data_source,
-                        licensepool.identifier.type,
-                        licensepool.identifier.identifier,
-                        None,
-                        None,
-                        None,
+                    hold_info = HoldInfo.from_license_pool(
+                        licensepool,
+                        start_date=None,
+                        end_date=None,
+                        hold_position=None,
                     )
                 except CurrentlyAvailable:
                     if loan_exception:
