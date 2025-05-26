@@ -330,7 +330,6 @@ class TestODLAPI:
         loan, _ = odl_api_test_fixture.checkout(loan_url=loan_url)
 
         assert odl_api_test_fixture.collection == loan.collection(db.session)
-        assert odl_api_test_fixture.pool.data_source.name == loan.data_source_name
         assert odl_api_test_fixture.pool.identifier.type == loan.identifier_type
         assert odl_api_test_fixture.pool.identifier.identifier == loan.identifier
         assert loan.start_date is not None
@@ -391,7 +390,6 @@ class TestODLAPI:
 
         # The patron gets a loan successfully.
         assert odl_api_test_fixture.collection == loan.collection(db.session)
-        assert odl_api_test_fixture.pool.data_source.name == loan.data_source_name
         assert odl_api_test_fixture.pool.identifier.type == loan.identifier_type
         assert odl_api_test_fixture.pool.identifier.identifier == loan.identifier
         assert loan.start_date is not None
@@ -753,9 +751,6 @@ class TestODLAPI:
         )
 
         assert odl_api_test_fixture.collection == fulfillment.collection(db.session)
-        assert (
-            odl_api_test_fixture.pool.data_source.name == fulfillment.data_source_name
-        )
         assert odl_api_test_fixture.pool.identifier.type == fulfillment.identifier_type
         assert odl_api_test_fixture.pool.identifier.identifier == fulfillment.identifier
         assert datetime_utc(2017, 10, 21, 11, 12, 13) == fulfillment.content_expires
@@ -789,9 +784,6 @@ class TestODLAPI:
         )
 
         assert odl_api_test_fixture.collection == fulfillment.collection(db.session)
-        assert (
-            odl_api_test_fixture.pool.data_source.name == fulfillment.data_source_name
-        )
         assert fulfillment.identifier_type == pool.identifier.type
         assert fulfillment.identifier == pool.identifier.identifier
         assert fulfillment.content_expires is None
@@ -831,14 +823,11 @@ class TestODLAPI:
 
     def _holdinfo_from_hold(self, hold: Hold) -> HoldInfo:
         pool: LicensePool = hold.license_pool
-        return HoldInfo(
-            pool.collection,
-            pool.data_source.name,
-            pool.identifier.type,
-            pool.identifier.identifier,
-            hold.start,
-            hold.end,
-            hold.position,
+        return HoldInfo.from_license_pool(
+            pool,
+            start_date=hold.start,
+            end_date=hold.end,
+            hold_position=hold.position,
         )
 
     def test_count_holds_before(
@@ -1296,7 +1285,6 @@ class TestODLAPI:
 
         assert 1 == odl_api_test_fixture.pool.patrons_in_hold_queue
         assert odl_api_test_fixture.collection == hold.collection(db.session)
-        assert odl_api_test_fixture.pool.data_source.name == hold.data_source_name
         assert odl_api_test_fixture.pool.identifier.type == hold.identifier_type
         assert odl_api_test_fixture.pool.identifier.identifier == hold.identifier
         assert hold.start_date > utc_now() - datetime.timedelta(minutes=1)
@@ -1397,9 +1385,6 @@ class TestODLAPI:
         )
         assert 1 == len(activity)
         assert odl_api_test_fixture.collection == activity[0].collection(db.session)
-        assert (
-            odl_api_test_fixture.pool.data_source.name == activity[0].data_source_name
-        )
         assert odl_api_test_fixture.pool.identifier.type == activity[0].identifier_type
         assert odl_api_test_fixture.pool.identifier.identifier == activity[0].identifier
         assert loan.start == activity[0].start_date
@@ -1418,7 +1403,6 @@ class TestODLAPI:
         [l1, l2] = sorted(activity, key=lambda x: x.start_date)
 
         assert odl_api_test_fixture.collection == l1.collection(db.session)
-        assert odl_api_test_fixture.pool.data_source.name == l1.data_source_name
         assert odl_api_test_fixture.pool.identifier.type == l1.identifier_type
         assert odl_api_test_fixture.pool.identifier.identifier == l1.identifier
         assert loan.start == l1.start_date
@@ -1426,7 +1410,6 @@ class TestODLAPI:
         assert loan.external_identifier == l1.external_identifier
 
         assert odl_api_test_fixture.collection == l2.collection(db.session)
-        assert pool2.data_source.name == l2.data_source_name
         assert pool2.identifier.type == l2.identifier_type
         assert pool2.identifier.identifier == l2.identifier
         assert loan2.start == l2.start_date
@@ -1456,7 +1439,6 @@ class TestODLAPI:
         [l1, l2] = sorted(activity, key=lambda x: x.start_date)
 
         assert odl_api_test_fixture.collection == l1.collection(db.session)
-        assert odl_api_test_fixture.pool.data_source.name == l1.data_source_name
         assert odl_api_test_fixture.pool.identifier.type == l1.identifier_type
         assert odl_api_test_fixture.pool.identifier.identifier == l1.identifier
         assert loan.start == l1.start_date
@@ -1464,7 +1446,6 @@ class TestODLAPI:
         assert loan.external_identifier == l1.external_identifier
 
         assert odl_api_test_fixture.collection == l2.collection(db.session)
-        assert pool3.data_source.name == l2.data_source_name
         assert pool3.identifier.type == l2.identifier_type
         assert pool3.identifier.identifier == l2.identifier
         assert loan3.start == l2.start_date
@@ -1488,7 +1469,6 @@ class TestODLAPI:
         [h1, l1] = sorted(activity, key=lambda x: x.start_date)
 
         assert odl_api_test_fixture.collection == h1.collection(db.session)
-        assert pool2.data_source.name == h1.data_source_name
         assert pool2.identifier.type == h1.identifier_type
         assert pool2.identifier.identifier == h1.identifier
         assert hold.start == h1.start_date

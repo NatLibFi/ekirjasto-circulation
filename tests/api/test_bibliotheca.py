@@ -4,7 +4,7 @@ import json
 import random
 from datetime import datetime, timedelta
 from io import BytesIO, StringIO
-from typing import TYPE_CHECKING, ClassVar, Protocol, cast, runtime_checkable
+from typing import TYPE_CHECKING, cast
 from unittest import mock
 from unittest.mock import MagicMock, create_autospec
 
@@ -20,30 +20,16 @@ from api.bibliotheca import (
     BibliothecaParser,
     BibliothecaPurchaseMonitor,
     CheckoutResponseParser,
-    ErrorParser,
     EventParser,
     ItemListParser,
-    PatronCirculationParser,
 )
-from api.circulation import CirculationAPI, FulfillmentInfo, HoldInfo, LoanInfo
+from api.circulation import FulfillmentInfo
 from api.circulation_exceptions import (
-    AlreadyCheckedOut,
-    AlreadyOnHold,
-    CannotHold,
-    CirculationException,
-    CurrentlyAvailable,
-    NoAvailableCopies,
-    NoLicenses,
-    NotCheckedOut,
-    NotOnHold,
     PatronHoldLimitReached,
-    PatronLoanLimitReached,
     RemoteInitiatedServerError,
 )
 from api.web_publication_manifest import FindawayManifest
 from core.analytics import Analytics
-from core.integration.goals import Goals
-from core.integration.registry import IntegrationRegistry
 from core.metadata_layer import ReplacementPolicy, TimestampData
 from core.mock_analytics_provider import MockAnalyticsProvider
 from core.model import (
@@ -68,7 +54,6 @@ from core.model import (
 from core.scripts import RunCollectionCoverageProviderScript
 from core.util.datetime_helpers import datetime_utc, utc_now
 from core.util.http import BadResponseException
-from core.util.problem_detail import ProblemDetail
 from core.util.web_publication_manifest import AudiobookManifest
 from tests.api.mockapi.bibliotheca import MockBibliothecaAPI
 
@@ -464,58 +449,6 @@ class TestBibliothecaAPI:
         with pytest.raises(RemoteInitiatedServerError) as excinfo:
             [x for x in bibliotheca_fixture.api.marc_request(start, end, 10, 20)]
 
-    def test_sync_bookshelf(self, bibliotheca_fixture: BibliothecaAPITestFixture):
-        db = bibliotheca_fixture.db
-        patron = db.patron()
-        circulation = CirculationAPI(
-            db.session,
-            db.default_library(),
-            registry=IntegrationRegistry(
-                Goals.LICENSE_GOAL,
-                {bibliotheca_fixture.collection.protocol: MockBibliothecaAPI},
-            ),
-        )
-
-        api = circulation.api_for_collection[bibliotheca_fixture.collection.id]
-        assert isinstance(api, MockBibliothecaAPI)
-        api.queue_response(
-            200, content=bibliotheca_fixture.files.sample_data("checkouts.xml")
-        )
-        circulation.sync_bookshelf(patron, "dummy pin")
-
-        # The patron should have two loans and two holds.
-        l1, l2 = patron.loans
-        h1, h2 = patron.holds
-
-        assert datetime_utc(2015, 3, 20, 18, 50, 22) == l1.start
-        assert datetime_utc(2015, 4, 10, 18, 50, 22) == l1.end
-
-        assert datetime_utc(2015, 3, 13, 13, 38, 19) == l2.start
-        assert datetime_utc(2015, 4, 3, 13, 38, 19) == l2.end
-
-        # The patron is fourth in line. The end date is an estimate
-        # of when the hold will be available to check out.
-        assert datetime_utc(2015, 3, 24, 15, 6, 56) == h1.start
-        assert datetime_utc(2015, 3, 24, 15, 7, 51) == h1.end
-        assert 4 == h1.position
-
-        # The hold has an end date. It's time for the patron to decide
-        # whether or not to check out this book.
-        assert datetime_utc(2015, 5, 25, 17, 5, 34) == h2.start
-        assert datetime_utc(2015, 5, 27, 17, 5, 34) == h2.end
-        assert 0 == h2.position
-
-    def test_place_hold(self, bibliotheca_fixture: BibliothecaAPITestFixture):
-        db = bibliotheca_fixture.db
-        patron = db.patron()
-        edition, pool = db.edition(with_license_pool=True)
-        bibliotheca_fixture.api.queue_response(
-            200, content=bibliotheca_fixture.files.sample_data("successful_hold.xml")
-        )
-        response = bibliotheca_fixture.api.place_hold(patron, "pin", pool)
-        assert pool.identifier.type == response.identifier_type
-        assert pool.identifier.identifier == response.identifier
-
     def test_place_hold_fails_if_exceeded_hold_limit(
         self, bibliotheca_fixture: BibliothecaAPITestFixture
     ):
@@ -828,224 +761,11 @@ class TestEventParser:
         assert "distributor_license_add" == internal_event_type
 
 
-class TestPatronCirculationParser:
-    def test_parse(self, bibliotheca_fixture: BibliothecaAPITestFixture):
-        data = bibliotheca_fixture.files.sample_data("checkouts.xml")
-        collection = bibliotheca_fixture.collection
-        loans_and_holds = list(PatronCirculationParser(collection).process_all(data))
-        loans = [x for x in loans_and_holds if isinstance(x, LoanInfo)]
-        holds = [x for x in loans_and_holds if isinstance(x, HoldInfo)]
-        assert 2 == len(loans)
-        assert 2 == len(holds)
-        [l1, l2] = sorted(loans, key=lambda x: str(x.identifier))
-        assert "1ad589" == l1.identifier
-        assert "cgaxr9" == l2.identifier
-        expect_loan_start = datetime_utc(2015, 3, 20, 18, 50, 22)
-        expect_loan_end = datetime_utc(2015, 4, 10, 18, 50, 22)
-        assert expect_loan_start == l1.start_date
-        assert expect_loan_end == l1.end_date
-
-        [h1, h2] = sorted(holds, key=lambda x: str(x.identifier))
-
-        # This is the book on reserve.
-        assert collection.id == h1.collection_id
-        assert DataSource.BIBLIOTHECA == h1.data_source_name
-        assert "9wd8" == h1.identifier
-        expect_hold_start = datetime_utc(2015, 5, 25, 17, 5, 34)
-        expect_hold_end = datetime_utc(2015, 5, 27, 17, 5, 34)
-        assert expect_hold_start == h1.start_date
-        assert expect_hold_end == h1.end_date
-        assert 0 == h1.hold_position
-
-        # This is the book on hold.
-        assert "d4o8r9" == h2.identifier
-        assert collection.id == h2.collection_id
-        assert DataSource.BIBLIOTHECA == h2.data_source_name
-        expect_hold_start = datetime_utc(2015, 3, 24, 15, 6, 56)
-        expect_hold_end = datetime_utc(2015, 3, 24, 15, 7, 51)
-        assert expect_hold_start == h2.start_date
-        assert expect_hold_end == h2.end_date
-        assert 4 == h2.hold_position
-
-
 class TestCheckoutResponseParser:
     def test_parse(self, bibliotheca_fixture: BibliothecaAPITestFixture):
         data = bibliotheca_fixture.files.sample_data("successful_checkout.xml")
         due_date = CheckoutResponseParser().process_first(data)
         assert datetime_utc(2015, 4, 16, 0, 32, 36) == due_date
-
-
-class TestErrorParser:
-    BIBLIOTHECA_ERROR_RESPONSE_BODY_TEMPLATE = (
-        '<Error xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'
-        "<Code>Gen-001</Code><Message>"
-        "{message}"
-        "</Message></Error>"
-    )
-
-    @runtime_checkable
-    class CirculationExceptionWithProblemDetail(Protocol):
-        status_code: ClassVar[int]
-
-        def as_problem_detail_document(self, debug=False) -> ProblemDetail:
-            ...
-
-    @pytest.mark.parametrize(
-        "incoming_message, error_class, error_code, problem_detail_title, problem_detail_code",
-        [
-            (
-                "Patron cannot loan more than 12 documents",
-                PatronLoanLimitReached,
-                500,
-                "Loan limit reached.",
-                403,
-            ),
-            (
-                "Patron cannot have more than 15 holds",
-                PatronHoldLimitReached,
-                500,
-                "Limit reached.",
-                403,
-            ),
-            (
-                "the patron document status was CAN_WISH and not one of CAN_LOAN,RESERVATION",
-                NoLicenses,
-                404,
-                "No licenses.",
-                404,
-            ),
-            (
-                "the patron document status was CAN_HOLD and not one of CAN_LOAN,RESERVATION",
-                NoAvailableCopies,
-                400,
-                None,
-                None,
-            ),
-            (
-                "the patron document status was LOAN and not one of CAN_LOAN,RESERVATION",
-                AlreadyCheckedOut,
-                400,
-                None,
-                None,
-            ),
-            (
-                "The patron has no eBooks checked out",
-                NotCheckedOut,
-                400,
-                None,
-                None,
-            ),
-            (
-                "the patron document status was CAN_LOAN and not one of CAN_HOLD",
-                CurrentlyAvailable,
-                400,
-                None,
-                None,
-            ),
-            (
-                "the patron document status was HOLD and not one of CAN_HOLD",
-                AlreadyOnHold,
-                400,
-                None,
-                None,
-            ),
-            (
-                "The patron does not have the book on hold",
-                NotOnHold,
-                400,
-                None,
-                None,
-            ),
-            # This is such a weird case we don't have a special exception for it.
-            (
-                "the patron document status was LOAN and not one of CAN_HOLD",
-                CannotHold,
-                500,
-                None,
-                None,
-            ),
-        ],
-    )
-    def test_exception(
-        self,
-        incoming_message: str,
-        error_class: type[CirculationException],
-        error_code: int,
-        problem_detail_title: str,
-        problem_detail_code: int,
-    ):
-        document = self.BIBLIOTHECA_ERROR_RESPONSE_BODY_TEMPLATE.format(
-            message=incoming_message
-        )
-        error = ErrorParser().process_first(document)
-        assert isinstance(error, error_class)
-        assert incoming_message == str(error)
-        assert error_code == error.status_code
-
-        if isinstance(error, self.CirculationExceptionWithProblemDetail):
-            problem = error.as_problem_detail_document()
-            assert problem_detail_code == problem.status_code
-            assert problem_detail_title == problem.title
-
-    @pytest.mark.parametrize(
-        "incoming_message, incoming_message_from_file, error_string",
-        [
-            (
-                # Simulate the message we get when the server goes down.
-                "The server has encountered an error",
-                None,
-                "The server has encountered an error",
-            ),
-            (
-                # Simulate the message we get when the server gives a vague error.
-                None,
-                "error_unknown.xml",
-                "Unknown error",
-            ),
-            (
-                # Simulate the message we get when the error message is
-                # 'Authentication failed' but our authentication information is
-                # set up correctly.
-                None,
-                "error_authentication_failed.xml",
-                "Authentication failed",
-            ),
-            (
-                """<weird>This error does not follow the standard set out by Bibliotheca.</weird>""",
-                None,
-                "Unknown error",
-            ),
-            (
-                # Empty error message
-                """<Error xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><Message/></Error>""",
-                None,
-                "Unknown error",
-            ),
-        ],
-    )
-    def test_remote_initiated_server_error(
-        self,
-        incoming_message: str | None,
-        incoming_message_from_file: str | None,
-        error_string: str,
-        api_bibliotheca_files_fixture: BibliothecaFilesFixture,
-    ):
-        if incoming_message_from_file:
-            incoming_message = api_bibliotheca_files_fixture.files().sample_text(
-                incoming_message_from_file
-            )
-        assert incoming_message is not None
-        error = ErrorParser().process_first(incoming_message)
-        assert isinstance(error, RemoteInitiatedServerError)
-
-        assert BibliothecaAPI.SERVICE_NAME == error.service_name
-        assert 502 == error.status_code
-        assert error_string == str(error)
-
-        problem = error.as_problem_detail_document()
-        assert 502 == problem.status_code
-        assert "Integration error communicating with Bibliotheca" == problem.detail
-        assert "Third-party service failed." == problem.title
 
 
 class TestBibliothecaEventParser:

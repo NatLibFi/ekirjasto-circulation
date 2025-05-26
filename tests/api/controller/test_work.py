@@ -392,18 +392,12 @@ class TestWorkController:
         assert expect == response.get_data()
         assert OPDSFeed.ENTRY_TYPE == response.headers["Content-Type"]
 
-    def test_permalink_returns_fulfillment_links_for_authenticated_patrons_with_fulfillment(
+    def test_permalink_does_not_return_fulfillment_links_for_authenticated_patrons_without_loans(
         self, work_fixture: WorkFixture
     ):
-        auth = dict(Authorization=work_fixture.valid_auth)
-
-        with work_fixture.request_context_with_library("/", headers=auth):
-            content_link = "https://content"
-
+        with work_fixture.request_context_with_library("/"):
             # We have two patrons.
-            patron_1 = work_fixture.controller.authenticated_patron(
-                work_fixture.valid_credentials
-            )
+            patron_1 = work_fixture.db.patron()
             patron_2 = work_fixture.db.patron()
 
             # But the request was initiated by the first patron.
@@ -421,52 +415,12 @@ class TestWorkController:
                 "Test Book", presentation_edition=edition, with_license_pool=True
             )
             pool = work.license_pools[0]
-            [delivery_mechanism] = pool.delivery_mechanisms
 
-            loan_info = LoanInfo(
-                pool.collection,
-                pool.data_source.name,
-                pool.identifier.type,
-                pool.identifier.identifier,
-                utc_now(),
-                utc_now() + datetime.timedelta(seconds=3600),
-            )
-            work_fixture.manager.d_circulation.queue_checkout(pool, loan_info)
-
-            fulfillment = FulfillmentInfo(
-                pool.collection,
-                pool.data_source,
-                pool.identifier.type,
-                pool.identifier.identifier,
-                content_link=content_link,
-                content_type=MediaTypes.EPUB_MEDIA_TYPE,
-                content=None,
-                content_expires=None,
-            )
-            work_fixture.manager.d_circulation.queue_fulfill(pool, fulfillment)
-
-            # Both patrons have loans:
-            # - the first patron's loan and fulfillment will be created via API.
-            # - the second patron's loan will be created via loan_to method.
-            work_fixture.manager.loans.borrow(
-                pool.identifier.type,
-                pool.identifier.identifier,
-                delivery_mechanism.delivery_mechanism.id,
-            )
-            work_fixture.manager.loans.fulfill(
-                pool.id,
-                delivery_mechanism.delivery_mechanism.id,
-            )
-
-            patron1_loan = pool.loans[0]
-            # We have to create a Resource object manually
-            # to assign a URL to the fulfillment that will be used to generate an acquisition link.
-            patron1_loan.fulfillment.resource = Resource(url=fulfillment.content_link)
-
+            # Only the second patron has a loan.
             patron2_loan, _ = pool.loan_to(patron_2)
 
-            # We want to make sure that only the first patron's fulfillment will be in the feed.
-            active_loans_by_work = {work: patron1_loan}
+            # We want to make sure that the feed doesn't contain any fulfillment links.
+            active_loans_by_work: dict[Any, Any] = {}
             annotator = LibraryAnnotator(
                 None,
                 None,
