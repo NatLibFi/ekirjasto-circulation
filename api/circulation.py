@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 import datetime
 import logging
 import math
@@ -12,10 +13,13 @@ from types import TracebackType
 from typing import Any, Literal, TypeVar
 
 import flask
+import requests
 from flask import Response
 from flask_babel import lazy_gettext as _
 from pydantic import PositiveInt
-from sqlalchemy.orm import Query
+from sqlalchemy import select
+from sqlalchemy.orm import Query, Session
+from typing_extensions import Self
 
 from api.circulation_exceptions import *
 from api.integration.registry.license_providers import LicenseProvidersRegistry
@@ -37,6 +41,7 @@ from core.model import (
     DeliveryMechanism,
     Hold,
     Library,
+    License,
     LicensePool,
     LicensePoolDeliveryMechanism,
     Loan,
@@ -49,8 +54,8 @@ from core.model import (
 from core.model.integration import IntegrationConfiguration
 from core.model.patron import LoanCheckout
 from core.util.datetime_helpers import utc_now
+from core.util.http import HTTP, BadResponseException, ResponseCodesT
 from core.util.log import LoggerMixin
-
 
 class CirculationInfo:
     def __init__(
@@ -414,53 +419,243 @@ class APIAwareFulfillmentInfo(FulfillmentInfo, ABC):
         raise NotImplementedError()
 
 
-class LoanInfo(CirculationInfo):
-    """A record of a loan."""
+class Fulfillment(ABC):
+    """
+    Represents a method of fulfilling a loan.
+    """
 
-    def __init__(
-        self,
-        collection: Collection | int,
-        data_source_name: str | DataSource | None,
-        identifier_type: str | None,
-        identifier: str | None,
-        start_date: datetime.datetime | None,
-        end_date: datetime.datetime | None,
-        fulfillment_info: FulfillmentInfo | None = None,
-        external_identifier: str | None = None,
-        locked_to: DeliveryMechanismInfo | None = None,
-    ):
-        """Constructor.
-
-        :param start_date: A datetime reflecting when the patron borrowed the book.
-        :param end_date: A datetime reflecting when the checked-out book is due.
-        :param fulfillment_info: A FulfillmentInfo object representing an
-            active attempt to fulfill the loan.
-        :param locked_to: A DeliveryMechanismInfo object representing the
-            delivery mechanism to which this loan is 'locked'.
+    @abstractmethod
+    def response(self) -> Response:
         """
-        super().__init__(collection, data_source_name, identifier_type, identifier)
-        self.start_date = start_date
-        self.end_date = end_date
-        self.fulfillment_info = fulfillment_info
-        self.locked_to = locked_to
-        self.external_identifier = external_identifier
+        Return a Flask Response object that can be used to fulfill a loan.
+        """
+        ...
+
+
+class UrlFulfillment(Fulfillment, ABC):
+    """
+    Represents a method of fulfilling a loan that has a URL to an external resource.
+    """
+
+    def __init__(self, content_link: str, content_type: str | None = None) -> None:
+        self.content_link = content_link
+        self.content_type = content_type
 
     def __repr__(self) -> str:
-        if self.fulfillment_info:
-            fulfillment = " Fulfilled by: " + repr(self.fulfillment_info)
-        else:
-            fulfillment = ""
-        f = "%Y/%m/%d"
-        return "<LoanInfo for {}/{}, start={} end={}>{}".format(
-            self.identifier_type,
-            self.identifier,
-            self.fd(self.start_date),
-            self.fd(self.end_date),
-            fulfillment,
+        repr_data = [f"content_link: {self.content_link}"]
+        if self.content_type:
+            repr_data.append(f"content_type: {self.content_type}")
+        return f"<{self.__class__.__name__}: {', '.join(repr_data)}>"
+
+
+class DirectFulfillment(Fulfillment):
+    """
+    Represents a method of fulfilling a loan by directly serving some content
+    that we know about locally.
+    """
+
+    def __init__(self, content: str, content_type: str | None) -> None:
+        self.content = content
+        self.content_type = content_type
+
+    def response(self) -> Response:
+        return Response(self.content, content_type=self.content_type)
+
+    def __repr__(self) -> str:
+        length = len(self.content)
+        return f"<{self.__class__.__name__}: content_type: {self.content_type}, content: {length} bytes>"
+
+
+class RedirectFulfillment(UrlFulfillment):
+    """
+    Fulfill a loan by redirecting the client to a URL.
+    """
+
+    def response(self) -> Response:
+        return Response(
+            f"Redirecting to {self.content_link} ...",
+            status=302,
+            headers={"Location": self.content_link},
+            content_type="text/plain",
         )
 
 
-class HoldInfo(CirculationInfo):
+class FetchResponse(Response):
+    """
+    Response object that defaults to no mimetype if none is provided.
+    """
+
+    default_mimetype = None
+
+
+class FetchFulfillment(UrlFulfillment, LoggerMixin):
+    """
+    Fulfill a loan by fetching a URL and returning the content. This should be
+    avoided for large files, since it will be slow and unreliable as well as
+    blocking the server.
+
+    In some cases for small files like ACSM or LCPL files, the server may be
+    the only entity that can fetch the file, so we fetch it and then return it
+    to the client.
+    """
+
+    def __init__(
+        self,
+        content_link: str,
+        content_type: str | None = None,
+        *,
+        include_headers: dict[str, str] | None = None,
+        allowed_response_codes: ResponseCodesT = None,
+    ) -> None:
+        super().__init__(content_link, content_type)
+        self.include_headers = include_headers or {}
+        self.allowed_response_codes = allowed_response_codes or []
+
+    def get(self, url: str) -> requests.Response:
+        return HTTP.get_with_timeout(
+            url,
+            headers=self.include_headers,
+            allowed_response_codes=self.allowed_response_codes,
+            allow_redirects=True,
+        )
+
+    def response(self) -> Response:
+        try:
+            response = self.get(self.content_link)
+        except BadResponseException as ex:
+            response = ex.response
+            self.log.exception(
+                f"Error fulfilling loan. Bad response from: {self.content_link}. "
+                f"Status code: {response.status_code}. "
+                f"Response: {response.text}."
+            )
+            raise
+
+        headers = {"Cache-Control": "private"}
+
+        if self.content_type:
+            headers["Content-Type"] = self.content_type
+        elif "Content-Type" in response.headers:
+            headers["Content-Type"] = response.headers["Content-Type"]
+
+        return FetchResponse(
+            response.content, status=response.status_code, headers=headers
+        )
+
+
+class LoanAndHoldInfoMixin:
+    collection_id: int
+    identifier_type: str
+    identifier: str
+
+    def collection(self, _db: Session) -> Collection:
+        """Find the Collection to which this object belongs."""
+        collection = Collection.by_id(_db, self.collection_id)
+        if collection is None:
+            raise ValueError(f"collection_id {self.collection_id} could not be found.")
+        return collection
+
+    def license_pool(self, _db: Session) -> LicensePool:
+        """Find the LicensePool model object corresponding to this object."""
+        collection = self.collection(_db)
+        pool, is_new = LicensePool.for_foreign_id(
+            _db,
+            collection.data_source,
+            self.identifier_type,
+            self.identifier,
+            collection=collection,
+        )
+        return pool
+
+
+@dataclasses.dataclass(kw_only=True)
+class LoanInfo(LoanAndHoldInfoMixin):
+    """A record of a loan."""
+
+    collection_id: int
+    identifier_type: str
+    identifier: str
+    start_date: datetime.datetime | None = None
+    end_date: datetime.datetime | None
+    external_identifier: str | None = None
+    locked_to: DeliveryMechanismInfo | None = None
+    fulfillment_info: FulfillmentInfo | None = None
+    license_identifier: str | None = None
+
+    @classmethod
+    def from_license_pool(
+        cls,
+        license_pool: LicensePool,
+        *,
+        start_date: datetime.datetime | None = None,
+        end_date: datetime.datetime | None,
+        external_identifier: str | None = None,
+        locked_to: DeliveryMechanismInfo | None = None,
+        fulfillment_info: FulfillmentInfo | None = None,
+        license_identifier: str | None = None,
+    ) -> Self:
+        collection_id = license_pool.collection_id
+        assert collection_id is not None
+        identifier_type = license_pool.identifier.type
+        assert identifier_type is not None
+        identifier = license_pool.identifier.identifier
+        assert identifier is not None
+        return cls(
+            collection_id=collection_id,
+            identifier_type=identifier_type,
+            identifier=identifier,
+            start_date=start_date,
+            end_date=end_date,
+            external_identifier=external_identifier,
+            locked_to=locked_to,
+            fulfillment_info=fulfillment_info,
+            license_identifier=license_identifier,
+        )
+
+    def __repr__(self) -> str:
+        return "<LoanInfo for {}/{}, start={} end={} fulfillment:{} locked to={} license={} collection={}>".format(
+            self.identifier_type,
+            self.identifier,
+            self.start_date.isoformat() if self.start_date else self.start_date,
+            self.end_date.isoformat() if self.end_date else self.end_date,
+            self.fulfillment_info,
+            self.locked_to,
+            self.license_identifier,
+            self.collection_id,
+        )
+
+    def create_or_update(
+        self, patron: Patron, license_pool: LicensePool | None = None
+    ) -> tuple[Loan, bool]:
+        session = Session.object_session(patron)
+        license_pool = license_pool or self.license_pool(session)
+
+        loanable: LicensePool | License
+        if self.license_identifier is not None:
+            loanable = (
+                session.execute(  # type: ignore
+                    select(License).where(
+                        License.identifier == self.license_identifier,
+                        License.license_pool == license_pool,
+                    )
+                )
+                .scalars()
+                .first()
+            )
+        else:
+            loanable = license_pool
+
+        loan, is_new = loanable.loan_to(
+            patron,
+            start=self.start_date,
+            end=self.end_date,
+            external_identifier=self.external_identifier,
+        )
+        return loan, is_new
+
+
+@dataclasses.dataclass(kw_only=True)
+class HoldInfo(LoanAndHoldInfoMixin):
     """A record of a hold.
 
     :param identifier_type: Ex. Identifier.BIBLIOTHECA_ID.
@@ -472,32 +667,57 @@ class HoldInfo(CirculationInfo):
         default to be passed is None, which is equivalent to "first in line".
     """
 
-    def __init__(
-        self,
-        collection: Collection | int,
-        data_source_name: str | DataSource | None,
-        identifier_type: str | None,
-        identifier: str | None,
-        start_date: datetime.datetime | None,
-        end_date: datetime.datetime | None,
+    collection_id: int
+    identifier_type: str
+    identifier: str
+    start_date: datetime.datetime | None = None
+    end_date: datetime.datetime | None = None
+    hold_position: int | None
+
+    @classmethod
+    def from_license_pool(
+        cls,
+        license_pool: LicensePool,
+        *,
+        start_date: datetime.datetime | None = None,
+        end_date: datetime.datetime | None = None,
         hold_position: int | None,
-        external_identifier: str | None = None,
-    ):
-        super().__init__(collection, data_source_name, identifier_type, identifier)
-        self.start_date = start_date
-        self.end_date = end_date
-        self.hold_position = hold_position
-        self.external_identifier = external_identifier
+    ) -> Self:
+        collection_id = license_pool.collection_id
+        assert collection_id is not None
+        identifier_type = license_pool.identifier.type
+        assert identifier_type is not None
+        identifier = license_pool.identifier.identifier
+        assert identifier is not None
+        return cls(
+            collection_id=collection_id,
+            identifier_type=identifier_type,
+            identifier=identifier,
+            start_date=start_date,
+            end_date=end_date,
+            hold_position=hold_position,
+        )
 
     def __repr__(self) -> str:
         return "<HoldInfo for {}/{}, start={} end={}, position={}>".format(
             self.identifier_type,
             self.identifier,
-            self.fd(self.start_date),
-            self.fd(self.end_date),
+            self.start_date.isoformat() if self.start_date else self.start_date,
+            self.end_date.isoformat() if self.end_date else self.end_date,
             self.hold_position,
         )
 
+    def create_or_update(
+        self, patron: Patron, license_pool: LicensePool | None = None
+    ) -> tuple[Hold, bool]:
+        session = Session.object_session(patron)
+        license_pool = license_pool or self.license_pool(session)
+        return license_pool.on_hold_to(  # type: ignore[no-any-return]
+            patron,
+            start=self.start_date,
+            end=self.end_date,
+            position=self.hold_position,
+        )
 
 class BaseCirculationEbookLoanSettings(BaseSettings):
     """A mixin for settings that apply to ebook loans."""
