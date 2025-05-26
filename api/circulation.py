@@ -1273,17 +1273,14 @@ class CirculationAPI:
         except AlreadyCheckedOut:
             # This is good, but we didn't get the real loan info.
             # Just fake it.
-            identifier = licensepool.identifier
-            loan_info = LoanInfo(
-                licensepool.collection,
-                licensepool.data_source,
-                identifier.type,
-                identifier.identifier,
+            loan_info = LoanInfo.from_license_pool(
+                licensepool,
                 start_date=None,
                 end_date=now + datetime.timedelta(hours=1),
+                external_identifier=(
+                    existing_loan.external_identifier if existing_loan else None
+                ),
             )
-            if existing_loan:
-                loan_info.external_identifier = existing_loan.external_identifier
         except AlreadyOnHold:
             # We're trying to check out a book that we already have on hold.
             hold_info = HoldInfo.from_license_pool(
@@ -1341,12 +1338,11 @@ class CirculationAPI:
             # We successfully secured a loan.  Now create it in our
             # database.
             __transaction = self._db.begin_nested()
-            loan, new_loan_record = licensepool.loan_to(
-                patron,
-                start=loan_info.start_date or now,
-                end=loan_info.end_date,
-                external_identifier=loan_info.external_identifier,
-            )
+
+            loan, new_loan_record = loan_info.create_or_update(patron, licensepool)
+
+            if must_set_delivery_mechanism:
+                loan.fulfillment = delivery_mechanism  # type: ignore
 
             if must_set_delivery_mechanism:
                 loan.fulfillment = delivery_mechanism
@@ -1386,11 +1382,10 @@ class CirculationAPI:
                     hold_info = api.place_hold(
                         patron, pin, licensepool, hold_notification_email
                     )
-                except AlreadyOnHold as e:
+                except AlreadyOnHold:
+                    # We're trying to check out a book that we already have on hold.
                     hold_info = HoldInfo.from_license_pool(
                         licensepool,
-                        start_date=None,
-                        end_date=None,
                         hold_position=None,
                     )
                 except CurrentlyAvailable:
@@ -1414,13 +1409,8 @@ class CirculationAPI:
         # It's pretty rare that we'd go from having a loan for a book
         # to needing to put it on hold, but we do check for that case.
         __transaction = self._db.begin_nested()
-        hold, is_new = licensepool.on_hold_to(
-            patron,
-            hold_info.start_date or now,
-            hold_info.end_date,
-            hold_info.hold_position,
-            hold_info.external_identifier,
-        )
+        
+        hold, is_new = hold_info.create_or_update(patron, licensepool)
 
         if hold and is_new:
             # Send out an analytics event to record the fact that
