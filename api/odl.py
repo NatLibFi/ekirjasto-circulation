@@ -842,7 +842,7 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
             else 0
         )
         licensepool.patrons_in_hold_queue = patrons_in_hold_queue + 1
-        holdinfo = HoldInfo(
+        holdinfo = HoldInfo.from_license_pool(
             licensepool,
             start_date=utc_now(),
             end_date=None,
