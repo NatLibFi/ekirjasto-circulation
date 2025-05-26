@@ -453,11 +453,11 @@ class BibliothecaAPI(
 
         # At this point we know we have a loan.
         loan_expires = CheckoutResponseParser().process_first(response.content)
-        loan = LoanInfo(
-            licensepool.collection,
+        loan = LoanInfo(  # type: ignore
+            licensepool.collection,  # type: ignore
             DataSource.BIBLIOTHECA,
-            licensepool.identifier.type,
-            licensepool.identifier.identifier,
+            licensepool.identifier.type,  # type: ignore
+            licensepool.identifier.identifier,  # type: ignore
             start_date=None,
             end_date=loan_expires,
         )

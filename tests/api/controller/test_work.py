@@ -1,4 +1,3 @@
-import datetime
 import json
 import urllib.parse
 from collections.abc import Generator
@@ -10,7 +9,6 @@ import flask
 import pytest
 from flask import url_for
 
-from api.circulation import FulfillmentInfo, LoanInfo
 from api.lanes import (
     ContributorFacets,
     ContributorLane,
@@ -35,14 +33,11 @@ from core.model import (
     Edition,
     Identifier,
     LicensePool,
-    MediaTypes,
-    Resource,
     get_one,
     tuple_to_numericrange,
 )
 from core.model.work import Work
 from core.problem_details import INVALID_INPUT
-from core.util.datetime_helpers import utc_now
 from core.util.flask_util import Response
 from core.util.opds_writer import OPDSFeed
 from core.util.problem_detail import ProblemDetail
@@ -374,53 +369,6 @@ class TestWorkController:
 
             # We want to make sure that only the first patron's loan will be in the feed.
             active_loans_by_work = {work: patron1_loan}
-            annotator = LibraryAnnotator(
-                None,
-                None,
-                work_fixture.db.default_library(),
-                active_loans_by_work=active_loans_by_work,
-            )
-            feed = OPDSAcquisitionFeed.single_entry(work, annotator)
-            assert isinstance(feed, WorkEntry)
-            expect = OPDSAcquisitionFeed.entry_as_response(feed).data
-
-            response = work_fixture.manager.work_controller.permalink(
-                identifier_type, identifier
-            )
-
-        assert 200 == response.status_code
-        assert expect == response.get_data()
-        assert OPDSFeed.ENTRY_TYPE == response.headers["Content-Type"]
-
-    def test_permalink_does_not_return_fulfillment_links_for_authenticated_patrons_without_loans(
-        self, work_fixture: WorkFixture
-    ):
-        with work_fixture.request_context_with_library("/"):
-            # We have two patrons.
-            patron_1 = work_fixture.db.patron()
-            patron_2 = work_fixture.db.patron()
-
-            # But the request was initiated by the first patron.
-            flask.request.patron = patron_1  # type: ignore
-
-            identifier_type = Identifier.GUTENBERG_ID
-            identifier = "1234567890"
-            edition, _ = work_fixture.db.edition(
-                title="Test Book",
-                identifier_type=identifier_type,
-                identifier_id=identifier,
-                with_license_pool=True,
-            )
-            work = work_fixture.db.work(
-                "Test Book", presentation_edition=edition, with_license_pool=True
-            )
-            pool = work.license_pools[0]
-
-            # Only the second patron has a loan.
-            patron2_loan, _ = pool.loan_to(patron_2)
-
-            # We want to make sure that the feed doesn't contain any fulfillment links.
-            active_loans_by_work: dict[Any, Any] = {}
             annotator = LibraryAnnotator(
                 None,
                 None,

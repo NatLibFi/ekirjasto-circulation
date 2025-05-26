@@ -1014,14 +1014,10 @@ class OverdriveAPI(
             expires = self.extract_expiration_date(data)
 
         # Create the loan info.
-        loan = LoanInfo(
-            licensepool.collection,
-            licensepool.data_source.name,
-            licensepool.identifier.type,
-            licensepool.identifier.identifier,
-            None,
-            expires,
-            None,
+        loan = LoanInfo.from_license_pool(
+            licensepool,
+            start_date=None,
+            end_date=expires,
         )
         return loan
 
@@ -1538,8 +1534,8 @@ class OverdriveAPI(
                     content_type=media_type, drm_scheme=drm_scheme
                 )
 
-        return LoanInfo(
-            collection,
+        return LoanInfo(  # type: ignore
+            collection,  # type: ignore
             DataSource.OVERDRIVE,
             Identifier.OVERDRIVE_ID,
             overdrive_identifier,

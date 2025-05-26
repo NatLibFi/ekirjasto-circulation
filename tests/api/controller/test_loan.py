@@ -1,5 +1,4 @@
 import datetime
-import urllib.parse
 from collections.abc import Generator
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
@@ -28,7 +27,6 @@ from api.circulation_exceptions import (
 )
 from api.problem_details import (
     BAD_DELIVERY_MECHANISM,
-    CANNOT_RELEASE_HOLD,
     HOLD_LIMIT_REACHED,
     NO_ACTIVE_LOAN,
     NO_COPIES_WHEN_RESERVED,
@@ -53,7 +51,7 @@ from core.model import (
     get_one_or_create,
 )
 from core.problem_details import INTEGRATION_ERROR, INVALID_INPUT
-from core.util.datetime_helpers import datetime_utc, utc_now
+from core.util.datetime_helpers import utc_now
 from core.util.flask_util import Response
 from core.util.http import RemoteIntegrationException
 from core.util.opds_writer import OPDSFeed

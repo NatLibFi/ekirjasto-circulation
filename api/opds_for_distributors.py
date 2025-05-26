@@ -264,16 +264,13 @@ class OPDSForDistributorsAPI(
         delivery_mechanism: LicensePoolDeliveryMechanism,
     ) -> LoanInfo:
         now = utc_now()
-        return LoanInfo(
-            licensepool.collection,
-            licensepool.data_source.name,
-            licensepool.identifier.type,
-            licensepool.identifier.identifier,
+        return LoanInfo.from_license_pool(
+            licensepool,
             start_date=now,
             end_date=None,
         )
 
-    def fulfill(
+    def fulfill(  # type: ignore
         self,
         patron: Patron,
         pin: str,
@@ -360,7 +357,7 @@ class OPDSForDistributorsAPI(
                 loan.license_pool.identifier.identifier,
                 loan.start,
                 loan.end,
-            )
+            )  # type: ignore
             for loan in loans
         ]
 

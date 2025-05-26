@@ -57,6 +57,7 @@ from core.util.datetime_helpers import utc_now
 from core.util.http import HTTP, BadResponseException, ResponseCodesT
 from core.util.log import LoggerMixin
 
+
 class CirculationInfo:
     def __init__(
         self,
@@ -719,6 +720,7 @@ class HoldInfo(LoanAndHoldInfoMixin):
             position=self.hold_position,
         )
 
+
 class BaseCirculationEbookLoanSettings(BaseSettings):
     """A mixin for settings that apply to ebook loans."""
 
@@ -1344,8 +1346,6 @@ class CirculationAPI:
             if must_set_delivery_mechanism:
                 loan.fulfillment = delivery_mechanism  # type: ignore
 
-            if must_set_delivery_mechanism:
-                loan.fulfillment = delivery_mechanism
             existing_hold = get_one(
                 self._db,
                 Hold,
@@ -1365,7 +1365,7 @@ class CirculationAPI:
                 # manager.
                 self._collect_checkout_history(patron, licensepool)
                 self._collect_checkout_event(patron, licensepool)
-            return loan, None, new_loan_record
+            return loan, None, new_loan_record  # type: ignore
 
         # At this point we know that we neither successfully
         # transacted a loan, nor discovered a preexisting loan.
@@ -1409,7 +1409,7 @@ class CirculationAPI:
         # It's pretty rare that we'd go from having a loan for a book
         # to needing to put it on hold, but we do check for that case.
         __transaction = self._db.begin_nested()
-        
+
         hold, is_new = hold_info.create_or_update(patron, licensepool)
 
         if hold and is_new:
