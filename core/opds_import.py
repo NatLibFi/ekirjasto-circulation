@@ -24,6 +24,7 @@ from sqlalchemy.orm.session import Session
 from api.circulation import (
     BaseCirculationAPI,
     BaseCirculationApiSettings,
+    Fulfillment,
     FulfillmentInfo,
     HoldInfo,
     LoanInfo,
@@ -284,7 +285,7 @@ class BaseOPDSAPI(
         pin: str,
         licensepool: LicensePool,
         delivery_mechanism: LicensePoolDeliveryMechanism,
-    ) -> FulfillmentInfo:
+    ) -> FulfillmentInfo | Fulfillment:
         requested_mechanism = delivery_mechanism.delivery_mechanism
         fulfillment = None
         for lpdm in licensepool.delivery_mechanisms:
@@ -332,11 +333,11 @@ class BaseOPDSAPI(
     def checkout(
         self,
         patron: Patron,
-        pin: str,
+        pin: str | None,
         licensepool: LicensePool,
-        delivery_mechanism: LicensePoolDeliveryMechanism,
+        delivery_mechanism: LicensePoolDeliveryMechanism | None,
     ) -> LoanInfo:
-        return LoanInfo(licensepool.collection, None, None, None, None, None)
+        return LoanInfo.from_license_pool(licensepool, end_date=None)
 
     def can_fulfill_without_loan(
         self,
@@ -1712,18 +1713,18 @@ class OPDSImportMonitor(CollectionMonitor):
         self._feed_base_url = f"{parsed_url.scheme}://{parsed_url.hostname}{(':' + str(parsed_url.port)) if parsed_url.port else ''}/"
         super().__init__(_db, collection)
 
-    def _get(self, url: str, headers: Mapping[str, str]) -> Response:
+    def _get(
+        self, url: str, headers: Mapping[str, str] | None = None, **kwargs: Any
+    ) -> Response:
         """Make the sort of HTTP request that's normal for an OPDS feed.
 
         Long timeout, raise error on anything but 2xx or 3xx.
         """
 
         headers = self._update_headers(headers)
-        kwargs = dict(
-            timeout=120,
-            max_retry_count=self._max_retry_count,
-            allowed_response_codes=["2xx", "3xx"],
-        )
+        kwargs["timeout"] = 120
+        kwargs["max_retry_count"] = self._max_retry_count
+        kwargs["allowed_response_codes"] = ["2xx", "3xx"]
         if not url.startswith("http"):
             url = urljoin(self._feed_base_url, url)
         return HTTP.get_with_timeout(url, headers=headers, **kwargs)

@@ -1,14 +1,17 @@
 import logging
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterable, Mapping
+from io import BytesIO, StringIO
 from json import JSONDecodeError
-from typing import Any
+from typing import Any, Literal, Protocol, TypedDict
 from urllib.parse import urlparse
 
 import requests
 from flask_babel import lazy_gettext as _
 from requests import sessions
 from requests.adapters import HTTPAdapter, Response
+from requests.auth import AuthBase
+from typing_extensions import Unpack
 from urllib3 import Retry
 
 import core
@@ -16,10 +19,14 @@ from core.exceptions import IntegrationException
 from core.problem_details import INTEGRATION_ERROR
 from core.util.log import LoggerMixin
 from core.util.problem_detail import JSON_MEDIA_TYPE as PROBLEM_DETAIL_JSON_MEDIA_TYPE
-from core.util.problem_detail import ProblemError
+from core.util.problem_detail import (
+    BaseProblemDetailException,
+    ProblemDetail,
+    ProblemError,
+)
 
 
-class RemoteIntegrationException(IntegrationException):
+class RemoteIntegrationException(IntegrationException, BaseProblemDetailException):
     """An exception that happens when we try and fail to communicate
     with a third-party service over HTTP.
     """
@@ -49,23 +56,42 @@ class RemoteIntegrationException(IntegrationException):
 
     def __str__(self):
         message = super().__str__()
+        if self.debug_message:
+            message += "\n\n" + self.debug_message
         return self.internal_message % (self.url, message)
 
+    # TODO: Remove this and replace with below temp function
     def document_detail(self, debug=True):
         if debug:
             return _(str(self.detail), service=self.url)
         return _(str(self.detail), service=self.service)
 
+    # TODO: Remove this and replace with below temp function
     def document_debug_message(self, debug=True):
         if debug:
             return _(str(self.detail), service=self.url)
         return None
 
+    # TODO: Remove this and replace with below property, update tests
     def as_problem_detail_document(self, debug):
         return INTEGRATION_ERROR.detailed(
             detail=self.document_detail(debug),
             title=self.title,
             debug_message=self.document_debug_message(debug),
+        )
+
+    def temp_document_detail(self) -> str:
+        return _(str(self.detail), service=self.service)
+
+    def temp_document_debug_message(self) -> str:
+        return str(self)
+
+    @property
+    def problem_detail(self) -> ProblemDetail:
+        return INTEGRATION_ERROR.detailed(
+            detail=self.temp_document_detail(),
+            title=self.title,
+            debug_message=self.temp_document_debug_message(),
         )
 
 
@@ -142,6 +168,62 @@ class RequestTimedOut(RequestNetworkException, requests.exceptions.Timeout):
     internal_message = "Timeout accessing %s: %s"
 
 
+_ResponseCodesLiteral = Literal["2xx", "3xx", "4xx", "5xx"]
+ResponseCodesT = Iterable[_ResponseCodesLiteral | int] | None
+
+
+class GetRequestKwargs(TypedDict, total=False):
+    params: Mapping[str, str | int | float | None] | None
+    headers: Mapping[str, str | None] | None
+    auth: tuple[str, str] | AuthBase | None
+    timeout: float | int | None
+    allow_redirects: bool
+    stream: bool | None
+    verify: bool | None
+
+    allowed_response_codes: ResponseCodesT
+    disallowed_response_codes: ResponseCodesT
+    verbose: bool
+    max_retry_count: int
+    backoff_factor: float
+
+
+class RequestKwargs(GetRequestKwargs, total=False):
+    data: Iterable[bytes] | str | bytes | Mapping[str, Any] | None
+    files: Mapping[str, BytesIO | StringIO | str | bytes] | None
+    json: Mapping[str, Any] | None
+
+
+class GetRequestCallable(Protocol):
+    def __call__(
+        self,
+        url: str,
+        **kwargs: Unpack[GetRequestKwargs],
+    ) -> Response:
+        ...
+
+
+class MakeRequestCallable(Protocol):
+    def __call__(
+        self,
+        method: str,
+        url: str,
+        **kwargs: Unpack[RequestKwargs],
+    ) -> Response:
+        ...
+
+
+class _ProcessResponseCallable(Protocol):
+    def __call__(
+        self,
+        url: str,
+        response: Response,
+        allowed_response_codes: ResponseCodesT = None,
+        disallowed_response_codes: ResponseCodesT = None,
+    ) -> Response:
+        ...
+
+
 class HTTP(LoggerMixin):
     """A helper for the `requests` module."""
 
@@ -159,31 +241,37 @@ class HTTP(LoggerMixin):
         cls.DEFAULT_REQUEST_TIMEOUT = 5
 
     @classmethod
-    def get_with_timeout(cls, url: str, *args, **kwargs) -> Response:
+    def get_with_timeout(cls, url: str, **kwargs: Unpack[GetRequestKwargs]) -> Response:
         """Make a GET request with timeout handling."""
-        return cls.request_with_timeout("GET", url, *args, **kwargs)
+        return cls.request_with_timeout("GET", url, **kwargs)
 
     @classmethod
-    def post_with_timeout(cls, url: str, payload, *args, **kwargs) -> Response:
+    def post_with_timeout(
+        cls,
+        url: str,
+        **kwargs: Unpack[RequestKwargs],
+    ) -> Response:
         """Make a POST request with timeout handling."""
-        kwargs["data"] = payload
-        return cls.request_with_timeout("POST", url, *args, **kwargs)
+        return cls.request_with_timeout("POST", url, **kwargs)
 
     @classmethod
-    def put_with_timeout(cls, url: str, payload, *args, **kwargs) -> Response:
+    def put_with_timeout(
+        cls,
+        url: str,
+        **kwargs: Unpack[RequestKwargs],
+    ) -> Response:
         """Make a PUT request with timeout handling."""
-        kwargs["data"] = payload
-        return cls.request_with_timeout("PUT", url, *args, **kwargs)
+        return cls.request_with_timeout("PUT", url, **kwargs)
 
     @classmethod
     def request_with_timeout(
-        cls, http_method: str, url: str, *args, **kwargs
+        cls, http_method: str, url: str, **kwargs: Unpack[RequestKwargs]
     ) -> Response:
         """Call requests.request and turn a timeout into a RequestTimedOut
         exception.
         """
         return cls._request_with_timeout(
-            url, sessions.Session.request, http_method, *args, **kwargs
+            http_method, url, sessions.Session.request, **kwargs
         )
 
     # The set of status codes on which a retry will be attempted (if the number of retries requested is non-zero).
@@ -191,7 +279,12 @@ class HTTP(LoggerMixin):
 
     @classmethod
     def _request_with_timeout(
-        cls, url: str, make_request_with: Callable[..., Response], *args, **kwargs
+        cls,
+        http_method: str,
+        url: str,
+        make_request_with: Callable[..., Response],
+        process_response_with: _ProcessResponseCallable | None = None,
+        **kwargs: Unpack[RequestKwargs],
     ) -> Response:
         """Call some kind of method and turn a timeout into a RequestTimedOut
         exception.
@@ -204,13 +297,11 @@ class HTTP(LoggerMixin):
         :param args: Positional arguments for the request function.
         :param kwargs: Keyword arguments for the request function.
         """
-        process_response_with = kwargs.pop(
-            "process_response_with", cls._process_response
-        )
+        process_response_with = process_response_with or cls._process_response
+
         allowed_response_codes = kwargs.pop("allowed_response_codes", [])
         disallowed_response_codes = kwargs.pop("disallowed_response_codes", [])
         verbose = kwargs.pop("verbose", False)
-        expected_encoding = kwargs.pop("expected_encoding", "utf-8")
 
         if not "timeout" in kwargs:
             kwargs["timeout"] = cls.DEFAULT_REQUEST_TIMEOUT
@@ -220,39 +311,20 @@ class HTTP(LoggerMixin):
         )
         backoff_factor: float = float(kwargs.pop("backoff_factor", 1.0))
 
-        # Unicode data can't be sent over the wire. Convert it
-        # to UTF-8.
-        if "data" in kwargs and isinstance(kwargs["data"], str):
-            kwdata: str = kwargs["data"]
-            kwargs["data"] = kwdata.encode("utf8")
-
-        headers = kwargs.get("headers", {})
         # Set a user-agent if not already present
-        if "User-Agent" not in headers:
-            version = (
-                core.__version__ if core.__version__ else cls.DEFAULT_USER_AGENT_VERSION
-            )
-            headers["User-Agent"] = f"Palace Manager/{version}"
-        new_headers = {}
-        for k, v in list(headers.items()):
-            if isinstance(k, str):
-                k = k.encode("utf8")
-            if isinstance(v, str):
-                v = v.encode("utf8")
-            new_headers[k] = v
-        kwargs["headers"] = new_headers
+        version = (
+            core.__version__ if core.__version__ else cls.DEFAULT_USER_AGENT_VERSION
+        )
+        headers: dict[str, str | None] = {"User-Agent": f"E-Kirjasto/{version}"}
+        if (additional_headers := kwargs.get("headers")) is not None:
+            headers.update(additional_headers)
+        kwargs["headers"] = headers
 
         try:
             if verbose:
                 logging.info(
-                    "Sending request to %s: args %r kwargs %r", url, args, kwargs
+                    f"Sending {http_method} request to {url}: kwargs {kwargs!r}"
                 )
-            if len(args) == 1:
-                # requests.request takes two positional arguments,
-                # an HTTP method and a URL. In most cases, the URL
-                # gets added on here. But if you do pass in both
-                # arguments, it will still work.
-                args = args + (url,)
 
             request_start_time = time.time()
             if make_request_with == sessions.Session.request:
@@ -267,29 +339,25 @@ class HTTP(LoggerMixin):
                     session.mount("http://", adapter)
                     session.mount("https://", adapter)
 
-                    response = session.request(*args, **kwargs)
+                    response = session.request(http_method, url, **kwargs)  # type: ignore[misc]
             else:
-                response = make_request_with(*args, **kwargs)
+                response = make_request_with(http_method, url, **kwargs)
             cls.logger().info(
                 f"Request time for {url} took {time.time() - request_start_time:.2f} seconds"
             )
 
             if verbose:
                 logging.info(
-                    "Response from %s: %s %r %r",
-                    url,
-                    response.status_code,
-                    response.headers,
-                    response.content,
+                    f"Response from {url}: {response.status_code} {response.headers!r} {response.content!r}"
                 )
         except requests.exceptions.Timeout as e:
             # Wrap the requests-specific Timeout exception
             # in a generic RequestTimedOut exception.
-            raise RequestTimedOut(url, e)
+            raise RequestTimedOut(url, str(e)) from e
         except requests.exceptions.RequestException as e:
             # Wrap all other requests-specific exceptions in
             # a generic RequestNetworkException.
-            raise RequestNetworkException(url, e)
+            raise RequestNetworkException(url, str(e)) from e
 
         return process_response_with(
             url,
@@ -302,21 +370,21 @@ class HTTP(LoggerMixin):
     def _process_response(
         cls,
         url: str,
-        response,
-        allowed_response_codes=None,
-        disallowed_response_codes=None,
-    ):
+        response: Response,
+        allowed_response_codes: ResponseCodesT = None,
+        disallowed_response_codes: ResponseCodesT = None,
+    ) -> Response:
         """Raise a RequestNetworkException if the response code indicates a
         server-side failure, or behavior so unpredictable that we can't
         continue.
 
         :param allowed_response_codes If passed, then only the responses with
             http status codes in this list are processed.  The rest generate
-            BadResponseExceptions.
+            BadResponseExceptions. If both allowed_response_codes and
+            disallowed_response_codes are passed, then the allowed_response_codes
+            list is used.
         :param disallowed_response_codes The values passed are added to 5xx, as
             http status codes that would generate BadResponseExceptions.
-        :param expected_encoding Typically we expect HTTP responses to be UTF-8
-            encoded, but for certain requests we can change the encoding type.
         """
         allowed_response_codes_str = (
             list(map(str, allowed_response_codes)) if allowed_response_codes else []
@@ -326,12 +394,15 @@ class HTTP(LoggerMixin):
             if disallowed_response_codes
             else []
         )
+
         series = cls.series(response.status_code)
         code = str(response.status_code)
+
         if code in allowed_response_codes_str or series in allowed_response_codes_str:
             # The code or series has been explicitly allowed. Allow
             # the request to be processed.
             return response
+
         error_message = None
         if (
             series == "5xx"
@@ -366,12 +437,12 @@ class HTTP(LoggerMixin):
             raise RequestNetworkException(url, str(e)) from e
 
     @classmethod
-    def series(cls, status_code):
+    def series(cls, status_code: int) -> _ResponseCodesLiteral:
         """Return the HTTP series for the given status code."""
-        return "%sxx" % (int(status_code) // 100)
+        return "%sxx" % (int(status_code) // 100)  # type: ignore[return-value]
 
     @classmethod
-    def debuggable_get(cls, url: str, **kwargs: Any) -> Response:
+    def debuggable_get(cls, url: str, **kwargs: Unpack[GetRequestKwargs]) -> Response:
         """Make a GET request that returns a detailed problem
         detail document on error.
         """
@@ -379,12 +450,13 @@ class HTTP(LoggerMixin):
 
     @classmethod
     def debuggable_post(
-        cls, url: str, payload: str | dict[str, Any], **kwargs: Any
+        cls,
+        url: str,
+        **kwargs: Unpack[RequestKwargs],
     ) -> Response:
         """Make a POST request that returns a detailed problem
         detail document on error.
         """
-        kwargs["data"] = payload
         return cls.debuggable_request("POST", url, **kwargs)
 
     @classmethod
@@ -393,7 +465,7 @@ class HTTP(LoggerMixin):
         http_method: str,
         url: str,
         make_request_with: Callable[..., Response] | None = None,
-        **kwargs: Any,
+        **kwargs: Unpack[RequestKwargs],
     ) -> Response:
         """Make a request that raises a ProblemError with a detailed problem detail
         document on error, rather than a generic "an integration error occurred"
@@ -411,9 +483,9 @@ class HTTP(LoggerMixin):
         )
         make_request_with = make_request_with or requests.request
         return cls._request_with_timeout(
+            http_method,
             url,
             make_request_with,
-            http_method,
             process_response_with=cls.process_debuggable_response,
             **kwargs,
         )
@@ -423,17 +495,12 @@ class HTTP(LoggerMixin):
         cls,
         url: str,
         response: Response,
-        allowed_response_codes: list[str | int] | None = None,
-        disallowed_response_codes: list[str | int] | None = None,
-        expected_encoding: str = "utf-8",
+        allowed_response_codes: ResponseCodesT = None,
+        disallowed_response_codes: ResponseCodesT = None,
     ) -> Response:
         """If there was a problem with an integration request,
         raise ProblemError with an appropriate ProblemDetail. Otherwise, return the
         response to the original request.
-
-        :param response: A Response object from the requests library.
-        :param expected_encoding: Typically, we expect HTTP responses to be UTF-8
-            encoded, but for certain requests we can change the encoding type.
         """
 
         allowed_response_codes = allowed_response_codes or ["2xx", "3xx"]

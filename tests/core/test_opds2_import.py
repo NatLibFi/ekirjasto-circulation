@@ -555,7 +555,7 @@ class Opds2ApiFixture:
         self.api = OPDS2API(db.session, self.collection)
 
     def fulfill(self) -> FulfillmentInfo:
-        return self.api.fulfill(self.patron, "", self.pool, self.mechanism)
+        return self.api.fulfill(self.patron, "", self.pool, self.mechanism)  # type: ignore
 
 
 @pytest.fixture
@@ -613,13 +613,13 @@ class TestOpds2Api:
             )
 
         assert (
-            fulfillment.content_link
+            fulfillment.content_link  # type: ignore
             == "http://example.org//getDrmFreeFile.action?documentId=1543720&mediaType=epub&authToken=plaintext-token"
         )
-        assert fulfillment.content_type == "application/epub+zip"
-        assert fulfillment.content is None
-        assert fulfillment.content_expires is None
-        assert fulfillment.content_link_redirect is True
+        assert fulfillment.content_type == "application/epub+zip"  # type: ignore
+        assert fulfillment.content is None  # type: ignore
+        assert fulfillment.content_expires is None  # type: ignore
+        assert fulfillment.content_link_redirect is True  # type: ignore
 
     def test_token_fulfill(self, opds2_api_fixture: Opds2ApiFixture):
         ff_info = opds2_api_fixture.fulfill()

@@ -36,12 +36,15 @@ class MockPatronActivityCirculationAPI(PatronActivityCirculationAPI, ABC):
 
 class MockRemoteAPI(MockPatronActivityCirculationAPI):
     def __init__(
-        self, set_delivery_mechanism_at=True, can_revoke_hold_when_reserved=True
+        self,
+        _db: Session,
+        set_delivery_mechanism_at=True,
+        can_revoke_hold_when_reserved=True,
     ):
         self.SET_DELIVERY_MECHANISM_AT = set_delivery_mechanism_at
         self.CAN_REVOKE_HOLD_WHEN_RESERVED = can_revoke_hold_when_reserved
-        self.responses = defaultdict(list)
-        self.availability_updated_for = []
+        self.responses = defaultdict(list)  # type: ignore[var-annotated]
+        self.availability_updated_for: list = []
 
     def checkout(self, patron_obj, patron_password, licensepool, delivery_mechanism):
         # Should be a LoanInfo.
@@ -123,11 +126,11 @@ class MockCirculationAPI(CirculationAPI):
     def local_holds(self, patron):
         return self._db.query(Hold).filter(Hold.patron == patron)
 
-    def add_remote_loan(self, *args, **kwargs):
-        self.remote_loans.append(LoanInfo(*args, **kwargs))
+    def add_remote_loan(self, loan_info: LoanInfo, *args, **kwargs):
+        self.remote_loans.append(loan_info)
 
-    def add_remote_hold(self, *args, **kwargs):
-        self.remote_holds.append(HoldInfo(*args, **kwargs))
+    def add_remote_hold(self, hold_info: HoldInfo, *args, **kwargs):
+        self.remote_holds.append(hold_info)
 
     def patron_activity(self, patron, pin):
         """Return a 3-tuple (loans, holds, completeness)."""

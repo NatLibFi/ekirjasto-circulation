@@ -1050,7 +1050,9 @@ class LicenseReportScript(Script):
                 "",
                 "",
                 "",
-                "",  # Fill the first 9 columns with empty strings
+                "",
+                "",
+                "",  # Fill the first 11 columns with empty strings
                 license.identifier,
                 license.status.value,
                 license.checkouts_left,

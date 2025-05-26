@@ -597,7 +597,7 @@ class OverdriveAPI(
             if not is_fulfillment
             else self.fulfillment_authorization_header
         )
-        return self._do_post(url, payload, headers, **kwargs)
+        return self._do_post(url, headers, **kwargs)
 
     @staticmethod
     def _update_credential(credential, overdrive_data):
@@ -787,12 +787,12 @@ class OverdriveAPI(
         kwargs["timeout"] = 120
         return HTTP.get_with_timeout(url, headers=headers, **kwargs)
 
-    def _do_post(self, url: str, payload, headers, **kwargs) -> Response:
+    def _do_post(self, url: str, headers, **kwargs) -> Response:
         """This method is overridden in MockOverdriveAPI."""
         url = self.endpoint(url)
         kwargs["max_retry_count"] = self.settings.max_retry_count
         kwargs["timeout"] = 120
-        return HTTP.post_with_timeout(url, payload, headers=headers, **kwargs)
+        return HTTP.post_with_timeout(url, headers=headers, **kwargs)
 
     def website_id(self) -> bytes:
         return self.settings.overdrive_website_id.encode("utf-8")
@@ -1014,14 +1014,10 @@ class OverdriveAPI(
             expires = self.extract_expiration_date(data)
 
         # Create the loan info.
-        loan = LoanInfo(
-            licensepool.collection,
-            licensepool.data_source.name,
-            licensepool.identifier.type,
-            licensepool.identifier.identifier,
-            None,
-            expires,
-            None,
+        loan = LoanInfo.from_license_pool(
+            licensepool,
+            start_date=None,
+            end_date=expires,
         )
         return loan
 
@@ -1538,8 +1534,8 @@ class OverdriveAPI(
                     content_type=media_type, drm_scheme=drm_scheme
                 )
 
-        return LoanInfo(
-            collection,
+        return LoanInfo(  # type: ignore
+            collection,  # type: ignore
             DataSource.OVERDRIVE,
             Identifier.OVERDRIVE_ID,
             overdrive_identifier,
