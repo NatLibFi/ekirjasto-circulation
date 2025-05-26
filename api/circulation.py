@@ -1288,6 +1288,8 @@ class CirculationAPI:
                 # copies available, update availability information
                 # immediately.
                 api.update_availability(licensepool)
+        except NoAvailableCopiesWhenReserved:
+            raise
         except NoLicenses:
             # Since the patron incorrectly believed there were
             # licenses available, update availability information

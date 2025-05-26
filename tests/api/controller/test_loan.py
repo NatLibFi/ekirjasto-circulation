@@ -31,10 +31,10 @@ from api.circulation_exceptions import (
 from api.problem_details import (
     BAD_DELIVERY_MECHANISM,
     CANNOT_RELEASE_HOLD,
+    CHECKOUT_FAILED,
     COULD_NOT_MIRROR_TO_REMOTE,
     HOLD_LIMIT_REACHED,
     NO_ACTIVE_LOAN,
-    NO_COPIES_WHEN_RESERVED,
     NO_LICENSES,
     NOT_FOUND_ON_REMOTE,
 )
@@ -1131,9 +1131,11 @@ class TestLoanController:
             assert isinstance(response, ProblemDetail)
             assert HOLD_LIMIT_REACHED.uri == response.uri
 
-    def test_loan_fails_when_patron_is_at_hold_limit_and_hold_position_zero(
+    def test_borrow_fails_when_no_available_copies_and_existing_hold(
         self, loan_fixture: LoanFixture
     ):
+        """Patron has a hold that they're trying to check out but the remote says there's no
+        available copies."""
         edition, pool = loan_fixture.db.edition(with_license_pool=True)
         pool.open_access = False
         with loan_fixture.request_context_with_library(
@@ -1148,7 +1150,7 @@ class TestLoanController:
                 pool.identifier.type, pool.identifier.identifier
             )
             assert isinstance(response, ProblemDetail)
-            assert NO_COPIES_WHEN_RESERVED.uri == response.uri
+            assert CHECKOUT_FAILED.uri == response.uri
             assert 502 == response.status_code
 
     def test_active_loans(self, loan_fixture: LoanFixture):
