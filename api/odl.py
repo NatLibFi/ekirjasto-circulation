@@ -568,10 +568,9 @@ class BaseODLAPI(
         pin: str,
         licensepool: LicensePool,
         delivery_mechanism: LicensePoolDeliveryMechanism,
-    ) -> FulfillmentInfo:
+    ) -> Fulfillment:
         """Get the actual resource file to the patron."""
         _db = Session.object_session(patron)
-
         loan = (
             _db.query(Loan)
             .filter(Loan.patron == patron)
@@ -580,212 +579,97 @@ class BaseODLAPI(
         return self._fulfill(loan, delivery_mechanism)
 
     @staticmethod
-    def _find_content_link_and_type(
-        links: list[dict[str, str]],
-        drm_scheme: str | None,
-    ) -> tuple[str | None, str | None]:
-        """Find a content link with the type information corresponding to the selected delivery mechanism.
+    def _get_resource_for_delivery_mechanism(
+        requested_delivery_mechanism: DeliveryMechanism, licensepool: LicensePool
+    ) -> Resource:
+        resource = next(
+            (
+                lpdm.resource
+                for lpdm in licensepool.delivery_mechanisms
+                if lpdm.delivery_mechanism == requested_delivery_mechanism
+                and lpdm.resource is not None
+            ),
+            None,
+        )
+        if resource is None:
+            raise FormatNotAvailable()
+        return resource
 
-        :param links: List of dict-like objects containing information about available links in the LCP license file
-        :param drm_scheme: Selected delivery mechanism DRM scheme
+    def _unlimited_access_fulfill(
+        self, loan: Loan, delivery_mechanism: LicensePoolDeliveryMechanism
+    ) -> Fulfillment:
+        licensepool = loan.license_pool
+        resource = self._get_resource_for_delivery_mechanism(
+            delivery_mechanism.delivery_mechanism, licensepool
+        )
+        if resource.representation is None:
+            raise FormatNotAvailable()
+        content_link = resource.representation.public_url
+        content_type = resource.representation.media_type
+        return RedirectFulfillment(
+            content_link, content_type
+        )  # Tää pitää kattoo, ei ole circulation.py:ssä
 
-        :return: Two-tuple containing a content link and content type
-        """
-        candidates = []
-        for link in links:
-            # Depending on the format being served, the crucial information
-            # may be in 'manifest' or in 'license'.
-            if link.get("rel") not in ("manifest", "license"):
-                continue
-            href = link.get("href")
-            type = link.get("type")
-            candidates.append((href, type))
+    def _license_fulfill(
+        self, loan: Loan, delivery_mechanism: LicensePoolDeliveryMechanism
+    ) -> Fulfillment:
+        # We are unable to fulfill a loan that doesn't have its external identifier set,
+        # since we use this to get to the checkout link. It shouldn't be possible to get
+        # into this state.
+        license_status_url = loan.external_identifier
+        assert license_status_url is not None
 
-        if len(candidates) == 0:
-            # No candidates
-            return None, None
+        loan_status = self._request_loan_status(license_status_url)
 
-        # For DeMarque audiobook content, we need to translate the type property
-        # to reflect what we have stored in our delivery mechanisms.
-        if drm_scheme == DeliveryMechanism.FEEDBOOKS_AUDIOBOOK_DRM:
-            drm_scheme = ODLImporter.FEEDBOOKS_AUDIO
+        if not loan_status.active:
+            # This loan isn't available for some reason. It's possible
+            # the distributor revoked it or the patron already returned it
+            # through the DRM system, and we didn't get a notification
+            # from the distributor yet.
+            db = Session.object_session(loan)
+            db.delete(loan)
+            self.log.warning(
+                f"Loan status was not active but {loan_status.status}, can not fulfill"
+            )
+            raise CannotFulfill()
 
-        return next(filter(lambda x: x[1] == drm_scheme, candidates), (None, None))
+        drm_scheme = delivery_mechanism.delivery_mechanism.drm_scheme
+        fulfill_cls: Callable[[str, str | None], UrlFulfillment]
+        if drm_scheme == DeliveryMechanism.NO_DRM:
+            # If we have no DRM, we can just redirect to the content link and let the patron download the book.
+            fulfill_link = loan_status.links.get(
+                rel="publication",
+                content_type=delivery_mechanism.delivery_mechanism.content_type,  # type: ignore
+            )
+            fulfill_cls = RedirectFulfillment
+        elif drm_scheme == DeliveryMechanism.FEEDBOOKS_AUDIOBOOK_DRM:
+            # For DeMarque audiobook content using "FEEDBOOKS_AUDIOBOOK_DRM", the link
+            # we are looking for is stored in the 'manifest' rel.
+            fulfill_link = loan_status.links.get(
+                rel="manifest", content_type=BaseODLImporter.FEEDBOOKS_AUDIO
+            )
+            fulfill_cls = partial(FetchFulfillment, allowed_response_codes=["2xx"])
+        else:
+            # We are getting content via a license loan_status document, so we need to find the link
+            # that corresponds to the delivery mechanism we are using.
+            fulfill_link = loan_status.links.get(rel="license", content_type=drm_scheme)  # type: ignore
+            fulfill_cls = partial(FetchFulfillment, allowed_response_codes=["2xx"])
+
+        if fulfill_link is None:
+            raise CannotFulfill()
+
+        self.log.info(f"Fulfilling with {drm_scheme}, Link: {fulfill_link.href}")
+        return fulfill_cls(fulfill_link.href, fulfill_link.content_type)
 
     def _fulfill(
         self,
         loan: Loan,
         delivery_mechanism: LicensePoolDeliveryMechanism,
-    ) -> FulfillmentInfo:
-        licensepool = loan.license_pool
-
-        if licensepool.open_access:
-            expires = None
-            requested_mechanism = delivery_mechanism.delivery_mechanism
-            fulfillment = next(
-                (
-                    lpdm
-                    for lpdm in licensepool.delivery_mechanisms
-                    if lpdm.delivery_mechanism == requested_mechanism
-                ),
-                None,
-            )
-            if fulfillment is None:
-                raise FormatNotAvailable()
-            content_link = fulfillment.resource.representation.public_url
-            content_type = fulfillment.resource.representation.media_type
+    ) -> Fulfillment:
+        if loan.license_pool.open_access or loan.license_pool.unlimited_access:
+            return self._unlimited_access_fulfill(loan, delivery_mechanism)
         else:
-            doc = self.get_license_status_document(loan)
-            status = doc.get("status")
-
-            if status not in [self.READY_STATUS, self.ACTIVE_STATUS]:
-                # This loan isn't available for some reason. It's possible
-                # the distributor revoked it or the patron already returned it
-                # through the DRM system, and we didn't get a notification
-                # from the distributor yet.
-                self.update_loan(loan, doc)
-                raise CannotFulfill()
-
-            expires = doc.get("potential_rights", {}).get("end")
-            expires = dateutil.parser.parse(expires)
-
-            links = doc.get("links", [])
-
-            content_link, content_type = self._find_content_link_and_type(
-                links, delivery_mechanism.delivery_mechanism.drm_scheme
-            )
-
-        return FulfillmentInfo(
-            licensepool.collection,
-            licensepool.data_source.name,
-            licensepool.identifier.type,
-            licensepool.identifier.identifier,
-            content_link,
-            content_type,
-            None,
-            expires,
-        )
-
-    def _count_holds_before(self, holdinfo: HoldInfo, pool: LicensePool) -> int:
-        # Count holds on the license pool that started before this hold and
-        # aren't expired.
-        _db = Session.object_session(pool)
-        return (
-            _db.query(Hold)
-            .filter(Hold.license_pool_id == pool.id)
-            .filter(Hold.start < holdinfo.start_date)
-            .filter(
-                or_(
-                    Hold.end == None,
-                    Hold.end > utc_now(),
-                    Hold.position > 0,
-                )
-            )
-            .count()
-        )
-
-    def _update_hold_data(self, hold: Hold) -> None:
-        pool: LicensePool = hold.license_pool
-        holdinfo = HoldInfo.from_license_pool(
-            pool,
-            start_date=hold.start,
-            end_date=hold.end,
-            hold_position=hold.position,
-        )
-        library = hold.patron.library
-        self._update_hold_end_date(holdinfo, pool, library=library)
-        hold.end = holdinfo.end_date
-        hold.position = holdinfo.hold_position
-
-    def _update_hold_end_date(
-        self, holdinfo: HoldInfo, pool: LicensePool, library: Library
-    ) -> None:
-        _db = Session.object_session(pool)
-
-        # First make sure the hold position is up-to-date, since we'll
-        # need it to calculate the end date.
-        original_position = holdinfo.hold_position
-        self._update_hold_position(holdinfo, pool)
-        assert holdinfo.hold_position is not None
-
-        if self.collection is None:
-            raise ValueError(f"Collection not found: {self.collection_id}")
-        default_loan_period = self.collection.default_loan_period(library)
-        default_reservation_period = self.collection.default_reservation_period
-
-        # If the hold was already to check out and already has an end date,
-        # it doesn't need an update.
-        if holdinfo.hold_position == 0 and original_position == 0 and holdinfo.end_date:
-            return
-
-        # If the patron is in the queue, we need to estimate when the book
-        # will be available for check out. We can do slightly better than the
-        # default calculation since we know when all current loans will expire,
-        # but we're still calculating the worst case.
-        elif holdinfo.hold_position > 0:
-            # Find the current loans and reserved holds for the licenses.
-            current_loans = (
-                _db.query(Loan)
-                .filter(Loan.license_pool_id == pool.id)
-                .filter(or_(Loan.end == None, Loan.end > utc_now()))
-                .order_by(Loan.start)
-                .all()
-            )
-            current_holds = (
-                _db.query(Hold)
-                .filter(Hold.license_pool_id == pool.id)
-                .filter(
-                    or_(
-                        Hold.end == None,
-                        Hold.end > utc_now(),
-                        Hold.position > 0,
-                    )
-                )
-                .order_by(Hold.start)
-                .all()
-            )
-            assert pool.licenses_owned is not None
-            licenses_reserved = min(
-                pool.licenses_owned - len(current_loans), len(current_holds)
-            )
-            current_reservations = current_holds[:licenses_reserved]
-
-            # The licenses will have to go through some number of cycles
-            # before one of them gets to this hold. This leavs out the first cycle -
-            # it's already started so we'll handle it separately.
-            cycles = (
-                holdinfo.hold_position - licenses_reserved - 1
-            ) // pool.licenses_owned
-
-            # Each of the owned licenses is currently either on loan or reserved.
-            # Figure out which license this hold will eventually get if every
-            # patron keeps their loans and holds for the maximum time.
-            copy_index = (
-                holdinfo.hold_position - licenses_reserved - 1
-            ) % pool.licenses_owned
-
-            # In the worse case, the first cycle ends when a current loan expires, or
-            # after a current reservation is checked out and then expires.
-            if len(current_loans) > copy_index:
-                next_cycle_start = current_loans[copy_index].end
-            else:
-                reservation = current_reservations[copy_index - len(current_loans)]
-                next_cycle_start = reservation.end + datetime.timedelta(
-                    days=default_loan_period
-                )
-
-            # Assume all cycles after the first cycle take the maximum time.
-            cycle_period = default_loan_period + default_reservation_period
-            holdinfo.end_date = next_cycle_start + datetime.timedelta(
-                days=(cycle_period * cycles)
-            )
-
-        # If the end date isn't set yet or the position just became 0, the
-        # hold just became available. The patron's reservation period starts now.
-        else:
-            holdinfo.end_date = utc_now() + datetime.timedelta(
-                days=default_reservation_period
-            )
+            return self._license_fulfill(loan, delivery_mechanism)
 
     def _update_hold_position(self, holdinfo: HoldInfo, pool: LicensePool) -> None:
         _db = Session.object_session(pool)
@@ -1382,7 +1266,7 @@ class ODLHoldReaper(CollectionMonitor):
             total_deleted_holds += 1
 
         for pool in changed_pools:
-            self.api.update_licensepool(pool)
+            self.api.update_licensepool_and_hold_queue(pool)
 
         message = "Holds deleted: %d. License pools updated: %d" % (
             total_deleted_holds,

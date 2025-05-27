@@ -117,9 +117,11 @@ class CirculationInfo:
         if not d:
             return None
         else:
-            return datetime.datetime.strftime(d, "%Y/%m/%d %H:%M:%S")
+            date = datetime.datetime.strftime(d, "%Y/%m/%d %H:%M:%S")
+            return date
 
 
+# TODO: Can be deleted, only used in Overdrive
 class DeliveryMechanismInfo(CirculationInfo):
     """A record of a technique that must be (but is not, currently, being)
     used to fulfill a certain loan.
@@ -321,6 +323,7 @@ class FulfillmentInfo(CirculationInfo):
         self._content_expires = value
 
 
+# TODO: Remove this class, it's only used by Axis.
 class APIAwareFulfillmentInfo(FulfillmentInfo, ABC):
     """This that acts like FulfillmentInfo but is prepared to make an API
     request on demand to get data, rather than having all the data
@@ -913,7 +916,7 @@ class BaseCirculationAPI(
         pin: str,
         licensepool: LicensePool,
         delivery_mechanism: LicensePoolDeliveryMechanism,
-    ) -> FulfillmentInfo:
+    ) -> Fulfillment | FulfillmentInfo:
         """Get the actual resource file to the patron."""
         ...
 
@@ -1506,8 +1509,7 @@ class CirculationAPI:
         pin: str,
         licensepool: LicensePool,
         delivery_mechanism: LicensePoolDeliveryMechanism,
-        sync_on_failure: bool = True,
-    ) -> FulfillmentInfo:
+    ) -> Fulfillment | FulfillmentInfo:
         """Fulfil a book that a patron has previously checked out.
 
         :param delivery_mechanism: A LicensePoolDeliveryMechanism
@@ -1516,10 +1518,10 @@ class CirculationAPI:
             mechanism, this parameter is ignored and the previously used
             mechanism takes precedence.
 
-        :return: A FulfillmentInfo object.
+        :return: A Fulfillment object.
 
         """
-        fulfillment: FulfillmentInfo
+        fulfillment: Fulfillment
         loan = get_one(
             self._db,
             Loan,
@@ -1534,20 +1536,8 @@ class CirculationAPI:
         if not loan and not self.can_fulfill_without_loan(
             patron, licensepool, delivery_mechanism
         ):
-            if sync_on_failure and isinstance(api, PatronActivityCirculationAPI):
-                # Sync and try again.
-                # TODO: Pass in only the single collection or LicensePool
-                # that needs to be synced.
-                self.sync_bookshelf(patron, pin, force=True)
-                return self.fulfill(
-                    patron,
-                    pin,
-                    licensepool=licensepool,
-                    delivery_mechanism=delivery_mechanism,
-                    sync_on_failure=False,
-                )
-            else:
-                raise NoActiveLoan(_("Cannot find your active loan for this work."))
+            raise NoActiveLoan(_("Cannot find your active loan for this work."))
+
         if (
             loan
             and loan.fulfillment is not None
@@ -1566,8 +1556,8 @@ class CirculationAPI:
             pin,
             licensepool,
             delivery_mechanism=delivery_mechanism,
-        )
-        if not fulfillment or not (fulfillment.content_link or fulfillment.content):
+        )  # type: ignore
+        if not fulfillment:
             raise NoAcceptableFormat()
 
         # Send out an analytics event to record the fact that
@@ -1610,7 +1600,7 @@ class CirculationAPI:
                 duration = math.floor(time_difference.total_seconds())
 
             except Exception as e:
-                self.log.warn(
+                self.log.warning(
                     f"Could not calculate duration of loan with start time #{loan.start}."
                 )
 
@@ -1629,11 +1619,10 @@ class CirculationAPI:
                 pass
 
             __transaction = self._db.begin_nested()
-            logging.info(f"In revoke_loan(), deleting loan #{loan.id}")
+            self.log.info(f"In revoke_loan(), deleting loan #{loan.id}")
             self._db.delete(loan)
             patron.last_loan_activity_sync = None
             __transaction.commit()
-
             # Send out an analytics event to record the fact that
             # a loan was revoked through the circulation
             # manager.
