@@ -767,7 +767,7 @@ class BaseODLAPI(
         self.update_licensepool_and_hold_queue(licensepool, ignored_holds={hold})
 
     def patron_activity(self, patron: Patron, pin: str) -> list[LoanInfo | HoldInfo]:
-        """Look up non-expired loans for this collection in the database."""
+        """Look up non-expired loans for this collection in the database and update holds."""
         _db = Session.object_session(patron)
         loans = (
             _db.query(Loan)
@@ -781,7 +781,6 @@ class BaseODLAPI(
                 )
             )
         )
-
         # Get the patron's holds. If there are any expired holds, delete them.
         # Update the end date and position for the remaining holds.
         holds = (
@@ -792,13 +791,15 @@ class BaseODLAPI(
         )
         remaining_holds = []
         for hold in holds:
+            licensepool = hold.license_pool
+            # Delete expired holds and update the pool and queue to reflect the change.
             if hold.end and hold.end < utc_now():
                 _db.delete(hold)
-                self.update_licensepool(hold.license_pool)
+                self._recalculate_holds_in_license_pool(licensepool)
             else:
-                self._update_hold_data(hold)
+                # Check to see if the position has changed in the queue or maybe the hold is ready for checkout.
+                self._recalculate_holds_in_license_pool(licensepool)
                 remaining_holds.append(hold)
-
         return [
             LoanInfo.from_license_pool(
                 loan.license_pool,

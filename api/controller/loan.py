@@ -28,13 +28,13 @@ from core.util.problem_detail import BaseProblemDetailException, ProblemDetail
 
 
 class LoanController(CirculationManagerController):
-    def sync(self):
+    def sync(self) -> Response:
         """Sync the authenticated patron's loans and holds with all third-party
         providers.
 
         :return: A Response containing an OPDS feed with up-to-date information.
         """
-        patron = flask.request.patron
+        patron = flask.request.patron  # type: ignore
 
         # Save some time if we don't believe the patron's loans or holds have
         # changed since the last time the client requested this feed.
@@ -465,40 +465,37 @@ class LoanController(CirculationManagerController):
             mime_types=flask.request.accept_mimetypes,
         )
 
-    def detail(self, identifier_type, identifier):
-        if flask.request.method == "DELETE":
-            # Causes an error becuase the function is not in LoansController but route!
-            return self.revoke_loan_or_hold(identifier_type, identifier)
-
-        patron = flask.request.patron
-        library = flask.request.library
+    def detail(
+        self, identifier_type: str, identifier: str
+    ) -> OPDSEntryResponse | ProblemDetail | None:
+        patron = flask.request.patron  # type: ignore[attr-defined]
+        library = flask.request.library  # type: ignore[attr-defined]
         pools = self.load_licensepools(library, identifier_type, identifier)
         if isinstance(pools, ProblemDetail):
             return pools
 
         loan, pool = self.get_patron_loan(patron, pools)
-        if loan:
-            hold = None
-        else:
-            hold, pool = self.get_patron_hold(patron, pools)
-
-        if not loan and not hold:
-            return NO_ACTIVE_LOAN_OR_HOLD.detailed(
-                _(
-                    'You have no active loan or hold for "%(title)s".',
-                    title=pool.work.title,
-                ),
-                status_code=404,
-            )
-
         work = self.load_work(library, identifier_type, identifier)
         selected_book = patron.load_selected_book(work)
-
-        if flask.request.method == "GET":
-            if loan:
-                item = loan
-            else:
-                item = hold
+        if loan:
             return OPDSAcquisitionFeed.single_entry_loans_feed(
-                self.circulation, item, selected_book=selected_book
+                self.circulation, loan, selected_book=selected_book
             )
+
+        hold, pool = self.get_patron_hold(patron, pools)
+        if hold:
+            return OPDSAcquisitionFeed.single_entry_loans_feed(
+                self.circulation, hold, selected_book=selected_book
+            )
+
+        if pool and pool.work and pool.work.title:
+            title = pool.work.title
+        else:
+            title = "unknown"
+        return NO_ACTIVE_LOAN_OR_HOLD.detailed(
+            _(
+                'You have no active loan or hold for "%(title)s".',
+                title=title,
+            ),
+            status_code=404,
+        )

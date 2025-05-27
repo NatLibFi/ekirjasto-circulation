@@ -1664,7 +1664,6 @@ class CirculationAPI:
             __transaction = self._db.begin_nested()
             logging.info(f"Deleting hold: {hold}")
             self._db.delete(hold)
-            patron.last_loan_activity_sync = None
             __transaction.commit()
 
             # Send out an analytics event to record the fact that
@@ -1684,9 +1683,6 @@ class CirculationAPI:
     ) -> tuple[list[LoanInfo], list[HoldInfo], bool]:
         """Return a record of the patron's current activity
         vis-a-vis all relevant external loan sources.
-
-        TODO: E-Kirjasto does not have external loan sources so we'll
-        want to remove this functionality later.
 
         We check each source in a separate thread for speed.
 
@@ -1797,8 +1793,6 @@ class CirculationAPI:
     ) -> tuple[list[Loan] | Query[Loan], list[Hold] | Query[Hold]]:
         """Sync our internal model of a patron's bookshelf with any external
         vendors that provide books to the patron's library.
-        Since, in E-Kirjasto, we only have local holds and loans, this mainly
-        updates hold data from ODL.
 
         :param patron: A Patron.
         :param pin: The password authenticating the patron; used by some vendors
@@ -1906,4 +1900,8 @@ class CirculationAPI:
             patron.last_loan_activity_sync = last_loan_activity_sync
 
         __transaction.commit()
+        self.log.info(
+            f"Patron id {patron.id}: active loans {len(active_loans)}, "
+            f"active holds {len(active_holds)} [synced: {patron.last_loan_activity_sync}]"
+        )
         return active_loans, active_holds
