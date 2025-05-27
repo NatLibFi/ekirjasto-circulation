@@ -1662,6 +1662,7 @@ class CirculationAPI:
         # upwards at this point
         if hold:
             __transaction = self._db.begin_nested()
+            logging.info(f"Deleting hold: {hold}")
             self._db.delete(hold)
             patron.last_loan_activity_sync = None
             __transaction.commit()

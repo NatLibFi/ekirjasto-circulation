@@ -762,20 +762,9 @@ class BaseODLAPI(
         )
         if not hold:
             raise NotOnHold()
-        self._release_hold(hold)
-
-    def _release_hold(self, hold: Hold) -> Literal[True]:
-        # If the book was ready and the patron revoked the hold instead
-        # of checking it out, but no one else had the book on hold, the
-        # book is now available for anyone to check out. If someone else
-        # had a hold, the license is now reserved for the next patron.
-        # If someone else had a hold, the license is now reserved for the
-        # next patron, and we need to update that hold.
-        _db = Session.object_session(hold)
-        licensepool = hold.license_pool
-        _db.delete(hold)
-        self.update_licensepool(licensepool)
-        return True
+        # The hold itself will be deleted by the caller CirculationAPI,
+        # so we just need to update the license pool to reflect the released hold.
+        self.update_licensepool_and_hold_queue(licensepool, ignored_holds={hold})
 
     def patron_activity(self, patron: Patron, pin: str) -> list[LoanInfo | HoldInfo]:
         """Look up non-expired loans for this collection in the database."""
