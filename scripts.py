@@ -907,10 +907,10 @@ class LicenseReportScript(Script):
             "Current copies owned",
             "Current copies available",
             "Patrons in hold queue",
-            "Changes in number of licenses",
-            "Changes in title availability",
             "License identifier",
             "License status",
+            "License missing?",
+            "License last checked",
             "License checkouts left",
             "License checkouts available",
             "License concurrency",
@@ -1042,6 +1042,8 @@ class LicenseReportScript(Script):
                 license.expires.strftime(self.format) if license.expires else ""
             )
             license_data = [
+                identifier.identifier,
+                edition.title,
                 "",
                 "",
                 "",
@@ -1049,10 +1051,10 @@ class LicenseReportScript(Script):
                 "",
                 "",
                 "",
-                "",
-                "",  # Fill the first 9 columns with empty strings
                 license.identifier,
                 license.status.value,
+                license.is_missing,
+                license.last_checked,
                 license.checkouts_left,
                 license.checkouts_available,
                 license.terms_concurrency,
