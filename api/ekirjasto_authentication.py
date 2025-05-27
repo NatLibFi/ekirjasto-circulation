@@ -324,8 +324,7 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
         if patrondata.permanent_id == None:
             # permanent_id is used to get the local Patron, we cannot proceed
             # if it is missing.
-            message = "Value for permanent_id is missing in remote user info."
-            raise RemotePatronCreationFailedException(message, self.__class__.__name__)
+            raise RemotePatronCreationFailedException()
 
         return patrondata
 
@@ -797,9 +796,7 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
             return patron
         if delegate_patron and patron.id != delegate_patron.id:
             # This situation should never happen.
-            raise PatronNotFoundOnRemote(
-                404, "Remote patron is conflicting with delegate patron."
-            )
+            raise PatronNotFoundOnRemote()
         if patron.cached_neighborhood and not patron.neighborhood:
             # Patron.neighborhood (which is not a model field) was not
             # set, probably because we avoided an expensive metadata
