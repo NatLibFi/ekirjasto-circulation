@@ -389,7 +389,7 @@ class Axis360API(
                 response.content
             )
         except etree.XMLSyntaxError as e:
-            raise RemoteInitiatedServerError(response.content, self.label())
+            raise RemoteInitiatedServerError(response.content, self.label())  # type: ignore
 
     def _checkin(self, title_id: str | None, patron_id: str | None) -> RequestsResponse:
         """Make a request to the EarlyCheckInTitle endpoint."""
@@ -431,7 +431,7 @@ class Axis360API(
                 raise CannotLoan()
             return loan_info
         except etree.XMLSyntaxError as e:
-            raise RemoteInitiatedServerError(response.content, self.label())
+            raise RemoteInitiatedServerError(response.content, self.label())  # type: ignore
 
     def _checkout(
         self, title_id: str | None, patron_id: str | None, internal_format: str
