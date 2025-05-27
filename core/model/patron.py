@@ -635,6 +635,12 @@ class Loan(Base, LoanAndHoldMixin):
         start = self.start or utc_now()
         return start + default_loan_period
 
+    def __repr__(self):
+        return (
+            f"Loan id: {self.id}, License: {self.license.identifier} ext id: {self.external_identifier} "
+            f"loan period: {self.start} - {self.end}"
+        )
+
 
 # Finland
 class LoanCheckout(Base, LoanAndHoldMixin):
@@ -679,6 +685,11 @@ class Hold(Base, LoanAndHoldMixin):
 
     def __lt__(self, other):
         return self.id < other.id
+
+    def __repr__(self):
+        return (
+            f"Hold id={self.id} start={self.start}->{self.end} position={self.position}"
+        )
 
     @classmethod
     def _calculate_until(
