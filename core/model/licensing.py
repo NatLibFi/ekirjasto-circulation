@@ -201,6 +201,9 @@ class License(Base, LicenseFunctions):
         else:
             logging.warning(f"Checking in expired license # {self.identifier}.")
 
+    def __repr__(self):
+        return f"License id: {self.identifier}, checkouts left: {self.checkouts_left}, available: {self.checkouts_available} active: {self.is_inactive} to borrow: {self.is_available_for_borrowing}"
+
 
 class LicensePool(Base):
     """A pool of undifferentiated licenses for a work from a given source."""
@@ -283,9 +286,14 @@ class LicensePool(Base):
 
     open_access = Column(Boolean, index=True)
     last_checked = Column(DateTime(timezone=True), index=True)
+
+    # Total amount of copies (basically changes only when a license is added to or removed from the pool)
     licenses_owned: int = Column(Integer, default=0, index=True)
+    # Amount of available copies at the moment
     licenses_available: int = Column(Integer, default=0, index=True)
+    # Depends on patrons in hold queue and available copies
     licenses_reserved: int = Column(Integer, default=0)
+    # Holds registered in the pool
     patrons_in_hold_queue = Column(Integer, default=0)
     should_track_playtime = Column(Boolean, default=False, nullable=False)
 
@@ -694,13 +702,16 @@ class LicensePool(Base):
     def update_availability_from_licenses(
         self,
         as_of: datetime.datetime | None = None,
+        ignored_holds: set[Hold] | None = None,
     ):
         """
         Update the LicensePool with new availability information, based on the
-        licenses and holds that are associated with it.
+        licenses and holds that are associated with it. Ignored holds provide more
+        accurate information when a patron releases a hold or checkouts a book.
         """
         _db = Session.object_session(self)
 
+        # How many copies (=lukuoikeus) of a license we have
         licenses_owned = sum(
             l.total_remaining_loans
             for l in self.licenses
@@ -711,16 +722,21 @@ class LicensePool(Base):
             for l in self.licenses
             if l.currently_available_loans is not None
         )
-
-        holds = self.get_active_holds()
-
-        patrons_in_hold_queue = len(holds)
-        if len(holds) > licenses_available:
+        ignored_holds_ids = {h.id for h in (ignored_holds or set())}
+        active_holds_ids = {h.id for h in self.holds_by_start_date()}
+        patrons_in_hold_queue = len(active_holds_ids - ignored_holds_ids)
+        if patrons_in_hold_queue > licenses_available:
             licenses_reserved = licenses_available
             licenses_available = 0
         else:
-            licenses_reserved = len(holds)
+            licenses_reserved = patrons_in_hold_queue
             licenses_available -= licenses_reserved
+
+        logging.info(
+            f"Collected availablility information for licensepool: {self.identifier}: "
+            f"OWNED={licenses_owned} AVAILABLE={licenses_available} RESERVED={licenses_reserved} "
+            f"HOLDS={patrons_in_hold_queue} LOANS={len(self.loans)}"
+        )
 
         return self.update_availability(
             licenses_owned,
@@ -730,7 +746,7 @@ class LicensePool(Base):
             as_of=as_of,
         )
 
-    def get_active_holds(self):
+    def holds_by_start_date(self):
         _db = Session.object_session(self)
         return (
             _db.query(Hold)
@@ -1054,7 +1070,6 @@ class LicensePool(Base):
             license_pool=self,
             create_method_kwargs=kwargs,
         )
-
         if is_new:
             # This action creates uncertainty about what the patron's
             # loan activity actually is. We'll need to sync with the
