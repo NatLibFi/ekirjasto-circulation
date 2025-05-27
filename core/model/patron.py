@@ -636,10 +636,7 @@ class Loan(Base, LoanAndHoldMixin):
         return start + default_loan_period
 
     def __repr__(self):
-        return (
-            f"Loan id: {self.id}, License: {self.license.identifier} ext id: {self.external_identifier} "
-            f"loan period: {self.start} - {self.end}"
-        )
+        return f"Loan id: {self.id}, ext id: {self.external_identifier} loan period: {self.start} - {self.end}"
 
 
 # Finland
