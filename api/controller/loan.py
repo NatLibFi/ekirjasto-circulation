@@ -456,8 +456,8 @@ class LoanController(CirculationManagerController):
         # doesn't identify its patrons.)
         return self.circulation.can_fulfill_without_loan(patron, pool, lpdm)
 
-    def revoke(self, license_pool_id):
-        patron = flask.request.patron
+    def revoke(self, license_pool_id: int) -> OPDSEntryResponse | ProblemDetail:
+        patron = flask.request.patron  # type: ignore[attr-defined]
         pool = self.load_licensepool(license_pool_id)
         if isinstance(pool, ProblemDetail):
             return pool
@@ -482,35 +482,37 @@ class LoanController(CirculationManagerController):
                 status_code=404,
             )
 
+        work = pool.work
+        if not work:
+            # Somehow we have a loan or hold for a LicensePool that has no Work.
+            self.log.error(
+                "Can't revoke loan or hold for LicensePool %r which has no Work!",
+                pool,
+            )
+            return NOT_FOUND_ON_REMOTE
+
         header = self.authorization_header()
         credential = self.manager.auth.get_credential_from_header(header)
+
         if loan:
             try:
                 self.circulation.revoke_loan(patron, credential, pool)
-            except RemoteRefusedReturn as e:
-                title = _(
-                    "Loan deleted locally but remote refused. Loan is likely to show up again on next sync."
-                )
-                return COULD_NOT_MIRROR_TO_REMOTE.detailed(title, status_code=503)
-            except CannotReturn as e:
-                title = _("Loan deleted locally but remote failed.")
-                return COULD_NOT_MIRROR_TO_REMOTE.detailed(title, 503).with_debug(
-                    str(e)
-                )
+            except (CirculationException, RemoteInitiatedServerError) as e:
+                return e.problem_detail
         elif hold:
             if not self.circulation.can_revoke_hold(pool, hold):
                 title = _("Cannot release a hold once it enters reserved state.")
                 return CANNOT_RELEASE_HOLD.detailed(title, 400)
             try:
                 self.circulation.release_hold(patron, credential, pool)
-            except CannotReleaseHold as e:
-                title = _("Hold released locally but remote failed.")
-                return CANNOT_RELEASE_HOLD.detailed(title, 503).with_debug(str(e))
+            except (CirculationException, RemoteInitiatedServerError) as e:
+                return e.problem_detail
 
-        work = pool.work
         annotator = self.manager.annotator(None)
+        single_entry_feed = OPDSAcquisitionFeed.single_entry(work, annotator)
         return OPDSAcquisitionFeed.entry_as_response(
-            OPDSAcquisitionFeed.single_entry(work, annotator)
+            entry=single_entry_feed,  # type: ignore
+            mime_types=flask.request.accept_mimetypes,
         )
 
     def detail(self, identifier_type, identifier):

@@ -317,55 +317,63 @@ class BaseODLAPI(
             raise NotCheckedOut()
         loan_result = loan.one()
 
-        if loan_result.license_pool.open_access:
+        if licensepool.open_access:
             # If this is an open-access book, we don't need to do anything.
             return
 
         self._checkin(loan_result)
 
-    def _checkin(self, loan: Loan) -> bool:
+    def _checkin(self, loan: Loan) -> None:
         _db = Session.object_session(loan)
-        doc = self.get_license_status_document(loan)
-        status = doc.get("status")
-        if status in [
-            self.REVOKED_STATUS,
-            self.RETURNED_STATUS,
-            self.CANCELLED_STATUS,
-            self.EXPIRED_STATUS,
-        ]:
-            # This loan was already returned early or revoked by the distributor, or it expired.
-            self.update_loan(loan, doc)
-            raise NotCheckedOut()
+        if loan.external_identifier is None:
+            # We can't return a loan that doesn't have an external identifier. This should never happen
+            # but if it does, we self.log an error and continue on, so it doesn't stay on the patrons
+            # bookshelf forever.
+            self.log.error(f"Loan {loan.id} has no external identifier.")
+            return
+        if loan.license is None:
+            # We can't return a loan that doesn't have a license. This should never happen but if it does,
+            # we self.log an error and continue on, so it doesn't stay on the patrons bookshelf forever.
+            self.log.error(f"Loan {loan.id} has no license.")  # type: ignore
+            return
 
-        return_url = None
-        links = doc.get("links", [])
-        for link in links:
-            if link.get("rel") == "return":
-                return_url = link.get("href")
-                break
+        loan_status = self._request_loan_status(loan.external_identifier)
+        if not loan_status.active:
+            self.log.warning(
+                f"Loan {loan.id} was {loan_status.status} was already returned early, revoked by the distributor, or it expired."
+            )
+            loan.license.checkin()
+            self.update_licensepool_and_hold_queue(loan.license_pool)
+            return
 
-        if not return_url:
-            # The distributor didn't provide a link to return this loan.
-            # This may be because the book has already been fulfilled and
-            # must be returned through the DRM system. If that's true, the
-            # app will already be doing that on its own, so we'll silently
-            # do nothing.
-            return False
+        return_link = loan_status.links.get(
+            rel="return", content_type=LoanStatus.content_type()
+        )
+        if not return_link:
+            # The distributor didn't provide a link to return this loan. This means that the distributor
+            # does not support early returns, and the patron will have to wait until the loan expires.
+            raise CannotReturn()
 
-        # Hit the distributor's return link.
-        self._get(return_url)
-        # Get the status document again to make sure the return was successful,
-        # and if so update the pool availability and delete the local loan.
-        self.update_loan(loan)
+        # The parameters for this link (if its templated) are defined here:
+        # https://readium.org/lcp-specs/releases/lsd/latest.html#34-returning-a-publication
+        # None of them are required, and often the link is not templated. But in the case
+        # of the open source LCP server, the link is templated, so we need to process the
+        # template before we can make the request.
+        return_url = return_link.href
 
-        # At this point, if the loan still exists, something went wrong.
-        # However, it might be because the loan has already been fulfilled
-        # and must be returned through the DRM system, which the app will
-        # do on its own, so we can ignore the problem.
-        new_loan = get_one(_db, Loan, id=loan.id)
-        if new_loan:
-            return False
-        return True
+        # Hit the distributor's return link, and if it's successful, update the pool
+        # availability.
+        loan_status = self._request_loan_status(return_url)
+        if loan_status.active:
+            # If the distributor says the loan is still active, we didn't return it, and
+            # something went wrong. We self.log an error and don't delete the loan, so the patron
+            # can try again later.
+            self.log.error(
+                f"Loan {loan.id} was {loan_status.status} not returned. The distributor says it's still active. {loan_status}"
+            )
+            raise CannotReturn()
+        loan.license.checkin()
+        self.update_licensepool_and_hold_queue(loan.license_pool)
 
     def checkout(
         self,
