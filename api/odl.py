@@ -818,42 +818,8 @@ class BaseODLAPI(
             for hold in remaining_holds
         ]
 
-    def update_loan(self, loan: Loan, status_doc: dict[str, Any] | None = None) -> None:
-        """Check a loan's status, and if it is no longer active, delete the loan
-        and update its pool's availability.
-        """
-        _db = Session.object_session(loan)
-
-        if not status_doc:
-            status_doc = self.get_license_status_document(loan)
-
-        status = status_doc.get("status")
-        # We already check that the status is valid in get_license_status_document,
-        # but if the document came from a notification it hasn't been checked yet.
-        if status not in self.STATUS_VALUES:
-            raise BadResponseException(
-                str(loan.license.checkout_url),
-                "The License Status Document had an unknown status value.",
-            )
-
-        if status in [
-            self.REVOKED_STATUS,
-            self.RETURNED_STATUS,
-            self.CANCELLED_STATUS,
-            self.EXPIRED_STATUS,
-        ]:
-            # This loan is no longer active. Update the pool's availability
-            # and delete the loan.
-
-            # Update the license
-            loan.license.checkin()
-
-            # If there are holds, the license is reserved for the next patron.
-            _db.delete(loan)
-            self.update_licensepool(loan.license_pool)
-
     def update_availability(self, licensepool: LicensePool) -> None:
-        pass
+        licensepool.update_availability_from_licenses()
 
 
 class ODLAPI(
@@ -996,6 +962,10 @@ class BaseODLImporter(BaseOPDSImporter[SettingsType], ABC):
             elif isinstance(document_format, list):
                 content_types = document_format
 
+        cls.logger().info(
+            f"License identifier {identifier} / status {status} / concurrency {concurrency} / expires {expires} / checkouts left {left} / available / {available} / content types {content_types}"
+        )
+
         return LicenseData(
             identifier=identifier,
             checkout_url=checkout_link,
@@ -1022,7 +992,7 @@ class BaseODLImporter(BaseOPDSImporter[SettingsType], ABC):
 
         if not license_info_document:
             return None
-
+        cls.logger().info(f"Parsing License Info Document {license_info_link}")
         parsed_license = cls.parse_license_info(
             license_info_document, license_info_link, checkout_link
         )
