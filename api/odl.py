@@ -671,39 +671,41 @@ class BaseODLAPI(
         else:
             return self._license_fulfill(loan, delivery_mechanism)
 
-    def _update_hold_position(self, holdinfo: HoldInfo, pool: LicensePool) -> None:
-        _db = Session.object_session(pool)
-        loans_count = (
-            _db.query(Loan)
-            .filter(
-                Loan.license_pool_id == pool.id,
-            )
-            .filter(or_(Loan.end == None, Loan.end > utc_now()))
-            .count()
+    def _recalculate_holds_in_license_pool(self, licensepool: LicensePool) -> None:
+        """Set any holds ready for checkout and update the position for all other holds in the queue."""
+        holds = licensepool.holds_by_start_date()
+        ready_for_checkout = holds[: licensepool.licenses_reserved]
+        waiting = holds[licensepool.licenses_reserved :]
+        self.log.info(
+            f"Holds in License pool [{licensepool.identifier}]: {len(holds)} "
+            f"holds / {len(ready_for_checkout)} ready to checkout / {len(waiting)} in queue"
         )
-        holds_count = self._count_holds_before(holdinfo, pool)
 
-        assert pool.licenses_owned is not None
-        remaining_licenses = pool.licenses_owned - loans_count
-
-        if remaining_licenses > holds_count:
-            # The hold is ready to check out.
-            holdinfo.hold_position = 0
-
-        else:
-            # Add 1 since position 0 indicates the hold is ready.
-            holdinfo.hold_position = holds_count + 1
-
-    def update_licensepool(self, licensepool: LicensePool) -> None:
-        # Update the pool and the next holds in the queue when a license is reserved.
-        licensepool.update_availability_from_licenses(
-            as_of=utc_now(),
-        )
-        holds = licensepool.get_active_holds()
-        for hold in holds[: licensepool.licenses_reserved]:
+        assert self.collection is not None
+        default_reservation_period = self.collection.default_reservation_period
+        # If we had available copies, reserve them for the same amount of holds at the top of the queue.
+        for hold in ready_for_checkout:
             if hold.position != 0:
-                # This hold just got a reserved license.
-                self._update_hold_data(hold)
+                hold.position = 0
+                # And start the reservation period.
+                hold.end = utc_now() + datetime.timedelta(
+                    days=default_reservation_period
+                )
+
+        # Update the rest of the queue.
+        for idx, hold in enumerate(waiting):
+            position = idx + 1
+            if hold.position != position:
+                hold.position = position
+
+    def update_licensepool_and_hold_queue(
+        self, licensepool: LicensePool, ignored_holds: set[Hold] | None = None
+    ) -> None:
+        """Update availability information of the license pool and recaulculate its holds queue."""
+        licensepool.update_availability_from_licenses(
+            as_of=utc_now(), ignored_holds=ignored_holds
+        )
+        self._recalculate_holds_in_license_pool(licensepool)
 
     def place_hold(
         self,
@@ -717,9 +719,8 @@ class BaseODLAPI(
 
     def _place_hold(self, patron: Patron, licensepool: LicensePool) -> HoldInfo:
         _db = Session.object_session(patron)
-
         # Make sure pool info is updated.
-        self.update_licensepool(licensepool)
+        licensepool.update_availability_from_licenses()
 
         if licensepool.licenses_available > 0:
             raise CurrentlyAvailable()
@@ -744,12 +745,9 @@ class BaseODLAPI(
         holdinfo = HoldInfo.from_license_pool(
             licensepool,
             start_date=utc_now(),
-            end_date=None,
-            hold_position=0,
+            end_date=utc_now() + datetime.timedelta(days=365),  # E-Kirjasto
+            hold_position=licensepool.patrons_in_hold_queue,
         )
-        library = patron.library
-        self._update_hold_end_date(holdinfo, licensepool, library=library)
-
         return holdinfo
 
     def release_hold(self, patron: Patron, pin: str, licensepool: LicensePool) -> None:
