@@ -420,14 +420,10 @@ class EnkiAPI(
         expires = self._epoch_to_struct(due_date)
 
         # Create the loan info.
-        loan = LoanInfo(
-            licensepool.collection,
-            licensepool.data_source.name,
-            licensepool.identifier.type,
-            licensepool.identifier.identifier,
-            None,
-            expires,
-            None,
+        loan = LoanInfo.from_license_pool(
+            licensepool,
+            start_date=None,
+            end_date=expires,
         )
         return loan
 
@@ -566,13 +562,11 @@ class EnkiAPI(
         if self.collection is None:
             raise ValueError("Collection is None")
         return LoanInfo(
-            self.collection,
-            DataSource.ENKI,
-            Identifier.ENKI_ID,
-            enki_id,
+            collection_id=self.collection_id,  # type: ignore
+            identifier_type=Identifier.ENKI_ID,
+            identifier=enki_id,
             start_date=start_date,
             end_date=end_date,
-            fulfillment_info=None,
         )
 
     def parse_patron_holds(self, hold_data: Mapping[str, Any]) -> HoldInfo | None:
@@ -973,9 +967,9 @@ class EnkiCollectionReaper(IdentifierSweepMonitor):
             return None
 
         if pool.presentation_edition:
-            self.log.warn("Removing %r from circulation", pool.presentation_edition)
+            self.log.warning("Removing %r from circulation", pool.presentation_edition)
         else:
-            self.log.warn(
+            self.log.warning(
                 "Removing unknown title %s from circulation.", identifier.identifier
             )
 

@@ -448,13 +448,10 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
             loan_end = loan_obj.end
             external_identifier = loan_obj.external_identifier
 
-        return LoanInfo(
-            licensepool.collection,
-            licensepool.data_source.name,
-            licensepool.identifier.type,
-            licensepool.identifier.identifier,
-            loan_start,
-            loan_end,
+        return LoanInfo.from_license_pool(
+            licensepool,
+            start_date=loan_start,
+            end_date=loan_end,
             external_identifier=external_identifier,
         )
 
@@ -674,14 +671,11 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
 
     def _update_hold_data(self, hold: Hold) -> None:
         pool: LicensePool = hold.license_pool
-        holdinfo = HoldInfo(
-            pool.collection,
-            pool.data_source.name,
-            pool.identifier.type,
-            pool.identifier.identifier,
-            hold.start,
-            hold.end,
-            hold.position,
+        holdinfo = HoldInfo.from_license_pool(
+            pool,
+            start_date=hold.start,
+            end_date=hold.end,
+            hold_position=hold.position,
         )
         library = hold.patron.library
         self._update_hold_end_date(holdinfo, pool, library=library)
@@ -848,14 +842,11 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
             else 0
         )
         licensepool.patrons_in_hold_queue = patrons_in_hold_queue + 1
-        holdinfo = HoldInfo(
-            licensepool.collection,
-            licensepool.data_source.name,
-            licensepool.identifier.type,
-            licensepool.identifier.identifier,
-            utc_now(),
-            None,
-            0,
+        holdinfo = HoldInfo.from_license_pool(
+            licensepool,
+            start_date=utc_now(),
+            end_date=None,
+            hold_position=0,
         )
         library = patron.library
         self._update_hold_end_date(holdinfo, licensepool, library=library)
@@ -923,22 +914,16 @@ class BaseODLAPI(PatronActivityCirculationAPI[SettingsType, LibrarySettingsType]
                 remaining_holds.append(hold)
 
         return [
-            LoanInfo(
-                loan.license_pool.collection,
-                loan.license_pool.data_source.name,
-                loan.license_pool.identifier.type,
-                loan.license_pool.identifier.identifier,
-                loan.start,
-                loan.end,
+            LoanInfo.from_license_pool(
+                loan.license_pool,
+                start_date=loan.start,
+                end_date=loan.end,
                 external_identifier=loan.external_identifier,
             )
             for loan in loans
         ] + [
-            HoldInfo(
-                hold.license_pool.collection,
-                hold.license_pool.data_source.name,
-                hold.license_pool.identifier.type,
-                hold.license_pool.identifier.identifier,
+            HoldInfo.from_license_pool(
+                hold.license_pool,
                 start_date=hold.start,
                 end_date=hold.end,
                 hold_position=hold.position,

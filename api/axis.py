@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import base64
 import datetime
-import html
 import json
 import re
 import ssl
@@ -505,8 +504,8 @@ class Axis360API(
             # The Axis 360 API doesn't return the identifier of the
             # item that was placed on hold, so we have to fill it in
             # based on our own knowledge.
-            hold_info.identifier_type = identifier.type
-            hold_info.identifier = identifier.identifier
+            hold_info.identifier_type = identifier.type  # type: ignore
+            hold_info.identifier = identifier.identifier  # type: ignore
         return hold_info
 
     def release_hold(self, patron: Patron, pin: str, licensepool: LicensePool) -> None:
@@ -542,7 +541,7 @@ class Axis360API(
             patron_id=patron.authorization_identifier, title_ids=title_ids
         )
         return list(
-            AvailabilityResponseParser(self, internal_format).process_all(
+            AvailabilityResponseParser(self, internal_format).process_all(  # type: ignore
                 availability.content
             )
         )
@@ -1437,7 +1436,7 @@ class CheckoutResponseParser(XMLResponseParser[LoanInfo]):
             collection=self.collection,
             data_source_name=DataSource.AXIS_360,
             identifier_type=self.id_type,
-            identifier=None,
+            identifier=None,  # type: ignore
             start_date=loan_start,
             end_date=expiration_date,
         )
@@ -1473,11 +1472,11 @@ class HoldResponseParser(XMLResponseParser[HoldInfo]):
             collection=self.collection,
             data_source_name=DataSource.AXIS_360,
             identifier_type=self.id_type,
-            identifier=None,
+            identifier="none",
             start_date=hold_start,
             end_date=None,
             hold_position=queue_position,
-        )
+        )  # type: ignore
         return hold
 
 
@@ -1518,107 +1517,6 @@ class AvailabilityResponseParser(XMLResponseParser[Union[LoanInfo, HoldInfo]]):
     @property
     def xpath_expression(self) -> str:
         return "//axis:title"
-
-    def process_one(
-        self, e: _Element, ns: dict[str, str] | None
-    ) -> LoanInfo | HoldInfo | None:
-        # Figure out which book we're talking about.
-        axis_identifier = self.text_of_subtag(e, "axis:titleId", ns)
-        availability = self._xpath1(e, "axis:availability", ns)
-        if availability is None:
-            return None
-        reserved = self._xpath1_boolean(availability, "axis:isReserved", ns)
-        checked_out = self._xpath1_boolean(availability, "axis:isCheckedout", ns)
-        on_hold = self._xpath1_boolean(availability, "axis:isInHoldQueue", ns)
-
-        info: LoanInfo | HoldInfo | None = None
-        if checked_out:
-            start_date = self._xpath1_date(availability, "axis:checkoutStartDate", ns)
-            end_date = self._xpath1_date(availability, "axis:checkoutEndDate", ns)
-            download_url = self.text_of_optional_subtag(
-                availability, "axis:downloadUrl", ns
-            )
-            transaction_id = (
-                self.text_of_optional_subtag(availability, "axis:transactionID", ns)
-                or ""
-            )
-
-            # Arguments common to FulfillmentInfo and
-            # Axis360FulfillmentInfo.
-            kwargs = dict(
-                data_source_name=DataSource.AXIS_360,
-                identifier_type=self.id_type,
-                identifier=axis_identifier,
-            )
-
-            fulfillment: FulfillmentInfo | None
-            if download_url and self.internal_format != self.api.AXISNOW:
-                # The patron wants a direct link to the book, which we can deliver
-                # immediately, without making any more API requests.
-                fulfillment = Axis360AcsFulfillmentInfo(
-                    collection=self.collection,
-                    content_link=html.unescape(download_url),
-                    content_type=DeliveryMechanism.ADOBE_DRM,
-                    content=None,
-                    content_expires=None,
-                    verify=self.api.verify_certificate,
-                    **kwargs,
-                )
-            elif transaction_id:
-                # We will eventually need to make a request to the
-                # "getfulfillmentInfo" endpoint, using this
-                # transaction ID.
-                #
-                # For a book delivered in AxisNow format, this will give
-                # us the Book Vault UUID and ISBN.
-                #
-                # For an audiobook, this will give us the Findaway
-                # content ID, license ID, and session key. We'll also
-                # need to make a second request to get the audiobook
-                # metadata.
-                #
-                # Axis360FulfillmentInfo can handle both cases.
-                fulfillment = Axis360FulfillmentInfo(
-                    api=self.api, key=transaction_id, **kwargs
-                )
-            else:
-                # We're out of luck -- we can't fulfill this loan.
-                fulfillment = None
-            info = LoanInfo(
-                collection=self.collection,
-                data_source_name=DataSource.AXIS_360,
-                identifier_type=self.id_type,
-                identifier=axis_identifier,
-                start_date=start_date,
-                end_date=end_date,
-                fulfillment_info=fulfillment,
-            )
-
-        elif reserved:
-            end_date = self._xpath1_date(availability, "axis:reservedEndDate", ns)
-            info = HoldInfo(
-                collection=self.collection,
-                data_source_name=DataSource.AXIS_360,
-                identifier_type=self.id_type,
-                identifier=axis_identifier,
-                start_date=None,
-                end_date=end_date,
-                hold_position=0,
-            )
-        elif on_hold:
-            position = self.int_of_optional_subtag(
-                availability, "axis:holdsQueuePosition", ns
-            )
-            info = HoldInfo(
-                collection=self.collection,
-                data_source_name=DataSource.AXIS_360,
-                identifier_type=self.id_type,
-                identifier=axis_identifier,
-                start_date=None,
-                end_date=None,
-                hold_position=position,
-            )
-        return info
 
 
 class JSONResponseParser(Generic[T], ResponseParser, ABC):

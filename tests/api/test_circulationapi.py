@@ -8,13 +8,13 @@ from unittest.mock import MagicMock
 import flask
 import pytest
 from flask import Flask
+from freezegun import freeze_time
 
 from api.circulation import (
     APIAwareFulfillmentInfo,
     BaseCirculationAPI,
     CirculationAPI,
     CirculationInfo,
-    DeliveryMechanismInfo,
     FulfillmentInfo,
     HoldInfo,
     LoanInfo,
@@ -28,16 +28,11 @@ from core.mock_analytics_provider import MockAnalyticsProvider
 from core.model import (
     CirculationEvent,
     DataSource,
-    DeliveryMechanism,
     ExternalIntegration,
     Hold,
-    Hyperlink,
     Identifier,
     Loan,
-    Representation,
-    RightsStatus,
 )
-from core.opds_import import OPDSAPI
 from core.util.datetime_helpers import utc_now
 from tests.api.mockapi.bibliotheca import MockBibliothecaAPI
 from tests.api.mockapi.circulation import (
@@ -45,7 +40,6 @@ from tests.api.mockapi.circulation import (
     MockPatronActivityCirculationAPI,
     MockRemoteAPI,
 )
-from tests.fixtures.api_bibliotheca_files import BibliothecaFilesFixture
 from tests.fixtures.database import DatabaseTransactionFixture
 from tests.fixtures.library import LibraryFixture
 
@@ -123,13 +117,10 @@ class TestCirculationAPI:
 
     def test_borrow_sends_analytics_event(self, circulation_api: CirculationAPIFixture):
         now = utc_now()
-        loaninfo = LoanInfo(
-            circulation_api.pool.collection,
-            circulation_api.pool.data_source,
-            circulation_api.pool.identifier.type,
-            circulation_api.pool.identifier.identifier,
-            now,
-            now + timedelta(seconds=3600),
+        loaninfo = LoanInfo.from_license_pool(
+            circulation_api.pool,
+            start_date=now,
+            end_date=now + timedelta(seconds=3600),
             external_identifier=circulation_api.db.fresh_str(),
         )
         circulation_api.remote.queue_checkout(loaninfo)
@@ -179,13 +170,10 @@ class TestCirculationAPI:
         self, circulation_api: CirculationAPIFixture
     ):
         now = utc_now()
-        loaninfo = LoanInfo(
-            circulation_api.pool.collection,
-            circulation_api.pool.data_source,
-            circulation_api.pool.identifier.type,
-            circulation_api.pool.identifier.identifier,
-            now,
-            now + timedelta(seconds=3600),
+        loaninfo = LoanInfo.from_license_pool(
+            circulation_api.pool,
+            start_date=now,
+            end_date=now + timedelta(seconds=3600),
             external_identifier=circulation_api.db.fresh_str(),
         )
         circulation_api.remote.queue_checkout(loaninfo)
@@ -219,23 +207,14 @@ class TestCirculationAPI:
         loan, hold, is_new = self.borrow(circulation_api)
         assert 3 == len(circulation_api.patron.loan_checkouts)
 
-    def test_attempt_borrow_with_existing_remote_loan(
+    @freeze_time()
+    def test_attempt_borrow_with_existing_loan(
         self, circulation_api: CirculationAPIFixture
     ):
-        """The patron has a remote loan that the circ manager doesn't know
+        """The patron has a loan that the circ manager doesn't know
         about, and they just tried to borrow a book they already have
         a loan for.
         """
-        # Remote loan.
-        circulation_api.circulation.add_remote_loan(
-            circulation_api.pool.collection,
-            circulation_api.pool.data_source,
-            circulation_api.identifier.type,
-            circulation_api.identifier.identifier,
-            self.YESTERDAY,
-            self.IN_TWO_WEEKS,
-        )
-
         circulation_api.remote.queue_checkout(AlreadyCheckedOut())
         now = utc_now()
         loan, hold, is_new = self.borrow(circulation_api)
@@ -250,8 +229,8 @@ class TestCirculationAPI:
         # but didn't give us any useful information on when that loan
         # was created. We've faked it with values that should be okay
         # until the next sync.
-        assert abs((loan.start - now).seconds) < 2
-        assert 3600 == (loan.end - loan.start).seconds
+        assert (loan.start - now).seconds == 0
+        assert (loan.end - loan.start).seconds == 3600
 
     def test_attempt_borrow_with_existing_remote_hold(
         self, circulation_api: CirculationAPIFixture
@@ -260,17 +239,6 @@ class TestCirculationAPI:
         about, and they just tried to borrow a book they already have
         on hold.
         """
-        # Remote hold.
-        circulation_api.circulation.add_remote_hold(
-            circulation_api.pool.collection,
-            circulation_api.pool.data_source,
-            circulation_api.identifier.type,
-            circulation_api.identifier.identifier,
-            self.YESTERDAY,
-            self.IN_TWO_WEEKS,
-            10,
-        )
-
         circulation_api.remote.queue_checkout(AlreadyOnHold())
         now = utc_now()
         loan, hold, is_new = self.borrow(circulation_api)
@@ -299,16 +267,6 @@ class TestCirculationAPI:
         # Local loan.
         loan, ignore = circulation_api.pool.loan_to(circulation_api.patron)
 
-        # Remote loan.
-        circulation_api.circulation.add_remote_loan(
-            circulation_api.pool.collection,
-            circulation_api.pool.data_source,
-            circulation_api.identifier.type,
-            circulation_api.identifier.identifier,
-            self.YESTERDAY,
-            self.IN_TWO_WEEKS,
-        )
-
         # This is the expected behavior in most cases--you tried to
         # renew the loan and failed because it's not time yet.
         circulation_api.remote.queue_checkout(CannotRenew())
@@ -326,14 +284,6 @@ class TestCirculationAPI:
         loan, ignore = circulation_api.pool.loan_to(circulation_api.patron)
 
         # Remote loan.
-        circulation_api.circulation.add_remote_loan(
-            circulation_api.pool.collection,
-            circulation_api.pool.data_source,
-            circulation_api.identifier.type,
-            circulation_api.identifier.identifier,
-            self.YESTERDAY,
-            self.IN_TWO_WEEKS,
-        )
 
         # NoAvailableCopies can happen if there are already people
         # waiting in line for the book. This case gives a more
@@ -353,14 +303,9 @@ class TestCirculationAPI:
     ):
         # We want to borrow this book but there are no copies.
         circulation_api.remote.queue_checkout(NoAvailableCopies())
-        holdinfo = HoldInfo(
-            circulation_api.pool.collection,
-            circulation_api.pool.data_source,
-            circulation_api.identifier.type,
-            circulation_api.identifier.identifier,
-            None,
-            None,
-            10,
+        holdinfo = HoldInfo.from_license_pool(
+            circulation_api.pool,
+            hold_position=10,
         )
         circulation_api.remote.queue_hold(holdinfo)
 
@@ -378,14 +323,9 @@ class TestCirculationAPI:
         # There are no available copies, but the remote API
         # places a hold for us right away instead of raising
         # an error.
-        holdinfo = HoldInfo(
-            circulation_api.pool.collection,
-            circulation_api.pool.data_source,
-            circulation_api.identifier.type,
-            circulation_api.identifier.identifier,
-            None,
-            None,
-            10,
+        holdinfo = HoldInfo.from_license_pool(
+            circulation_api.pool,
+            hold_position=10,
         )
         circulation_api.remote.queue_checkout(holdinfo)
 
@@ -406,14 +346,9 @@ class TestCirculationAPI:
 
         # But the point is moot because the book isn't even available.
         # Attempting to place a hold will succeed.
-        holdinfo = HoldInfo(
-            circulation_api.pool.collection,
-            circulation_api.pool.data_source,
-            circulation_api.identifier.type,
-            circulation_api.identifier.identifier,
-            None,
-            None,
-            10,
+        holdinfo = HoldInfo.from_license_pool(
+            circulation_api.pool,
+            hold_position=10,
         )
         circulation_api.remote.queue_hold(holdinfo)
 
@@ -453,14 +388,9 @@ class TestCirculationAPI:
 
     def test_hold_sends_analytics_event(self, circulation_api: CirculationAPIFixture):
         circulation_api.remote.queue_checkout(NoAvailableCopies())
-        holdinfo = HoldInfo(
-            circulation_api.pool.collection,
-            circulation_api.pool.data_source,
-            circulation_api.identifier.type,
-            circulation_api.identifier.identifier,
-            None,
-            None,
-            10,
+        holdinfo = HoldInfo.from_license_pool(
+            circulation_api.pool,
+            hold_position=10,
         )
         circulation_api.remote.queue_hold(holdinfo)
 
@@ -485,42 +415,27 @@ class TestCirculationAPI:
         # sent.
         assert 1 == circulation_api.analytics.count
 
-    def test_loan_becomes_hold_if_no_available_copies_and_preexisting_loan(
+    @freeze_time()
+    def test_attempt_borrow_with_existing_remote_loan(
         self, circulation_api: CirculationAPIFixture
     ):
-        # Once upon a time, we had a loan for this book.
-        loan, ignore = circulation_api.pool.loan_to(circulation_api.patron)
-        loan.start = self.YESTERDAY
-
-        # But no longer! What's more, other patrons have taken all the
-        # copies!
-        circulation_api.remote.queue_checkout(NoAvailableCopies())
-        holdinfo = HoldInfo(
-            circulation_api.pool.collection,
-            circulation_api.pool.data_source,
-            circulation_api.identifier.type,
-            circulation_api.identifier.identifier,
-            None,
-            None,
-            10,
-        )
-        circulation_api.remote.queue_hold(holdinfo)
-
-        assert [] == circulation_api.remote.availability_updated_for
-
-        # As such, an attempt to renew our loan results in us actually
-        # placing a hold on the book.
+        # Remote loan.
+        circulation_api.remote.queue_checkout(AlreadyCheckedOut())
+        now = utc_now()
         loan, hold, is_new = self.borrow(circulation_api)
-        assert None == loan
-        assert True == is_new
-        assert circulation_api.pool == hold.license_pool
-        assert circulation_api.patron == hold.patron
 
-        # When NoAvailableCopies was raised, the circulation
-        # information for the book was immediately updated, to reduce
-        # the risk that other patrons would encounter the same
-        # problem.
-        assert [circulation_api.pool] == circulation_api.remote.availability_updated_for
+        # There is now a new local loan representing the remote loan.
+        assert True == is_new
+        assert circulation_api.pool == loan.license_pool
+        assert circulation_api.patron == loan.patron
+        assert None == hold
+
+        # The server told us 'there's already a loan for this book'
+        # but didn't give us any useful information on when that loan
+        # was created. We've faked it with values that should be okay
+        # until the next sync.
+        assert (loan.start - now).seconds == 0
+        assert (loan.end - loan.start).seconds == 3600
 
     def test_borrow_with_expired_card_fails(
         self, circulation_api: CirculationAPIFixture
@@ -529,13 +444,11 @@ class TestCirculationAPI:
         # We use local time here, rather than UTC time, because we use
         # local time when checking for expired cards in authorization_is_active.
         now = datetime.datetime.now()
-        loaninfo = LoanInfo(
-            circulation_api.pool.collection,
-            circulation_api.pool.data_source,
-            circulation_api.pool.identifier.type,
-            circulation_api.pool.identifier.identifier,
-            now,
-            now + timedelta(seconds=3600),
+        loaninfo = LoanInfo.from_license_pool(
+            circulation_api.pool,
+            start_date=now,
+            end_date=now + timedelta(seconds=3600),
+            external_identifier=circulation_api.db.fresh_str(),
         )
         circulation_api.remote.queue_checkout(loaninfo)
 
@@ -552,13 +465,11 @@ class TestCirculationAPI:
     ):
         # This checkout would succeed...
         now = utc_now()
-        loaninfo = LoanInfo(
-            circulation_api.pool.collection,
-            circulation_api.pool.data_source,
-            circulation_api.pool.identifier.type,
-            circulation_api.pool.identifier.identifier,
-            now,
-            now + timedelta(seconds=3600),
+        loaninfo = LoanInfo.from_license_pool(
+            circulation_api.pool,
+            start_date=now,
+            end_date=now + timedelta(seconds=3600),
+            external_identifier=circulation_api.db.fresh_str(),
         )
         circulation_api.remote.queue_checkout(loaninfo)
 
@@ -585,13 +496,11 @@ class TestCirculationAPI:
     def test_borrow_with_block_fails(self, circulation_api: CirculationAPIFixture):
         # This checkout would succeed...
         now = utc_now()
-        loaninfo = LoanInfo(
-            circulation_api.pool.collection,
-            circulation_api.pool.data_source,
-            circulation_api.pool.identifier.type,
-            circulation_api.pool.identifier.identifier,
-            now,
-            now + timedelta(seconds=3600),
+        loaninfo = LoanInfo.from_license_pool(
+            circulation_api.pool,
+            start_date=now,
+            end_date=now + timedelta(seconds=3600),
+            external_identifier=circulation_api.db.fresh_str(),
         )
         circulation_api.remote.queue_checkout(loaninfo)
 
@@ -925,14 +834,11 @@ class TestCirculationAPI:
         library_fixture.settings(circulation_api.patron.library).hold_limit = 2
         circulation_api.remote.queue_checkout(NoAvailableCopies())
         now = utc_now()
-        holdinfo = HoldInfo(
-            circulation_api.pool.collection,
-            circulation_api.pool.data_source,
-            circulation_api.pool.identifier.type,
-            circulation_api.pool.identifier.identifier,
-            now,
-            now + timedelta(seconds=3600),
-            10,
+        holdinfo = HoldInfo.from_license_pool(
+            circulation_api.pool,
+            hold_position=10,
+            start_date=now,
+            end_date=now + timedelta(seconds=3600),
         )
         circulation_api.remote.queue_hold(holdinfo)
         loan, hold, is_new = self.borrow(circulation_api)
@@ -983,26 +889,18 @@ class TestCirculationAPI:
 
     def test_fulfill_errors(self, circulation_api: CirculationAPIFixture):
         # Here's an open-access title.
-        collection = circulation_api.db.collection(
-            protocol=ExternalIntegration.OPDS_IMPORT,
-            data_source_name="OPDS",
-            external_account_id="http://url/",
-        )
+        collection = circulation_api.db.collection()
         circulation_api.pool.open_access = True
         circulation_api.pool.collection = collection
-
-        circulation_api.circulation.remotes[
-            circulation_api.pool.data_source.name
-        ] = OPDSAPI(circulation_api.db.session, collection)
 
         # The patron has the title on loan.
         circulation_api.pool.loan_to(circulation_api.patron)
 
         # It has a LicensePoolDeliveryMechanism that is broken (has no
         # associated Resource).
-        broken_lpdm = circulation_api.delivery_mechanism
-        assert None == broken_lpdm.resource
-        i_want_an_epub = broken_lpdm.delivery_mechanism
+        circulation_api.circulation.queue_fulfill(
+            circulation_api.pool, FormatNotAvailable()
+        )
 
         # fulfill() will raise FormatNotAvailable.
         pytest.raises(
@@ -1011,72 +909,7 @@ class TestCirculationAPI:
             circulation_api.patron,
             "1234",
             circulation_api.pool,
-            broken_lpdm,
-            sync_on_failure=False,
-        )
-
-        # Let's add a second LicensePoolDeliveryMechanism of the same
-        # type which has an associated Resource.
-        link, new = circulation_api.pool.identifier.add_link(
-            Hyperlink.OPEN_ACCESS_DOWNLOAD,
-            circulation_api.db.fresh_url(),
-            circulation_api.pool.data_source,
-        )
-
-        working_lpdm = circulation_api.pool.set_delivery_mechanism(
-            i_want_an_epub.content_type,
-            i_want_an_epub.drm_scheme,
-            RightsStatus.GENERIC_OPEN_ACCESS,
-            link.resource,
-        )
-
-        # It's still not going to work because the Resource has no
-        # Representation.
-        assert None == link.resource.representation
-        pytest.raises(
-            FormatNotAvailable,
-            circulation_api.circulation.fulfill,
-            circulation_api.patron,
-            "1234",
-            circulation_api.pool,
-            broken_lpdm,
-            sync_on_failure=False,
-        )
-
-        # Let's add a Representation to the Resource.
-        representation, is_new = circulation_api.db.representation(
-            link.resource.url,
-            i_want_an_epub.content_type,
-            "Dummy content",
-            mirrored=True,
-        )
-        link.resource.representation = representation
-
-        # We can finally fulfill a loan.
-        result = circulation_api.circulation.fulfill(
-            circulation_api.patron, "1234", circulation_api.pool, broken_lpdm
-        )
-        assert isinstance(result, FulfillmentInfo)
-        assert result.content_link == link.resource.representation.public_url
-        assert result.content_type == i_want_an_epub.content_type
-
-        # If we change the working LPDM so that it serves a different
-        # media type than the one we're asking for, we're back to
-        # FormatNotAvailable errors.
-        irrelevant_delivery_mechanism, ignore = DeliveryMechanism.lookup(
-            circulation_api.db.session,
-            "application/some-other-type",
-            DeliveryMechanism.NO_DRM,
-        )
-        working_lpdm.delivery_mechanism = irrelevant_delivery_mechanism
-        pytest.raises(
-            FormatNotAvailable,
-            circulation_api.circulation.fulfill,
-            circulation_api.patron,
-            "1234",
-            circulation_api.pool,
-            broken_lpdm,
-            sync_on_failure=False,
+            circulation_api.delivery_mechanism,
         )
 
     def test_fulfill(self, circulation_api: CirculationAPIFixture):
@@ -1304,184 +1137,35 @@ class TestCirculationAPI:
         # But we can still sync without crashing.
         self.sync_bookshelf(circulation_api)
 
-    def test_sync_bookshelf_with_old_local_loan_and_no_remote_loan_deletes_local_loan(
+    def test_sync_bookshelf_updates_hold_with_modified_timestamps(
         self, circulation_api: CirculationAPIFixture
     ):
-        # Local loan that was created yesterday.
-        loan, ignore = circulation_api.pool.loan_to(circulation_api.patron)
-        loan.start = self.YESTERDAY
-
-        # The loan is in the db.
-        loans = circulation_api.db.session.query(Loan).all()
-        assert [loan] == loans
-
-        self.sync_bookshelf(circulation_api)
-
-        # Now the local loan is gone.
-        loans = circulation_api.db.session.query(Loan).all()
-        assert [] == loans
-
-    def test_sync_bookshelf_with_new_local_loan_and_no_remote_loan_keeps_local_loan(
-        self, circulation_api: CirculationAPIFixture
-    ):
-        # Local loan that was just created.
-        loan, ignore = circulation_api.pool.loan_to(circulation_api.patron)
-        loan.start = utc_now()
-
-        # The loan is in the db.
-        loans = circulation_api.db.session.query(Loan).all()
-        assert [loan] == loans
-
-        self.sync_bookshelf(circulation_api)
-
-        # The loan is still in the db, since it was just created.
-        loans = circulation_api.db.session.query(Loan).all()
-        assert [loan] == loans
-
-    def test_sync_bookshelf_with_incomplete_remotes_keeps_local_loan(
-        self, circulation_api: CirculationAPIFixture
-    ):
-        circulation_api.patron.last_loan_activity_sync = utc_now()
-        loan, ignore = circulation_api.pool.loan_to(circulation_api.patron)
-        loan.start = self.YESTERDAY
-
-        class IncompleteCirculationAPI(MockCirculationAPI):
-            def patron_activity(self, patron, pin):
-                # A remote API failed, and we don't know if
-                # the patron has any loans or holds.
-                return [], [], False
-
-        incomplete_circulation = IncompleteCirculationAPI(
-            circulation_api.db.session,
-            circulation_api.db.default_library(),
-            registry=IntegrationRegistry(
-                Goals.LICENSE_GOAL,
-                {ExternalIntegration.BIBLIOTHECA: MockBibliothecaAPI},
-            ),
-        )
-        incomplete_circulation.sync_bookshelf(circulation_api.patron, "1234")
-
-        # The loan is still in the db, since there was an
-        # error from one of the remote APIs and we don't have
-        # complete loan data.
-        loans = circulation_api.db.session.query(Loan).all()
-        assert [loan] == loans
-
-        # Since we don't have complete loan data,
-        # patron.last_loan_activity_sync has been cleared out -- we know
-        # the data we have is unreliable.
-        assert None == circulation_api.patron.last_loan_activity_sync
-
-        class CompleteCirculationAPI(MockCirculationAPI):
-            def patron_activity(self, patron, pin):
-                # All the remote API calls succeeded, so
-                # now we know the patron has no loans.
-                return [], [], True
-
-        circulation = CompleteCirculationAPI(
-            circulation_api.db.session,
-            circulation_api.db.default_library(),
-            registry=IntegrationRegistry(
-                Goals.LICENSE_GOAL,
-                {ExternalIntegration.BIBLIOTHECA: MockBibliothecaAPI},
-            ),
-        )
-        circulation.sync_bookshelf(circulation_api.patron, "1234")
-
-        # Now the loan is gone.
-        loans = circulation_api.db.session.query(Loan).all()
-        assert [] == loans
-
-        # Since we know our picture of the patron's bookshelf is up-to-date,
-        # patron.last_loan_activity_sync has been set to the current time.
-        now = utc_now()
-        assert (
-            now - circulation_api.patron.last_loan_activity_sync
-        ).total_seconds() < 2
-
-    def test_sync_bookshelf_updates_local_loan_and_hold_with_modified_timestamps(
-        self, circulation_api: CirculationAPIFixture
-    ):
-        # We have a local loan that supposedly runs from yesterday
-        # until tomorrow.
-        loan, ignore = circulation_api.pool.loan_to(circulation_api.patron)
-        loan.start = self.YESTERDAY
-        loan.end = self.TOMORROW
-
-        # But the remote thinks the loan runs from today until two
-        # weeks from today.
-        circulation_api.circulation.add_remote_loan(
-            circulation_api.pool.collection,
-            circulation_api.pool.data_source,
-            circulation_api.identifier.type,
-            circulation_api.identifier.identifier,
-            self.TODAY,
-            self.IN_TWO_WEEKS,
-        )
-
-        # Similar situation for this hold on a different LicensePool.
         edition, pool2 = circulation_api.db.edition(
             data_source_name=DataSource.BIBLIOTHECA,
             identifier_type=Identifier.BIBLIOTHECA_ID,
             with_license_pool=True,
             collection=circulation_api.collection,
         )
-
+        # Don't really see this happening but let's say we have a local hold...
         hold, ignore = pool2.on_hold_to(circulation_api.patron)
         hold.start = self.YESTERDAY
         hold.end = self.TOMORROW
         hold.position = 10
-
+        # Let's pretend that for some weird reason the "remote" hold (ODL holds are local) data differs from the local hold
         circulation_api.circulation.add_remote_hold(
-            pool2.collection,
-            pool2.data_source,
-            pool2.identifier.type,
-            pool2.identifier.identifier,
-            self.TODAY,
-            self.IN_TWO_WEEKS,
-            0,
+            HoldInfo.from_license_pool(
+                pool2,
+                start_date=self.TODAY,
+                end_date=self.IN_TWO_WEEKS,
+                hold_position=0,
+            )
         )
-        circulation_api.circulation.sync_bookshelf(circulation_api.patron, "1234")
 
-        # Our local loans and holds have been updated to reflect the new
-        # data from the source of truth.
-        assert self.TODAY == loan.start
-        assert self.IN_TWO_WEEKS == loan.end
+        circulation_api.circulation.sync_bookshelf(circulation_api.patron, "1234")
 
         assert self.TODAY == hold.start
         assert self.IN_TWO_WEEKS == hold.end
         assert 0 == hold.position
-
-    def test_sync_bookshelf_applies_locked_delivery_mechanism_to_loan(
-        self, circulation_api: CirculationAPIFixture
-    ):
-        # By the time we hear about the patron's loan, they've already
-        # locked in an oddball delivery mechanism.
-        mechanism = DeliveryMechanismInfo(
-            Representation.TEXT_HTML_MEDIA_TYPE, DeliveryMechanism.NO_DRM
-        )
-        pool = circulation_api.db.licensepool(None)
-        circulation_api.circulation.add_remote_loan(
-            pool.collection,
-            pool.data_source.name,
-            pool.identifier.type,
-            pool.identifier.identifier,
-            utc_now(),
-            None,
-            locked_to=mechanism,
-        )
-        circulation_api.circulation.sync_bookshelf(circulation_api.patron, "1234")
-
-        # The oddball delivery mechanism is now associated with the loan...
-        [loan] = circulation_api.patron.loans
-        assert loan.fulfillment is not None
-        delivery = loan.fulfillment.delivery_mechanism
-        assert Representation.TEXT_HTML_MEDIA_TYPE == delivery.content_type
-        assert DeliveryMechanism.NO_DRM == delivery.drm_scheme
-
-        # ... and (once we commit) with the LicensePool.
-        circulation_api.db.session.commit()
-        assert loan.fulfillment in pool.delivery_mechanisms
 
     def test_sync_bookshelf_respects_last_loan_activity_sync(
         self, circulation_api: CirculationAPIFixture
@@ -1489,17 +1173,6 @@ class TestCirculationAPI:
         # We believe we have up-to-date loan activity for this patron.
         now = utc_now()
         circulation_api.patron.last_loan_activity_sync = now
-
-        # Little do we know that they just used a vendor website to
-        # create a loan.
-        circulation_api.circulation.add_remote_loan(
-            circulation_api.pool.collection,
-            circulation_api.pool.data_source,
-            circulation_api.identifier.type,
-            circulation_api.identifier.identifier,
-            self.YESTERDAY,
-            self.IN_TWO_WEEKS,
-        )
 
         # Syncing our loans with the remote won't actually do anything.
         circulation_api.circulation.sync_bookshelf(circulation_api.patron, "1234")
@@ -1514,7 +1187,8 @@ class TestCirculationAPI:
         # At that point, sync_bookshelf _will_ go out to the remote.
         now = utc_now()
         circulation_api.circulation.sync_bookshelf(circulation_api.patron, "1234")
-        assert 1 == len(circulation_api.patron.loans)
+        # Still no loans
+        assert 0 == len(circulation_api.patron.loans)
 
         # Once that happens, patron.last_loan_activity_sync is updated to
         # the current time.
@@ -1525,53 +1199,11 @@ class TestCirculationAPI:
         # normally happen, by passing force=True into sync_bookshelf.
         circulation_api.circulation.remote_loans = []
 
-        # A hack to work around the rule that loans not found on
-        # remote don't get deleted if they were created in the last 60
-        # seconds.
-        circulation_api.patron.loans[0].start = long_ago
-        circulation_api.db.session.commit()
-
         circulation_api.circulation.sync_bookshelf(
             circulation_api.patron, "1234", force=True
         )
         assert [] == circulation_api.patron.loans
         assert circulation_api.patron.last_loan_activity_sync > updated
-
-    def test_patron_activity(
-        self,
-        circulation_api: CirculationAPIFixture,
-        api_bibliotheca_files_fixture: BibliothecaFilesFixture,
-    ):
-        # Get a CirculationAPI that doesn't mock out its API's patron activity.
-        registry: IntegrationRegistry[BaseCirculationAPI] = IntegrationRegistry(
-            goal=Goals.LICENSE_GOAL
-        )
-        registry.register(MockBibliothecaAPI, canonical=ExternalIntegration.BIBLIOTHECA)
-        circulation = CirculationAPI(
-            circulation_api.db.session,
-            circulation_api.db.default_library(),
-            registry=registry,
-        )
-        mock_bibliotheca = circulation.api_for_collection[circulation_api.collection.id]
-        assert isinstance(mock_bibliotheca, MockBibliothecaAPI)
-        data = api_bibliotheca_files_fixture.sample_data("checkouts.xml")
-        mock_bibliotheca.queue_response(200, content=data)
-
-        loans, holds, complete = circulation.patron_activity(
-            circulation_api.patron, "1234"
-        )
-        assert 2 == len(loans)
-        assert 2 == len(holds)
-        assert True == complete
-
-        mock_bibliotheca.queue_response(500, content="Error")
-
-        loans, holds, complete = circulation.patron_activity(
-            circulation_api.patron, "1234"
-        )
-        assert 0 == len(loans)
-        assert 0 == len(holds)
-        assert False == complete
 
     def test_can_fulfill_without_loan(self, circulation_api: CirculationAPIFixture):
         """Can a title can be fulfilled without an active loan?  It depends on
@@ -1628,81 +1260,6 @@ class TestBaseCirculationAPI:
         assert False == api.can_fulfill_without_loan(
             MagicMock(), MagicMock(), MagicMock()
         )
-
-
-class TestDeliveryMechanismInfo:
-    def test_apply(self, db: DatabaseTransactionFixture):
-        # Here's a LicensePool with one non-open-access delivery mechanism.
-        pool = db.licensepool(None)
-        assert False == pool.open_access
-        [mechanism] = [lpdm.delivery_mechanism for lpdm in pool.delivery_mechanisms]
-        assert Representation.EPUB_MEDIA_TYPE == mechanism.content_type
-        assert DeliveryMechanism.ADOBE_DRM == mechanism.drm_scheme
-
-        # This patron has the book out on loan, but as far as we no,
-        # no delivery mechanism has been set.
-        patron = db.patron()
-        loan, ignore = pool.loan_to(patron)
-
-        # When consulting with the source of the loan, we learn that
-        # the patron has locked the delivery mechanism to a previously
-        # unknown mechanism.
-        info = DeliveryMechanismInfo(
-            Representation.PDF_MEDIA_TYPE, DeliveryMechanism.NO_DRM
-        )
-        info.apply(loan)
-
-        # This results in the addition of a new delivery mechanism to
-        # the LicensePool.
-        [new_mechanism] = [
-            lpdm.delivery_mechanism
-            for lpdm in pool.delivery_mechanisms
-            if lpdm.delivery_mechanism != mechanism
-        ]
-        assert Representation.PDF_MEDIA_TYPE == new_mechanism.content_type
-        assert DeliveryMechanism.NO_DRM == new_mechanism.drm_scheme
-        assert new_mechanism == loan.fulfillment.delivery_mechanism
-        assert RightsStatus.IN_COPYRIGHT == loan.fulfillment.rights_status.uri
-
-        # Calling apply() again with the same arguments does nothing.
-        info.apply(loan)
-        assert 2 == len(pool.delivery_mechanisms)
-
-        # Although it's extremely unlikely that this will happen in
-        # real life, it's possible for this operation to reveal a new
-        # *open-access* delivery mechanism for a LicensePool.
-        link, new = pool.identifier.add_link(
-            Hyperlink.OPEN_ACCESS_DOWNLOAD,
-            db.fresh_url(),
-            pool.data_source,
-            Representation.EPUB_MEDIA_TYPE,
-        )
-
-        info = DeliveryMechanismInfo(
-            Representation.EPUB_MEDIA_TYPE,
-            DeliveryMechanism.NO_DRM,
-            RightsStatus.CC0,
-            link.resource,
-        )
-
-        # Calling apply() on the loan we were using before will update
-        # its associated LicensePoolDeliveryMechanism.
-        info.apply(loan)
-        [oa_lpdm] = [
-            lpdm
-            for lpdm in pool.delivery_mechanisms
-            if lpdm.delivery_mechanism not in (mechanism, new_mechanism)
-        ]
-        assert oa_lpdm == loan.fulfillment
-
-        # The correct resource and rights status have been associated
-        # with the new LicensePoolDeliveryMechanism.
-        assert RightsStatus.CC0 == oa_lpdm.rights_status.uri
-        assert link.resource == oa_lpdm.resource
-
-        # The LicensePool is now considered an open-access LicensePool,
-        # since it has an open-access delivery mechanism.
-        assert True == pool.open_access
 
 
 class TestConfigurationFailures:
