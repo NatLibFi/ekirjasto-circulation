@@ -907,10 +907,10 @@ class LicenseReportScript(Script):
             "Current copies owned",
             "Current copies available",
             "Patrons in hold queue",
-            "Changes in number of licenses",
-            "Changes in title availability",
             "License identifier",
             "License status",
+            "License missing?",
+            "License last checked",
             "License checkouts left",
             "License checkouts available",
             "License concurrency",
@@ -928,24 +928,12 @@ class LicenseReportScript(Script):
 
         :param licensepool: A LicensePool.
 
-        :return: a 3-tuple (last_seen, title_removal_events,
-            license_removal_events).
+        :return: last_seen date.
 
         `last_seen` is the latest point at which we knew the book was
         circulating. If we never knew the book to be circulating, this
         is the first time we ever saw the LicensePool.
-
-        `title_removal_events` is a query that returns CirculationEvents
-        in which this LicensePool was removed from the remote collection.
-
-        `license_removal_events` is a query that returns
-        CirculationEvents in which LicensePool.licenses_owned went
-        from having a positive number to being zero or a negative
-        number.
         """
-        first_activity = None
-        most_recent_activity = None
-
         # If we have absolutely no information about the book ever
         # circulating, we act like we lost track of the book
         # immediately after seeing it for the first time.
@@ -989,16 +977,14 @@ class LicenseReportScript(Script):
             if not last_seen or candidate > last_seen:
                 last_seen = candidate
 
-        return last_seen, title_removal_events, license_removal_events
+        return last_seen
 
     format = "%Y-%m-%d"
 
     def explain(self, licensepool):
         edition = licensepool.presentation_edition
         identifier = licensepool.identifier
-        last_seen, title_removal_events, license_removal_events = self.investigate(
-            licensepool
-        )
+        last_seen = self.investigate(licensepool)
 
         data = [identifier.identifier]
         if edition:
@@ -1018,20 +1004,6 @@ class LicenseReportScript(Script):
         data.append(licensepool.licenses_available)
         data.append(licensepool.patrons_in_hold_queue)
 
-        license_removals = []
-        for event in license_removal_events:
-            description = "{}: {}→{}".format(
-                event.start.strftime(self.format),
-                event.old_value,
-                event.new_value,
-            )
-            license_removals.append(description)
-        data.append(", ".join(license_removals))
-
-        title_removals = [
-            event.start.strftime(self.format) for event in title_removal_events
-        ]
-        data.append(", ".join(title_removals))
         # Print the main license pool information
         print(",".join(str(item) for item in data))  # Convert all items to strings
 
@@ -1042,6 +1014,8 @@ class LicenseReportScript(Script):
                 license.expires.strftime(self.format) if license.expires else ""
             )
             license_data = [
+                identifier.identifier,
+                edition.title,
                 "",
                 "",
                 "",
@@ -1049,10 +1023,10 @@ class LicenseReportScript(Script):
                 "",
                 "",
                 "",
-                "",
-                "",  # Fill the first 9 columns with empty strings
                 license.identifier,
                 license.status.value,
+                license.is_missing,
+                license.last_checked,
                 license.checkouts_left,
                 license.checkouts_available,
                 license.terms_concurrency,
