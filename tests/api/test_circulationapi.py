@@ -844,15 +844,14 @@ class TestCirculationAPI:
         loan, hold, is_new = self.borrow(circulation_api)
         assert hold != None
 
-    def test_borrow_no_available_copies_and_update_existing_hold(
+    def test_borrow_no_available_copies_when_reserved(
         self, circulation_api: CirculationAPIFixture, library_fixture: LibraryFixture
     ):
         """
         The hold limit is 1, and the patron has a hold with position 0 in the hold queue on a book they're
-        trying to checkout. When the patron tries to borrow the book but it turns out to not be available, the
-        hold is updated to have a new end date with all other properties unchanged.
-        The circulation information for the book is immediately updated, to reduce the risk that other patrons
-        would encounter the same problem. Finally, the patron gets a NoAvailableCopiesWhenReserved exception.
+        trying to checkout. When the patron tries to borrow the book but it turns out to not be available
+        and a specific exception is raised. Hold data has been updated prior to raising the specific exception
+        on the remote (ODL api).
         """
 
         # The hold limit is 1
@@ -865,27 +864,12 @@ class TestCirculationAPI:
             end=self.TOMORROW,
             position=0,
         )
-        original_hold_end_date = existing_hold.end
-
         # The patron wants to take out their hold for loan but which turns out to not be available.
-        circulation_api.remote.queue_checkout(NoAvailableCopies())
+        circulation_api.remote.queue_checkout(NoAvailableCopiesWhenReserved())
 
         # The patron tries to borrow the book but gets a NoAvailableCopiesWhenReserved exception
-        try:
+        with pytest.raises(NoAvailableCopiesWhenReserved):
             self.borrow(circulation_api)
-        except Exception as e:
-            assert isinstance(e, NoAvailableCopiesWhenReserved)
-
-        # Nonetheless, the hold is updated to have a new extended end date.
-        assert existing_hold.position == 0
-        assert (
-            existing_hold.end != original_hold_end_date
-        )  # The updated hold should have a new end date.
-        # When NoAvailableCopies was raised, the circulation
-        # information for the book was immediately updated, to reduce
-        # the risk that other patrons would encounter the same
-        # problem.
-        assert [circulation_api.pool] == circulation_api.remote.availability_updated_for
 
     def test_fulfill_errors(self, circulation_api: CirculationAPIFixture):
         # Here's an open-access title.
@@ -969,7 +953,6 @@ class TestCirculationAPI:
         circulation_api.patron.last_loan_activity_sync = utc_now()
         circulation_api.pool.loan_to(circulation_api.patron)
         circulation_api.remote.queue_checkin(True)
-
         result = circulation_api.circulation.revoke_loan(
             circulation_api.patron, "1234", circulation_api.pool
         )

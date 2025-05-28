@@ -486,7 +486,6 @@ def borrow(identifier_type, identifier, mechanism_id=None):
 
 @library_route("/works/<license_pool_id>/fulfill")
 @library_route("/works/<license_pool_id>/fulfill/<mechanism_id>")
-@library_route("/works/<license_pool_id>/fulfill/<mechanism_id>")
 @has_library
 @allows_patron_web
 @returns_problem_detail
@@ -692,11 +691,11 @@ def client_libraries(library_uuid):
 
 
 # Loan notifications for ODL distributors, eg. Feedbooks
-@library_route("/odl_notify/<loan_id>", methods=["GET", "POST"])
+@library_route("/odl_notify/<license_identifier>", methods=["GET", "POST"])
 @has_library
 @returns_problem_detail
-def odl_notify(loan_id):
-    return app.manager.odl_notification_controller.notify(loan_id)
+def odl_notify(license_identifier: str) -> Response:
+    return app.manager.odl_notification_controller.notify(license_identifier)
 
 
 # Controllers used for operations purposes

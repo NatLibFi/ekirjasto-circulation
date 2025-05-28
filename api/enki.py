@@ -531,7 +531,7 @@ class EnkiAPI(
                 self.log.error(
                     "Unexpected error in patron_activity: %r", response.content
                 )
-                raise CirculationException(response.content)
+                raise CirculationException(response.content)  # type: ignore
         for loan in result["checkedOutItems"]:
             yield self.parse_patron_loans(loan)
         for type, holds in list(result["holds"].items()):
