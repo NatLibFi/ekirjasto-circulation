@@ -406,9 +406,16 @@ class TestODLNotificationController:
         route_test.set_controller_name(self.CONTROLLER_NAME)
         return route_test
 
-    def test_odl_notify(self, fixture: RouteTestFixture):
+    def test_odl_notify_deprecated(self, fixture: RouteTestFixture):
         url = "/odl_notify/<loan_id>"
-        fixture.assert_request_calls(url, fixture.controller.notify, "<loan_id>")  # type: ignore[union-attr]
+        fixture.assert_request_calls(url, fixture.controller.notify_deprecated, "<loan_id>")  # type: ignore[union-attr]
+        fixture.assert_supported_methods(url, "GET", "POST")
+
+    def test_odl_notify(self, fixture: RouteTestFixture):
+        url = "/odl/notify/<patron_id>/<license_id>"
+        fixture.assert_request_calls(
+            url, fixture.controller.notify, "<patron_id>", "<license_id>"  # type: ignore[union-attr]
+        )
         fixture.assert_supported_methods(url, "GET", "POST")
 
 

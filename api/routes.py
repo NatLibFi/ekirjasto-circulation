@@ -10,7 +10,7 @@ from flask_pydantic_spec import Response as SpecResponse
 from api.app import api_spec, app
 from api.model.patron_auth import PatronAuthAccessToken
 from api.model.time_tracking import PlaytimeEntriesPost, PlaytimeEntriesPostResponse
-from core.app_server import compressible, returns_problem_detail
+from core.app_server import compressible, raises_problem_detail, returns_problem_detail
 from core.model import HasSessionCache
 from core.util.problem_detail import ProblemDetail
 
@@ -690,12 +690,28 @@ def client_libraries(library_uuid):
     return app.manager.catalog_descriptions.get_catalogs(library_uuid)
 
 
-# Loan notifications for ODL distributors, eg. Feedbooks
-@library_route("/odl_notify/<license_identifier>", methods=["GET", "POST"])
+# TODO: This is a deprecated route that will be removed in a future release of the code,
+#       its left here for now to provide a dummy endpoint for existing ODL loans. All
+#       new loans will use the new endpoint.
+@library_route("/odl_notify/<loan_id>", methods=["GET", "POST"])
 @has_library
-@returns_problem_detail
-def odl_notify(license_identifier: str) -> Response:
-    return app.manager.odl_notification_controller.notify(license_identifier)
+@raises_problem_detail
+def odl_notify(loan_id) -> Response:
+    return app.manager.odl_notification_controller.notify_deprecated(loan_id)
+
+
+# Loan notifications for OPDS + ODL distributors
+@library_route(
+    "/odl/notify/<patron_identifier>/<license_identifier>", methods=["GET", "POST"]
+)
+@has_library
+@raises_problem_detail
+def opds2_with_odl_notification(
+    patron_identifier: str, license_identifier: str
+) -> Response:
+    return app.manager.odl_notification_controller.notify(
+        patron_identifier, license_identifier
+    )
 
 
 # Controllers used for operations purposes

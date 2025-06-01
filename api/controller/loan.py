@@ -160,10 +160,14 @@ class LoanController(CirculationManagerController):
            entire operation failed).
         """
         try:
+            # Go to CirculationAPI to borrow the book.
+            # Basically, we could tear down CirculationAPI because we only
+            # use ODL api for all E-Kirjasto loans.
             loan, hold, is_new = self.circulation.borrow(
                 patron, credential, pool, mechanism
             )
             result = loan or hold
+        # Any problems raised during borrow inherit these exceptions. Raise them now.
         except (CirculationException, RemoteInitiatedServerError) as e:
             return e.problem_detail, False
 
@@ -346,12 +350,14 @@ class LoanController(CirculationManagerController):
                 )
 
         try:
+            # Go to CirculationAPI that makes the fulfill request to ODL API.
             fulfillment = self.circulation.fulfill(
                 patron,
                 credential,
                 requested_license_pool,
                 mechanism,
             )
+        # Any problems raised during borrow inherit these exceptions. Raise them now.
         except (CirculationException, RemoteInitiatedServerError) as e:
             return e.problem_detail
 
@@ -477,6 +483,7 @@ class LoanController(CirculationManagerController):
         loan, pool = self.get_patron_loan(patron, pools)
         work = self.load_work(library, identifier_type, identifier)
         selected_book = patron.load_selected_book(work)
+
         if loan:
             return OPDSAcquisitionFeed.single_entry_loans_feed(
                 self.circulation, loan, selected_book=selected_book

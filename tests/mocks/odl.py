@@ -18,8 +18,10 @@ class MockOPDS2WithODLApi(ODLAPI):
         self.mock_http_client = mock_http_client
 
     @staticmethod
-    def _notification_url(short_name: str | None, license_id: str) -> str:
-        return f"https://ekirjasto/{short_name}/odl_notify/{license_id}"
+    def _notification_url(
+        short_name: str | None, patron_id: str, license_id: str
+    ) -> str:
+        return f"https://ekirjasto/{short_name}/odl/notify/{patron_id}/{license_id}"
 
 
 class MockODL2Api(ODL2API):
@@ -33,5 +35,7 @@ class MockODL2Api(ODL2API):
         self.mock_http_client = mock_http_client
 
     @staticmethod
-    def _notification_url(short_name: str | None, license_id: str) -> str:
-        return f"https://ekirjasto/{short_name}/odl_notify/{license_id}"
+    def _notification_url(
+        short_name: str | None, patron_id: str, license_id: str
+    ) -> str:
+        return f"https://ekirjasto/{short_name}/odl/notify/{patron_id}/{license_id}"

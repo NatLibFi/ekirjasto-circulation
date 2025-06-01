@@ -16,7 +16,9 @@ from api.problem_details import (
     NO_ACTIVE_LOAN,
 )
 from core.model import get_one
-from core.model.patron import Loan
+from core.model.credential import Credential
+from core.model.licensing import License
+from core.model.patron import Loan, Patron
 from core.util.datetime_helpers import utc_now
 from core.util.problem_detail import ProblemDetailException
 
@@ -26,11 +28,47 @@ class ODLNotificationController(CirculationManagerController):
     status of a loan changes.
     """
 
-    def notify(self, license_id):
-        loan = get_one(self._db, Loan, id=license_id)
+    def _get_loan(
+        self, patron_identifier: str | None, license_identifier: str | None
+    ) -> Loan | None:
+        if patron_identifier is None or license_identifier is None:
+            return None
 
-        library = flask.request.library
+        patron_identifier = str(patron_identifier)
+        license_identifier = str(license_identifier)
+
+        # When the loan was made the patron's identifier to this remote API was saved to credential.credential. It's now
+        # used to identify the loan for this license.
+        loan = (
+            self._db.query(Loan)
+            .join(License)
+            .join(Patron)
+            .join(Credential)
+            .filter(
+                License.identifier == license_identifier,
+                Credential.credential == patron_identifier,
+                Credential.type == Credential.IDENTIFIER_TO_REMOTE_SERVICE,
+            )
+            .one_or_none()
+        )
+        return loan
+
+    # TODO: This method is deprecated and should be removed once all the loans
+    #   created using the old endpoint have expired.
+    def notify_deprecated(self, loan_id: int) -> Response:
+        loan = get_one(self._db, Loan, id=loan_id)
+        return self._process_notification(loan)
+
+    def notify(
+        self, patron_identifier: str | None, license_identifier: str | None
+    ) -> Response:
+        loan = self._get_loan(patron_identifier, license_identifier)
+        return self._process_notification(loan)
+
+    def _process_notification(self, loan: Loan | None) -> Response:
+        library = flask.request.library  # type: ignore
         status_doc_json = flask.request.data
+
         try:
             status_doc = LoanStatus.parse_raw(status_doc_json)
         except ValidationError as e:

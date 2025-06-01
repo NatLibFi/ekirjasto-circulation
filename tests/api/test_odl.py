@@ -315,16 +315,20 @@ class TestODLAPI:
 
         # Test that we generated the expected URL
         with app.test_request_context():
-            notification_url = ODLAPI._notification_url(short_name, license_id)
-            print(notification_url)
+            notification_url = ODLAPI._notification_url(
+                short_name, patron_id, license_id
+            )
 
-        assert get_path(notification_url) == f"/{short_name}/odl_notify/{license_id}"
+        assert (
+            get_path(notification_url)
+            == f"/{short_name}/odl/notify/{patron_id}/{license_id}"
+        )
 
         # Test that our mock generates the same URL
         with app.test_request_context():
             assert get_path(
-                ODLAPI._notification_url(short_name, license_id)
-            ) == get_path(ODLAPI._notification_url(short_name, license_id))
+                ODLAPI._notification_url(short_name, patron_id, license_id)
+            ) == get_path(ODLAPI._notification_url(short_name, patron_id, license_id))
 
     def test_checkout_success(
         self,
@@ -399,6 +403,7 @@ class TestODLAPI:
         notification_url = urllib.parse.unquote_plus(params["notification_url"][0])
         expected_notification_url = opds2_with_odl_api_fixture.api._notification_url(
             opds2_with_odl_api_fixture.library.short_name,
+            patron_id,
             opds2_with_odl_api_fixture.license.identifier,
         )
         assert notification_url == expected_notification_url

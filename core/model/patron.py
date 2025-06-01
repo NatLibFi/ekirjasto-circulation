@@ -246,6 +246,10 @@ class Patron(Base):
             refresh,
             allow_persistent_token=True,
         )
+        # Any way that we create a credential should result in a result that does not
+        # have credential.credential set to None. Mypy doesn't know that, so we assert
+        # it here.
+        assert credential.credential is not None
         return credential.credential
 
     def works_on_loan(self):

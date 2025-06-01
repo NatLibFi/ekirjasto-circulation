@@ -172,8 +172,17 @@ class License(Base, LicenseFunctions):
             and self.checkouts_available > 0
         )
 
-    def loan_to(self, patron: Patron, **kwargs) -> tuple[Loan, bool]:
-        loan, is_new = self.license_pool.loan_to(patron, **kwargs)
+    def loan_to(
+        self,
+        patron: Patron,
+        start: datetime.datetime | None = None,
+        end: datetime.datetime | None = None,
+        fulfillment: LicensePoolDeliveryMechanism | None = None,
+        external_identifier: str | None = None,
+    ) -> tuple[Loan, bool]:
+        loan, is_new = self.license_pool.loan_to(
+            patron, start, end, fulfillment, external_identifier
+        )
         loan.license = self
         return loan, is_new
 
@@ -1080,6 +1089,10 @@ class LicensePool(Base):
             loan.fulfillment = fulfillment
         if external_identifier:
             loan.external_identifier = external_identifier
+        if start:
+            loan.start = start
+        if end:
+            loan.end = end
         return loan, is_new
 
     def on_hold_to(

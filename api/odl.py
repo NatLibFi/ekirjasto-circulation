@@ -252,15 +252,18 @@ class BaseODLAPI(
         return url_for(*args, **kwargs)
 
     @staticmethod
-    def _notification_url(short_name: str | None, license_id: str) -> str:
+    def _notification_url(
+        short_name: str | None, patron_id: str, license_id: str
+    ) -> str:
         """Get the notification URL that should be passed in the ODL checkout link.
 
         This is broken out into a separate function to make it easier to override
         in tests.
         """
         return url_for(
-            "odl_notify",
+            "opds2_with_odl_notification",
             library_short_name=short_name,
+            patron_identifier=patron_id,
             license_identifier=license_id,
             _external=True,
         )
@@ -528,6 +531,7 @@ class BaseODLAPI(
         checkout_id = str(uuid.uuid4())
         notification_url = self._notification_url(
             library_short_name,
+            patron_id,
             identifier,
         )
         # We should never be able to get here if the license doesn't have a checkout_url, but
