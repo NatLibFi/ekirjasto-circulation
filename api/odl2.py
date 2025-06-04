@@ -223,11 +223,12 @@ class ODL2Importer(BaseODLImporter[ODL2Settings], OPDS2Importer):
                     if odl_license.metadata.terms
                     else None
                 )
-                concurrency = (
-                    int(odl_license.metadata.terms.concurrency)
-                    if odl_license.metadata.terms
-                    else None
-                )
+                try:
+                    # Try to convert the concurrency value to an integer.
+                    concurrency = int(odl_license.metadata.terms.concurrency)
+                except (AttributeError, ValueError, TypeError):
+                    # If concurrency is missing, not an int, or terms is invalid, default to None.
+                    concurrency = None
 
                 if not license_info_document_link:
                     parsed_license = None
