@@ -942,7 +942,7 @@ class ErrorParser(BibliothecaParser[Exception]):
         except Exception as e:
             # The server sent us an error with an incorrect or
             # nonstandard syntax.
-            return RemoteInitiatedServerError(string, BibliothecaAPI.SERVICE_NAME)
+            return RemoteInitiatedServerError(string, BibliothecaAPI.SERVICE_NAME)  # type: ignore
 
         if return_val is None:
             # We were not able to interpret the result as an error.

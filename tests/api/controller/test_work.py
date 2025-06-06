@@ -1,3 +1,4 @@
+import datetime
 import json
 import urllib.parse
 from collections.abc import Generator
@@ -9,6 +10,7 @@ import flask
 import pytest
 from flask import url_for
 
+from api.circulation import Fulfillment, LoanInfo
 from api.lanes import (
     ContributorFacets,
     ContributorLane,
@@ -33,11 +35,13 @@ from core.model import (
     Edition,
     Identifier,
     LicensePool,
+    Resource,
     get_one,
     tuple_to_numericrange,
 )
 from core.model.work import Work
 from core.problem_details import INVALID_INPUT
+from core.util.datetime_helpers import utc_now
 from core.util.flask_util import Response
 from core.util.opds_writer import OPDSFeed
 from core.util.problem_detail import ProblemDetail
@@ -368,6 +372,88 @@ class TestWorkController:
             patron2_loan, _ = pool.loan_to(patron_2)
 
             # We want to make sure that only the first patron's loan will be in the feed.
+            active_loans_by_work = {work: patron1_loan}
+            annotator = LibraryAnnotator(
+                None,
+                None,
+                work_fixture.db.default_library(),
+                active_loans_by_work=active_loans_by_work,
+            )
+            feed = OPDSAcquisitionFeed.single_entry(work, annotator)
+            assert isinstance(feed, WorkEntry)
+            expect = OPDSAcquisitionFeed.entry_as_response(feed).data
+
+            response = work_fixture.manager.work_controller.permalink(
+                identifier_type, identifier
+            )
+
+        assert 200 == response.status_code
+        assert expect == response.get_data()
+        assert OPDSFeed.ENTRY_TYPE == response.headers["Content-Type"]
+
+    def test_permalink_returns_fulfillment_links_for_authenticated_patrons_with_fulfillment(
+        self, work_fixture: WorkFixture
+    ):
+        auth = dict(Authorization=work_fixture.valid_auth)
+
+        with work_fixture.request_context_with_library("/", headers=auth) as ctx:
+            content_link = "https://content"
+
+            # We have two patrons.
+            patron_1 = work_fixture.controller.authenticated_patron(
+                work_fixture.valid_credentials
+            )
+            patron_2 = work_fixture.db.patron()
+
+            # But the request was initiated by the first patron.
+            setattr(ctx.request, "patron", patron_1)
+
+            identifier_type = Identifier.GUTENBERG_ID
+            identifier = "1234567890"
+            edition, _ = work_fixture.db.edition(
+                title="Test Book",
+                identifier_type=identifier_type,
+                identifier_id=identifier,
+                with_license_pool=True,
+            )
+            work = work_fixture.db.work(
+                "Test Book", presentation_edition=edition, with_license_pool=True
+            )
+            pool = work.license_pools[0]
+            [delivery_mechanism] = pool.delivery_mechanisms
+
+            loan_info = LoanInfo.from_license_pool(
+                pool,
+                start_date=utc_now(),
+                end_date=utc_now() + datetime.timedelta(seconds=3600),
+            )
+            work_fixture.manager.d_circulation.queue_checkout(pool, loan_info)
+
+            work_fixture.manager.d_circulation.queue_fulfill(
+                pool, create_autospec(Fulfillment)
+            )
+
+            # Both patrons have loans:
+            # - the first patron's loan and fulfillment will be created via API.
+            # - the second patron's loan will be created via loan_to method.
+            work_fixture.manager.loans.borrow(
+                pool.identifier.type,
+                pool.identifier.identifier,
+                delivery_mechanism.delivery_mechanism.id,
+            )
+            work_fixture.manager.loans.fulfill(
+                pool.id,
+                delivery_mechanism.delivery_mechanism.id,
+            )
+
+            patron1_loan = pool.loans[0]
+            # We have to create a Resource object manually
+            # to assign a URL to the fulfillment that will be used to generate an acquisition link.
+            patron1_loan.fulfillment.resource = Resource(url=content_link)
+
+            patron2_loan, _ = pool.loan_to(patron_2)
+
+            # We want to make sure that only the first patron's fulfillment will be in the feed.
             active_loans_by_work = {work: patron1_loan}
             annotator = LibraryAnnotator(
                 None,

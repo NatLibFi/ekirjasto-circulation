@@ -246,6 +246,10 @@ class Patron(Base):
             refresh,
             allow_persistent_token=True,
         )
+        # Any way that we create a credential should result in a result that does not
+        # have credential.credential set to None. Mypy doesn't know that, so we assert
+        # it here.
+        assert credential.credential is not None
         return credential.credential
 
     def works_on_loan(self):
@@ -635,6 +639,9 @@ class Loan(Base, LoanAndHoldMixin):
         start = self.start or utc_now()
         return start + default_loan_period
 
+    def __repr__(self):
+        return f"Loan id: {self.id}, ext id: {self.external_identifier} loan period: {self.start} - {self.end}"
+
 
 # Finland
 class LoanCheckout(Base, LoanAndHoldMixin):
@@ -679,6 +686,11 @@ class Hold(Base, LoanAndHoldMixin):
 
     def __lt__(self, other):
         return self.id < other.id
+
+    def __repr__(self):
+        return (
+            f"Hold id={self.id} start={self.start}->{self.end} position={self.position}"
+        )
 
     @classmethod
     def _calculate_until(

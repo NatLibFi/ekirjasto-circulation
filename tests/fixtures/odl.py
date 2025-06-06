@@ -1,12 +1,19 @@
+import datetime
 import json
 import types
+import uuid
 from collections.abc import Callable
-from typing import Any
+from functools import partial
+from typing import Any, Literal
+from unittest.mock import MagicMock
 
 import pytest
 from _pytest.monkeypatch import MonkeyPatch
 
-from api.circulation import LoanInfo
+from api.circulation import HoldInfo, LoanInfo
+from api.lcp.status import LoanStatus
+
+# from _pytest.monkeypatch import MonkeyPatch
 from api.odl import ODLAPI, BaseODLAPI
 from api.odl2 import ODL2API
 from core.model import (
@@ -21,12 +28,258 @@ from core.model import (
 )
 from core.model.configuration import ExternalIntegration
 from core.util.http import HTTP
-from tests.core.mock import MockRequestsResponse
+from tests.api.mockapi.mock import MockHTTPClient, MockRequestsResponse
 from tests.fixtures.api_odl import ODL2APIFilesFixture, ODLAPIFilesFixture
 from tests.fixtures.database import DatabaseTransactionFixture
-from tests.fixtures.files import APIFilesFixture
+from tests.fixtures.files import APIFilesFixture, OPDS2WithODLFilesFixture
+from tests.mocks.odl import MockODL2Api, MockOPDS2WithODLApi
 
 
+class OPDS2WithODLApiFixture:
+    def __init__(
+        self,
+        db: DatabaseTransactionFixture,
+        files: OPDS2WithODLFilesFixture,
+    ):
+        self.db = db
+        self.files = files
+
+        self.library = db.default_library()
+        self.collection = self.create_collection(self.library)
+        self.work = self.create_work(self.collection)
+        self.license = self.setup_license()
+        self.mock_http = MockHTTPClient()
+        self.api = MockOPDS2WithODLApi(self.db.session, self.collection, self.mock_http)
+        self.patron = db.patron()
+        self.pool = self.license.license_pool
+        self.api_checkout = partial(
+            self.api.checkout,
+            patron=self.patron,
+            pin="pin",
+            licensepool=self.pool,
+            delivery_mechanism=MagicMock(),
+        )
+
+    def create_work(self, collection: Collection) -> Work:
+        return self.db.work(with_license_pool=True, collection=collection)
+
+    def create_collection(self, library, api_class=ODLAPI):
+        """Create a mock ODL collection to use in tests."""
+        integration_protocol = api_class.label()
+        collection, _ = Collection.by_name_and_protocol(
+            self.db.session,
+            f"Test {api_class.__name__} Collection",
+            integration_protocol,
+        )
+        collection.integration_configuration.settings_dict = {
+            "username": "a",
+            "password": "b",
+            "external_account_id": "http://odl",
+            Collection.DATA_SOURCE_NAME_SETTING: "Feedbooks",
+        }
+        collection.libraries.append(library)
+        return collection
+
+    def setup_license(
+        self,
+        work: Work | None = None,
+        available: int = 1,
+        concurrency: int = 1,
+        left: int | None = None,
+        expires: datetime.datetime | None = None,
+    ) -> License:
+        work = work or self.work
+        pool = work.license_pools[0]
+
+        if len(pool.licenses) == 0:
+            self.db.license(pool)
+
+        license_ = pool.licenses[0]
+        license_.checkout_url = "https://loan.feedbooks.net/loan/get/{?id,checkout_id,expires,patron_id,notification_url,hint,hint_url}"
+        license_.checkouts_available = available
+        license_.terms_concurrency = concurrency
+        license_.expires = expires
+        license_.checkouts_left = left
+        pool.update_availability_from_licenses()
+        return license_
+
+    @staticmethod
+    def loan_status_document(
+        status: str = "ready",
+        self_link: str | Literal[False] = "http://status",
+        return_link: str | Literal[False] = "http://return",
+        license_link: str | Literal[False] = "http://license",
+        links: list[dict[str, str]] | None = None,
+    ) -> LoanStatus:
+        if links is None:
+            links = []
+
+        if license_link:
+            links.append(
+                {
+                    "rel": "license",
+                    "href": license_link,
+                    "type": "application/vnd.readium.license.status.v1.0+json",
+                },
+            )
+
+        if self_link:
+            links.append(
+                {
+                    "rel": "self",
+                    "href": self_link,
+                    "type": LoanStatus.content_type(),
+                }
+            )
+
+        if return_link:
+            links.append(
+                {
+                    "rel": "return",
+                    "href": return_link,
+                    "type": LoanStatus.content_type(),
+                }
+            )
+        return LoanStatus(
+            id=str(uuid.uuid4()),
+            status=status,
+            message="This is a message",
+            updated={
+                "license": "2025-04-25T11:12:13Z",
+                "status": "2025-04-25T11:12:13Z",
+            },
+            links=links,
+            potential_rights={"end": "3017-10-21T11:12:13Z"},
+        )
+
+    def checkin(
+        self, patron: Patron | None = None, pool: LicensePool | None = None
+    ) -> None:
+        patron = patron or self.patron
+        pool = pool or self.pool
+
+        self.mock_http.queue_response(
+            200, content=self.loan_status_document().to_serializable()
+        )
+        self.mock_http.queue_response(
+            200, content=self.loan_status_document("returned").to_serializable()
+        )
+        self.api.checkin(patron, "pin", pool)
+
+    def checkout(
+        self,
+        loan_url: str | None = None,
+        patron: Patron | None = None,
+        pool: LicensePool | None = None,
+        create_loan: bool = False,
+    ) -> LoanInfo:
+        patron = patron or self.patron
+        pool = pool or self.pool
+        loan_url = loan_url or self.db.fresh_url()
+
+        self.mock_http.queue_response(
+            201, content=self.loan_status_document(self_link=loan_url).to_serializable()
+        )
+        loan_info = self.api_checkout(patron=patron, licensepool=pool)
+        print("fixture")
+        if create_loan:
+            loan_info.create_or_update(patron, pool)
+        return loan_info
+
+    def place_hold(
+        self,
+        patron: Patron | None = None,
+        pool: LicensePool | None = None,
+        create_hold: bool = False,
+    ) -> HoldInfo:
+        patron = patron or self.patron
+        pool = pool or self.pool
+
+        hold_info = self.api.place_hold(patron, "pin", pool, "dummy@email.com")
+        if create_hold:
+            hold_info.create_or_update(patron, pool)
+        return hold_info
+
+
+@pytest.fixture(scope="function")
+def opds2_with_odl_api_fixture(
+    db: DatabaseTransactionFixture,
+    opds2_with_odl_files_fixture: OPDS2WithODLFilesFixture,
+) -> OPDS2WithODLApiFixture:
+    return OPDS2WithODLApiFixture(db, opds2_with_odl_files_fixture)
+
+
+class LicenseHelper:
+    """Represents an ODL license."""
+
+    def __init__(
+        self,
+        identifier: str | None = "",
+        checkouts: int | None = None,
+        concurrency: int | None = None,
+        expires: datetime.datetime | str | None = None,
+    ) -> None:
+        """Initialize a new instance of LicenseHelper class.
+
+        :param identifier: License's identifier
+        :param checkouts: Total number of checkouts before a license expires
+        :param concurrency: Number of concurrent checkouts allowed
+        :param expires: Date & time when a license expires
+        """
+        self.identifier = identifier if identifier else f"urn:uuid:{uuid.uuid1()}"
+        self.checkouts = checkouts
+        self.concurrency = concurrency
+        self.expires = (
+            expires.isoformat() if isinstance(expires, datetime.datetime) else expires
+        )
+
+
+class LicenseInfoHelper:
+    """Represents information about the current state of a license stored in the License Info Document."""
+
+    def __init__(
+        self,
+        license: LicenseHelper,
+        available: int,
+        status: str = "available",
+        left: int | None = None,
+    ) -> None:
+        """Initialize a new instance of LicenseInfoHelper class."""
+        self.license: LicenseHelper = license
+        self.status: str = status
+        self.left: int | None = left
+        self.available: int = available
+
+    def __str__(self) -> str:
+        """Return a JSON representation of the License Info Document."""
+        return self.json
+
+    @property
+    def json(self) -> str:
+        """Return a JSON representation of the License Info Document."""
+        return json.dumps(self.dict)
+
+    @property
+    def dict(self) -> dict[str, Any]:
+        """Return a dictionary representation of the License Info Document."""
+        output: dict[str, Any] = {
+            "identifier": self.license.identifier,
+            "status": self.status,
+            "terms": {
+                "concurrency": self.license.concurrency,
+            },
+            "checkouts": {
+                "available": self.available,
+            },
+        }
+        if self.license.expires is not None:
+            output["terms"]["expires"] = self.license.expires
+        if self.left is not None:
+            output["checkouts"]["left"] = self.left
+        return output
+
+
+# OLD FIXTURES
 class MonkeyPatchedODLFixture:
     """A fixture that patches the ODLAPI to make it possible to intercept HTTP requests for testing."""
 
@@ -316,3 +569,173 @@ def odl2_api_test_fixture(odl2_test_fixture: ODL2TestFixture) -> ODL2APITestFixt
     return ODL2APITestFixture(
         odl2_test_fixture, library, collection, work, license, api, patron
     )
+
+
+class ODL2ApiFixture:
+    def __init__(
+        self,
+        db: DatabaseTransactionFixture,
+        files: ODL2APIFilesFixture,
+    ):
+        self.db = db
+        self.files = files
+
+        self.library = db.default_library()
+        self.collection = self.create_collection(self.library)
+        self.work = self.create_work(self.collection)
+        self.license = self.setup_license()
+        self.mock_http = MockHTTPClient()
+        self.api = MockODL2Api(self.db.session, self.collection, self.mock_http)
+        self.patron = db.patron()
+        self.pool = self.license.license_pool
+        self.api_checkout = partial(
+            self.api._checkout,
+            patron=self.patron,
+            licensepool=self.pool,
+        )
+
+    def create_work(self, collection: Collection) -> Work:
+        return self.db.work(with_license_pool=True, collection=collection)
+
+    def create_collection(self, library, api_class=ODL2API):
+        """Create a mock ODL collection to use in tests."""
+        integration_protocol = api_class.label()
+        collection, _ = Collection.by_name_and_protocol(
+            self.db.session,
+            f"Test {api_class.__name__} Collection",
+            integration_protocol,
+        )
+        collection.integration_configuration.settings_dict = {
+            "username": "a",
+            "password": "b",
+            "external_account_id": "http://odl",
+            Collection.DATA_SOURCE_NAME_SETTING: "Feedbooks",
+        }
+        collection.libraries.append(library)
+        return collection
+
+    def setup_license(
+        self,
+        work: Work | None = None,
+        available: int = 1,
+        concurrency: int = 1,
+        left: int | None = None,
+        expires: datetime.datetime | None = None,
+    ) -> License:
+        work = work or self.work
+        pool = work.license_pools[0]
+
+        if len(pool.licenses) == 0:
+            self.db.license(pool)
+
+        license_ = pool.licenses[0]
+        license_.checkout_url = "https://loan.feedbooks.net/loan/get/{?id,checkout_id,expires,patron_id,notification_url,hint,hint_url}"
+        license_.checkouts_available = available
+        license_.terms_concurrency = concurrency
+        license_.expires = expires
+        license_.checkouts_left = left
+        pool.update_availability_from_licenses()
+        return license_
+
+    @staticmethod
+    def loan_status_document(
+        status: str = "ready",
+        self_link: str | Literal[False] = "http://status",
+        return_link: str | Literal[False] = "http://return",
+        license_link: str | Literal[False] = "http://license",
+        links: list[dict[str, str]] | None = None,
+    ) -> LoanStatus:
+        if links is None:
+            links = []
+
+        if license_link:
+            links.append(
+                {
+                    "rel": "license",
+                    "href": license_link,
+                    "type": "application/vnd.readium.license.status.v1.0+json",
+                },
+            )
+
+        if self_link:
+            links.append(
+                {
+                    "rel": "self",
+                    "href": self_link,
+                    "type": LoanStatus.content_type(),
+                }
+            )
+
+        if return_link:
+            links.append(
+                {
+                    "rel": "return",
+                    "href": return_link,
+                    "type": LoanStatus.content_type(),
+                }
+            )
+        return LoanStatus(
+            id=str(uuid.uuid4()),
+            status=status,
+            message="This is a message",
+            updated={
+                "license": "2025-04-25T11:12:13Z",
+                "status": "2025-04-25T11:12:13Z",
+            },
+            links=links,
+            potential_rights={"end": "3017-10-21T11:12:13Z"},
+        )
+
+    def checkin(
+        self, patron: Patron | None = None, pool: LicensePool | None = None
+    ) -> None:
+        patron = patron or self.patron
+        pool = pool or self.pool
+
+        self.mock_http.queue_response(
+            200, content=self.loan_status_document().to_serializable()
+        )
+        self.mock_http.queue_response(
+            200, content=self.loan_status_document("returned").to_serializable()
+        )
+        self.api.checkin(patron, "pin", pool)
+
+    def checkout(
+        self,
+        loan_url: str | None = None,
+        patron: Patron | None = None,
+        pool: LicensePool | None = None,
+        create_loan: bool = False,
+    ) -> LoanInfo:
+        patron = patron or self.patron
+        pool = pool or self.pool
+        loan_url = loan_url or self.db.fresh_url()
+        self.mock_http.queue_response(
+            201, content=self.loan_status_document(self_link=loan_url).to_serializable()
+        )
+        loan_info = self.api_checkout(patron=patron, licensepool=pool)
+        if create_loan:
+            loan_info.create_or_update(patron, pool)
+        return loan_info
+
+    def place_hold(
+        self,
+        patron: Patron | None = None,
+        pool: LicensePool | None = None,
+        create_hold: bool = False,
+    ) -> HoldInfo:
+        patron = patron or self.patron
+        pool = pool or self.pool
+
+        hold_info = self.api._place_hold(patron, pool)
+        if create_hold:
+            hold_info.create_or_update(patron, pool)
+        return hold_info
+
+
+@pytest.fixture(scope="function")
+def odl2_api_fixture(
+    db: DatabaseTransactionFixture,
+    api_odl2_files_fixture: ODL2APIFilesFixture,
+) -> ODL2ApiFixture:
+    return ODL2ApiFixture(db, api_odl2_files_fixture)

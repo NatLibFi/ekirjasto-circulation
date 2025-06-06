@@ -56,14 +56,6 @@ NO_AVAILABLE_LICENSE = pd(
     _("All licenses for this book are loaned out."),
 )
 
-# E-kirjasto
-NO_COPIES_WHEN_RESERVED = pd(
-    "http://librarysimplified.org/terms/problem/cannot-issue-loan",
-    502,
-    _("No available license."),
-    _("All copies of this book are loaned out after all. You are still next in line."),
-)
-
 NO_ACCEPTABLE_FORMAT = pd(
     "http://librarysimplified.org/terms/problem/no-acceptable-format",
     400,
@@ -300,6 +292,22 @@ INVALID_EKIRJASTO_TOKEN = pd(
 )
 
 # Finland
+MISSING_USER_INFO = pd(
+    "http://librarysimplified.org/terms/problem/credentials-invalid",
+    status_code=500,
+    title=_("Missing permanent id"),
+    detail="Value for permanent_id is missing in remote user info.",
+)
+
+# Finland
+PATRON_NOT_FOUND_ON_REMOTE = pd(
+    "",
+    status_code=404,
+    title=("Patron not found"),
+    detail=("Remote patron is conflicting with delegate patron."),
+)
+
+# Finland
 EKIRJASTO_REMOTE_AUTHENTICATION_FAILED = pd(
     "http://librarysimplified.org/terms/problem/credentials-invalid",
     status_code=400,
@@ -433,5 +441,14 @@ PATRON_AUTH_ACCESS_TOKEN_NOT_POSSIBLE = pd(
     title=_("Access token not possible"),
     detail=_(
         "The patron authentication access token is not possible for this type of authentication."
+    ),
+)
+
+COULD_NOT_MIRROR_TO_REMOTE = pd(
+    "http://librarysimplified.org/terms/problem/cannot-mirror-to-remote",
+    503,
+    _("Loan deleted locally but remote failed."),
+    _(
+        "Could not convince a third party to accept the change you made. It's likely to show up again soon."
     ),
 )

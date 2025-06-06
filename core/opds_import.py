@@ -24,6 +24,7 @@ from sqlalchemy.orm.session import Session
 from api.circulation import (
     BaseCirculationAPI,
     BaseCirculationApiSettings,
+    Fulfillment,
     FulfillmentInfo,
     HoldInfo,
     LoanInfo,
@@ -284,7 +285,7 @@ class BaseOPDSAPI(
         pin: str,
         licensepool: LicensePool,
         delivery_mechanism: LicensePoolDeliveryMechanism,
-    ) -> FulfillmentInfo:
+    ) -> FulfillmentInfo | Fulfillment:
         requested_mechanism = delivery_mechanism.delivery_mechanism
         fulfillment = None
         for lpdm in licensepool.delivery_mechanisms:
@@ -332,9 +333,9 @@ class BaseOPDSAPI(
     def checkout(
         self,
         patron: Patron,
-        pin: str,
+        pin: str | None,
         licensepool: LicensePool,
-        delivery_mechanism: LicensePoolDeliveryMechanism,
+        delivery_mechanism: LicensePoolDeliveryMechanism | None,
     ) -> LoanInfo:
         return LoanInfo.from_license_pool(licensepool, end_date=None)
 
