@@ -5,6 +5,7 @@ from __future__ import annotations
 import datetime
 import logging
 from enum import Enum as PythonEnum
+from enum import IntEnum, auto
 from typing import TYPE_CHECKING, Literal, overload
 
 from sqlalchemy import Boolean, Column, DateTime
@@ -171,8 +172,17 @@ class License(Base, LicenseFunctions):
             and self.checkouts_available > 0
         )
 
-    def loan_to(self, patron: Patron, **kwargs) -> tuple[Loan, bool]:
-        loan, is_new = self.license_pool.loan_to(patron, **kwargs)
+    def loan_to(
+        self,
+        patron: Patron,
+        start: datetime.datetime | None = None,
+        end: datetime.datetime | None = None,
+        fulfillment: LicensePoolDeliveryMechanism | None = None,
+        external_identifier: str | None = None,
+    ) -> tuple[Loan, bool]:
+        loan, is_new = self.license_pool.loan_to(
+            patron, start, end, fulfillment, external_identifier
+        )
         loan.license = self
         return loan, is_new
 
@@ -199,6 +209,9 @@ class License(Base, LicenseFunctions):
             self.checkouts_available = min(available)
         else:
             logging.warning(f"Checking in expired license # {self.identifier}.")
+
+    def __repr__(self):
+        return f"License id: {self.identifier}, checkouts left: {self.checkouts_left}, available: {self.checkouts_available} active: {self.is_inactive} to borrow: {self.is_available_for_borrowing}"
 
 
 class LicensePool(Base):
@@ -282,9 +295,14 @@ class LicensePool(Base):
 
     open_access = Column(Boolean, index=True)
     last_checked = Column(DateTime(timezone=True), index=True)
+
+    # Total amount of copies (basically changes only when a license is added to or removed from the pool)
     licenses_owned: int = Column(Integer, default=0, index=True)
+    # Amount of available copies at the moment
     licenses_available: int = Column(Integer, default=0, index=True)
+    # Depends on patrons in hold queue and available copies
     licenses_reserved: int = Column(Integer, default=0)
+    # Holds registered in the pool
     patrons_in_hold_queue = Column(Integer, default=0)
     should_track_playtime = Column(Boolean, default=False, nullable=False)
 
@@ -693,13 +711,16 @@ class LicensePool(Base):
     def update_availability_from_licenses(
         self,
         as_of: datetime.datetime | None = None,
+        ignored_holds: set[Hold] | None = None,
     ):
         """
         Update the LicensePool with new availability information, based on the
-        licenses and holds that are associated with it.
+        licenses and holds that are associated with it. Ignored holds provide more
+        accurate information when a patron releases a hold or checkouts a book.
         """
         _db = Session.object_session(self)
 
+        # How many copies (=lukuoikeus) of a license we have
         licenses_owned = sum(
             l.total_remaining_loans
             for l in self.licenses
@@ -710,16 +731,21 @@ class LicensePool(Base):
             for l in self.licenses
             if l.currently_available_loans is not None
         )
-
-        holds = self.get_active_holds()
-
-        patrons_in_hold_queue = len(holds)
-        if len(holds) > licenses_available:
+        ignored_holds_ids = {h.id for h in (ignored_holds or set())}
+        active_holds_ids = {h.id for h in self.holds_by_start_date()}
+        patrons_in_hold_queue = len(active_holds_ids - ignored_holds_ids)
+        if patrons_in_hold_queue > licenses_available:
             licenses_reserved = licenses_available
             licenses_available = 0
         else:
-            licenses_reserved = len(holds)
+            licenses_reserved = patrons_in_hold_queue
             licenses_available -= licenses_reserved
+
+        logging.info(
+            f"Collected availablility information for licensepool: {self.identifier}: "
+            f"OWNED={licenses_owned} AVAILABLE={licenses_available} RESERVED={licenses_reserved} "
+            f"HOLDS={patrons_in_hold_queue} LOANS={len(self.loans)}"
+        )
 
         return self.update_availability(
             licenses_owned,
@@ -729,7 +755,7 @@ class LicensePool(Base):
             as_of=as_of,
         )
 
-    def get_active_holds(self):
+    def holds_by_start_date(self):
         _db = Session.object_session(self)
         return (
             _db.query(Hold)
@@ -1053,7 +1079,6 @@ class LicensePool(Base):
             license_pool=self,
             create_method_kwargs=kwargs,
         )
-
         if is_new:
             # This action creates uncertainty about what the patron's
             # loan activity actually is. We'll need to sync with the
@@ -1064,6 +1089,10 @@ class LicensePool(Base):
             loan.fulfillment = fulfillment
         if external_identifier:
             loan.external_identifier = external_identifier
+        if start:
+            loan.start = start
+        if end:
+            loan.end = end
         return loan, is_new
 
     def on_hold_to(
@@ -1089,44 +1118,68 @@ class LicensePool(Base):
             hold.external_identifier = external_identifier
         return hold, new
 
-    def best_available_license(self) -> License | None:
-        """Determine the next license that should be lent out for this pool.
+    class _LicensePriority(IntEnum):
+        TIME_LIMITED = auto()
+        PERPETUAL = auto()
+        TIME_AND_LOAN_LIMITED = auto()
+        LOAN_LIMITED = auto()
+
+    @staticmethod
+    def _time_limited_sort_key(license_: License) -> int:
+        if license_.expires is None:
+            return 0
+        return int(license_.expires.timestamp())
+
+    @staticmethod
+    def _loan_limited_sort_key(license_: License) -> int:
+        return (license_.checkouts_left or 0) * -1
+
+    @classmethod
+    def _license_sort_func(cls, license_: License) -> tuple[_LicensePriority, int, int]:
+        time_limited_key = cls._time_limited_sort_key(license_)
+        loan_limited_key = cls._loan_limited_sort_key(license_)
+
+        if license_.is_time_limited and license_.is_loan_limited:
+            return (
+                cls._LicensePriority.TIME_AND_LOAN_LIMITED,
+                time_limited_key,
+                loan_limited_key,
+            )
+
+        if license_.is_time_limited:
+            return cls._LicensePriority.TIME_LIMITED, time_limited_key, loan_limited_key
+
+        if license_.is_loan_limited:
+            return cls._LicensePriority.LOAN_LIMITED, time_limited_key, loan_limited_key
+
+        return cls._LicensePriority.PERPETUAL, time_limited_key, loan_limited_key
+
+    def best_available_licenses(self) -> list[License]:
+        """
+        Determine the next license that should be lent out from this pool.
+
+        This function returns a list of licenses that are available for lending, sorted
+        by priority. The highest priority license (the one that the next loan should be made from)
+        is the first one in the list.
 
         Time-limited licenses and perpetual licenses are the best. It doesn't matter which
         is used first, unless a time-limited license would expire within the loan period, in
-        which case it's better to loan the time-limited license so the perpetual one is still
-        available. We can handle this by always loaning the time-limited one first, followed
-        by perpetual. If there is more than one time-limited license, it's better to use the one
+        which case it's better to loan the time-limited license so the perpetual one remains
+        available.
+
+        We handle this by always loaning the time-limited one first, followed by the perpetual
+        one. If there is more than one time-limited license, it's better to use the one
         expiring soonest.
 
         If no time-limited or perpetual licenses are available, the next best is a loan-limited
-        license. We should choose the license with the most remaining loans, so that we'll
-        maximize the number of concurrent checkouts available in the future.
-
-        The worst option would be pay-per-use, but we don't yet support any distributors that
-        offer that model.
+        license. If a license is both time-limited and loan-limited, it's better to use it before
+        a license that is only loan-limited. We should choose the license with the most remaining
+        loans, so that we'll maximize the number of concurrent checkouts available in the future.
         """
-        best: License | None = None
-
-        for license in (l for l in self.licenses if l.is_available_for_borrowing):
-            if (
-                not best
-                or (license.is_time_limited and not best.is_time_limited)
-                or (
-                    license.is_time_limited
-                    and best.is_time_limited
-                    and license.expires < best.expires  # type: ignore[operator]
-                )
-                or (license.is_perpetual and not best.is_time_limited)
-                or (
-                    license.is_loan_limited
-                    and best.is_loan_limited
-                    and license.checkouts_left > best.checkouts_left  # type: ignore[operator]
-                )
-            ):
-                best = license
-
-        return best
+        return sorted(
+            (l for l in self.licenses if l.is_available_for_borrowing),
+            key=self._license_sort_func,
+        )
 
     @classmethod
     def consolidate_works(cls, _db, batch_size=10):

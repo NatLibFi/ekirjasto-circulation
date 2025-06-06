@@ -3,67 +3,38 @@ from __future__ import annotations
 from typing import Any
 
 import flask
-from flask import Response, redirect
+from flask import Response
 from flask_babel import lazy_gettext as _
-from lxml import etree
 from werkzeug import Response as wkResponse
 
-from api.circulation_exceptions import (
-    AuthorizationBlocked,
-    AuthorizationExpired,
-    CannotFulfill,
-    CannotHold,
-    CannotLoan,
-    CannotReleaseHold,
-    CannotRenew,
-    CannotReturn,
-    CirculationException,
-    DeliveryMechanismConflict,
-    DeliveryMechanismError,
-    FormatNotAvailable,
-    NoActiveLoan,
-    NoAvailableCopiesWhenReserved,
-    NoOpenAccessDownload,
-    NotFoundOnRemote,
-    OutstandingFines,
-    PatronAuthorizationFailedException,
-    PatronHoldLimitReached,
-    PatronLoanLimitReached,
-    RemoteRefusedReturn,
-)
+from api.circulation import UrlFulfillment
+from api.circulation_exceptions import CirculationException, RemoteInitiatedServerError
 from api.controller.circulation_manager import CirculationManagerController
 from api.problem_details import (
     BAD_DELIVERY_MECHANISM,
-    CANNOT_FULFILL,
     CANNOT_RELEASE_HOLD,
-    CHECKOUT_FAILED,
-    COULD_NOT_MIRROR_TO_REMOTE,
-    DELIVERY_CONFLICT,
     HOLD_FAILED,
-    INVALID_CREDENTIALS,
-    NO_ACCEPTABLE_FORMAT,
     NO_ACTIVE_LOAN,
     NO_ACTIVE_LOAN_OR_HOLD,
     NO_LICENSES,
     NOT_FOUND_ON_REMOTE,
-    OUTSTANDING_FINES,
-    RENEW_FAILED,
 )
 from core.feed.acquisition import OPDSAcquisitionFeed
-from core.model import DataSource, DeliveryMechanism, Loan, Patron, Representation
-from core.util.http import RemoteIntegrationException
-from core.util.opds_writer import OPDSFeed
-from core.util.problem_detail import ProblemDetail
+from core.model import Hold, Loan, Patron, Representation
+from core.model.library import Library
+from core.model.licensing import LicensePool, LicensePoolDeliveryMechanism
+from core.util.flask_util import OPDSEntryResponse
+from core.util.problem_detail import BaseProblemDetailException, ProblemDetail
 
 
 class LoanController(CirculationManagerController):
-    def sync(self):
+    def sync(self) -> Response:
         """Sync the authenticated patron's loans and holds with all third-party
         providers.
 
         :return: A Response containing an OPDS feed with up-to-date information.
         """
-        patron = flask.request.patron
+        patron = flask.request.patron  # type: ignore
 
         # Save some time if we don't believe the patron's loans or holds have
         # changed since the last time the client requested this feed.
@@ -105,15 +76,17 @@ class LoanController(CirculationManagerController):
             response.last_modified = last_modified
         return response
 
-    def borrow(self, identifier_type, identifier, mechanism_id=None):
+    def borrow(
+        self, identifier_type: str, identifier: str, mechanism_id: int | None = None
+    ) -> OPDSEntryResponse | ProblemDetail | None:
         """Create a new loan or hold for a book.
 
         :return: A Response containing an OPDS entry that includes a link of rel
            "http://opds-spec.org/acquisition", which can be used to fetch the
            book or the license file.
         """
-        patron = flask.request.patron
-        library = flask.request.library
+        patron = flask.request.patron  # type: ignore
+        library = flask.request.library  # type: ignore
 
         header = self.authorization_header()
         credential = self.manager.auth.get_credential_from_header(header)
@@ -130,6 +103,7 @@ class LoanController(CirculationManagerController):
             # LicensePool to use.
             return result
 
+        loan_or_hold: Loan | Hold
         if isinstance(result, Loan):
             # We already have a Loan, so there's no need to go to the API.
             loan_or_hold = result
@@ -138,10 +112,12 @@ class LoanController(CirculationManagerController):
             # We need to actually go out to the API
             # and try to take out a loan.
             pool, mechanism = result
-            loan_or_hold, is_new = self._borrow(patron, credential, pool, mechanism)
-
-        if isinstance(loan_or_hold, ProblemDetail):
-            return loan_or_hold
+            loan_or_hold_or_pd, is_new = self._borrow(
+                patron, credential, pool, mechanism
+            )
+            if isinstance(loan_or_hold_or_pd, ProblemDetail):
+                return loan_or_hold_or_pd
+            loan_or_hold = loan_or_hold_or_pd
 
         # At this point we have either a loan or a hold. If a loan, serve
         # a feed that tells the patron how to fulfill the loan. If a hold,
@@ -155,15 +131,20 @@ class LoanController(CirculationManagerController):
 
         work = self.load_work(library, identifier_type, identifier)
         selected_book = patron.load_selected_book(work)
-
         return OPDSAcquisitionFeed.single_entry_loans_feed(
             self.circulation,
-            loan_or_hold,
+            loan_or_hold,  # type: ignore[arg-type]
             selected_book=selected_book,
-            **response_kwargs,
+            **response_kwargs,  # type: ignore[arg-type]
         )
 
-    def _borrow(self, patron, credential, pool, mechanism):
+    def _borrow(
+        self,
+        patron: Patron,
+        credential: str | None,
+        pool: LicensePool,
+        mechanism: LicensePoolDeliveryMechanism | None,
+    ) -> tuple[Loan | Hold | ProblemDetail, bool]:
         """Go out to the API, try to take out a loan, and handle errors as
         problem detail documents.
 
@@ -178,61 +159,37 @@ class LoanController(CirculationManagerController):
            created but a Hold could be), or a ProblemDetail (if the
            entire operation failed).
         """
-        result = None
-        is_new = False
         try:
+            # Go to CirculationAPI to borrow the book.
+            # Basically, we could tear down CirculationAPI because we only
+            # use ODL api for all E-Kirjasto loans.
             loan, hold, is_new = self.circulation.borrow(
                 patron, credential, pool, mechanism
             )
             result = loan or hold
-        except NoOpenAccessDownload as e:
-            result = NO_LICENSES.detailed(
-                _("Couldn't find an open-access download link for this book."),
-                status_code=404,
-            )
-        except PatronAuthorizationFailedException as e:
-            result = INVALID_CREDENTIALS
-        except (PatronLoanLimitReached, PatronHoldLimitReached) as e:
-            result = e.as_problem_detail_document().with_debug(str(e))
-        except DeliveryMechanismError as e:
-            result = BAD_DELIVERY_MECHANISM.with_debug(
-                str(e), status_code=e.status_code
-            )
-        except OutstandingFines as e:
-            result = OUTSTANDING_FINES.detailed(
-                _(
-                    "You must pay your $%(fine_amount).2f outstanding fines before you can borrow more books.",
-                    fine_amount=patron.fines,
-                )
-            )
-        except AuthorizationExpired as e:
-            result = e.as_problem_detail_document(debug=False)
-        except AuthorizationBlocked as e:
-            result = e.as_problem_detail_document(debug=False)
-        except CannotLoan as e:
-            if isinstance(e, NoAvailableCopiesWhenReserved):
-                result = e.as_problem_detail_document()
-            else:
-                result = CHECKOUT_FAILED.with_debug(str(e))
-        except CannotHold as e:
-            result = HOLD_FAILED.with_debug(str(e))
-        except CannotRenew as e:
-            result = RENEW_FAILED.with_debug(str(e))
-        except NotFoundOnRemote as e:
-            result = NOT_FOUND_ON_REMOTE
-        except CirculationException as e:
-            # Generic circulation error.
-            result = CHECKOUT_FAILED.with_debug(str(e))
+        # Any problems raised during borrow inherit these exceptions. Raise them now.
+        except (CirculationException, RemoteInitiatedServerError) as e:
+            return e.problem_detail, False
 
         if result is None:
             # This shouldn't happen, but if it does, it means no exception
             # was raised but we just didn't get a loan or hold. Return a
             # generic circulation error.
-            result = HOLD_FAILED
+            return HOLD_FAILED, False
         return result, is_new
 
     def best_lendable_pool(
-        self, library, patron, identifier_type, identifier, mechanism_id
+        self,
+        library: Library,
+        patron: Patron,
+        identifier_type: str,
+        identifier: str,
+        mechanism_id: int | None,
+    ) -> (
+        Loan
+        | ProblemDetail
+        | tuple[LicensePool, LicensePoolDeliveryMechanism | None]
+        | None
     ):
         """
         Of the available LicensePools for the given Identifier, return the
@@ -291,7 +248,7 @@ class LoanController(CirculationManagerController):
             # to pick the one that will get the book to the patron
             # with the shortest wait.
             if (
-                not best
+                not best  # type: ignore[unreachable]
                 or pool.licenses_available > best.licenses_available
                 or pool.patrons_in_hold_queue < best.patrons_in_hold_queue
             ):
@@ -361,6 +318,8 @@ class LoanController(CirculationManagerController):
             )
             if isinstance(mechanism, ProblemDetail):
                 return mechanism
+            else:
+                mechanism = mechanism
 
         if (not loan or not loan_license_pool) and not (
             self.can_fulfill_without_loan(
@@ -391,89 +350,41 @@ class LoanController(CirculationManagerController):
                 )
 
         try:
+            # Go to CirculationAPI that makes the fulfill request to ODL API.
             fulfillment = self.circulation.fulfill(
                 patron,
                 credential,
                 requested_license_pool,
                 mechanism,
             )
-        except DeliveryMechanismConflict as e:
-            return DELIVERY_CONFLICT.detailed(str(e))
-        except NoActiveLoan as e:
-            return NO_ACTIVE_LOAN.detailed(
-                _("Can't fulfill loan because you have no active loan for this book."),
-                status_code=e.status_code,
-            )
-        except FormatNotAvailable as e:
-            return NO_ACCEPTABLE_FORMAT.with_debug(str(e), status_code=e.status_code)
-        except CannotFulfill as e:
-            return CANNOT_FULFILL.with_debug(str(e), status_code=e.status_code)
-        except DeliveryMechanismError as e:
-            return BAD_DELIVERY_MECHANISM.with_debug(str(e), status_code=e.status_code)
+        # Any problems raised during borrow inherit these exceptions. Raise them now.
+        except (CirculationException, RemoteInitiatedServerError) as e:
+            return e.problem_detail
 
-        # A subclass of FulfillmentInfo may want to bypass the whole
-        # response creation process.
-        response = fulfillment.as_response
-        if response is not None:
-            return response
-
-        headers = dict()
-        encoding_header = dict()
-        if (
-            fulfillment.data_source_name == DataSource.ENKI
-            and mechanism.delivery_mechanism.drm_scheme_media_type
-            == DeliveryMechanism.NO_DRM
+        # TODO: This should really be turned into its own Fulfillment class,
+        #   so each integration can choose when to return a feed response like
+        #   this, and when to return a direct response.
+        if mechanism.delivery_mechanism.is_streaming and isinstance(
+            fulfillment, UrlFulfillment
         ):
-            encoding_header["Accept-Encoding"] = "deflate"
-
-        if mechanism.delivery_mechanism.is_streaming:
-            # If this is a streaming delivery mechanism, create an OPDS entry
-            # with a fulfillment link to the streaming reader url.
-            feed = OPDSAcquisitionFeed.single_entry_loans_feed(
+            # If this is a streaming delivery mechanism (note: E-kirjasto does not stream),
+            # create an OPDS entry with a fulfillment link to the streaming reader url.
+            return OPDSAcquisitionFeed.single_entry_loans_feed(
                 self.circulation, loan, fulfillment=fulfillment
-            )
-            if isinstance(feed, ProblemDetail):
-                # This should typically never happen, since we've gone through the entire fulfill workflow
-                # But for the sake of return-type completeness we are adding this here
-                return feed
-            if isinstance(feed, Response):
-                return feed
-            else:
-                content = etree.tostring(feed)
-            status_code = 200
-            headers["Content-Type"] = OPDSFeed.ACQUISITION_FEED_TYPE
-        elif fulfillment.content_link_redirect is True:
-            # The fulfillment API has asked us to not be a proxy and instead redirect the client directly
-            return redirect(fulfillment.content_link)
-        else:
-            content = fulfillment.content
-            if fulfillment.content_link:
-                # If we have a link to the content on a remote server, web clients may not
-                # be able to access it if the remote server does not support CORS requests.
+            )  # type: ignore[return-value]
 
-                # If the pool is open access though, the web client can link directly to the
-                # file to download it, so it's safe to redirect.
-                if requested_license_pool.open_access:
-                    return redirect(fulfillment.content_link)
+        try:
+            return fulfillment.response()
+        except BaseProblemDetailException as e:
+            return e.problem_detail
 
-                # Otherwise, we need to fetch the content and return it instead
-                # of redirecting to it, since it may be downloaded through an
-                # indirect acquisition link.
-                try:
-                    status_code, headers, content = do_get(
-                        fulfillment.content_link, headers=encoding_header
-                    )
-                    headers = dict(headers)
-                except RemoteIntegrationException as e:
-                    return e.as_problem_detail_document(debug=False)
-            else:
-                status_code = 200
-            if fulfillment.content_type:
-                headers["Content-Type"] = fulfillment.content_type
-
-        return Response(response=content, status=status_code, headers=headers)
-
-    def can_fulfill_without_loan(self, library, patron, pool, lpdm):
+    def can_fulfill_without_loan(
+        self,
+        library: Library,
+        patron: Patron | None,
+        pool: LicensePool,
+        lpdm: LicensePoolDeliveryMechanism | None,
+    ) -> bool:
         """Is it acceptable to fulfill the given LicensePoolDeliveryMechanism
         for the given Patron without creating a Loan first?
 
@@ -501,8 +412,8 @@ class LoanController(CirculationManagerController):
         # doesn't identify its patrons.)
         return self.circulation.can_fulfill_without_loan(patron, pool, lpdm)
 
-    def revoke(self, license_pool_id):
-        patron = flask.request.patron
+    def revoke(self, license_pool_id: int) -> OPDSEntryResponse | ProblemDetail:
+        patron = flask.request.patron  # type: ignore[attr-defined]
         pool = self.load_licensepool(license_pool_id)
         if isinstance(pool, ProblemDetail):
             return pool
@@ -527,71 +438,71 @@ class LoanController(CirculationManagerController):
                 status_code=404,
             )
 
+        work = pool.work
+        if not work:
+            # Somehow we have a loan or hold for a LicensePool that has no Work.
+            self.log.error(
+                "Can't revoke loan or hold for LicensePool %r which has no Work!",
+                pool,
+            )
+            return NOT_FOUND_ON_REMOTE
+
         header = self.authorization_header()
         credential = self.manager.auth.get_credential_from_header(header)
+
         if loan:
             try:
                 self.circulation.revoke_loan(patron, credential, pool)
-            except RemoteRefusedReturn as e:
-                title = _(
-                    "Loan deleted locally but remote refused. Loan is likely to show up again on next sync."
-                )
-                return COULD_NOT_MIRROR_TO_REMOTE.detailed(title, status_code=503)
-            except CannotReturn as e:
-                title = _("Loan deleted locally but remote failed.")
-                return COULD_NOT_MIRROR_TO_REMOTE.detailed(title, 503).with_debug(
-                    str(e)
-                )
+            except (CirculationException, RemoteInitiatedServerError) as e:
+                return e.problem_detail
         elif hold:
             if not self.circulation.can_revoke_hold(pool, hold):
                 title = _("Cannot release a hold once it enters reserved state.")
                 return CANNOT_RELEASE_HOLD.detailed(title, 400)
             try:
                 self.circulation.release_hold(patron, credential, pool)
-            except CannotReleaseHold as e:
-                title = _("Hold released locally but remote failed.")
-                return CANNOT_RELEASE_HOLD.detailed(title, 503).with_debug(str(e))
+            except (CirculationException, RemoteInitiatedServerError) as e:
+                return e.problem_detail
 
-        work = pool.work
         annotator = self.manager.annotator(None)
+        single_entry_feed = OPDSAcquisitionFeed.single_entry(work, annotator)
         return OPDSAcquisitionFeed.entry_as_response(
-            OPDSAcquisitionFeed.single_entry(work, annotator)
+            entry=single_entry_feed,  # type: ignore
+            mime_types=flask.request.accept_mimetypes,
         )
 
-    def detail(self, identifier_type, identifier):
-        if flask.request.method == "DELETE":
-            # Causes an error becuase the function is not in LoansController but route!
-            return self.revoke_loan_or_hold(identifier_type, identifier)
-
-        patron = flask.request.patron
-        library = flask.request.library
+    def detail(
+        self, identifier_type: str, identifier: str
+    ) -> OPDSEntryResponse | ProblemDetail | None:
+        patron = flask.request.patron  # type: ignore[attr-defined]
+        library = flask.request.library  # type: ignore[attr-defined]
         pools = self.load_licensepools(library, identifier_type, identifier)
         if isinstance(pools, ProblemDetail):
             return pools
 
         loan, pool = self.get_patron_loan(patron, pools)
-        if loan:
-            hold = None
-        else:
-            hold, pool = self.get_patron_hold(patron, pools)
-
-        if not loan and not hold:
-            return NO_ACTIVE_LOAN_OR_HOLD.detailed(
-                _(
-                    'You have no active loan or hold for "%(title)s".',
-                    title=pool.work.title,
-                ),
-                status_code=404,
-            )
-
         work = self.load_work(library, identifier_type, identifier)
         selected_book = patron.load_selected_book(work)
 
-        if flask.request.method == "GET":
-            if loan:
-                item = loan
-            else:
-                item = hold
+        if loan:
             return OPDSAcquisitionFeed.single_entry_loans_feed(
-                self.circulation, item, selected_book=selected_book
+                self.circulation, loan, selected_book=selected_book
             )
+
+        hold, pool = self.get_patron_hold(patron, pools)
+        if hold:
+            return OPDSAcquisitionFeed.single_entry_loans_feed(
+                self.circulation, hold, selected_book=selected_book
+            )
+
+        if pool and pool.work and pool.work.title:
+            title = pool.work.title
+        else:
+            title = "unknown"
+        return NO_ACTIVE_LOAN_OR_HOLD.detailed(
+            _(
+                'You have no active loan or hold for "%(title)s".',
+                title=title,
+            ),
+            status_code=404,
+        )
