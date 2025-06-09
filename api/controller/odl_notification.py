@@ -62,6 +62,9 @@ class ODLNotificationController(CirculationManagerController):
     def notify(
         self, patron_identifier: str | None, license_identifier: str | None
     ) -> Response:
+        self.log.info(
+            f"Loan notification received [patron: {patron_identifier}] [license: {license_identifier}]"
+        )
         loan = self._get_loan(patron_identifier, license_identifier)
         return self._process_notification(loan)
 
