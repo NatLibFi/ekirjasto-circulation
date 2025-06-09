@@ -132,7 +132,7 @@ class LoanStatus(BaseModel):
     status: Status
     message: str | None = None
     updated: Updated | None = None
-    links: LinkCollection
+    links: LinkCollection | None = None
     potential_rights: PotentialRights = Field(default_factory=PotentialRights)
     events: list[Event] | None = Field(default_factory=list)
 

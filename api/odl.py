@@ -349,6 +349,7 @@ class BaseODLAPI(
             self.update_licensepool_and_hold_queue(loan.license_pool)
             return
 
+        assert loan_status.links  # To satisfy mypy
         return_link = loan_status.links.get(
             rel="return", content_type=LoanStatus.content_type()
         )
@@ -486,6 +487,7 @@ class BaseODLAPI(
             )
             raise CannotLoan()
 
+        assert loan_status.links  # To satisfy mypy
         # We save the link to the loan status document in the loan's external_identifier field, so
         # we are able to retrieve it later.
         loan_status_document_link: Link | None = loan_status.links.get(
@@ -639,6 +641,7 @@ class BaseODLAPI(
 
         drm_scheme = delivery_mechanism.delivery_mechanism.drm_scheme
         fulfill_cls: Callable[[str, str | None], UrlFulfillment]
+        assert loan_status.links  # To satisfy mypy
         if drm_scheme == DeliveryMechanism.NO_DRM:
             # If we have no DRM, we can just redirect to the content link and let the patron download the book.
             fulfill_link = loan_status.links.get(
