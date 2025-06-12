@@ -196,9 +196,8 @@ class PushNotifications(LoggerMixin):
             loans_api = f"{url}/{hold.patron.library.short_name}/loans"
             work: Work = hold.work
             identifier: Identifier = hold.license_pool.identifier
-            hold_end = hold.end.strftime("%-d.%-m.%Y")
             title = f'Varauksesi "{work.title}" on lainattavissa!'
-            body = f"Varaus on lainattava viimeistään {hold_end}."
+            body = f"Varaus on lainattava viimeistään {hold.end.strftime('%-d.%-m.%Y') if hold.end else '3 päivän päästä'}."
             print(body)
             data = dict(
                 title=title,

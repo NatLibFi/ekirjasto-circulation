@@ -147,7 +147,6 @@ class TestPushNotifications:
         loan, _ = work.active_license_pool().loan_to(patron)  # type: ignore
         work2: Work = db.work(with_license_pool=True)
         hold, _ = work2.active_license_pool().on_hold_to(patron)  # type: ignore
-        hold.end = utc_now() + timedelta(days=3)
 
         with mock.patch(
             "core.util.notifications.PushNotifications.send_messages"
