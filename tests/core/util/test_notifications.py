@@ -1,7 +1,7 @@
 import logging
 import re
 from collections.abc import Generator
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 from unittest import mock
 from unittest.mock import MagicMock
@@ -11,6 +11,7 @@ import pytest
 import pytz
 from firebase_admin.exceptions import FirebaseError
 from firebase_admin.messaging import UnregisteredError
+from freezegun import freeze_time
 from google.auth import credentials
 from requests_mock import Mocker
 
@@ -105,12 +106,12 @@ class TestPushNotifications:
                 {
                     "token": "atoken",
                     "notification": messaging.Notification(
-                        title="Only 1 day left on your loan!",
-                        body=f"Your loan on {work.presentation_edition.title} is expiring soon",
+                        title=f'"{work.presentation_edition.title}" laina-aika on päättymässä!',
+                        body=f'"{work.presentation_edition.title}" laina-aika päättyy 1 päivän päästä.',
                     ),
                     "data": dict(
-                        title="Only 1 day left on your loan!",
-                        body=f"Your loan on {work.presentation_edition.title} is expiring soon",
+                        title=f'"{work.presentation_edition.title}" laina-aika on päättymässä!',
+                        body=f'"{work.presentation_edition.title}" laina-aika päättyy 1 päivän päästä.',
                         event_type=NotificationConstants.LOAN_EXPIRY_TYPE,
                         loans_endpoint="http://localhost/default/loans",
                         external_identifier=patron.external_identifier,
@@ -146,6 +147,7 @@ class TestPushNotifications:
         loan, _ = work.active_license_pool().loan_to(patron)  # type: ignore
         work2: Work = db.work(with_license_pool=True)
         hold, _ = work2.active_license_pool().on_hold_to(patron)  # type: ignore
+        hold.end = utc_now() + timedelta(days=3)
 
         with mock.patch(
             "core.util.notifications.PushNotifications.send_messages"
@@ -254,6 +256,7 @@ class TestPushNotifications:
 
             assert messaging.send.call_count == 4
 
+    @freeze_time()
     def test_holds_notification(self, push_notf_fixture: PushNotificationsFixture):
         db = push_notf_fixture.db
         # Only patron1 will get an identifier
@@ -276,8 +279,9 @@ class TestPushNotifications:
         assert p1 is not None
         p2 = work2.active_license_pool()
         assert p2 is not None
-        hold1, _ = p1.on_hold_to(patron1, position=0)
-        hold2, _ = p2.on_hold_to(patron2, position=0)
+        in_three_days = utc_now() + timedelta(days=3)
+        hold1, _ = p1.on_hold_to(patron1, position=0, end=in_three_days)
+        hold2, _ = p2.on_hold_to(patron2, position=0, end=in_three_days)
 
         with mock.patch("core.util.notifications.messaging") as mock_messaging:
             # Mock the notification method to return the kwargs passed to it
@@ -298,8 +302,8 @@ class TestPushNotifications:
             include_auth_id: bool = True,
         ) -> None:
             data = dict(
-                title="Your hold is available!",
-                body=f'Your hold on "{work.title}" is available!',
+                title=f'Varauksesi "{work.title}" on lainattavissa!',
+                body=f'Varaus on lainattava viimeistään {in_three_days.strftime("%-d.%-m.%Y")}.',
                 event_type=NotificationConstants.HOLD_AVAILABLE_TYPE,
                 loans_endpoint=loans_api,
                 identifier=hold.license_pool.identifier.identifier,
