@@ -2745,7 +2745,7 @@ class LoanNotificationsScript(Script):
     are expiring"""
 
     # Days before on which to send out a notification
-    LOAN_EXPIRATION_DAYS = [5, 1]
+    LOAN_EXPIRATION_DAYS = [3, 1]
     BATCH_SIZE = 100
 
     def do_run(self):

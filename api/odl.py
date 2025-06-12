@@ -694,10 +694,10 @@ class BaseODLAPI(
         for hold in ready_for_checkout:
             if hold.position != 0:
                 hold.position = 0
-                # And start the reservation period.
-                hold.end = utc_now() + datetime.timedelta(
-                    days=default_reservation_period
-                )
+                # And start the reservation period which ends end of day.
+                hold.end = (
+                    utc_now() + datetime.timedelta(days=default_reservation_period)
+                ).replace(hour=23, minute=59, second=59, microsecond=999999)
 
         # Update the rest of the queue.
         for idx, hold in enumerate(waiting):
