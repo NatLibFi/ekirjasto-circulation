@@ -116,8 +116,8 @@ class PushNotifications(LoggerMixin):
         edition = loan.license_pool.presentation_edition
         identifier = loan.license_pool.identifier
         library_short_name = loan.library.short_name
-        title = f"Only {days_to_expiry} {'days' if days_to_expiry != 1 else 'day'} left on your loan!"
-        body = f"Your loan on {edition.title} is expiring soon"
+        title = f'"{edition.title}" laina-aika on päättymässä!'
+        body = f'"{edition.title}" laina-aika päättyy {days_to_expiry} päivän päästä.'
         data = dict(
             title=title,
             body=body,
@@ -196,8 +196,9 @@ class PushNotifications(LoggerMixin):
             loans_api = f"{url}/{hold.patron.library.short_name}/loans"
             work: Work = hold.work
             identifier: Identifier = hold.license_pool.identifier
-            title = "Your hold is available!"
-            body = f'Your hold on "{work.title}" is available!'
+            title = f'Varauksesi "{work.title}" on lainattavissa!'
+            body = f"Varaus on lainattava viimeistään {hold.end.strftime('%-d.%-m.%Y') if hold.end else '3 päivän päästä'}."
+            print(body)
             data = dict(
                 title=title,
                 body=body,

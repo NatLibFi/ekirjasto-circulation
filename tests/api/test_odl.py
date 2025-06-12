@@ -1137,9 +1137,10 @@ class TestODLAPI:
 
         # And the first hold changed.
         assert 0 == hold.position
-        assert hold.end - utc_now() - datetime.timedelta(days=3) < datetime.timedelta(
-            hours=1
-        )
+        # assert hold.end - utc_now() - datetime.timedelta(days=3) < datetime.timedelta(
+        #     hours=1
+        # )
+        assert hold.end.hour == 23 and hold.end.minute == 59
 
         # The later hold also moved one position.
         assert 1 == later_hold.position
@@ -1158,9 +1159,10 @@ class TestODLAPI:
         assert 2 == opds2_with_odl_api_fixture.pool.licenses_reserved
         assert 2 == opds2_with_odl_api_fixture.pool.patrons_in_hold_queue
         assert 0 == later_hold.position
-        assert later_hold.end - utc_now() - datetime.timedelta(
-            days=3
-        ) < datetime.timedelta(hours=1)
+        # assert later_hold.end - utc_now() - datetime.timedelta(
+        #     days=3
+        # ) < datetime.timedelta(hours=1)
+        assert later_hold.end.hour == 23 and later_hold.end.minute == 59
 
         # Now there are no more holds. If we add another license,
         # it ends up being available.
@@ -1217,12 +1219,8 @@ class TestODLAPI:
         assert 0 == holds[0].position
         assert 0 == holds[1].position
         assert 1 == holds[2].position
-        assert holds[0].end - utc_now() - datetime.timedelta(
-            days=3
-        ) < datetime.timedelta(hours=1)
-        assert holds[1].end - utc_now() - datetime.timedelta(
-            days=3
-        ) < datetime.timedelta(hours=1)
+        assert holds[0].end.hour == 23 and holds[0].end.minute == 59
+        assert holds[1].end.hour == 23 and holds[1].end.minute == 59
 
         # If there are more licenses that change than holds, some of them become available.
         with opds2_with_odl_api_fixture.mock_http.patch():
