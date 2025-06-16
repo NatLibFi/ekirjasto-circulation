@@ -309,6 +309,7 @@ class BaseODLAPI(
 
     def checkin(self, patron: Patron, pin: str, licensepool: LicensePool) -> None:
         """Return a loan early."""
+        self.log.info(f"Checking in a loan in license pool {licensepool}")
         _db = Session.object_session(patron)
 
         loan = (
@@ -387,6 +388,7 @@ class BaseODLAPI(
         delivery_mechanism: LicensePoolDeliveryMechanism,
     ) -> LoanInfo:
         """Create a new loan."""
+        self.log.info(f"Checking out a loan in license pool {licensepool}")
         _db = Session.object_session(patron)
 
         loan = (
@@ -612,13 +614,14 @@ class BaseODLAPI(
             raise FormatNotAvailable()
         content_link = resource.representation.public_url
         content_type = resource.representation.media_type
-        return RedirectFulfillment(
-            content_link, content_type
-        )  # Tää pitää kattoo, ei ole circulation.py:ssä
+        return RedirectFulfillment(content_link, content_type)
 
     def _license_fulfill(
         self, loan: Loan, delivery_mechanism: LicensePoolDeliveryMechanism
     ) -> Fulfillment:
+        self.log.info(
+            f"Fulfilling loan of license {loan.license.identifier} in license pool {loan.license_pool}"
+        )
         # We are unable to fulfill a loan that doesn't have its external identifier set,
         # since we use this to get to the checkout link. It shouldn't be possible to get
         # into this state.
@@ -722,6 +725,7 @@ class BaseODLAPI(
         notification_email_address: str | None,
     ) -> HoldInfo:
         """Create a new hold."""
+        self.log.info(f"Placing hold in license pool {licensepool}")
         return self._place_hold(patron, licensepool)
 
     def _place_hold(self, patron: Patron, licensepool: LicensePool) -> HoldInfo:
@@ -759,6 +763,7 @@ class BaseODLAPI(
 
     def release_hold(self, patron: Patron, pin: str, licensepool: LicensePool) -> None:
         """Cancel a hold."""
+        self.log.info(f"Releasing hold in license pool {licensepool}")
         _db = Session.object_session(patron)
 
         hold = get_one(
