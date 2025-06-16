@@ -211,7 +211,7 @@ class License(Base, LicenseFunctions):
             logging.warning(f"Checking in expired license # {self.identifier}.")
 
     def __repr__(self):
-        return f"License id: {self.identifier}, checkouts left: {self.checkouts_left}, available: {self.checkouts_available} active: {self.is_inactive} to borrow: {self.is_available_for_borrowing}"
+        return f"License id: {self.identifier}, checkouts left: {self.checkouts_left}, available: {self.checkouts_available}, is inactive: {self.is_inactive}, can be borrowed: {self.is_available_for_borrowing}"
 
 
 class LicensePool(Base):
