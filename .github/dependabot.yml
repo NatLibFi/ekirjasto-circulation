@@ -8,14 +8,12 @@ updates:
     schedule:
       interval: "daily"
     versioning-strategy: increase-if-necessary
-    # Ignore everything for now (and stay in pace with the upstream)
-    # ignore:
-    #    - dependency-name: "*"
+    # Install a specific version of Poetry before running updates
+    pre-commands:
+      - curl -sSL https://install.python-poetry.org | python3 - --version 1.8.2
+      - poetry config virtualenvs.create false
 
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "daily"
-    # Ignore everything for now (and stay in pace with the upstream)
-    # ignore:
-    #    - dependency-name: "*"
