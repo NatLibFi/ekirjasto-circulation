@@ -10,7 +10,7 @@ updates:
     versioning-strategy: increase-if-necessary
     # Install a specific version of Poetry before running updates
     pre-commands:
-      - curl -sSL https://install.python-poetry.org | python3 - --version 1.8.2
+      - curl -sSL https://install.python-poetry.org | python3 - --version 1.8.5
       - poetry config virtualenvs.create false
 
   - package-ecosystem: "github-actions"
