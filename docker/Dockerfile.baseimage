@@ -18,26 +18,26 @@ RUN apt-get update && \
     apt-get upgrade -y --no-install-recommends -o Dpkg::Options::="--force-confold" && \
     /bd_build/cleanup.sh
 
-ARG POETRY_VERSION=1.7.1
+ARG POETRY_VERSION=1.8.5
 
 # Install required packages including python, pip, compiliers and libraries needed
 # to build the python wheels we need and poetry.
 RUN install_clean \
-      nginx \
-      python3 \
-      python3-dev \
-      python3-venv \
-      python3-pip \
-      gcc \
-      # needed for uwsgi
-      libpcre3-dev \
-      # needed for psycopg2
-      libpq-dev \
-      # needed for xmlsec
-      libxmlsec1-dev \
-      libxmlsec1-openssl \
-      tzdata \
-      pkg-config && \
+    nginx \
+    python3 \
+    python3-dev \
+    python3-venv \
+    python3-pip \
+    gcc \
+    # needed for uwsgi
+    libpcre3-dev \
+    # needed for psycopg2
+    libpq-dev \
+    # needed for xmlsec
+    libxmlsec1-dev \
+    libxmlsec1-openssl \
+    tzdata \
+    pkg-config && \
     curl -sSL https://install.python-poetry.org | POETRY_HOME="/opt/poetry" python3 - --yes --version $POETRY_VERSION && \
     ln -s /opt/poetry/bin/poetry /usr/local/bin/poetry && \
     rm -rf /etc/logrotate.d/dpkg && \

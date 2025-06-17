@@ -1,11 +1,11 @@
-name: 'Poetry'
-description: 'Install python poetry'
+name: "Poetry"
+description: "Install python poetry"
 
 inputs:
   version:
     description: "Version of poetry to install"
     required: false
-    default: "1.5.1"
+    default: "1.8.5"
 
 outputs:
   version:
