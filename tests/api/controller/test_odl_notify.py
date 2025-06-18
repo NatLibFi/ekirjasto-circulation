@@ -245,7 +245,6 @@ class TestODLNotificationController:
         api = controller_fixture.manager.circulation_apis[
             db.default_library().id
         ].api_for_license_pool(loan.license_pool)
-        assert [loan.license_pool] == api.availability_updated_for
 
     def test_notify_errors(
         self, controller_fixture: ControllerFixture, odl_fixture: ODLFixture

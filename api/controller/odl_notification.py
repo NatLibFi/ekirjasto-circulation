@@ -99,10 +99,6 @@ class ODLNotificationController(CirculationManagerController):
                 try:
                     with self._db.begin_nested():
                         loan.end = utc_now()
-                    api = self.manager.circulation_apis[
-                        library.id
-                    ].api_for_license_pool(loan.license_pool)
-                    api.update_availability(loan.license_pool)
                 except StaleDataError:
                     # This can happen if this callback happened while we were returning this
                     # item. We can fetch the loan, but it's deleted by the time we go to do
