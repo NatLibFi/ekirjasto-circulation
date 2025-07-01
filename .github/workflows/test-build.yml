@@ -287,12 +287,33 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build & Start container
-        run: docker compose up -d --build ${{ matrix.image }}
+      - name: Build and Load Docker Compose Images for Testing
+        uses: docker/bake-action@v5
+        with:
+          files: docker-compose.yml
+          load: true # CRITICAL: Load images into Docker daemon for 'docker compose up'
+          set: |
+            webapp.cache-from=type=gha,scope=buildkit-${{ github.run_id }}-webapp
+            webapp.cache-to=type=gha,mode=max,scope=buildkit-${{ github.run_id }}-webapp
+            scripts.cache-from=type=gha,scope=buildkit-${{ github.run_id }}-scripts
+            scripts.cache-to=type=gha,mode=max,scope=buildkit-${{ github.run_id }}-scripts
+            os.cache-from=type=gha,scope=buildkit-${{ github.run_id }}-os
+            os.cache-to=type=gha,mode=max,scope=buildkit-${{ github.run_id }}-os
+          build-args: |
+            BUILD_PLATFORM=${{ matrix.platform }}
+            # Pass the base image tag from the docker-image-build job
+            BASE_IMAGE=${{ needs.docker-image-build.outputs.baseimage }}
+
+      - name: Start container stack
+        # Now that all necessary images (webapp, scripts, os) are built and loaded
+        # by the 'docker/bake-action', you just need to start the stack.
+        # The '--build' flag is no longer necessary here.
+        run: docker compose up -d
         env:
-          BUILD_PLATFORM: ${{ matrix.platform }}
-          BUILD_CACHE_FROM: type=gha,scope=buildkit-${{ github.run_id }}
-          BUILD_BASE_IMAGE: ${{ needs.docker-image-build.outputs.baseimage }}
+          BUILD_PLATFORM: ${{ matrix.platform }} # Still pass runtime env if needed
+          # BUILD_CACHE_FROM is not relevant for 'up' commands, only for 'build'
+          # BUILD_BASE_IMAGE is already passed as a build-arg above if needed for runtime
+
 
       - name: Run tests
         run: ./docker/ci/test_${{ matrix.image }}.sh ${{ matrix.image }}
