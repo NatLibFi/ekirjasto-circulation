@@ -1225,24 +1225,6 @@ files = [
 Flask = ">=0.9"
 
 [[package]]
-name = "flask-pydantic-spec"
-version = "0.6.0"
-description = "generate OpenAPI document and validate request & response with Python annotations."
-optional = false
-python-versions = ">=3.8"
-files = [
-    {file = "flask_pydantic_spec-0.6.0-py3-none-any.whl", hash = "sha256:480689102eed43900b2164d07af930221a2379253ed06337d280a47224990035"},
-    {file = "flask_pydantic_spec-0.6.0.tar.gz", hash = "sha256:f20d63cba821dfaaa92fa19c1e1975e0acf544ea6a3cc9eb5cbac62a81117790"},
-]
-
-[package.dependencies]
-inflection = ">=0.5.0,<1"
-pydantic = ">=1.2,<2"
-
-[package.extras]
-flask = ["flask"]
-
-[[package]]
 name = "freezegun"
 version = "1.4.0"
 description = "Let your Python tests travel through time"
@@ -1756,17 +1738,6 @@ python-versions = ">=3.5"
 files = [
     {file = "idna-3.3-py3-none-any.whl", hash = "sha256:84d9dd047ffa80596e0f246e2eab0b391788b0503584e8945f2368256d2735ff"},
     {file = "idna-3.3.tar.gz", hash = "sha256:9d643ff0a55b762d5cdb124b8eaa99c66322e2157b69160bc32796e824360e6d"},
-]
-
-[[package]]
-name = "inflection"
-version = "0.5.1"
-description = "A port of Ruby on Rails inflector to Python"
-optional = false
-python-versions = ">=3.5"
-files = [
-    {file = "inflection-0.5.1-py2.py3-none-any.whl", hash = "sha256:f38b2b640938a4f35ade69ac3d053042959b62a0f1076a5bbaa1b9526605a8a2"},
-    {file = "inflection-0.5.1.tar.gz", hash = "sha256:1a29730d366e996aaacffb2f1f1cb9593dc38e2ddd30c91250c6dde09ea9b417"},
 ]
 
 [[package]]
@@ -4527,4 +4498,4 @@ lxml = ">=3.8"
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<4"
-content-hash = "51c7c5551d5ba508e52e356aa2ad3e134bde2022f245d657512a944c39bfe2a4"
+content-hash = "cc621ba1c3b6e6d82f9d16b5c63acdb5c1122cd3462830a5d252dbb0e50655b1"
