@@ -1371,6 +1371,28 @@ class TestODLAPI:
         assert 1 == pool2.licenses_available
         assert 0 == pool2.licenses_reserved
 
+    def test_delete_expired_loan(
+        self,
+        db: DatabaseTransactionFixture,
+        opds2_with_odl_api_fixture: OPDS2WithODLApiFixture,
+    ) -> None:
+        # A patron has a copy of this book checked out.
+        opds2_with_odl_api_fixture.setup_license(concurrency=1, available=0)
+
+        loan, _ = opds2_with_odl_api_fixture.license.loan_to(
+            opds2_with_odl_api_fixture.patron
+        )
+        loan.end = utc_now() - datetime.timedelta(days=3)
+
+        # The patron returns the book successfully.
+        opds2_with_odl_api_fixture.api.delete_expired_loan(loan)
+
+        # The pool's availability has increased
+        assert 1 == opds2_with_odl_api_fixture.pool.licenses_available
+
+        # The license on the pool has also been updated
+        assert 1 == opds2_with_odl_api_fixture.license.checkouts_available
+
 
 class TestODLImporter:
     @freeze_time("2019-01-01T00:00:00+00:00")

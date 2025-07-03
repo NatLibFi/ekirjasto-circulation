@@ -833,6 +833,16 @@ class BaseODLAPI(
     def update_availability(self, licensepool: LicensePool) -> None:
         licensepool.update_availability_from_licenses()
 
+    def delete_expired_loan(self, loan: Loan) -> None:
+        """
+        Delete a loan we know to be expired and update the license pool.
+        """
+        _db = Session.object_session(loan)
+        loan.license.checkin()
+        self.log.info(f"Deleting loan #{loan.id}")
+        _db.delete(loan)
+        self.update_licensepool_and_hold_queue(loan.license_pool)
+
 
 class ODLAPI(
     BaseODLAPI[ODLSettings, ODLLibrarySettings],
