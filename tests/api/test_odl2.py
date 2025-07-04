@@ -463,8 +463,8 @@ class TestODL2LoanReaper:
         yesterday = now - datetime.timedelta(days=1)
         tomorrow = now + datetime.timedelta(days=1)
 
-        # License with all its checkouts on loan to 3 patrons.
-        odl2_api_fixture.setup_license(concurrency=3, available=0)
+        # License with all its checkouts on loan to 4 patrons.
+        odl2_api_fixture.setup_license(concurrency=4, available=0)
         expired_loan1, ignore = odl2_api_fixture.license.loan_to(
             db.patron(), end=yesterday
         )
@@ -474,7 +474,10 @@ class TestODL2LoanReaper:
         current_loan, ignore = odl2_api_fixture.license.loan_to(
             db.patron(), end=tomorrow
         )
-        assert 3 == db.session.query(Loan).count()
+        very_old_loan, ignore = odl2_api_fixture.license.loan_to(
+            db.patron(), start=now - datetime.timedelta(days=90), end=None
+        )
+        assert 4 == db.session.query(Loan).count()
         assert 0 == odl2_api_fixture.pool.licenses_available
 
         progress = reaper.run_once(reaper.timestamp().to_data())
@@ -482,10 +485,10 @@ class TestODL2LoanReaper:
         # The expired loans have been deleted and the current loan remains.
         assert 1 == db.session.query(Loan).count()
 
-        assert 2 == odl2_api_fixture.pool.licenses_available
+        assert 3 == odl2_api_fixture.pool.licenses_available
 
         # The TimestampData returned reflects what work was done.
-        assert "Loans deleted: 2. License pools updated: 1" == progress.achievements
+        assert "Loans deleted: 3. License pools updated: 1" == progress.achievements
 
         # The TimestampData does not include any timing information --
         # that will be applied by run().

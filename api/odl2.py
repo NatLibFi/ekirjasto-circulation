@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 from flask_babel import lazy_gettext as _
 from pydantic import PositiveInt
 from sqlalchemy.orm import Session
+from sqlalchemy.sql.expression import and_, or_
 from webpub_manifest_parser.odl import ODLFeedParserFactory
 from webpub_manifest_parser.opds2.registry import OPDS2LinkRelationsRegistry
 
@@ -340,12 +341,24 @@ class ODL2LoanReaper(CollectionMonitor):
     def run_once(self, progress: TimestampData) -> TimestampData:
         # Find loans that have expired.
         self.log.info("Loan Reaper Job started")
-        yesterday = utc_now() - datetime.timedelta(days=1)
+        now = utc_now()
         expired_loans = (
             self._db.query(Loan)
             .join(Loan.license_pool)
-            .filter(LicensePool.collection_id == self.api.collection_id)
-            .filter(Loan.end < yesterday)
+            .filter(
+                and_(
+                    LicensePool.open_access == False,
+                    or_(
+                        Loan.end
+                        < now
+                        - datetime.timedelta(
+                            days=1
+                        ),  # Loans that ended before yesterday
+                        Loan.start < now - datetime.timedelta(days=90),
+                        Loan.end == None,
+                    ),  # Loans that started more than 90 days ago and have no end date
+                )
+            )
         )
 
         changed_pools = set()

@@ -1376,21 +1376,20 @@ class TestODLAPI:
         db: DatabaseTransactionFixture,
         opds2_with_odl_api_fixture: OPDS2WithODLApiFixture,
     ) -> None:
-        # A patron has a copy of this book checked out.
         opds2_with_odl_api_fixture.setup_license(concurrency=1, available=0)
-
+        # This loan expired a few days ago
         loan, _ = opds2_with_odl_api_fixture.license.loan_to(
-            opds2_with_odl_api_fixture.patron
+            opds2_with_odl_api_fixture.patron,
+            end=utc_now() - datetime.timedelta(days=3),
         )
-        loan.end = utc_now() - datetime.timedelta(days=3)
+        assert 1 == db.session.query(Loan).count()
 
-        # The patron returns the book successfully.
         opds2_with_odl_api_fixture.api.delete_expired_loan(loan)
 
-        # The pool's availability has increased
+        # There's no more loans
+        assert 0 == db.session.query(Loan).count()
+        # The pool's and license's availability has increased
         assert 1 == opds2_with_odl_api_fixture.pool.licenses_available
-
-        # The license on the pool has also been updated
         assert 1 == opds2_with_odl_api_fixture.license.checkouts_available
 
 
