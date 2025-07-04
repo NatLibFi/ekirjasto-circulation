@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import logging
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
@@ -7,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 from flask_babel import lazy_gettext as _
 from pydantic import PositiveInt
 from sqlalchemy.orm import Session
+from sqlalchemy.sql.expression import and_, or_
 from webpub_manifest_parser.odl import ODLFeedParserFactory
 from webpub_manifest_parser.opds2.registry import OPDS2LinkRelationsRegistry
 
@@ -18,9 +20,10 @@ from core.integration.settings import (
     ConfigurationFormItemType,
     FormField,
 )
-from core.metadata_layer import FormatData
-from core.model import Edition, RightsStatus
+from core.metadata_layer import FormatData, TimestampData
+from core.model import Edition, LicensePool, Loan, RightsStatus
 from core.model.configuration import ExternalIntegration
+from core.monitor import CollectionMonitor
 from core.opds2_import import (
     OPDS2Importer,
     OPDS2ImporterSettings,
@@ -28,7 +31,7 @@ from core.opds2_import import (
     RWPMManifestParser,
 )
 from core.util import first_or_default
-from core.util.datetime_helpers import to_utc
+from core.util.datetime_helpers import to_utc, utc_now
 
 if TYPE_CHECKING:
     from webpub_manifest_parser.core.ast import Metadata
@@ -316,3 +319,62 @@ class ODL2ImportMonitor(OPDS2ImportMonitor):
         super().__init__(
             _db, collection, import_class, force_reimport=True, **import_class_kwargs
         )
+
+
+class ODL2LoanReaper(CollectionMonitor):
+    """Check for loans that have expired and delete them, and update
+    the holds queues for their pools."""
+
+    SERVICE_NAME = "ODL2 Loan Reaper"
+    PROTOCOL = ODL2API.label()
+
+    def __init__(
+        self,
+        _db: Session,
+        collection: Collection,
+        api: ODL2API | None = None,
+        **kwargs: Any,
+    ):
+        super().__init__(_db, collection, **kwargs)
+        self.api = api or ODL2API(_db, collection)
+
+    def run_once(self, progress: TimestampData) -> TimestampData:
+        # Find loans that have expired.
+        self.log.info("Loan Reaper Job started")
+        now = utc_now()
+        expired_loans = (
+            self._db.query(Loan)
+            .join(Loan.license_pool)
+            .filter(
+                and_(
+                    LicensePool.open_access == False,
+                    or_(
+                        Loan.end
+                        < now
+                        - datetime.timedelta(
+                            days=1
+                        ),  # Loans that ended before yesterday
+                        Loan.start < now - datetime.timedelta(days=90),
+                        Loan.end == None,
+                    ),  # Loans that started more than 90 days ago and have no end date
+                )
+            )
+        )
+
+        changed_pools = set()
+        total_deleted_loans = 0
+        for loan in expired_loans:
+            changed_pools.add(loan.license_pool)
+            loan.license.checkin()
+            self._db.delete(loan)
+            total_deleted_loans += 1
+
+        for pool in changed_pools:
+            self.api.update_licensepool_and_hold_queue(pool)
+
+        message = "Loans deleted: %d. License pools updated: %d" % (
+            total_deleted_loans,
+            len(changed_pools),
+        )
+        progress = TimestampData(achievements=message)
+        return progress

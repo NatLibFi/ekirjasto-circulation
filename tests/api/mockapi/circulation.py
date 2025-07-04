@@ -82,7 +82,8 @@ class MockRemoteAPI(MockPatronActivityCirculationAPI):
     def internal_format(self, delivery_mechanism):
         return delivery_mechanism
 
-    def update_loan(self, loan, status_doc):
+    # Only called TestODLNotificationController
+    def delete_expired_loan(self, loan):
         self.availability_updated_for.append(loan.license_pool)
 
     def queue_checkout(self, response):

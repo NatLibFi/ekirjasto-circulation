@@ -4,7 +4,6 @@ import flask
 from flask import Response
 from flask_babel import lazy_gettext as _
 from pydantic import ValidationError
-from sqlalchemy.orm.exc import StaleDataError
 
 from api.controller.circulation_manager import CirculationManagerController
 from api.lcp.status import LoanStatus
@@ -19,7 +18,6 @@ from core.model import get_one
 from core.model.credential import Credential
 from core.model.licensing import License
 from core.model.patron import Loan, Patron
-from core.util.datetime_helpers import utc_now
 from core.util.problem_detail import ProblemDetailException
 
 
@@ -96,14 +94,10 @@ class ODLNotificationController(CirculationManagerController):
 
             # We might be out of sync with the distributor. Mark the loan as expired and update the license pool.
             if not status_doc.active:
-                try:
-                    with self._db.begin_nested():
-                        loan.end = utc_now()
-                except StaleDataError:
-                    # This can happen if this callback happened while we were returning this
-                    # item. We can fetch the loan, but it's deleted by the time we go to do
-                    # the update. This is not a problem, as we were just marking the loan as
-                    # completed anyway so we just continue.
-                    ...
+                self.log.info(f"Loan status was {status_doc.status}, will delete loan")
+                api = self.manager.circulation_apis[library.id].api_for_license_pool(
+                    loan.license_pool
+                )
+                api.delete_expired_loan(loan)
 
         return Response(_("Success"), 200)

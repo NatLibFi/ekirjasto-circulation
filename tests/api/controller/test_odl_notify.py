@@ -237,14 +237,11 @@ class TestODLNotificationController:
             )
             assert odl_fixture.license.identifier is not None
             assert 200 == response.status_code
-
-        # Since we had a loan and it's not active, we're out of sync with the remote. We've set the loan to end now.
-        assert loan.end == utc_now()
-
-        # The pool's availability has been updated.
-        api = controller_fixture.manager.circulation_apis[
-            db.default_library().id
-        ].api_for_license_pool(loan.license_pool)
+            # The pool's availability has been updated.
+            api = controller_fixture.manager.circulation_apis[
+                db.default_library().id
+            ].api_for_license_pool(loan.license_pool)
+            assert [loan.license_pool] == api.availability_updated_for
 
     def test_notify_errors(
         self, controller_fixture: ControllerFixture, odl_fixture: ODLFixture

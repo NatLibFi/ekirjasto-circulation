@@ -9,21 +9,25 @@ from webpub_manifest_parser.odl.semantic import (
 )
 
 from api.circulation_exceptions import PatronHoldLimitReached, PatronLoanLimitReached
-from api.odl2 import ODL2Importer
+from api.odl2 import ODL2Importer, ODL2LoanReaper
 from core.coverage import CoverageFailure
 from core.model import (
+    Collection,
     Contribution,
     Contributor,
+    DataSource,
     DeliveryMechanism,
     Edition,
     EditionConstants,
     LicensePool,
     LicensePoolDeliveryMechanism,
+    Loan,
     MediaTypes,
     Work,
 )
 from core.model.constants import IdentifierConstants
 from core.model.resource import Hyperlink
+from core.util.datetime_helpers import utc_now
 from tests.fixtures.api_odl import (
     LicenseHelper,
     LicenseInfoHelper,
@@ -440,3 +444,53 @@ class TestODL2API:
         with pytest.raises(PatronHoldLimitReached) as exc:
             odl2_api_fixture.place_hold(odl2_api_fixture.patron, pool)
         assert exc.value.limit == 1
+
+
+class TestODL2LoanReaper:
+    def test_run_once(
+        self, odl2_api_fixture: ODL2ApiFixture, db: DatabaseTransactionFixture
+    ):
+        data_source = DataSource.lookup(db.session, "Feedbooks", autocreate=True)
+        DatabaseTransactionFixture.set_settings(
+            odl2_api_fixture.collection.integration_configuration,
+            **{Collection.DATA_SOURCE_NAME_SETTING: data_source.name},
+        )
+        reaper = ODL2LoanReaper(
+            db.session, odl2_api_fixture.collection, api=odl2_api_fixture.api
+        )
+
+        now = utc_now()
+        yesterday = now - datetime.timedelta(days=1)
+        tomorrow = now + datetime.timedelta(days=1)
+
+        # License with all its checkouts on loan to 4 patrons.
+        odl2_api_fixture.setup_license(concurrency=4, available=0)
+        expired_loan1, ignore = odl2_api_fixture.license.loan_to(
+            db.patron(), end=yesterday
+        )
+        expired_loan2, ignore = odl2_api_fixture.license.loan_to(
+            db.patron(), end=yesterday
+        )
+        current_loan, ignore = odl2_api_fixture.license.loan_to(
+            db.patron(), end=tomorrow
+        )
+        very_old_loan, ignore = odl2_api_fixture.license.loan_to(
+            db.patron(), start=now - datetime.timedelta(days=90), end=None
+        )
+        assert 4 == db.session.query(Loan).count()
+        assert 0 == odl2_api_fixture.pool.licenses_available
+
+        progress = reaper.run_once(reaper.timestamp().to_data())
+
+        # The expired loans have been deleted and the current loan remains.
+        assert 1 == db.session.query(Loan).count()
+
+        assert 3 == odl2_api_fixture.pool.licenses_available
+
+        # The TimestampData returned reflects what work was done.
+        assert "Loans deleted: 3. License pools updated: 1" == progress.achievements
+
+        # The TimestampData does not include any timing information --
+        # that will be applied by run().
+        assert None == progress.start
+        assert None == progress.finish
