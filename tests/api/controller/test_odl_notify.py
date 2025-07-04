@@ -237,6 +237,11 @@ class TestODLNotificationController:
             )
             assert odl_fixture.license.identifier is not None
             assert 200 == response.status_code
+            # The pool's availability has been updated.
+            api = controller_fixture.manager.circulation_apis[
+                db.default_library().id
+            ].api_for_license_pool(loan.license_pool)
+            assert [loan.license_pool] == api.availability_updated_for
 
     def test_notify_errors(
         self, controller_fixture: ControllerFixture, odl_fixture: ODLFixture
