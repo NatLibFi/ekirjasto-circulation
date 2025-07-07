@@ -8,11 +8,6 @@ updates:
     schedule:
       interval: "daily"
     versioning-strategy: increase-if-necessary
-    # Ensure Poetry version is explicitly installed
-    pre-commands:
-      - curl -sSL https://install.python-poetry.org | python3 - --version 1.8.5
-      - poetry config virtualenvs.create false
-
     # Ignore everything for now (and stay in pace with the upstream)
     # ignore:
     #    - dependency-name: "*"
