@@ -348,6 +348,7 @@ class ODL2LoanReaper(CollectionMonitor):
             .filter(
                 and_(
                     LicensePool.open_access == False,
+                    LicensePool.collection_id == self.api.collection_id,
                     or_(
                         Loan.end
                         < now
