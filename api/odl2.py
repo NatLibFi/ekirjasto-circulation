@@ -364,8 +364,11 @@ class ODL2LoanReaper(CollectionMonitor):
         changed_pools = set()
         total_deleted_loans = 0
         for loan in expired_loans:
+            # Only a license can be checked in
+            if loan.license:
+                loan.license.checkin()
             changed_pools.add(loan.license_pool)
-            loan.license.checkin()
+            self.log.info(f"Deleting loan {loan} in pool {loan.license_pool}")
             self._db.delete(loan)
             total_deleted_loans += 1
 
