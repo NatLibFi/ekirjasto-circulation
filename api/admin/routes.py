@@ -3,27 +3,18 @@ from functools import wraps
 
 import flask
 from flask import Response, make_response, redirect, request, url_for
-from flask_pydantic_spec import FileResponse as SpecFileResponse
-from flask_pydantic_spec import Request as SpecRequest
-from flask_pydantic_spec import Response as SpecResponse
 
 from api.admin.config import Configuration as AdminClientConfig
 from api.admin.config import OperationalMode
-from api.admin.controller.custom_lists import CustomListsController
 from api.admin.dashboard_stats import generate_statistics
 from api.admin.model.dashboard_statistics import StatisticsResponse
-from api.admin.model.quicksight import (
-    QuicksightDashboardNamesResponse,
-    QuicksightGenerateUrlRequest,
-    QuicksightGenerateUrlResponse,
-)
 from api.admin.templates import admin_sign_in_again as sign_in_again_template
-from api.app import api_spec, app
+from api.app import app
 from api.controller.static_file import StaticFileController
 from api.ekirjasto_consortium import EkirjastoConsortiumMonitor
 from api.routes import allows_library, has_library, library_route
-from core.app_server import ensure_pydantic_after_problem_detail, returns_problem_detail
-from core.util.problem_detail import ProblemDetail, ProblemDetailModel, ProblemError
+from core.app_server import returns_problem_detail
+from core.util.problem_detail import BaseProblemDetailException, ProblemDetail
 
 # An admin's session will expire after this amount of time and
 # the admin will have to log in again.
@@ -86,14 +77,12 @@ def requires_csrf_token(f):
 
 
 def returns_json_or_response_or_problem_detail(f):
-    ensure_pydantic_after_problem_detail(f)
-
     @wraps(f)
     def decorated(*args, **kwargs):
         try:
             v = f(*args, **kwargs)
-        except ProblemError as ex:
-            # A ProblemError is the same as a ProblemDetail
+        except BaseProblemDetailException as ex:
+            # A ProblemDetailException just needs to be converted to a ProblemDetail.
             v = ex.problem_detail
         if isinstance(v, ProblemDetail):
             return v.response
@@ -376,7 +365,6 @@ def circulation_events():
 
 
 @app.route("/admin/stats")
-@api_spec.validate(resp=SpecResponse(HTTP_200=StatisticsResponse), tags=["admin.stats"])
 @returns_json_or_response_or_problem_detail
 @requires_admin
 def stats():
@@ -387,11 +375,6 @@ def stats():
 
 
 @app.route("/admin/quicksight_embed/<dashboard_name>")
-@api_spec.validate(
-    resp=SpecResponse(HTTP_200=QuicksightGenerateUrlResponse),
-    tags=["admin.quicksight"],
-    query=QuicksightGenerateUrlRequest,
-)
 @returns_json_or_response_or_problem_detail
 @requires_admin
 def generate_quicksight_url(dashboard_name: str):
@@ -401,10 +384,6 @@ def generate_quicksight_url(dashboard_name: str):
 
 
 @app.route("/admin/quicksight_embed/names")
-@api_spec.validate(
-    resp=SpecResponse(HTTP_200=QuicksightDashboardNamesResponse),
-    tags=["admin.quicksight"],
-)
 @returns_json_or_response_or_problem_detail
 @requires_admin
 def get_quicksight_names():
@@ -661,11 +640,6 @@ def discovery_service_library_registrations():
 
 
 @library_route("/admin/custom_lists", methods=["POST"])
-@api_spec.validate(
-    resp=SpecFileResponse(content_type="application/atom+xml"),
-    body=SpecRequest(CustomListsController.CustomListPostRequest),
-    tags=["admin.customlists"],
-)
 @has_library
 @returns_json_or_response_or_problem_detail
 @requires_admin
@@ -675,10 +649,6 @@ def custom_lists_post():
 
 
 @library_route("/admin/custom_lists", methods=["GET"])
-@api_spec.validate(
-    resp=SpecFileResponse(content_type="application/atom+xml"),
-    tags=["admin.customlists"],
-)
 @has_library
 @returns_json_or_response_or_problem_detail
 @requires_admin
@@ -688,10 +658,6 @@ def custom_lists_get():
 
 
 @library_route("/admin/custom_list/<list_id>", methods=["GET"])
-@api_spec.validate(
-    resp=SpecFileResponse(content_type="application/atom+xml"),
-    tags=["admin.customlists"],
-)
 @has_library
 @returns_json_or_response_or_problem_detail
 @requires_admin
@@ -701,11 +667,6 @@ def custom_list_get(list_id: int):
 
 
 @library_route("/admin/custom_list/<list_id>", methods=["POST"])
-@api_spec.validate(
-    resp=SpecFileResponse(content_type="application/atom+xml"),
-    body=SpecRequest(CustomListsController.CustomListPostRequest),
-    tags=["admin.customlists"],
-)
 @has_library
 @returns_json_or_response_or_problem_detail
 @requires_admin
@@ -724,13 +685,6 @@ def custom_list_delete(list_id):
 
 
 @library_route("/admin/custom_list/<list_id>/share", methods=["POST"])
-@api_spec.validate(
-    resp=SpecResponse(
-        HTTP_200=CustomListsController.CustomListSharePostResponse,
-        HTTP_403=ProblemDetailModel,
-    ),
-    tags=["admin.customlists"],
-)
 @has_library
 @returns_json_or_response_or_problem_detail
 @requires_admin
@@ -741,7 +695,6 @@ def custom_list_share(list_id: int):
 
 
 @library_route("/admin/custom_list/<list_id>/share", methods=["DELETE"])
-@api_spec.validate(resp=SpecResponse(HTTP_204=None), tags=["admin.customlists"])
 @has_library
 @returns_json_or_response_or_problem_detail
 @requires_admin
