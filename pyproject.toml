@@ -184,6 +184,11 @@ name = "E-kirjasto Circulation Manager"
 readme = "README.md"
 repository = "https://github.com/NatLibFi/ekirjasto-circulation"
 version = "0"  # Version number is managed with tags in git
+packages = [
+    { include = "api" },
+    { include = "core" },
+    { include = "customlists" }
+]
 
 [tool.poetry.dependencies]
 alembic = {extras = ["tz"], version = "^1.8.1"}
