@@ -139,9 +139,6 @@
   "allOf": [
     {
       "$ref": "https://readium.org/webpub-manifest/schema/extensions/epub/metadata.schema.json"
-    },
-    {
-      "$ref": "https://readium.org/webpub-manifest/schema/experimental/presentation/metadata.schema.json"
     }
   ]
 }
