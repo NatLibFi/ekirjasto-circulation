@@ -181,6 +181,11 @@ description = "E-kirjasto Circulation Manager Application"
 homepage = "https://kansalliskirjasto.fi"
 license = "Apache-2.0"
 name = "E-kirjasto Circulation Manager"
+packages = [
+    {include = "api"},
+    {include = "core"},
+    {include = "customlists"},
+]
 readme = "README.md"
 repository = "https://github.com/NatLibFi/ekirjasto-circulation"
 version = "0"  # Version number is managed with tags in git
