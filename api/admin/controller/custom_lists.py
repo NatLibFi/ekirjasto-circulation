@@ -7,7 +7,6 @@ from datetime import datetime
 import flask
 from flask import Response, url_for
 from flask_babel import lazy_gettext as _
-from flask_pydantic_spec.flask_backend import Context
 from pydantic import BaseModel
 
 from api.admin.controller.base import AdminPermissionsControllerMixin
@@ -39,6 +38,7 @@ from core.model import (
 )
 from core.problem_details import INVALID_INPUT, METHOD_NOT_ALLOWED
 from core.query.customlist import CustomListQueries
+from core.util.flask_util import parse_multi_dict
 from core.util.problem_detail import ProblemDetail
 
 
@@ -99,27 +99,21 @@ class CustomListsController(
             return dict(custom_lists=custom_lists)
 
         if flask.request.method == "POST":
-            ctx: Context = flask.request.context.body  # type: ignore
+            list_ = self.CustomListPostRequest.parse_obj(
+                parse_multi_dict(flask.request.form)
+            )
             return self._create_or_update_list(
                 library,
-                ctx.name,
-                ctx.entries,
-                ctx.collections,
-                id=ctx.id,
-                auto_update=ctx.auto_update,
-                auto_update_facets=ctx.auto_update_facets,
-                auto_update_query=ctx.auto_update_query,
+                list_.name,
+                list_.entries,
+                list_.collections,
+                id=list_.id,
+                auto_update=list_.auto_update,
+                auto_update_facets=list_.auto_update_facets,
+                auto_update_query=list_.auto_update_query,
             )
 
         return None
-
-    def _getJSONFromRequest(self, values: str | None) -> list:
-        if values:
-            return_values = json.loads(values)
-        else:
-            return_values = []
-
-        return return_values
 
     def _get_work_from_urn(self, library: Library, urn: str | None) -> Work | None:
         identifier, ignore = Identifier.parse_urn(self._db, urn)
@@ -360,17 +354,19 @@ class CustomListsController(
             )
 
         elif flask.request.method == "POST":
-            ctx: Context = flask.request.context.body  # type: ignore
+            list_ = self.CustomListPostRequest.parse_obj(
+                parse_multi_dict(flask.request.form)
+            )
             return self._create_or_update_list(
                 library,
-                ctx.name,
-                ctx.entries,
-                ctx.collections,
-                deleted_entries=ctx.deletedEntries,
+                list_.name,
+                list_.entries,
+                list_.collections,
+                deleted_entries=list_.deletedEntries,
                 id=list_id,
-                auto_update=ctx.auto_update,
-                auto_update_query=ctx.auto_update_query,
-                auto_update_facets=ctx.auto_update_facets,
+                auto_update=list_.auto_update,
+                auto_update_query=list_.auto_update_query,
+                auto_update_facets=list_.auto_update_facets,
             )
 
         elif flask.request.method == "DELETE":
