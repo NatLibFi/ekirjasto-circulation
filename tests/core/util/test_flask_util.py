@@ -6,8 +6,8 @@ from wsgiref.handlers import format_date_time
 
 import pytest
 from flask import Response as FlaskResponse
-from flask_pydantic_spec.flask_backend import Context
-from flask_pydantic_spec.utils import parse_multi_dict
+from pydantic import BaseModel
+from werkzeug.datastructures import MultiDict
 
 from core.util.datetime_helpers import utc_now
 from core.util.flask_util import (
@@ -16,6 +16,7 @@ from core.util.flask_util import (
     Response,
     _snake_to_camel_case,
     boolean_value,
+    parse_multi_dict,
     str_comma_list_validator,
 )
 from core.util.opds_writer import OPDSFeed
@@ -178,21 +179,19 @@ class TestMethods:
         assert boolean_value(value) == result
 
 
-def add_request_context(request, model, form=None) -> None:
-    """Add a flask pydantic model into the request context
-    :param model: The pydantic model
-    :param form: A form multidict
-    TODO:
-    - query params
-    - json post requests
-    """
-    body = None
-    query = None
-    if form is not None:
-        request.form = form
-        body = model.parse_obj(parse_multi_dict(form))
+def add_request_context(
+    request, model: type[BaseModel], form: MultiDict | None = None
+) -> None:
+    """Add form data into the request context.
 
-    request.context = Context(query, body, None, None)
+    Before doing so, we verify that it can be parsed into the Pydantic model.
+
+    :param model: A pydantic model
+    :param form: A form multidict
+    """
+    if form is not None:
+        model.parse_obj(parse_multi_dict(form))
+        request.form = form
 
 
 def test_snake_to_camel_case():
