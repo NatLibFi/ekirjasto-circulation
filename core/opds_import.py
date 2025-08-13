@@ -7,6 +7,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from collections.abc import Callable, Generator, Iterable, Mapping, Sequence
 from datetime import datetime
+from enum import Enum
 from io import BytesIO
 from typing import TYPE_CHECKING, Any, Generic, TypeVar, overload
 from urllib.parse import urljoin, urlparse
@@ -80,8 +81,8 @@ from core.util.datetime_helpers import datetime_utc, to_utc, utc_now
 from core.util.http import HTTP, BadResponseException
 from core.util.log import LoggerMixin
 from core.util.opds_writer import OPDSFeed, OPDSMessage
-from core.util.xmlparser import XMLParser
 from core.util.pydantic import HttpUrl
+from core.util.xmlparser import XMLParser
 
 if TYPE_CHECKING:
     from core.model import Work
@@ -99,6 +100,11 @@ class OPDSXMLParser(XMLParser):
         "drm": "http://librarysimplified.org/terms/drm",
         "palace": "http://palaceproject.io/terms",
     }
+
+
+class IdentifierSource(Enum):
+    ID = "id"
+    DCTERMS_IDENTIFIER = "first_dcterms_identifier"
 
 
 class OPDSImporterSettings(
@@ -176,19 +182,18 @@ class OPDSImporterSettings(
         ),
     )
 
-    primary_identifier_source: str | None = FormField(
+    primary_identifier_source: IdentifierSource = FormField(
+        IdentifierSource.ID,
         form=ConfigurationFormItem(
             label=_("Identifer"),
             required=False,
             description=_("Which book identifier to use as ID."),
             type=ConfigurationFormItemType.SELECT,
             options={
-                "": _("(Default) Use <id>"),
-                ExternalIntegration.DCTERMS_IDENTIFIER: _(
-                    "Use <dcterms:identifier> first, if not exist use <id>"
-                ),
+                IdentifierSource.ID: "(Default) Use <id>",
+                IdentifierSource.DCTERMS_IDENTIFIER: "Use <dcterms:identifier> first, if not exist use <id>",
             },
-        )
+        ),
     )
 
 
