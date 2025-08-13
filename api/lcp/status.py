@@ -1,4 +1,3 @@
-import sys
 from enum import Enum
 from functools import cached_property
 
@@ -97,8 +96,8 @@ class LoanStatus(BaseOpdsModel):
 
     id: str
     status: Status
-    message: str
-    updated: Updated
+    message: str | None = None  # Ellibs does not provide this in their data
+    updated: Updated | None = None  # Ellibs does not provide this in their data
     links: CompactCollection[Link]
     potential_rights: PotentialRights = Field(default_factory=PotentialRights)
     events: list[Event] = Field(default_factory=list)
