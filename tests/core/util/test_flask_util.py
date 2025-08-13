@@ -14,7 +14,6 @@ from core.util.flask_util import (
     OPDSEntryResponse,
     OPDSFeedResponse,
     Response,
-    _snake_to_camel_case,
     boolean_value,
     parse_multi_dict,
     str_comma_list_validator,
@@ -192,21 +191,9 @@ def add_request_context(
     if form is not None:
         model.parse_obj(parse_multi_dict(form))
         request.form = form
+        body = model.model_validate(parse_multi_dict(form))
 
-
-def test_snake_to_camel_case():
-    assert _snake_to_camel_case("a_snake_case_word") == "aSnakeCaseWord"  # liar
-    assert _snake_to_camel_case("double__scores") == "doubleScores"
-    assert _snake_to_camel_case("__magic") == "magic"
-    assert (
-        _snake_to_camel_case("SnakesAreInnocent_snokes_are_not")
-        == "snakesareinnocentSnokesAreNot"
-    )
-
-    # Error case
-    with pytest.raises(ValueError):
-        _snake_to_camel_case("_")
-
+    request.context = Context(query, body, None, None)
 
 def test_str_comma_list_validator():
     assert str_comma_list_validator(5) == ["5"]

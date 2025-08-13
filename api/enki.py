@@ -9,7 +9,6 @@ from typing import Any, cast
 
 from dependency_injector.wiring import Provide
 from flask_babel import lazy_gettext as _
-from pydantic import HttpUrl
 from requests import Response as RequestsResponse
 from sqlalchemy.orm import Session
 
@@ -61,7 +60,7 @@ from core.monitor import CollectionMonitor, IdentifierSweepMonitor, TimelineMoni
 from core.service.container import Services
 from core.util.datetime_helpers import from_timestamp, strptime_utc, utc_now
 from core.util.http import HTTP, RemoteIntegrationException, RequestTimedOut
-
+from core.util.pydantic import HttpUrl
 
 class EnkiConstants:
     PRODUCTION_BASE_URL = "https://enkilibrary.org/API/"

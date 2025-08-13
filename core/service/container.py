@@ -61,10 +61,10 @@ def create_container() -> Services:
     container = Services()
     container.config.from_dict(
         {
-            "storage": StorageConfiguration().dict(),
-            "logging": LoggingConfiguration().dict(),
-            "analytics": AnalyticsConfiguration().dict(),
-            "search": SearchConfiguration().dict(),
+            "storage": StorageConfiguration().model_dump(),
+            "logging": LoggingConfiguration().model_dump(),
+            "analytics": AnalyticsConfiguration().model_dump(),
+            "search": SearchConfiguration().model_dump(),
         }
     )
     wire_container(container)

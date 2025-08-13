@@ -20,7 +20,7 @@ class StatisticsBaseModel(CustomBaseModel):
     def __add__(self, other: Self) -> Self:
         """Sum each property and return new instance."""
         return self.__class__(
-            **{field: self[field] + other[field] for field in self.__fields__.keys()}
+            **{field: self[field] + other[field] for field in self.model_fields.keys()}
         )
 
     @classmethod

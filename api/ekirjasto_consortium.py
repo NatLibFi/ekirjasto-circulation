@@ -252,7 +252,7 @@ class EkirjastoConsortiumMonitor(Monitor):
         )
 
         library.update_settings(
-            LibrarySettings.construct(
+            LibrarySettings.model_construct(
                 municipalities=circulation_consortium.municipality_codes,
             )
         )

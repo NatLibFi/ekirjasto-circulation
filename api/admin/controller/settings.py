@@ -309,7 +309,7 @@ class SettingsController(CirculationManagerController, AdminPermissionsControlle
 
         # Attach the configuration
         library_configuration = IntegrationLibraryConfiguration(
-            library=library, settings_dict=validated_data.dict()
+            library=library, settings_dict=validated_data.model_dump()
         )
         configuration.library_configurations.append(library_configuration)
         return library_configuration

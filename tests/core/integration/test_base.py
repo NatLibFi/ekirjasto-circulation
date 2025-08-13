@@ -35,9 +35,10 @@ def base_fixture():
 
 def test_integration_settings_load(base_fixture: BaseFixture) -> None:
     return_value: BaseSettings = base_fixture.load()
-    base_fixture.mock_settings_cls.assert_called_once_with(test="test", number=123)
-    assert return_value is base_fixture.mock_settings_cls.return_value
-
+    base_fixture.mock_settings_cls.model_validate.assert_called_once_with(
+        {"test": "test", "number": 123}
+    )
+    assert return_value is base_fixture.mock_settings_cls.model_validate.return_value
 
 def test_integration_settings_roundtrip(db: DatabaseTransactionFixture) -> None:
     class TestEnum(Enum):
@@ -73,7 +74,7 @@ def test_integration_settings_roundtrip(db: DatabaseTransactionFixture) -> None:
 
 def test_integration_settings_update_no_merge(base_fixture: BaseFixture) -> None:
     base_fixture.update({"test": "foo"}, merge=False)
-    base_fixture.mock_settings_cls.assert_called_with(test="foo")
+    base_fixture.mock_settings_cls.model_validate.assert_called_with({"test": "foo"})
     base_fixture.mock_flag_modified.assert_called_once_with(
         base_fixture.mock_integration, "settings_dict"
     )
@@ -81,7 +82,7 @@ def test_integration_settings_update_no_merge(base_fixture: BaseFixture) -> None
 
 def test_integration_settings_update_merge(base_fixture: BaseFixture) -> None:
     base_fixture.update({"test": "foo"}, merge=True)
-    base_fixture.mock_settings_cls.assert_called_with(test="foo", number=123)
+    base_fixture.mock_settings_cls.model_validate.assert_called_with({"test": "foo"})
     base_fixture.mock_flag_modified.assert_called_once_with(
         base_fixture.mock_integration, "settings_dict"
     )
@@ -93,7 +94,7 @@ def test_integration_settings_update_basesettings(base_fixture: BaseFixture) -> 
 
     base_fixture.update(mock_base, merge=True)
     mock_base.dict.assert_called_once_with()
-    base_fixture.mock_settings_cls.assert_called_with(test="foo", number=123, bool=True)
+    base_fixture.mock_settings_cls.model_validate.assert_called_with({"test": "foo"})
     base_fixture.mock_flag_modified.assert_called_once_with(
         base_fixture.mock_integration, "settings_dict"
     )

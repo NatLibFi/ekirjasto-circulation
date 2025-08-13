@@ -43,7 +43,7 @@ class RemoteRegistryFixture:
         self.db = db
         # Create an ExternalIntegration that can be used as the basis for
         # a OpdsRegistrationService.
-        self.registry_url = "http://registry.com/"
+        self.registry_url = "http://registry.com"
         self.integration = integration_configuration.discovery_service(
             url=self.registry_url
         )
@@ -164,7 +164,9 @@ class TestOpdsRegistrationService:
         )
         assert requests_mock.called_once
         assert requests_mock.last_request is not None
-        assert requests_mock.last_request.url == remote_registry_fixture.registry_url
+        assert (
+            requests_mock.last_request.url == remote_registry_fixture.registry_url + "/"
+        )
         assert remote_registry_fixture.registry._extract_catalog_information.called
         assert func_mock.call_args.args[0].text == "A root catalog"
 
@@ -549,7 +551,7 @@ class TestOpdsRegistrationService:
         # If a contact is configured, it shows up in the payload.
         contact = "mailto:ohno@library.org"
         settings = library_fixture.settings(library)
-        settings.configuration_contact_email_address = contact  # type: ignore[assignment]
+        settings.configuration_contact_email_address = contact
         expect_payload["contact"] = contact
         assert expect_payload == m(library, stage, url_for)
 
@@ -736,7 +738,7 @@ class TestLibraryRegistrationScript:
         base_url_setting = ConfigurationSetting.sitewide(
             db.session, Configuration.BASE_URL_KEY
         )
-        base_url_setting.value = "http://test-circulation-manager/"
+        base_url_setting.value = "http://test-circulation-manager"
 
         library = library_fixture.library()
         library2 = library_fixture.library()
@@ -744,7 +746,7 @@ class TestLibraryRegistrationScript:
         cmd_args = [
             str(library.short_name),
             "--stage=testing",
-            "--registry-url=http://registry.com/",
+            "--registry-url=http://registry.com",
         ]
         manager = MockCirculationManager(db.session, MagicMock())
         script.do_run(cmd_args=cmd_args, manager=manager)
@@ -761,7 +763,7 @@ class TestLibraryRegistrationScript:
 
         # Now run the script again without specifying a particular
         # library or the --stage argument.
-        script.do_run(cmd_args=["--registry-url=http://registry.com/"], manager=manager)
+        script.do_run(cmd_args=["--registry-url=http://registry.com"], manager=manager)
 
         # Every library was processed.
         assert {library, library2} == {x.library for x in script.processed}
@@ -773,7 +775,7 @@ class TestLibraryRegistrationScript:
         }
 
         # Every library was registered with the specified registry.
-        assert {"http://registry.com/", "http://registry.com/"} == {
+        assert {"http://registry.com/", "http://registry.com"} == {
             x.registry.settings.url for x in script.processed
         }
 

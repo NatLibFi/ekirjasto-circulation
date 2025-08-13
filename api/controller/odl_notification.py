@@ -71,7 +71,7 @@ class ODLNotificationController(CirculationManagerController):
         status_doc_json = flask.request.data
 
         try:
-            status_doc = LoanStatus.parse_raw(status_doc_json)
+            status_doc = LoanStatus.model_validate_json(status_doc_json)
         except ValidationError as e:
             self.log.exception(f"Unable to parse loan status document. {e}")
             raise ProblemDetailException(INVALID_INPUT) from e

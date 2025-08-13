@@ -8,7 +8,7 @@ from collections import defaultdict
 from collections.abc import Callable, Generator, Iterable, Mapping, Sequence
 from datetime import datetime
 from io import BytesIO
-from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, overload
 from urllib.parse import urljoin, urlparse
 from xml.etree.ElementTree import Element
 
@@ -17,7 +17,6 @@ import feedparser
 from feedparser import FeedParserDict
 from flask_babel import lazy_gettext as _
 from lxml import etree
-from pydantic import AnyHttpUrl
 from requests import Response
 from sqlalchemy.orm.session import Session
 
@@ -82,6 +81,7 @@ from core.util.http import HTTP, BadResponseException
 from core.util.log import LoggerMixin
 from core.util.opds_writer import OPDSFeed, OPDSMessage
 from core.util.xmlparser import XMLParser
+from core.util.pydantic import HttpUrl
 
 if TYPE_CHECKING:
     from core.model import Work
@@ -107,7 +107,7 @@ class OPDSImporterSettings(
     FormatPrioritiesSettings,
     BaseCirculationApiSettings,
 ):
-    external_account_id: AnyHttpUrl = FormField(
+    external_account_id: HttpUrl = FormField(
         form=ConfigurationFormItem(
             label=_("URL"),
             required=True,
@@ -136,23 +136,25 @@ class OPDSImporterSettings(
     )
 
     username: str | None = FormField(
+        None,
         form=ConfigurationFormItem(
             label=_("Username"),
             description=_(
                 "If HTTP Basic authentication is required to access the OPDS feed (it usually isn't), enter the username here."
             ),
             weight=-1,
-        )
+        ),
     )
 
     password: str | None = FormField(
+        None,
         form=ConfigurationFormItem(
             label=_("Password"),
             description=_(
                 "If HTTP Basic authentication is required to access the OPDS feed (it usually isn't), enter the password here."
             ),
             weight=-1,
-        )
+        ),
     )
 
     custom_accept_header: str = FormField(
@@ -1929,7 +1931,7 @@ class OPDSImportMonitor(CollectionMonitor):
 
     def _get_feeds(self) -> Iterable[tuple[str, bytes]]:
         feeds = []
-        queue = [cast(str, self.feed_url)]
+        queue = [self.feed_url]
         seen_links = set()
 
         # First, follow the feed's next links until we reach a page with

@@ -266,7 +266,7 @@ class DatabaseTransactionFixture:
 
         name = name or self.fresh_str()
         short_name = short_name or self.fresh_str()
-        settings_dict = settings.dict() if settings else {}
+        settings_dict = settings.model_dump() if settings else {}
 
         # Make sure we have defaults for settings that are required
         if "website" not in settings_dict:
@@ -999,8 +999,8 @@ class IntegrationConfigurationFixture:
             assert protocol is not None
 
         if url is not None:
-            settings_obj = registry[protocol].settings_class().construct(url=url)  # type: ignore[arg-type]
-            settings_dict = settings_obj.dict()
+            settings_obj = registry[protocol].settings_class().model_construct(url=url)  # type: ignore[arg-type]
+            settings_dict = settings_obj.model_dump()
         else:
             settings_dict = {}
 

@@ -32,7 +32,8 @@ from api.circulation import (
 )
 from api.circulation_exceptions import *
 from api.lcp.hash import Hasher, HasherFactory, HashingAlgorithm
-from api.lcp.status import Link, LoanStatus
+from api.lcp.status import LoanStatus
+from api.opds.types.link import BaseLink
 from api.odl_api.auth import OpdsWithOdlException
 from core import util
 from core.integration.settings import (
@@ -274,7 +275,7 @@ class BaseODLAPI(
         """Retrieves the Loan Status Document."""
         try:
             response = self._get(url, allowed_response_codes=["2xx"])
-            status_doc = LoanStatus.parse_raw(response.content)
+            status_doc = LoanStatus.model_validate_json(response.content)
         except ValidationError as e:
             self.log.exception(
                 f"Error validating Loan Status Document. '{url}' returned and invalid document. {e}"
@@ -374,7 +375,7 @@ class BaseODLAPI(
             # something went wrong. We self.log an error and don't delete the loan, so the patron
             # can try again later.
             self.log.error(
-                f"Loan {loan.id} was {loan_status.status} not returned. The distributor says it's still active. {loan_status}"
+                f"Loan {loan.id} was {loan_status.status} not returned. The distributor says it's still active. {loan_status.model_dump_json()}"
             )
             raise CannotReturn()
         loan.license.checkin()
@@ -492,8 +493,8 @@ class BaseODLAPI(
         assert loan_status.links  # To satisfy mypy
         # We save the link to the loan status document in the loan's external_identifier field, so
         # we are able to retrieve it later.
-        loan_status_document_link: Link | None = loan_status.links.get(
-            rel="self", content_type="application/vnd.readium.license.status.v1.0+json"
+        loan_status_document_link: BaseLink | None = loan_status.links.get(
+            rel="self", type=LoanStatus.content_type()
         )
 
         if not loan_status_document_link:

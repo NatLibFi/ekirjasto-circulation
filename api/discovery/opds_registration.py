@@ -9,7 +9,6 @@ from typing import Any, Literal, overload
 from Crypto.Cipher.PKCS1_OAEP import PKCS1OAEP_Cipher
 from flask_babel import lazy_gettext as _
 from html_sanitizer import Sanitizer
-from pydantic import HttpUrl
 from requests import Response
 from sqlalchemy import select
 from sqlalchemy.orm.session import Session
@@ -27,6 +26,7 @@ from core.model.discovery_service_registration import (
 )
 from core.util.http import HTTP
 from core.util.problem_detail import ProblemError
+from core.util.pydantic import HttpUrl
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -139,11 +139,11 @@ class OpdsRegistrationService(
         """Get a LibraryRegistry for the given protocol, goal, and
         URL. Create the corresponding ExternalIntegration if necessary.
         """
-        settings = cls.settings_class().construct(url=url)  # type: ignore[arg-type]
+        settings = cls.settings_class().model_construct(url=url)
         query = select(IntegrationConfiguration).where(
             IntegrationConfiguration.goal == goal,
             IntegrationConfiguration.protocol == protocol,
-            IntegrationConfiguration.settings_dict.contains(settings.dict()),
+            IntegrationConfiguration.settings_dict.contains(settings.model_dump()),
         )
         integration = _db.scalars(query).one_or_none()
         if not integration:

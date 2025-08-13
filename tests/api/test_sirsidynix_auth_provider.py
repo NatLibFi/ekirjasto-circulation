@@ -263,7 +263,7 @@ class TestSirsiDynixAuthenticationProvider:
     ):
         library = db.default_library()
         library_settings = create_library_settings(
-            library_identifier_field="patronType",
+            library_identifier_field="patrontype",
             library_identifier_restriction_type=restriction_type,
             library_identifier_restriction_criteria=restriction,
         )

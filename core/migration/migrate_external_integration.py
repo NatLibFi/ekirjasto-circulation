@@ -92,7 +92,7 @@ def _migrate_external_integration(
             protocol,
             goal,
             name,
-            json_serializer(settings_obj.dict()),
+            json_serializer(settings_obj.model_dump()),
             json_serializer(context or {}),
             self_test_results,
         ),
@@ -121,7 +121,7 @@ def _migrate_library_settings(
         (
             integration_id,
             library_id,
-            json_serializer(library_settings_obj.dict()),
+            json_serializer(library_settings_obj.model_dump()),
         ),
     )
 

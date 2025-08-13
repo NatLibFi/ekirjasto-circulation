@@ -1,8 +1,20 @@
-from datetime import datetime
+import sys
 from enum import Enum
+from functools import cached_property
 
-from dateutil import parser
-from pydantic import BaseModel, Field, validator
+from pydantic import AwareDatetime, Field
+
+from api.opds.base import BaseOpdsModel
+from api.opds.types.link import BaseLink, CompactCollection
+
+
+class Link(BaseLink):
+    """
+    https://readium.org/lcp-specs/releases/lsd/latest#25-links
+    """
+
+    title: str | None = None
+    profile: str | None = None
 
 
 class Status(str, Enum):
@@ -18,33 +30,21 @@ class Status(str, Enum):
     EXPIRED = "expired"
 
 
-class Updated(BaseModel):
+class Updated(BaseOpdsModel):
     """
     https://readium.org/lcp-specs/releases/lsd/latest#24-timestamps
     """
 
-    license: datetime | None = None
-    status: datetime | None = None
-
-    @validator("license", "status", pre=True)
-    def parse_iso_timestamp(cls, value):
-        if isinstance(value, str):
-            return parser.isoparse(value)
-        return value
+    license: AwareDatetime
+    status: AwareDatetime
 
 
-class PotentialRights(BaseModel):
-    """
+class PotentialRights(BaseOpdsModel):
+    """ "
     https://readium.org/lcp-specs/releases/lsd/latest#26-potential-rights
     """
 
-    end: datetime | None = None
-
-    @validator("end", pre=True)
-    def parse_iso_timestamp(cls, value):
-        if isinstance(value, str):
-            return parser.isoparse(value)
-        return value
+    end: AwareDatetime | None = None
 
 
 class EventType(str, Enum):
@@ -59,59 +59,22 @@ class EventType(str, Enum):
     CANCEL = "cancel"
 
 
-class Event(BaseModel):
+class Event(BaseOpdsModel):
     """
     https://readium.org/lcp-specs/releases/lsd/latest#27-events
     """
 
-    event_type: EventType | None = Field(None, alias="type")
-    name: str | None = None
-    timestamp: datetime | None = None
+    type: EventType
+    name: str
+    timestamp: AwareDatetime
+
+    # The spec isn't clear if these fields are required, but DeMarque does not
+    # provide id in their event data.
     id: str | None = None
     device: str | None = None
 
-    @validator("timestamp", pre=True)
-    def parse_iso_timestamp(cls, value):
-        if isinstance(value, str):
-            return parser.isoparse(value)
-        return value
 
-
-class Link(BaseModel):
-    """
-    https://readium.org/lcp-specs/releases/lsd/latest#25-links
-    """
-
-    href: str
-    rel: str | list[str]
-    title: str | None = None
-    content_type: str | None = Field(None, alias="type")
-    templated: str | None = None
-    profile: str | None = None
-
-    def to_dict(self):
-        return self.dict(by_alias=True)
-
-
-class LinkCollection(BaseModel):
-    """
-    Creates a collection of Link classas.
-    """
-
-    __root__: list[Link]
-
-    def get(self, rel: str, content_type: str) -> Link | None:
-        return next(
-            (
-                link
-                for link in self.__root__
-                if link.rel == rel and link.content_type == content_type
-            ),
-            None,
-        )
-
-
-class LoanStatus(BaseModel):
+class LoanStatus(BaseOpdsModel):
     """
     This document is defined as part of the Readium LCP Specifications.
 
@@ -128,34 +91,18 @@ class LoanStatus(BaseModel):
     enforce that here.
     """
 
-    id: str
-    status: Status
-    message: str | None = None
-    updated: Updated | None = None
-    links: LinkCollection | None = None
-    potential_rights: PotentialRights = Field(default_factory=PotentialRights)
-    events: list[Event] | None = Field(default_factory=list)
-
-    @property
-    def active(self) -> bool:
-        return self.status in [Status.READY, Status.ACTIVE]
-
     @staticmethod
     def content_type() -> str:
         return "application/vnd.readium.license.status.v1.0+json"
 
-    def to_serializable(self):
-        """This is a temporary function that's only used in tests."""
-        return {
-            "id": self.id,
-            "status": self.status.value,
-            "message": self.message,
-            "updated": {
-                "license": self.updated.license.isoformat(),
-                "status": self.updated.status.isoformat(),
-            },
-            "links": [link.to_dict() for link in self.links.__root__],
-            "potential_rights": {
-                "end": self.potential_rights.end.isoformat(),
-            },
-        }
+    id: str
+    status: Status
+    message: str
+    updated: Updated
+    links: CompactCollection[Link]
+    potential_rights: PotentialRights = Field(default_factory=PotentialRights)
+    events: list[Event] = Field(default_factory=list)
+
+    @cached_property
+    def active(self) -> bool:
+        return self.status in [Status.READY, Status.ACTIVE]

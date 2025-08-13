@@ -265,4 +265,4 @@ class TestPlaytimeEntriesController:
             assert response.status_code == 400
             assert response.detail is not None
             assert "timeEntries" in response.detail
-            assert "field required" in response.detail
+            assert "Field required" in response.detail

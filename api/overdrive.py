@@ -2844,7 +2844,7 @@ class OverdriveAdvantageAccount:
                 _db, name, ExternalIntegration.OVERDRIVE
             )
             child.parent = parent
-            child_settings = OverdriveChildSettings.construct(
+            child_settings = OverdriveChildSettings.model_construct(
                 external_account_id=self.library_id
             )
             integration_settings_update(

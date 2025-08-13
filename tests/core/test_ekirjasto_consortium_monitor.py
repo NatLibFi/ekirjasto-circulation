@@ -12,7 +12,7 @@ class TestEkirjastoConsortiumMonitor:
         _ = db.default_library()
         library = db.library(name="my_library")
         library.update_settings(
-            LibrarySettings.construct(kirkanta_consortium_slug="vaski-kirjastot")
+            LibrarySettings.model_construct(kirkanta_consortium_slug="vaski-kirjastot")
         )
 
         with Mocker() as mocker:

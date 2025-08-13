@@ -9,7 +9,7 @@ from typing import Any, List, Literal, Tuple, Type, TypeVar, Union
 from contextlib2 import contextmanager
 from psycopg2.extensions import adapt as sqlescape
 from psycopg2.extras import NumericRange
-from pydantic.json import pydantic_encoder
+from pydantic_core import to_jsonable_python
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Connection
 from sqlalchemy.exc import DatabaseError, IntegrityError
@@ -327,7 +327,7 @@ def json_encoder(obj: Any) -> Any:
         return str(obj.__html__())
 
     # Pass everything else off to Pydantic JSON encoder.
-    return pydantic_encoder(obj)
+    return to_jsonable_python(obj)
 
 
 def json_serializer(*args, **kwargs) -> str:
