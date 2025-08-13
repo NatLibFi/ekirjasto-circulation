@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from pydantic import ConfigDict
 
 import pytest
+from pydantic import ConfigDict
 
 from core.configuration.library import LibrarySettings
 from core.model import Library

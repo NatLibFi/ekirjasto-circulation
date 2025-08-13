@@ -223,6 +223,7 @@ palace-webpub-manifest-parser = "^3.1.1"
 pillow = "^10.0"
 pycryptodome = "^3.18"
 pydantic = {version = "^2.11.7", extras = ["email"]}
+pydantic-settings = "^2.10.1"
 pyinstrument = "^4.6"
 PyJWT = "^2.8"
 PyLD = "2.0.3"
@@ -251,7 +252,6 @@ uWSGI = "~2.0.21"
 watchtower = "3.0.1"  # watchtower is for Cloudwatch logging integration
 wcag-contrast-ratio = "0.9"
 Werkzeug = "^3.0.3"
-pydantic-settings = "^2.10.1"
 
 [tool.poetry.group.ci.dependencies]
 dunamai = "^1.16"

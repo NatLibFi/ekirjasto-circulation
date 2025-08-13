@@ -187,7 +187,6 @@ def boolean_value(value: str) -> bool:
 
 
 class CustomBaseModel(BaseModel):
-
     model_config = ConfigDict(
         alias_generator=to_camel,
         populate_by_name=True,
@@ -216,6 +215,7 @@ def str_comma_list_validator(value):
         raise TypeError("string required")
 
     return value.split(",")
+
 
 # This code is borrowed from `flask-pydantic-spec
 # - https://github.com/turner-townsend/flask-pydantic-spec/blob/2d29e45f428b7e7bee60c1bc3657e95ee1f3a866/flask_pydantic_spec/utils.py#L200-L211

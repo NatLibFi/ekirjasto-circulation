@@ -40,6 +40,7 @@ def test_integration_settings_load(base_fixture: BaseFixture) -> None:
     )
     assert return_value is base_fixture.mock_settings_cls.model_validate.return_value
 
+
 def test_integration_settings_roundtrip(db: DatabaseTransactionFixture) -> None:
     class TestEnum(Enum):
         FOO = "foo"

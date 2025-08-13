@@ -11,12 +11,16 @@ from pydantic import (
     PositiveInt,
     ValidationInfo,
     field_validator,
-    model_validator
+    model_validator,
 )
 from sqlalchemy.orm import Session
 from typing_extensions import Self
 
-from api.admin.problem_details import INVALID_CONFIGURATION_OPTION, UNKNOWN_LANGUAGE, UNKNOWN_LOCATION
+from api.admin.problem_details import (
+    INVALID_CONFIGURATION_OPTION,
+    UNKNOWN_LANGUAGE,
+    UNKNOWN_LOCATION,
+)
 from core.config import Configuration
 from core.entrypoint import EntryPoint
 from core.facets import FacetConstants

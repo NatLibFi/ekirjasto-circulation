@@ -20,24 +20,19 @@ class ServiceConfiguration(BaseSettings):
     """
 
     model_config = SettingsConfigDict(
-            # Each sub-config will have its own prefix
-            env_prefix="PALACE_",
-
-            # Strip whitespace from all strings
-            str_strip_whitespace=True,
-
-            # Forbid mutation, settings should be loaded once from environment.
-            frozen=True,
-
-            # Allow env vars to be loaded from a .env file
-            # This loads the .env file from the root of the project
-            env_file=str(Path(__file__).parent.parent.parent.absolute() / ".env"),
-
-            # Nested settings will be loaded from environment variables with this delimiter.
-            env_nested_delimiter="__",
-
-            # Ignore extra fields in the environment
-            extra="ignore",
+        # Each sub-config will have its own prefix
+        env_prefix="PALACE_",
+        # Strip whitespace from all strings
+        str_strip_whitespace=True,
+        # Forbid mutation, settings should be loaded once from environment.
+        frozen=True,
+        # Allow env vars to be loaded from a .env file
+        # This loads the .env file from the root of the project
+        env_file=str(Path(__file__).parent.parent.parent.absolute() / ".env"),
+        # Nested settings will be loaded from environment variables with this delimiter.
+        env_nested_delimiter="__",
+        # Ignore extra fields in the environment
+        extra="ignore",
     )
 
     def __init__(self, *args: Any, **kwargs: Any):
@@ -63,5 +58,5 @@ class ServiceConfiguration(BaseSettings):
                     )
                     error_log_message += f"\n  {location}:  {error['msg']}"
                 else:
-                    error_log_message += f"\n  {error['msg']}"            
+                    error_log_message += f"\n  {error['msg']}"
             raise CannotLoadConfiguration(error_log_message) from error_exception

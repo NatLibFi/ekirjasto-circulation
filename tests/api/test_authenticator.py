@@ -1271,7 +1271,9 @@ class TestLibraryAuthenticator:
             # If a separate copyright designated agent is configured,
             # that email address is used instead of the default
             # patron support address.
-            library_settings.copyright_designated_agent_email_address = "dmca@library.org"
+            library_settings.copyright_designated_agent_email_address = (
+                "dmca@library.org"
+            )
             doc = json.loads(authenticator.create_authentication_document())
             [agent] = [x for x in doc["links"] if x["rel"] == copyright_rel]
             assert "mailto:dmca@library.org" == agent["href"]

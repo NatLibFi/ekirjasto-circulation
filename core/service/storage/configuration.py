@@ -5,6 +5,7 @@ from pydantic_settings import SettingsConfigDict
 from core.service.configuration import ServiceConfiguration
 from core.util.pydantic import HttpUrl
 
+
 class StorageConfiguration(ServiceConfiguration):
     region: str | None = None
     access_key: str | None = None

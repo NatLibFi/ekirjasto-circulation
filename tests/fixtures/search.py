@@ -13,8 +13,8 @@ from core.search.service import SearchServiceOpensearch1
 from core.service.configuration import ServiceConfiguration
 from core.service.container import Services, wire_container
 from core.service.search.container import Search
-from core.util.pydantic import HttpUrl
 from core.util.log import LoggerMixin
+from core.util.pydantic import HttpUrl
 from tests.fixtures.database import DatabaseTransactionFixture
 from tests.fixtures.services import ServicesFixture
 from tests.mocks.search import SearchServiceFake
@@ -27,6 +27,7 @@ class SearchTestConfiguration(ServiceConfiguration):
     maxsize: int = 25
 
     model_config = SettingsConfigDict(env_prefix="PALACE_TEST_SEARCH_")
+
 
 class ExternalSearchFixture(LoggerMixin):
     """

@@ -62,6 +62,7 @@ from core.util.datetime_helpers import from_timestamp, strptime_utc, utc_now
 from core.util.http import HTTP, RemoteIntegrationException, RequestTimedOut
 from core.util.pydantic import HttpUrl
 
+
 class EnkiConstants:
     PRODUCTION_BASE_URL = "https://enkilibrary.org/API/"
 

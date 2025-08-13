@@ -28,6 +28,7 @@ from core.util.datetime_helpers import datetime_utc, utc_now
 from core.util.http import HTTP
 from core.util.pydantic import HttpUrl
 
+
 class NeighborhoodMode(Enum):
     DISABLED = "disabled"
     HOME_BRANCH = "home_branch"

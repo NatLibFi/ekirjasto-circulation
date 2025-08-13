@@ -10,9 +10,9 @@ from pydantic_core import core_schema
 from typing_extensions import Self
 from uritemplate import URITemplate, variable
 
-from core.exceptions import PalaceValueError
 from api.opds.base import BaseOpdsModel
 from api.opds.util import StrOrTuple, obj_or_tuple_to_tuple
+from core.exceptions import PalaceValueError
 
 
 class BaseLink(BaseOpdsModel):
@@ -103,10 +103,12 @@ class CompactCollection(Sequence[LinkT]):
         return cls(links)
 
     @overload
-    def __getitem__(self, index: int) -> LinkT: ...
+    def __getitem__(self, index: int) -> LinkT:
+        ...
 
     @overload
-    def __getitem__(self, index: slice) -> Self: ...
+    def __getitem__(self, index: slice) -> Self:
+        ...
 
     def __getitem__(self, index: int | slice) -> LinkT | Self:
         if isinstance(index, slice):
@@ -135,12 +137,14 @@ class CompactCollection(Sequence[LinkT]):
         rel: str | None = ...,
         type: str | None = ...,
         raising: Literal[True],
-    ) -> LinkT: ...
+    ) -> LinkT:
+        ...
 
     @overload
     def get(
         self, *, rel: str | None = ..., type: str | None = ..., raising: bool = ...
-    ) -> LinkT | None: ...
+    ) -> LinkT | None:
+        ...
 
     def get(
         self, *, rel: str | None = None, type: str | None = None, raising: bool = False

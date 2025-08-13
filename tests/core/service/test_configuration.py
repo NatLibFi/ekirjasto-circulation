@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import json
 from functools import partial
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
-from pyfakefs.fake_filesystem import FakeFilesystem
 from pydantic import Field, ValidationError, field_validator, model_validator
 from pydantic_settings import SettingsConfigDict
+from pyfakefs.fake_filesystem import FakeFilesystem
 from typing_extensions import Self
 
 from core.config import CannotLoadConfiguration
@@ -40,6 +39,7 @@ class MockServiceConfiguration(ServiceConfiguration):
 
     model_config = SettingsConfigDict(env_prefix="MOCK_")
 
+
 class ServiceConfigurationFixture:
     def __init__(self, type: str, monkeypatch: MonkeyPatch, fs: FakeFilesystem):
         self.type = type
@@ -67,7 +67,6 @@ class ServiceConfigurationFixture:
                 del self.env_file_vars[key]
         self._update_dot_env()
 
-
     def set(self, key: str, value: str):
         if self.type == "env":
             self.set_env(key, value)
@@ -90,6 +89,7 @@ class ServiceConfigurationFixture:
 
     def set_defaults(self):
         self.set("MOCK_STRING_WITHOUT_DEFAULT", "string")
+
 
 @pytest.fixture(params=["env", "dot_env"])
 def service_configuration_fixture(

@@ -10,7 +10,6 @@ from typing import Any, TypeVar
 from flask import url_for
 from pydantic import PositiveInt, field_validator
 from pydantic_core.core_schema import ValidationInfo
-
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.exc import NoResultFound

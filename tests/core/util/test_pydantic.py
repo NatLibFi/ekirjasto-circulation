@@ -1,7 +1,5 @@
-import pytest
+from palace.manager.util.pydantic import HttpUrl
 from pydantic import TypeAdapter
-
-from palace.manager.util.pydantic import HttpUrl, RedisDsn
 
 
 class TestStrUrlTypes:

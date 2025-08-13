@@ -70,7 +70,7 @@ class SirsiDynixHorizonAuthLibrarySettings(BasicAuthProviderLibrarySettings):
             type=ConfigurationFormItemType.LIST,
         ),
     )
-    library_identifier_field:  Literal["barcode"] | Literal["patrontype"] = FormField(
+    library_identifier_field: Literal["barcode"] | Literal["patrontype"] = FormField(
         "patrontype",
         form=ConfigurationFormItem(
             label="Library Identifier Field",

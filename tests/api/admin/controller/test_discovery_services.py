@@ -101,7 +101,7 @@ class TestDiscoveryServices:
         assert discovery_service.settings_dict["url"] == service.get("settings").get(
             "url"
         )
- 
+
     def test_discovery_services_post_errors(
         self,
         flask_app_fixture: FlaskAppFixture,

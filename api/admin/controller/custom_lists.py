@@ -37,9 +37,8 @@ from core.model import (
 )
 from core.problem_details import INVALID_INPUT, METHOD_NOT_ALLOWED
 from core.query.customlist import CustomListQueries
-from core.util.flask_util import parse_multi_dict
-from core.util.problem_detail import ProblemDetail
 from core.util.flask_util import CustomBaseModel, parse_multi_dict
+from core.util.problem_detail import ProblemDetail
 
 
 class CustomListsController(

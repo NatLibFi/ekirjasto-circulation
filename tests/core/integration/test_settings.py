@@ -20,9 +20,10 @@ from core.integration.settings import (
     FormFieldInfo,
     SettingsValidationError,
 )
-from core.util.problem_detail import ProblemDetail, ProblemError, ProblemDetailException
+from core.util.problem_detail import ProblemDetail, ProblemDetailException
 
 mock_problem_detail = ProblemDetail("http://test.com", 400, "test", "testing 123")
+
 
 class MockSettings(BaseSettings):
     """Mock settings class"""
@@ -57,6 +58,7 @@ class MockSettings(BaseSettings):
         ),
         alias="foo",
     )
+
 
 @dataclasses.dataclass
 class ProblemDetailInfo:
@@ -124,6 +126,7 @@ class BaseSettingsFixture:
 
         if detail is not None:
             assert info.value.detail == detail
+
 
 @pytest.fixture
 def base_settings_fixture():

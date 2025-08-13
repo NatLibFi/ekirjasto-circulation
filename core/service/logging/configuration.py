@@ -1,8 +1,7 @@
 from enum import Enum
-from typing import Any
 
 import boto3
-from pydantic import NonNegativeInt, PositiveInt, field_validator
+from pydantic import PositiveInt, field_validator
 from pydantic_core.core_schema import ValidationInfo
 from pydantic_settings import SettingsConfigDict
 from watchtower import DEFAULT_LOG_STREAM_NAME

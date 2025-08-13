@@ -8,7 +8,6 @@ from typing import Any, Union
 
 import annotated_types
 import typing_extensions
-from typing_extensions import Unpack
 from pydantic import (
     AliasChoices,
     AliasPath,
@@ -18,7 +17,6 @@ from pydantic import (
     model_validator,
     types,
 )
-from sqlalchemy.orm import Session
 from pydantic.config import JsonDict
 from pydantic.fields import (
     Deprecated,
@@ -28,6 +26,9 @@ from pydantic.fields import (
     _Unset,
 )
 from pydantic_core import ErrorDetails, PydanticUndefined
+from sqlalchemy.orm import Session
+from typing_extensions import Unpack
+
 from api.admin.problem_details import (
     INCOMPLETE_CONFIGURATION,
     INVALID_CONFIGURATION_OPTION,
@@ -36,9 +37,9 @@ from core.util.log import LoggerMixin
 from core.util.problem_detail import (
     BaseProblemDetailException,
     ProblemDetail,
-    ProblemError,
     ProblemDetailException,
 )
+
 
 class FormFieldInfo(FieldInfo):
     """
@@ -328,17 +329,14 @@ class BaseSettings(BaseModel, LoggerMixin):
     model_config = ConfigDict(
         # See the pydantic docs for information on these settings
         # https://docs.pydantic.dev/usage/model_config/
-
         # Strip whitespace from all strings
         atr_strip_whitespace=True,
         # Make the settings model immutable, so it's clear that settings changes will not automatically be saved to the database.
         frozen=True,
-
         # Allow extra arguments to be passed to the model. We allow this
         # because we want to preserve old configuration settings that
         # have not been cleaned up by a migration yet.
         extra="allow",
-
         # Allow population by field name. We store old field names
         # as aliases so that we can properly migrate old settings,
         # but we generally will populate the module using the field name
@@ -365,7 +363,9 @@ class BaseSettings(BaseModel, LoggerMixin):
                 field_info, FormFieldInfo
             ), f"{name} was not initialized with FormField"
             config.append(
-                field_info.form.to_dict(db, name, field_info.is_required(), field_info.default)
+                field_info.form.to_dict(
+                    db, name, field_info.is_required(), field_info.default
+                )
             )
 
         for key, additional_field in cls.__private_attributes__[
@@ -386,7 +386,7 @@ class BaseSettings(BaseModel, LoggerMixin):
         if "exclude_extra" in kwargs:
             exclude_extra = kwargs.pop("exclude_extra")
             if exclude_extra:
-                kwargs["exclude"] = self.model_fields_set- self.model_fields.keys()
+                kwargs["exclude"] = self.model_fields_set - self.model_fields.keys()
 
         return super().model_dump(**kwargs)
 
@@ -471,6 +471,7 @@ class BaseSettings(BaseModel, LoggerMixin):
                     )
 
             raise ProblemDetailException(problem_detail=problem_detail) from e
+
 
 class SettingsValidationError(ProblemDetailException, ValidationError):
     """
