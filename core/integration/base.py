@@ -41,7 +41,6 @@ def integration_settings_load(
     settings_dict = (
         integration if isinstance(integration, dict) else integration.settings_dict
     )
-    print(settings_dict)
     return settings_cls.model_validate(settings_dict)
 
 

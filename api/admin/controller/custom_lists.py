@@ -97,9 +97,8 @@ class CustomListsController(
 
             return dict(custom_lists=custom_lists)
 
-        # TÄNNE TULEE MUUTOS
         if flask.request.method == "POST":
-            list_ = self.CustomListPostRequest.parse_obj(
+            list_ = self.CustomListPostRequest.model_validate(
                 parse_multi_dict(flask.request.form)
             )
             return self._create_or_update_list(
@@ -353,9 +352,8 @@ class CustomListsController(
                 max_age=0, mime_types=flask.request.accept_mimetypes
             )
 
-        # TÄNNE MUUTOS
         elif flask.request.method == "POST":
-            list_ = self.CustomListPostRequest.parse_obj(
+            list_ = self.CustomListPostRequest.model_validate(
                 parse_multi_dict(flask.request.form)
             )
             return self._create_or_update_list(
