@@ -18,7 +18,7 @@ from core.integration.goals import Goals
 from core.integration.registry import IntegrationRegistry
 from core.integration.settings import BaseSettings, ConfigurationFormItem, FormField
 from core.model import ExternalIntegration
-from core.util.problem_detail import ProblemError
+from core.util.problem_detail import ProblemDetailException
 from tests.fixtures.api_admin import AdminControllerFixture, SettingsControllerFixture
 
 
@@ -293,7 +293,7 @@ class TestSettingsController:
             == "Could not find the configuration library"
         )
 
-        with pytest.raises(ProblemError) as problem_error_raised:
+        with pytest.raises(ProblemDetailException) as problem_error_raised:
             _set_configuration_library(config, dict(short_name="short-name"), Protocol1)
         assert (
             problem_error_raised.value.problem_detail.detail

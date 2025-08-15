@@ -66,7 +66,7 @@ class TestODLAPI:
         expected_document = opds2_with_odl_api_fixture.loan_status_document("active")
 
         opds2_with_odl_api_fixture.mock_http.queue_response(
-            status_code, content=expected_document.to_serializable()
+            status_code, content=expected_document.model_dump_json()
         )
         with opds2_with_odl_api_fixture.mock_http.patch():
             requested_document = opds2_with_odl_api_fixture.api._request_loan_status(
@@ -132,7 +132,6 @@ class TestODLAPI:
         expected_log_message: str,
     ) -> None:
         # The response can't be parsed as JSON.
-        print(content)
         opds2_with_odl_api_fixture.mock_http.queue_response(
             status, other_headers=headers, content=content
         )
@@ -226,7 +225,7 @@ class TestODLAPI:
             200,
             content=opds2_with_odl_api_fixture.loan_status_document(
                 "revoked"
-            ).to_serializable(),
+            ).model_dump_json(),
         )
         # Checking in silently does nothing.
         with opds2_with_odl_api_fixture.mock_http.patch():
@@ -252,7 +251,7 @@ class TestODLAPI:
             200,
             content=opds2_with_odl_api_fixture.loan_status_document(
                 "ready", return_link=False
-            ).to_serializable(),
+            ).model_dump_json(),
         )
         # Checking in raises the CannotReturn exception, since the distributor
         # does not support returning the book.
@@ -267,7 +266,7 @@ class TestODLAPI:
         # If the return link doesn't change the status, we raise the same exception.
         lsd = opds2_with_odl_api_fixture.loan_status_document(
             "ready", return_link="http://return"
-        ).to_serializable()
+        ).model_dump_json()
 
         opds2_with_odl_api_fixture.mock_http.queue_response(200, content=lsd)
         opds2_with_odl_api_fixture.mock_http.queue_response(200, content=lsd)
@@ -638,7 +637,7 @@ class TestODLAPI:
         # But license_lent is still available, and we successfully check it out
         opds2_with_odl_api_fixture.mock_http.queue_response(
             201,
-            content=opds2_with_odl_api_fixture.loan_status_document().to_serializable(),
+            content=opds2_with_odl_api_fixture.loan_status_document().model_dump_json(),
         )
 
         with opds2_with_odl_api_fixture.mock_http.patch():
@@ -690,7 +689,6 @@ class TestODLAPI:
             days=opds2_with_odl_api_fixture.collection.default_loan_period(library)
         )
 
-        print(opds2_with_odl_api_fixture.pool)
         opds2_with_odl_api_fixture.setup_license(concurrency=1, available=1)
 
         assert opds2_with_odl_api_fixture.pool.licenses_available == 0
@@ -799,7 +797,7 @@ class TestODLAPI:
             200,
             content=opds2_with_odl_api_fixture.loan_status_document(
                 "revoked"
-            ).to_serializable(),
+            ).model_dump_json(),
         )
         with opds2_with_odl_api_fixture.mock_http.patch():
             with pytest.raises(CannotLoan):
@@ -811,7 +809,7 @@ class TestODLAPI:
             200,
             content=opds2_with_odl_api_fixture.loan_status_document(
                 self_link=False, license_link=False
-            ).to_serializable(),
+            ).model_dump_json(),
         )
         with opds2_with_odl_api_fixture.mock_http.patch():
             with pytest.raises(CannotLoan):
@@ -903,7 +901,7 @@ class TestODLAPI:
 
         lsd = opds2_with_odl_api_fixture.loan_status_document("active", links=links)
         opds2_with_odl_api_fixture.mock_http.queue_response(
-            200, content=lsd.to_serializable()
+            200, content=lsd.model_dump_json()
         )
         with opds2_with_odl_api_fixture.mock_http.patch():
             fulfillment = opds2_with_odl_api_fixture.api.fulfill(
@@ -984,7 +982,7 @@ class TestODLAPI:
         assert 6 == opds2_with_odl_api_fixture.pool.licenses_available
 
         opds2_with_odl_api_fixture.mock_http.queue_response(
-            200, content=status_document.to_serializable()
+            200, content=status_document.model_dump_json()
         )
         with opds2_with_odl_api_fixture.mock_http.patch():
             with pytest.raises(CannotFulfill):

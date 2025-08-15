@@ -34,8 +34,8 @@ from core.model import (
 )
 from core.query.customlist import CustomListQueries
 from core.util.problem_detail import ProblemDetail
-from tests.core.util.test_flask_util import add_request_context
 from tests.fixtures.api_admin import AdminLibrarianFixture
+from tests.mocks.flask import add_request_context
 from tests.mocks.search import ExternalSearchIndexFake, SearchServiceFake
 
 

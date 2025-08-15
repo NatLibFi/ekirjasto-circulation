@@ -775,7 +775,7 @@ class TestLibraryRegistrationScript:
         }
 
         # Every library was registered with the specified registry.
-        assert {"http://registry.com/", "http://registry.com"} == {
+        assert {"http://registry.com", "http://registry.com"} == {
             x.registry.settings.url for x in script.processed
         }
 

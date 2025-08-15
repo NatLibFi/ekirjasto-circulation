@@ -28,7 +28,7 @@ from api.integration.registry.license_providers import LicenseProvidersRegistry
 from api.selftest import HasCollectionSelfTests
 from core.model import AdminRole, Collection, ExternalIntegration, get_one
 from core.selftest import HasSelfTests
-from core.util.problem_detail import ProblemDetail, ProblemError
+from core.util.problem_detail import ProblemDetail, ProblemDetailException
 from tests.api.mockapi.axis import MockAxis360API
 from tests.fixtures.database import DatabaseTransactionFixture
 from tests.fixtures.flask import FlaskAppFixture
@@ -762,7 +762,7 @@ class TestCollectionSettings:
     def test_collection_self_tests_with_no_collection_found(
         self, controller: CollectionSettingsController
     ):
-        with pytest.raises(ProblemError) as excinfo:
+        with pytest.raises(ProblemDetailException) as excinfo:
             controller.self_tests_process_get(-1)
         assert excinfo.value.problem_detail == MISSING_SERVICE
 
@@ -771,7 +771,7 @@ class TestCollectionSettings:
     ):
         collection = db.collection(protocol="test")
         assert collection.integration_configuration.id is not None
-        with pytest.raises(ProblemError) as excinfo:
+        with pytest.raises(ProblemDetailException) as excinfo:
             controller.self_tests_process_get(collection.integration_configuration.id)
         assert excinfo.value.problem_detail == UNKNOWN_PROTOCOL
 
@@ -857,7 +857,7 @@ class TestCollectionSettings:
         # Failed to run self tests
         assert collection.integration_configuration.id is not None
 
-        with pytest.raises(ProblemError) as excinfo:
+        with pytest.raises(ProblemDetailException) as excinfo:
             controller.self_tests_process_post(collection.integration_configuration.id)
 
         assert excinfo.value.problem_detail == FAILED_TO_RUN_SELF_TESTS

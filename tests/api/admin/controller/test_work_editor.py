@@ -40,9 +40,9 @@ from tests.core.mock import (
     AlwaysSuccessfulCoverageProvider,
     NeverSuccessfulCoverageProvider,
 )
-from tests.core.util.test_flask_util import add_request_context
 from tests.fixtures.api_admin import AdminControllerFixture
 from tests.fixtures.api_controller import ControllerFixture
+from tests.mocks.flask import add_request_context
 
 
 class WorkFixture(AdminControllerFixture):

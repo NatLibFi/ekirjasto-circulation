@@ -11,9 +11,8 @@ import pytest
 from _pytest.monkeypatch import MonkeyPatch
 
 from api.circulation import HoldInfo, LoanInfo
+from api.lcp.license import LicenseDocument
 from api.lcp.status import LoanStatus
-
-# from _pytest.monkeypatch import MonkeyPatch
 from api.odl import ODLAPI, BaseODLAPI
 from api.odl2 import ODL2API
 from core.model import (
@@ -27,6 +26,7 @@ from core.model import (
     Work,
 )
 from core.model.configuration import ExternalIntegration
+from core.util.datetime_helpers import utc_now
 from core.util.http import HTTP
 from tests.api.mockapi.mock import MockHTTPClient, MockRequestsResponse
 from tests.fixtures.api_odl import ODL2APIFilesFixture, ODLAPIFilesFixture
@@ -119,7 +119,7 @@ class OPDS2WithODLApiFixture:
                 {
                     "rel": "license",
                     "href": license_link,
-                    "type": "application/vnd.readium.license.status.v1.0+json",
+                    "type": LicenseDocument.content_type(),
                 },
             )
 
@@ -140,16 +140,19 @@ class OPDS2WithODLApiFixture:
                     "type": LoanStatus.content_type(),
                 }
             )
-        return LoanStatus(
-            id=str(uuid.uuid4()),
-            status=status,
-            message="This is a message",
-            updated={
-                "license": "2025-04-25T11:12:13Z",
-                "status": "2025-04-25T11:12:13Z",
-            },
-            links=links,
-            potential_rights={"end": "3017-10-21T11:12:13Z"},
+
+        return LoanStatus.model_validate(
+            dict(
+                id=str(uuid.uuid4()),
+                status=status,
+                message="This is a message",
+                updated={
+                    "license": utc_now(),
+                    "status": utc_now(),
+                },
+                links=links,
+                potential_rights={"end": "3017-10-21T11:12:13Z"},
+            )
         )
 
     def checkin(
@@ -159,10 +162,10 @@ class OPDS2WithODLApiFixture:
         pool = pool or self.pool
 
         self.mock_http.queue_response(
-            200, content=self.loan_status_document().to_serializable()
+            200, content=self.loan_status_document().model_dump_json()
         )
         self.mock_http.queue_response(
-            200, content=self.loan_status_document("returned").to_serializable()
+            200, content=self.loan_status_document("returned").model_dump_json()
         )
         self.api.checkin(patron, "pin", pool)
 
@@ -178,10 +181,9 @@ class OPDS2WithODLApiFixture:
         loan_url = loan_url or self.db.fresh_url()
 
         self.mock_http.queue_response(
-            201, content=self.loan_status_document(self_link=loan_url).to_serializable()
+            201, content=self.loan_status_document(self_link=loan_url).model_dump_json()
         )
         loan_info = self.api_checkout(patron=patron, licensepool=pool)
-        print("fixture")
         if create_loan:
             loan_info.create_or_update(patron, pool)
         return loan_info
@@ -693,10 +695,10 @@ class ODL2ApiFixture:
         pool = pool or self.pool
 
         self.mock_http.queue_response(
-            200, content=self.loan_status_document().to_serializable()
+            200, content=self.loan_status_document().model_dump_json()
         )
         self.mock_http.queue_response(
-            200, content=self.loan_status_document("returned").to_serializable()
+            200, content=self.loan_status_document("returned").model_dump_json()
         )
         self.api.checkin(patron, "pin", pool)
 
@@ -711,7 +713,7 @@ class ODL2ApiFixture:
         pool = pool or self.pool
         loan_url = loan_url or self.db.fresh_url()
         self.mock_http.queue_response(
-            201, content=self.loan_status_document(self_link=loan_url).to_serializable()
+            201, content=self.loan_status_document(self_link=loan_url).model_dump_json()
         )
         loan_info = self.api_checkout(patron=patron, licensepool=pool)
         if create_loan:

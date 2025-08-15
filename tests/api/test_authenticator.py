@@ -1035,6 +1035,7 @@ class TestLibraryAuthenticator:
 
         library = library_fixture.library()
         library_settings = library_fixture.settings(library)
+        print("settings ", library_settings)
         basic = mock_basic()
         library.name = "A Fabulous Library"
         # TODO: We can remove this patch once basic token authentication is fully deployed.
@@ -1193,7 +1194,7 @@ class TestLibraryAuthenticator:
             assert "http://privacy.com" == privacy_policy["href"]
             assert "http://copyright.com" == copyright["href"]
             assert "http://about.io" == about["href"]
-            assert "http://license.ca/" == license["href"]
+            assert "http://license.ca" == license["href"]  # Trailing slash is stripped
             assert "data:image/png;base64,image data" == logo["href"]
             assert "http://style.css" == stylesheet["href"]
 
@@ -1231,7 +1232,9 @@ class TestLibraryAuthenticator:
             assert "image/png" == logo["type"]
 
             # We have two help links.
-            assert "http://library.help/" == help_web["href"]
+            assert (
+                "http://library.help" == help_web["href"]
+            )  # Trailing slash is stripped
             assert "text/html" == help_web["type"]
             assert "mailto:help@library.org" == help_email["href"]
 
@@ -1252,7 +1255,7 @@ class TestLibraryAuthenticator:
             # The library's web page shows up as an HTML alternate
             # to the OPDS server.
             assert (
-                dict(rel="alternate", type="text/html", href="http://library.org/")
+                dict(rel="alternate", type="text/html", href="http://library.org")
                 == alternate
             )
 

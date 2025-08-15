@@ -1,5 +1,6 @@
-from palace.manager.util.pydantic import HttpUrl
 from pydantic import TypeAdapter
+
+from core.util.pydantic import HttpUrl
 
 
 class TestStrUrlTypes:

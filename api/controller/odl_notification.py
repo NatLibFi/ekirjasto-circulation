@@ -81,7 +81,7 @@ class ODLNotificationController(CirculationManagerController):
         # distributor thinks the loan is still active.
         if loan is None and status_doc.active:
             self.log.error(
-                f"No loan found for active OPDS + ODL Notification. Document: {status_doc.to_serializable()}"
+                f"No loan found for active OPDS + ODL Notification. Document: {status_doc.model_dump_json()}"
             )
             raise ProblemDetailException(
                 NO_ACTIVE_LOAN.detailed(_("No loan was found."), status_code=404)

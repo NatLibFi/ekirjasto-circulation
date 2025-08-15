@@ -1854,7 +1854,6 @@ class TestOPDSImportMonitor:
         # Note that this works even when the media type is imprecisely
         # specified as Atom or bare XML.
         for imprecise_media_type in OPDSFeed.ATOM_LIKE_TYPES:
-            print("here: ", imprecise_media_type)
             http.queue_requests_response(200, imprecise_media_type, content=feed)
             next_links, content = follow()
             assert 0 == len(next_links)

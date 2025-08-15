@@ -473,7 +473,7 @@ class BaseSettings(BaseModel, LoggerMixin):
             raise ProblemDetailException(problem_detail=problem_detail) from e
 
 
-class SettingsValidationError(ProblemDetailException, ValidationError):
+class SettingsValidationError(ProblemDetailException, ValueError):
     """
     Raised in a custom pydantic validator when there is a problem
     with the configuration settings. A ProblemDetail should
