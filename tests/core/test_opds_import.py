@@ -42,7 +42,13 @@ from core.model import (
     Work,
     WorkCoverageRecord,
 )
-from core.opds_import import OPDSAPI, OPDSImporter, OPDSImportMonitor, OPDSXMLParser
+from core.opds_import import (
+    OPDSAPI,
+    IdentifierSource,
+    OPDSImporter,
+    OPDSImportMonitor,
+    OPDSXMLParser,
+)
 from core.saml.wayfless import SAMLWAYFlessFulfillmentError
 from core.util import first_or_default
 from core.util.datetime_helpers import datetime_utc
@@ -248,17 +254,17 @@ class TestOPDSImporter:
 
         collection_to_test = db.collection(
             settings={
-                "primary_identifier_source": ExternalIntegration.DCTERMS_IDENTIFIER,
+                "primary_identifier_source": IdentifierSource.DCTERMS_IDENTIFIER,
             },
             data_source_name="OPDS",
             external_account_id="http://root.uri",
         )
+        print(collection_to_test)
         importer = opds_importer_fixture.importer(collection=collection_to_test)
 
         metadata, failures = importer.extract_feed_data(
             data.feed_with_id_and_dcterms_identifier
         )
-
         # First book doesn't have <dcterms:identifier>, so <id> must be used as identifier
         book_1 = metadata.get("https://root.uri/1")
         assert book_1 is not None

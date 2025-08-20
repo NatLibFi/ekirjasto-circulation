@@ -137,7 +137,7 @@ class TestServiceConfiguration:
         with pytest.raises(CannotLoadConfiguration) as exc_info:
             MockServiceConfiguration()
 
-        assert "MOCK_STRING_WITHOUT_DEFAULT:  field required" in str(exc_info.value)
+        assert "MOCK_STRING_WITHOUT_DEFAULT:  Field required" in str(exc_info.value)
 
     def test_exception_validation(
         self, service_configuration_fixture: ServiceConfigurationFixture
@@ -147,7 +147,10 @@ class TestServiceConfiguration:
         with pytest.raises(CannotLoadConfiguration) as exc_info:
             MockServiceConfiguration()
 
-        assert "MOCK_INT_TYPE:  value is not a valid integer" in str(exc_info.value)
+        assert (
+            "MOCK_INT_TYPE:  Input should be a valid integer, unable to parse string as an integer"
+            in str(exc_info.value)
+        )
 
     def test_exception_mutation(
         self, service_configuration_fixture: ServiceConfigurationFixture

@@ -1938,7 +1938,7 @@ class TestBasicAuthenticationProvider:
         provider.library_identifier_restriction_type = (
             LibraryIdentifierRestriction.STRING
         )
-        provider.library_identifier_field = None
+        provider.library_identifier_field = None  # type: ignore[assignment]
         patrondata = PatronData(authorization_identifier="12345")
         assert provider.enforce_library_identifier_restriction(patrondata) == patrondata
 

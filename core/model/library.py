@@ -522,6 +522,7 @@ class Library(Base, HasSessionCache):
         lines.append("")
         lines.append("Configuration settings:")
         lines.append("-----------------------")
+        assert self.settings  # Satisfying unit test lazy load
         for key, value in self.settings.model_dump(exclude_defaults=False).items():
             if value is not None:
                 lines.append(f"{key}='{value}'")

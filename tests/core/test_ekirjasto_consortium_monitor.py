@@ -20,6 +20,7 @@ class TestEkirjastoConsortiumMonitor:
             self._mock_koodisto_api(mocker)
             EkirjastoConsortiumMonitor(db.session).run()
 
+        print(library.settings)
         assert ["100"] == library.settings.municipalities
 
     def _mock_koodisto_api(self, mocker: Mocker) -> None:
@@ -36,7 +37,7 @@ class TestEkirjastoConsortiumMonitor:
                             }
                         ],
                         "status": "ACTIVE",
-                        "conceptCodeId": 100,
+                        "conceptCodeId": "100",
                     },
                     {
                         "attributes": [
@@ -46,7 +47,7 @@ class TestEkirjastoConsortiumMonitor:
                             }
                         ],
                         "status": "ACTIVE",
-                        "conceptCodeId": 200,
+                        "conceptCodeId": "200",
                     },
                 ],
                 "totalItems": 2,
@@ -62,8 +63,8 @@ class TestEkirjastoConsortiumMonitor:
             json={
                 "type": "city",
                 "items": [
-                    {"id": "1", "name": "Turku", "consortium": "10"},
-                    {"id": "2", "name": "Helsinki", "consortium": "20"},
+                    {"id": "1", "name": "Turku", "consortium": 10},
+                    {"id": "2", "name": "Helsinki", "consortium": 20},
                     {"id": "3", "name": "Kangasniemi", "consortium": None},
                 ],
             },
@@ -76,12 +77,12 @@ class TestEkirjastoConsortiumMonitor:
                 "type": "consortium",
                 "items": [
                     {
-                        "id": "10",
+                        "id": 10,
                         "name": "Vaski-kirjastot",
                         "slug": "vaski-kirjastot",
                     },
                     {
-                        "id": "20",
+                        "id": 20,
                         "name": "Helmet",
                         "slug": "helmet",
                     },

@@ -105,7 +105,6 @@ class ODLSettings(OPDSImporterSettings):
     )
 
     password: str = FormField(
-        key=ExternalIntegration.PASSWORD,
         form=ConfigurationFormItem(
             label=_("Library's API password"),
             required=True,
@@ -651,7 +650,7 @@ class BaseODLAPI(
             # If we have no DRM, we can just redirect to the content link and let the patron download the book.
             fulfill_link = loan_status.links.get(
                 rel="publication",
-                type=delivery_mechanism.delivery_mechanism.content_type,  # type: ignore
+                type=delivery_mechanism.delivery_mechanism.content_type,
             )
             fulfill_cls = RedirectFulfillment
         elif drm_scheme == DeliveryMechanism.FEEDBOOKS_AUDIOBOOK_DRM:
@@ -664,7 +663,7 @@ class BaseODLAPI(
         else:
             # We are getting content via a license loan_status document, so we need to find the link
             # that corresponds to the delivery mechanism we are using.
-            fulfill_link = loan_status.links.get(rel="license", type=drm_scheme)  # type: ignore
+            fulfill_link = loan_status.links.get(rel="license", type=drm_scheme)
             fulfill_cls = partial(FetchFulfillment, allowed_response_codes=["2xx"])
 
         if fulfill_link is None:

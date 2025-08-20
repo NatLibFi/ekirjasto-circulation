@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 from pydantic import ValidationError
@@ -28,7 +27,7 @@ class ServiceConfiguration(BaseSettings):
         frozen=True,
         # Allow env vars to be loaded from a .env file
         # This loads the .env file from the root of the project
-        env_file=str(Path(__file__).parent.parent.parent.absolute() / ".env"),
+        env_file=".env",
         # Nested settings will be loaded from environment variables with this delimiter.
         env_nested_delimiter="__",
         # Ignore extra fields in the environment

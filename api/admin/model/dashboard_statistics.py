@@ -26,7 +26,7 @@ class StatisticsBaseModel(CustomBaseModel):
     @classmethod
     def zeroed(cls) -> Self:
         """An instance of this class with all values set to zero."""
-        return cls(**{field: 0 for field in cls.__fields__.keys()})
+        return cls(**{field: 0 for field in cls.model_fields.keys()})
 
 
 class PatronStatistics(StatisticsBaseModel):

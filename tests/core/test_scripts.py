@@ -1050,9 +1050,9 @@ class TestConfigureLibraryScript:
             ],
             output,
         )
-
         # Now there is one library.
         [library] = db.session.query(Library).all()
+
         assert "Library 1" == library.name
         assert "L1" == library.short_name
         assert "http://library.org" == library.settings.website

@@ -7,9 +7,9 @@ from pydantic import (
     field_validator,
 )
 
-from core.exceptions import PalaceValueError
 from api.opds.base import BaseOpdsModel
 from api.opds.types.link import BaseLink, CompactCollection
+from core.exceptions import PalaceValueError
 
 
 class Link(BaseLink):

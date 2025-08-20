@@ -756,7 +756,7 @@ class OPDSImporter(BaseOPDSImporter[OPDSImporterSettings]):
             xml_data_dict = xml_data_meta.get(_id, {})
 
             external_identifier = None
-            if self.primary_identifier_source == ExternalIntegration.DCTERMS_IDENTIFIER:
+            if self.primary_identifier_source == IdentifierSource.DCTERMS_IDENTIFIER:
                 # If it should use <dcterms:identifier> as the primary identifier, it must use the
                 # first value from the dcterms identifier, that came from the metadata as an
                 # IdentifierData object and it must be validated as a foreign_id before be used

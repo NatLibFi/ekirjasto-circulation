@@ -35,6 +35,13 @@ class MockSettings(BaseSettings):
             raise SettingsValidationError(mock_problem_detail)
         return v
 
+    @field_validator("with_alias")
+    @classmethod
+    def alias_validation_no_pd(cls, v: float) -> float:
+        assert v != -212.55, "Sorry, -212.55 is a cursed number"
+        assert v != 666.0
+        return v
+
     @model_validator(mode="after")
     def secret_number(self) -> Self:
         if self.number == 66:
@@ -45,12 +52,10 @@ class MockSettings(BaseSettings):
         "test",
         form=ConfigurationFormItem(label="Test", description="Test description"),
     )
-
     number: PositiveInt = FormField(
         ...,
         form=ConfigurationFormItem(label="Number", description="Number description"),
     )
-
     with_alias: float = FormField(
         -1.1,
         form=ConfigurationFormItem(
@@ -262,7 +267,7 @@ class TestBaseSettings:
     def test_logger(self) -> None:
         log = MockSettings.logger()
         assert isinstance(log, logging.Logger)
-        assert log.name == "tests.manager.integration.test_settings.MockSettings"
+        assert log.name == "test_settings.MockSettings"
 
     def test_configuration_form(
         self, base_settings_fixture: BaseSettingsFixture
@@ -311,6 +316,7 @@ class TestBaseSettings:
             "test", options=options_callable, type=ConfigurationFormItemType.SELECT
         )
         form = MockSettings.configuration_form(base_settings_fixture.mock_db)
+
         options_callable.assert_called_once_with(base_settings_fixture.mock_db)
         assert form[0]["options"] == [
             {"key": "xyz", "label": "ABC"},

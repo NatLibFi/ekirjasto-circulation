@@ -999,7 +999,7 @@ class IntegrationConfigurationFixture:
             assert protocol is not None
 
         if url is not None:
-            settings_obj = registry[protocol].settings_class().model_construct(url=url)  # type: ignore[arg-type]
+            settings_obj = registry[protocol].settings_class().model_construct(url=url)
             settings_dict = settings_obj.model_dump()
         else:
             settings_dict = {}

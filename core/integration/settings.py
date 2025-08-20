@@ -330,8 +330,9 @@ class BaseSettings(BaseModel, LoggerMixin):
         # See the pydantic docs for information on these settings
         # https://docs.pydantic.dev/usage/model_config/
         # Strip whitespace from all strings
-        atr_strip_whitespace=True,
-        # Make the settings model immutable, so it's clear that settings changes will not automatically be saved to the database.
+        str_strip_whitespace=True,
+        # Make the settings model immutable, so it's clear that settings changes will
+        # not automatically be saved to the database.
         frozen=True,
         # Allow extra arguments to be passed to the model. We allow this
         # because we want to preserve old configuration settings that
@@ -343,6 +344,7 @@ class BaseSettings(BaseModel, LoggerMixin):
         # not the alias.
         populate_by_name=True,
     )
+
     # If your settings class needs additional form fields that are not
     # defined on the model, you can add them here. This is useful if you
     # need to add a custom form field, but don't want the data in the field
@@ -370,7 +372,7 @@ class BaseSettings(BaseModel, LoggerMixin):
 
         for key, additional_field in cls.__private_attributes__[
             "_additional_form_fields"
-        ].default.items():
+        ].default.items():  # type: ignore
             config.append(additional_field.to_dict(db, key))
 
         # Sort by weight then return only the settings
@@ -401,6 +403,7 @@ class BaseSettings(BaseModel, LoggerMixin):
                     break
         if item is not None and isinstance(item, FormFieldInfo):
             return item.form.label
+
         return field_name
 
     @classmethod

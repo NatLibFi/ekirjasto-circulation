@@ -56,7 +56,7 @@ class LibraryFixture:
     def mock_settings(self) -> MockLibrarySettings:
         settings = MockLibrarySettings.model_construct()
         settings.color_scheme = "blue"
-        settings.website = "https://example.com"  # type: ignore[assignment]
+        settings.website = "https://example.com"
         return settings
 
     def set_mock_on_library(
