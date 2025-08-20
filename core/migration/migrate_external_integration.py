@@ -32,10 +32,10 @@ def _validate_and_load_settings(
     for key, setting in settings_dict.items():
         if key in aliases:
             key = aliases[key]
-        field = settings_class.settings_class.model_fields.get(key)  # type: ignore
-        if field is None or not isinstance(field.field_info, FormFieldInfo):
+        field = settings_class.model_fields.get(key)
+        if field is None or not isinstance(field, FormFieldInfo):
             continue
-        config_item = field.field_info
+        config_item = field
         if (
             config_item.type == ConfigurationFormItemType.LIST  # type: ignore
             or config_item.type == ConfigurationFormItemType.MENU  # type: ignore
