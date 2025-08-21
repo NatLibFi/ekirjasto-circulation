@@ -2,22 +2,26 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Any
+from typing import Annotated, Any, cast
 
 import wcag_contrast_ratio
 from pydantic import (
-    ConstrainedFloat,
     EmailStr,
-    HttpUrl,
     PositiveFloat,
     PositiveInt,
-    root_validator,
-    validator,
+    ValidationInfo,
+    field_validator,
+    model_validator,
 )
-from pydantic.fields import ModelField
 from sqlalchemy.orm import Session
+from typing_extensions import Self
 
-from api.admin.problem_details import INVALID_CONFIGURATION_OPTION, UNKNOWN_LANGUAGE
+from api.admin.problem_details import (
+    INVALID_CONFIGURATION_OPTION,
+    UNKNOWN_LANGUAGE,
+    UNKNOWN_LOCATION,
+)
+from core.config import Configuration
 from core.entrypoint import EntryPoint
 from core.facets import FacetConstants
 from core.integration.settings import (
@@ -28,11 +32,7 @@ from core.integration.settings import (
     SettingsValidationError,
 )
 from core.util import LanguageCodes
-
-
-class PercentFloat(ConstrainedFloat):
-    ge = 0
-    le = 1
+from core.util.pydantic import HttpUrl
 
 
 # The "level" property determines which admins will be able to modify the
@@ -249,16 +249,19 @@ class LibrarySettings(BaseSettings):
             default_library_only=True,
         ),
     )
-    minimum_featured_quality: PercentFloat = FormField(
-        0.65,
-        form=LibraryConfFormItem(
-            label="Minimum quality for books that show up in 'featured' lanes",
-            description="Between 0 and 1.",
-            category="Lanes & Filters",
-            level=Level.ALL_ACCESS,
-            default_library_only=True,
+    minimum_featured_quality: Annotated[
+        float,
+        FormField(
+            ge=0,
+            le=1,
+            form=LibraryConfFormItem(
+                label="Minimum quality for books that show up in 'featured' lanes",
+                description="Between 0 and 1.",
+                category="Lanes & Filters",
+                level=Level.ALL_ACCESS,
+            ),
         ),
-    )
+    ] = Configuration.DEFAULT_MINIMUM_FEATURED_QUALITY
     facets_enabled_order: list[str] = FormField(
         FacetConstants.DEFAULT_ENABLED_FACETS[FacetConstants.ORDER_FACET_GROUP_NAME],
         form=LibraryConfFormItem(
@@ -414,7 +417,6 @@ class LibrarySettings(BaseSettings):
             category="Basic Information",
             level=Level.ALL_ACCESS,
         ),
-        alias="help-email",
     )
     help_web: HttpUrl | None = FormField(
         None,
@@ -425,7 +427,6 @@ class LibrarySettings(BaseSettings):
             category="Basic Information",
             level=Level.ALL_ACCESS,
         ),
-        alias="help-web",
     )
     copyright_designated_agent_email_address: EmailStr | None = FormField(
         None,
@@ -509,7 +510,6 @@ class LibrarySettings(BaseSettings):
             level=Level.SYS_ADMIN_OR_MANAGER,
             default_library_only=True,
         ),
-        alias="web-primary-color",
     )
     web_secondary_color: str = FormField(
         "#D53F34",
@@ -522,7 +522,6 @@ class LibrarySettings(BaseSettings):
             level=Level.SYS_ADMIN_OR_MANAGER,
             default_library_only=True,
         ),
-        alias="web-secondary-color",
     )
     web_css_file: HttpUrl | None = FormField(
         None,
@@ -533,7 +532,6 @@ class LibrarySettings(BaseSettings):
             level=Level.SYS_ADMIN_ONLY,
             default_library_only=True,
         ),
-        alias="web-css-file",
     )
     web_header_links: list[str] = FormField(
         [],
@@ -546,7 +544,6 @@ class LibrarySettings(BaseSettings):
             level=Level.SYS_ADMIN_OR_MANAGER,
             default_library_only=True,
         ),
-        alias="web-header-links",
     )
     web_header_labels: list[str] = FormField(
         [],
@@ -558,7 +555,6 @@ class LibrarySettings(BaseSettings):
             level=Level.SYS_ADMIN_OR_MANAGER,
             default_library_only=True,
         ),
-        alias="web-header-labels",
     )
     hidden_content_types: list[str] = FormField(
         [],
@@ -609,7 +605,6 @@ class LibrarySettings(BaseSettings):
             category="Links",
             level=Level.ALL_ACCESS,
         ),
-        alias="terms-of-service",
     )
     privacy_policy: HttpUrl | None = FormField(
         None,
@@ -618,7 +613,6 @@ class LibrarySettings(BaseSettings):
             category="Links",
             level=Level.ALL_ACCESS,
         ),
-        alias="privacy-policy",
     )
     copyright: HttpUrl | None = FormField(
         None,
@@ -652,7 +646,6 @@ class LibrarySettings(BaseSettings):
             category="Patron Support",
             level=Level.ALL_ACCESS,
         ),
-        alias="register",
     )
     patron_password_reset: HttpUrl | None = FormField(
         None,
@@ -662,7 +655,6 @@ class LibrarySettings(BaseSettings):
             category="Patron Support",
             level=Level.SYS_ADMIN_ONLY,
         ),
-        alias="http://librarysimplified.org/terms/rel/patron-password-reset",
     )
     large_collection_languages: list[str] | None = FormField(
         None,
@@ -677,7 +669,6 @@ class LibrarySettings(BaseSettings):
             level=Level.ALL_ACCESS,
             default_library_only=True,
         ),
-        alias="large_collections",
     )
     small_collection_languages: list[str] | None = FormField(
         None,
@@ -692,7 +683,6 @@ class LibrarySettings(BaseSettings):
             level=Level.ALL_ACCESS,
             default_library_only=True,
         ),
-        alias="small_collections",
     )
     tiny_collection_languages: list[str] | None = FormField(
         None,
@@ -707,24 +697,24 @@ class LibrarySettings(BaseSettings):
             level=Level.ALL_ACCESS,
             default_library_only=True,
         ),
-        alias="tiny_collections",
     )
 
-    @root_validator
-    def validate_header_links(cls, values: dict[str, Any]) -> dict[str, Any]:
+    @model_validator(mode="after")
+    def validate_header_links(self) -> Self:
         """Verify that header links and labels are the same length."""
-        header_links = values.get("web_header_links")
-        header_labels = values.get("web_header_labels")
+        header_links = self.web_header_links
+        header_labels = self.web_header_labels
         if header_links and header_labels and len(header_links) != len(header_labels):
             raise SettingsValidationError(
                 problem_detail=INVALID_CONFIGURATION_OPTION.detailed(
                     "There must be the same number of web header links and web header labels."
                 )
             )
-        return values
+        return self
 
-    @validator("web_primary_color", "web_secondary_color")
-    def validate_web_color_contrast(cls, value: str, field: ModelField) -> str:
+    @field_validator("web_primary_color", "web_secondary_color")
+    @classmethod
+    def validate_web_color_contrast(cls, value: str, info: ValidationInfo) -> str:
         """
         Verify that the web primary and secondary color both contrast
         well on white, as these colors will serve as button backgrounds with
@@ -745,7 +735,7 @@ class LibrarySettings(BaseSettings):
                 + "-on-%23"
                 + "#ffffff"[1:]
             )
-            field_label = cls.get_form_field_label(field.name)
+            field_label = cls.get_form_field_label(cast(str, info.field_name))
             raise SettingsValidationError(
                 problem_detail=INVALID_CONFIGURATION_OPTION.detailed(
                     f"The {field_label} doesn't have enough contrast to pass the WCAG 2.0 AA guidelines and "
@@ -755,11 +745,12 @@ class LibrarySettings(BaseSettings):
             )
         return value
 
-    @validator(
+    @field_validator(
         "municipalities",
     )
+    @classmethod
     def validate_municipalities(
-        cls, value: list[str] | None, field: ModelField
+        cls, value: list[str] | None, info: ValidationInfo
     ) -> list[str] | None:
         """Verify that municipality IDs are valid."""
         if not value:
@@ -768,8 +759,8 @@ class LibrarySettings(BaseSettings):
         for code in value:
             if not code.isdigit():
                 raise SettingsValidationError(
-                    problem_detail=UNKNOWN_LANGUAGE.detailed(
-                        f'"{cls.get_form_field_label(field.name)}": "{code}" is not a valid language code.'
+                    problem_detail=UNKNOWN_LOCATION.detailed(
+                        f'"{cls.get_form_field_label(cast(str, info.field_name))}": "{code}" is not a valid municipality code.'
                     )
                 )
 
@@ -779,13 +770,14 @@ class LibrarySettings(BaseSettings):
     def _remove_duplicates(cls, values: list[str]):
         return list(set(values))
 
-    @validator(
+    @field_validator(
         "large_collection_languages",
         "small_collection_languages",
         "tiny_collection_languages",
     )
+    @classmethod
     def validate_language_codes(
-        cls, value: list[str] | None, field: ModelField
+        cls, value: list[str] | None, info: ValidationInfo
     ) -> list[str] | None:
         """Verify that collection languages are valid."""
         if value is not None:
@@ -793,7 +785,7 @@ class LibrarySettings(BaseSettings):
             for language in value:
                 validated_language = LanguageCodes.string_to_alpha_3(language)
                 if validated_language is None:
-                    field_label = cls.get_form_field_label(field.name)
+                    field_label = cls.get_form_field_label(cast(str, info.field_name))
                     raise SettingsValidationError(
                         problem_detail=UNKNOWN_LANGUAGE.detailed(
                             f'"{field_label}": "{language}" is not a valid language code.'

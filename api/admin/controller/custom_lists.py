@@ -7,7 +7,6 @@ from datetime import datetime
 import flask
 from flask import Response, url_for
 from flask_babel import lazy_gettext as _
-from pydantic import BaseModel
 
 from api.admin.controller.base import AdminPermissionsControllerMixin
 from api.admin.problem_details import (
@@ -38,18 +37,18 @@ from core.model import (
 )
 from core.problem_details import INVALID_INPUT, METHOD_NOT_ALLOWED
 from core.query.customlist import CustomListQueries
-from core.util.flask_util import parse_multi_dict
+from core.util.flask_util import CustomBaseModel, parse_multi_dict
 from core.util.problem_detail import ProblemDetail
 
 
 class CustomListsController(
     CirculationManagerController, AdminPermissionsControllerMixin
 ):
-    class CustomListSharePostResponse(BaseModel):
+    class CustomListSharePostResponse(CustomBaseModel):
         successes: int = 0
         failures: int = 0
 
-    class CustomListPostRequest(BaseModel):
+    class CustomListPostRequest(CustomBaseModel):
         name: str
         id: int | None = None
         entries: list[dict] = []
@@ -99,7 +98,7 @@ class CustomListsController(
             return dict(custom_lists=custom_lists)
 
         if flask.request.method == "POST":
-            list_ = self.CustomListPostRequest.parse_obj(
+            list_ = self.CustomListPostRequest.model_validate(
                 parse_multi_dict(flask.request.form)
             )
             return self._create_or_update_list(
@@ -354,7 +353,7 @@ class CustomListsController(
             )
 
         elif flask.request.method == "POST":
-            list_ = self.CustomListPostRequest.parse_obj(
+            list_ = self.CustomListPostRequest.model_validate(
                 parse_multi_dict(flask.request.form)
             )
             return self._create_or_update_list(
@@ -453,7 +452,7 @@ class CustomListsController(
         self.log.info(f"Done sharing customlist {customlist.name}")
         return self.CustomListSharePostResponse(
             successes=len(successes), failures=len(failures)
-        ).dict()
+        ).model_dump()
 
     def share_locally_DELETE(self, customlist: CustomList) -> ProblemDetail | Response:
         """Delete the shared status of a custom list

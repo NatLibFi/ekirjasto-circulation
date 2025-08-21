@@ -13,7 +13,7 @@ from core.model import (
     json_serializer,
     site_configuration_has_changed,
 )
-from core.util.problem_detail import ProblemDetail, ProblemError
+from core.util.problem_detail import ProblemDetail, ProblemDetailException
 
 
 class DiscoveryServicesController(
@@ -56,7 +56,7 @@ class DiscoveryServicesController(
         settings = OpdsRegistrationService.settings_class()(
             url=OpdsRegistrationService.DEFAULT_LIBRARY_REGISTRY_URL
         )
-        default_registry.settings_dict = settings.dict()
+        default_registry.settings_dict = settings.model_dump()
 
     def process_post(self) -> Response | ProblemDetail:
         try:
@@ -66,7 +66,7 @@ class DiscoveryServicesController(
             impl_cls = self.registry[protocol]
             settings_class = impl_cls.settings_class()
             validated_settings = ProcessFormData.get_settings(settings_class, form_data)
-            service.settings_dict = validated_settings.dict()
+            service.settings_dict = validated_settings.model_dump()
 
             # Make sure that the URL of the service is unique.
             self.check_url_unique(service, validated_settings.url)
@@ -74,7 +74,7 @@ class DiscoveryServicesController(
             # Trigger a site configuration change
             site_configuration_has_changed(self._db)
 
-        except ProblemError as e:
+        except ProblemDetailException as e:
             self._db.rollback()
             return e.problem_detail
 
@@ -84,7 +84,7 @@ class DiscoveryServicesController(
         self.require_system_admin()
         try:
             return self.delete_service(service_id)
-        except ProblemError as e:
+        except ProblemDetailException as e:
             self._db.rollback()
             return e.problem_detail
 
@@ -105,4 +105,4 @@ class DiscoveryServicesController(
             )
         ).one_or_none()
         if existing_service:
-            raise ProblemError(problem_detail=INTEGRATION_URL_ALREADY_IN_USE)
+            raise ProblemDetailException(problem_detail=INTEGRATION_URL_ALREADY_IN_USE)

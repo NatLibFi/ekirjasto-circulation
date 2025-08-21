@@ -71,7 +71,7 @@ class ODLNotificationController(CirculationManagerController):
         status_doc_json = flask.request.data
 
         try:
-            status_doc = LoanStatus.parse_raw(status_doc_json)
+            status_doc = LoanStatus.model_validate_json(status_doc_json)
         except ValidationError as e:
             self.log.exception(f"Unable to parse loan status document. {e}")
             raise ProblemDetailException(INVALID_INPUT) from e
@@ -81,7 +81,7 @@ class ODLNotificationController(CirculationManagerController):
         # distributor thinks the loan is still active.
         if loan is None and status_doc.active:
             self.log.error(
-                f"No loan found for active OPDS + ODL Notification. Document: {status_doc.to_serializable()}"
+                f"No loan found for active OPDS + ODL Notification. Document: {status_doc.model_dump_json()}"
             )
             raise ProblemDetailException(
                 NO_ACTIVE_LOAN.detailed(_("No loan was found."), status_code=404)

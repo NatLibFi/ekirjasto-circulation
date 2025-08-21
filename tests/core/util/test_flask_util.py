@@ -6,17 +6,13 @@ from wsgiref.handlers import format_date_time
 
 import pytest
 from flask import Response as FlaskResponse
-from pydantic import BaseModel
-from werkzeug.datastructures import MultiDict
 
 from core.util.datetime_helpers import utc_now
 from core.util.flask_util import (
     OPDSEntryResponse,
     OPDSFeedResponse,
     Response,
-    _snake_to_camel_case,
     boolean_value,
-    parse_multi_dict,
     str_comma_list_validator,
 )
 from core.util.opds_writer import OPDSFeed
@@ -177,35 +173,6 @@ class TestMethods:
     )
     def test_boolean_value(self, value, result):
         assert boolean_value(value) == result
-
-
-def add_request_context(
-    request, model: type[BaseModel], form: MultiDict | None = None
-) -> None:
-    """Add form data into the request context.
-
-    Before doing so, we verify that it can be parsed into the Pydantic model.
-
-    :param model: A pydantic model
-    :param form: A form multidict
-    """
-    if form is not None:
-        model.parse_obj(parse_multi_dict(form))
-        request.form = form
-
-
-def test_snake_to_camel_case():
-    assert _snake_to_camel_case("a_snake_case_word") == "aSnakeCaseWord"  # liar
-    assert _snake_to_camel_case("double__scores") == "doubleScores"
-    assert _snake_to_camel_case("__magic") == "magic"
-    assert (
-        _snake_to_camel_case("SnakesAreInnocent_snokes_are_not")
-        == "snakesareinnocentSnokesAreNot"
-    )
-
-    # Error case
-    with pytest.raises(ValueError):
-        _snake_to_camel_case("_")
 
 
 def test_str_comma_list_validator():

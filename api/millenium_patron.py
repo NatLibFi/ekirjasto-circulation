@@ -7,7 +7,7 @@ import dateutil
 from flask_babel import lazy_gettext as _
 from lxml import etree
 from money import Money
-from pydantic import HttpUrl, validator
+from pydantic import field_validator
 
 from api.authentication.base import PatronData
 from api.authentication.basic import (
@@ -26,6 +26,7 @@ from core.model import Patron
 from core.util import MoneyUtility
 from core.util.datetime_helpers import datetime_utc, utc_now
 from core.util.http import HTTP
+from core.util.pydantic import HttpUrl
 
 
 class NeighborhoodMode(Enum):
@@ -40,7 +41,8 @@ class AuthenticationMode(Enum):
 
 
 class MilleniumPatronSettings(BasicAuthProviderSettings):
-    @validator("neighborhood_mode", pre=True)
+    @field_validator("neighborhood_mode", mode="before")
+    @classmethod
     def validate_neighborhood_mode(cls, v):
         # TODO: We should fix this in the admin ui interface.
         #  For the neighborhood_mode setting, the admin UI isn't sending the
@@ -106,7 +108,6 @@ class MilleniumPatronSettings(BasicAuthProviderSettings):
                 AuthenticationMode.FAMILY_NAME: "Family Name",
             },
         ),
-        alias="auth_mode",
     )
     neighborhood_mode: NeighborhoodMode = FormField(
         NeighborhoodMode.DISABLED,

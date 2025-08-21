@@ -5,8 +5,6 @@ from gettext import gettext as _
 from typing import TYPE_CHECKING, Literal
 from urllib.parse import urljoin
 
-from pydantic import HttpUrl
-
 from api.authentication.base import PatronData
 from api.authentication.basic import (
     BasicAuthenticationProvider,
@@ -21,6 +19,7 @@ from core.integration.settings import (
     FormField,
 )
 from core.util.http import HTTP
+from core.util.pydantic import HttpUrl
 
 if TYPE_CHECKING:
     from requests import Response
@@ -48,7 +47,6 @@ class SirsiDynixHorizonAuthSettings(BasicAuthProviderSettings):
             label="Client ID",
             description="The client ID that should be used to identify this CM.",
         ),
-        alias="CLIENT_ID",
     )
 
 
@@ -59,7 +57,6 @@ class SirsiDynixHorizonAuthLibrarySettings(BasicAuthProviderLibrarySettings):
             label="Library ID",
             description="This is used to identify a unique library on the API. This must match what the API expects.",
         ),
-        alias="LIBRARY_ID",
     )
     library_disallowed_suffixes: list[str] = FormField(
         [],
@@ -72,9 +69,8 @@ class SirsiDynixHorizonAuthLibrarySettings(BasicAuthProviderLibrarySettings):
             ),
             type=ConfigurationFormItemType.LIST,
         ),
-        alias="LIBRARY_DISALLOWED_SUFFIXES",
     )
-    library_identifier_field = FormField(
+    library_identifier_field: Literal["barcode"] | Literal["patrontype"] = FormField(
         "patrontype",
         form=ConfigurationFormItem(
             label="Library Identifier Field",

@@ -4,7 +4,7 @@ from collections.abc import Generator
 
 import pytest
 from opensearchpy import OpenSearch
-from pydantic import AnyHttpUrl
+from pydantic_settings import SettingsConfigDict
 
 from core.external_search import ExternalSearchIndex
 from core.model import Work
@@ -14,19 +14,19 @@ from core.service.configuration import ServiceConfiguration
 from core.service.container import Services, wire_container
 from core.service.search.container import Search
 from core.util.log import LoggerMixin
+from core.util.pydantic import HttpUrl
 from tests.fixtures.database import DatabaseTransactionFixture
 from tests.fixtures.services import ServicesFixture
 from tests.mocks.search import SearchServiceFake
 
 
 class SearchTestConfiguration(ServiceConfiguration):
-    url: AnyHttpUrl
+    url: HttpUrl
     index_prefix: str = "test_index"
     timeout: int = 20
     maxsize: int = 25
 
-    class Config:
-        env_prefix = "PALACE_TEST_SEARCH_"
+    model_config = SettingsConfigDict(env_prefix="PALACE_TEST_SEARCH_")
 
 
 class ExternalSearchFixture(LoggerMixin):
@@ -44,7 +44,7 @@ class ExternalSearchFixture(LoggerMixin):
 
         # Set up our testing search instance in the services container
         self.search_container = Search()
-        self.search_container.config.from_dict(self.search_config.dict())
+        self.search_container.config.from_dict(self.search_config.model_dump())
         self.services_container.search.override(self.search_container)
 
         self._indexes_created: list[str] = []

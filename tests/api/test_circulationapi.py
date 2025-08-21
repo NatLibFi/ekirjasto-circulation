@@ -1226,7 +1226,7 @@ class TestBaseCirculationAPI:
         # Test the ability to get the default notification email address
         # for a patron or a library.
         settings = library_fixture.mock_settings()
-        settings.default_notification_email_address = "help@example.com"  # type: ignore[assignment]
+        settings.default_notification_email_address = "help@example.com"
         library = library_fixture.library(settings=settings)
         patron = db.patron(library=library)
         m = BaseCirculationAPI.default_notification_email_address

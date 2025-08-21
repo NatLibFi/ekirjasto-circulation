@@ -14,7 +14,7 @@ from dependency_injector.wiring import Provide, inject
 from flask import url_for
 from flask_babel import lazy_gettext as _
 from lxml.etree import Element
-from pydantic import AnyHttpUrl, HttpUrl, PositiveInt, ValidationError
+from pydantic import PositiveInt, ValidationError
 from requests import Response
 from sqlalchemy.sql.expression import or_
 from uritemplate import URITemplate
@@ -32,8 +32,9 @@ from api.circulation import (
 )
 from api.circulation_exceptions import *
 from api.lcp.hash import Hasher, HasherFactory, HashingAlgorithm
-from api.lcp.status import Link, LoanStatus
+from api.lcp.status import LoanStatus
 from api.odl_api.auth import OpdsWithOdlException
+from api.opds.types.link import BaseLink
 from core import util
 from core.integration.settings import (
     ConfigurationFormItem,
@@ -80,6 +81,7 @@ from core.util import base64
 from core.util.datetime_helpers import to_utc, utc_now
 from core.util.http import HTTP, BadResponseException, RemoteIntegrationException
 from core.util.log import LoggerMixin
+from core.util.pydantic import HttpUrl
 
 
 class ODLAPIConstants:
@@ -88,7 +90,7 @@ class ODLAPIConstants:
 
 
 class ODLSettings(OPDSImporterSettings):
-    external_account_id: AnyHttpUrl = FormField(
+    external_account_id: HttpUrl = FormField(
         form=ConfigurationFormItem(
             label=_("ODL feed URL"),
             required=True,
@@ -103,7 +105,6 @@ class ODLSettings(OPDSImporterSettings):
     )
 
     password: str = FormField(
-        key=ExternalIntegration.PASSWORD,
         form=ConfigurationFormItem(
             label=_("Library's API password"),
             required=True,
@@ -274,7 +275,7 @@ class BaseODLAPI(
         """Retrieves the Loan Status Document."""
         try:
             response = self._get(url, allowed_response_codes=["2xx"])
-            status_doc = LoanStatus.parse_raw(response.content)
+            status_doc = LoanStatus.model_validate_json(response.content)
         except ValidationError as e:
             self.log.exception(
                 f"Error validating Loan Status Document. '{url}' returned and invalid document. {e}"
@@ -352,7 +353,7 @@ class BaseODLAPI(
 
         assert loan_status.links  # To satisfy mypy
         return_link = loan_status.links.get(
-            rel="return", content_type=LoanStatus.content_type()
+            rel="return", type=LoanStatus.content_type()
         )
         if not return_link:
             # The distributor didn't provide a link to return this loan. This means that the distributor
@@ -374,7 +375,7 @@ class BaseODLAPI(
             # something went wrong. We self.log an error and don't delete the loan, so the patron
             # can try again later.
             self.log.error(
-                f"Loan {loan.id} was {loan_status.status} not returned. The distributor says it's still active. {loan_status}"
+                f"Loan {loan.id} was {loan_status.status} not returned. The distributor says it's still active. {loan_status.model_dump_json()}"
             )
             raise CannotReturn()
         loan.license.checkin()
@@ -492,8 +493,8 @@ class BaseODLAPI(
         assert loan_status.links  # To satisfy mypy
         # We save the link to the loan status document in the loan's external_identifier field, so
         # we are able to retrieve it later.
-        loan_status_document_link: Link | None = loan_status.links.get(
-            rel="self", content_type="application/vnd.readium.license.status.v1.0+json"
+        loan_status_document_link: BaseLink | None = loan_status.links.get(
+            rel="self", type=LoanStatus.content_type()
         )
 
         if not loan_status_document_link:
@@ -649,27 +650,27 @@ class BaseODLAPI(
             # If we have no DRM, we can just redirect to the content link and let the patron download the book.
             fulfill_link = loan_status.links.get(
                 rel="publication",
-                content_type=delivery_mechanism.delivery_mechanism.content_type,  # type: ignore
+                type=delivery_mechanism.delivery_mechanism.content_type,
             )
             fulfill_cls = RedirectFulfillment
         elif drm_scheme == DeliveryMechanism.FEEDBOOKS_AUDIOBOOK_DRM:
             # For DeMarque audiobook content using "FEEDBOOKS_AUDIOBOOK_DRM", the link
             # we are looking for is stored in the 'manifest' rel.
             fulfill_link = loan_status.links.get(
-                rel="manifest", content_type=BaseODLImporter.FEEDBOOKS_AUDIO
+                rel="manifest", type=BaseODLImporter.FEEDBOOKS_AUDIO
             )
             fulfill_cls = partial(FetchFulfillment, allowed_response_codes=["2xx"])
         else:
             # We are getting content via a license loan_status document, so we need to find the link
             # that corresponds to the delivery mechanism we are using.
-            fulfill_link = loan_status.links.get(rel="license", content_type=drm_scheme)  # type: ignore
+            fulfill_link = loan_status.links.get(rel="license", type=drm_scheme)
             fulfill_cls = partial(FetchFulfillment, allowed_response_codes=["2xx"])
 
         if fulfill_link is None:
             raise CannotFulfill()
 
         self.log.info(f"Fulfilling with {drm_scheme}, Link: {fulfill_link.href}")
-        return fulfill_cls(fulfill_link.href, fulfill_link.content_type)
+        return fulfill_cls(fulfill_link.href, fulfill_link.type)
 
     def _fulfill(
         self,

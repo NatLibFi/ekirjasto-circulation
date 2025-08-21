@@ -8,12 +8,13 @@ from unittest.mock import MagicMock
 
 import pytest
 from botocore.exceptions import BotoCoreError, ClientError
-from pydantic import AnyHttpUrl
+from pydantic_settings import SettingsConfigDict
 
 from core.config import CannotLoadConfiguration
 from core.service.configuration import ServiceConfiguration
 from core.service.storage.container import Storage
 from core.service.storage.s3 import S3Service
+from core.util.pydantic import HttpUrl
 
 if TYPE_CHECKING:
     from mypy_boto3_s3 import S3Client
@@ -232,12 +233,11 @@ class TestS3Service:
 
 
 class S3UploaderIntegrationConfiguration(ServiceConfiguration):
-    endpoint_url: AnyHttpUrl
+    endpoint_url: HttpUrl
     user: str
     password: str
 
-    class Config(ServiceConfiguration.Config):
-        env_prefix = "PALACE_TEST_MINIO_"
+    model_config = SettingsConfigDict(env_prefix="PALACE_TEST_MINIO_")
 
 
 class S3ServiceIntegrationFixture:

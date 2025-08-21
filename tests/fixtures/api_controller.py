@@ -238,7 +238,7 @@ class ControllerFixture:
                 name=self.db.fresh_str(),
                 protocol=protocol,
                 goal=Goals.PATRON_AUTH_GOAL,
-                settings_dict=settings.dict(),
+                settings_dict=settings.model_dump(),
             )
             create(
                 _db,
@@ -247,7 +247,7 @@ class ControllerFixture:
                 parent=integration,
             )
 
-        settings = LibrarySettings.construct(
+        settings = LibrarySettings.model_construct(
             large_collection_languages=[],
             small_collection_languages=["eng"],
             tiny_collection_languages=["spa", "chi", "fre"],
@@ -335,7 +335,7 @@ class CirculationControllerFixture(ControllerFixture):
         # tests verify that non-default entry points can be selected.
         library = self.db.default_library()
         library.update_settings(
-            LibrarySettings.construct(
+            LibrarySettings.model_construct(
                 enabled_entry_points=[
                     EbooksEntryPoint.INTERNAL_NAME,
                     AudiobooksEntryPoint.INTERNAL_NAME,

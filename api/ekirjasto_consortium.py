@@ -14,7 +14,7 @@ from core.util.cache import memoize
 
 
 class KirkantaConsortium(BaseModel):
-    id: str
+    id: int
     name: str
     slug: str
 
@@ -25,8 +25,8 @@ class KirkantaConsortiums(BaseModel):
 
 
 class KirkantaCity(BaseModel):
-    id: str
-    consortium: str | None
+    id: int
+    consortium: int | None
     name: str
 
 
@@ -252,7 +252,7 @@ class EkirjastoConsortiumMonitor(Monitor):
         )
 
         library.update_settings(
-            LibrarySettings.construct(
+            LibrarySettings.model_construct(
                 municipalities=circulation_consortium.municipality_codes,
             )
         )

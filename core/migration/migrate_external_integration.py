@@ -17,26 +17,28 @@ from core.model import json_serializer
 
 T = TypeVar("T", bound=BaseSettings)
 
+# TODO: Remove this file together with redundant migration files that used it. Ticket 502 created.
+
 
 def _validate_and_load_settings(
     settings_class: type[T], settings_dict: dict[str, str]
 ) -> T:
     aliases = {
-        f.alias: f.name
-        for f in settings_class.__fields__.values()
-        if f.alias is not None
+        field.alias: field.name  # type: ignore
+        for field in settings_class.model_fields.values()
+        if field.alias is not None
     }
     parsed_settings_dict = {}
     for key, setting in settings_dict.items():
         if key in aliases:
             key = aliases[key]
-        field = settings_class.__fields__.get(key)
-        if field is None or not isinstance(field.field_info, FormFieldInfo):
+        field = settings_class.model_fields.get(key)
+        if field is None or not isinstance(field, FormFieldInfo):
             continue
-        config_item = field.field_info.form
+        config_item = field
         if (
-            config_item.type == ConfigurationFormItemType.LIST
-            or config_item.type == ConfigurationFormItemType.MENU
+            config_item.type == ConfigurationFormItemType.LIST  # type: ignore
+            or config_item.type == ConfigurationFormItemType.MENU  # type: ignore
         ):
             parsed_settings_dict[key] = json.loads(setting)
         else:
@@ -92,7 +94,7 @@ def _migrate_external_integration(
             protocol,
             goal,
             name,
-            json_serializer(settings_obj.dict()),
+            json_serializer(settings_obj.model_dump()),
             json_serializer(context or {}),
             self_test_results,
         ),
@@ -121,7 +123,7 @@ def _migrate_library_settings(
         (
             integration_id,
             library_id,
-            json_serializer(library_settings_obj.dict()),
+            json_serializer(library_settings_obj.model_dump()),
         ),
     )
 

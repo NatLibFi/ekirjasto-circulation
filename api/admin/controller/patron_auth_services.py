@@ -28,7 +28,7 @@ from core.model.integration import (
     IntegrationConfiguration,
     IntegrationLibraryConfiguration,
 )
-from core.util.problem_detail import ProblemDetail, ProblemError
+from core.util.problem_detail import ProblemDetail, ProblemDetailException
 
 
 class PatronAuthServicesController(
@@ -76,7 +76,7 @@ class PatronAuthServicesController(
             impl_cls = self.registry[protocol]
             settings_class = impl_cls.settings_class()
             validated_settings = ProcessFormData.get_settings(settings_class, form_data)
-            auth_service.settings_dict = validated_settings.dict()
+            auth_service.settings_dict = validated_settings.model_dump()
 
             # Update library settings
             if libraries_data:
@@ -87,7 +87,7 @@ class PatronAuthServicesController(
             # Trigger a site configuration change
             site_configuration_has_changed(self._db)
 
-        except ProblemError as e:
+        except ProblemDetailException as e:
             self._db.rollback()
             return e.problem_detail
 
@@ -110,7 +110,7 @@ class PatronAuthServicesController(
             .count()
         )
         if basic_auth_integrations > 1:
-            raise ProblemError(
+            raise ProblemDetailException(
                 MULTIPLE_BASIC_AUTH_SERVICES.detailed(
                     "You tried to add a patron authentication service that uses basic auth "
                     f"to {library.short_name}, but it already has one."
@@ -130,7 +130,7 @@ class PatronAuthServicesController(
         self.require_system_admin()
         try:
             return self.delete_service(service_id)
-        except ProblemError as e:
+        except ProblemDetailException as e:
             self._db.rollback()
             return e.problem_detail
 
@@ -162,7 +162,7 @@ class PatronAuthServicesController(
         # we can't run self tests.
         library_configuration = self.get_library_configuration(integration)
         if library_configuration is None:
-            raise ProblemError(
+            raise ProblemDetailException(
                 problem_detail=FAILED_TO_RUN_SELF_TESTS.detailed(
                     f"Failed to run self tests for {integration.name}, because it is not associated with any libraries."
                 )
@@ -171,7 +171,7 @@ class PatronAuthServicesController(
         if not isinstance(integration.settings_dict, dict) or not isinstance(
             library_configuration.settings_dict, dict
         ):
-            raise ProblemError(
+            raise ProblemDetailException(
                 problem_detail=FAILED_TO_RUN_SELF_TESTS.detailed(
                     f"Failed to run self tests for {integration.name}, because its settings are not valid."
                 )

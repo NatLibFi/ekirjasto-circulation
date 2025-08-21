@@ -9,7 +9,6 @@ from typing import Any, cast
 
 from dependency_injector.wiring import Provide
 from flask_babel import lazy_gettext as _
-from pydantic import HttpUrl
 from requests import Response as RequestsResponse
 from sqlalchemy.orm import Session
 
@@ -61,6 +60,7 @@ from core.monitor import CollectionMonitor, IdentifierSweepMonitor, TimelineMoni
 from core.service.container import Services
 from core.util.datetime_helpers import from_timestamp, strptime_utc, utc_now
 from core.util.http import HTTP, RemoteIntegrationException, RequestTimedOut
+from core.util.pydantic import HttpUrl
 
 
 class EnkiConstants:
@@ -80,7 +80,8 @@ class EnkiLibrarySettings(BaseSettings):
     enki_library_id: str = FormField(
         form=ConfigurationFormItem(label=_("Library ID"), required=True)
     )
-    dont_display_reserves: str | None = FormField(
+    dont_display_reserves: ConfigurationAttributeValue = FormField(
+        ConfigurationAttributeValue.YESVALUE,
         form=ConfigurationFormItem(
             label=_("Show/Hide Titles with No Available Loans"),
             required=False,
@@ -89,10 +90,10 @@ class EnkiLibrarySettings(BaseSettings):
             ),
             type=ConfigurationFormItemType.SELECT,
             options={
-                ConfigurationAttributeValue.YESVALUE.value: "Show",
-                ConfigurationAttributeValue.NOVALUE.value: "Hide",
+                ConfigurationAttributeValue.YESVALUE: "Show",
+                ConfigurationAttributeValue.NOVALUE: "Hide",
             },
-        )
+        ),
     )
 
 

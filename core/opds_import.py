@@ -7,8 +7,9 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from collections.abc import Callable, Generator, Iterable, Mapping, Sequence
 from datetime import datetime
+from enum import Enum
 from io import BytesIO
-from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, overload
 from urllib.parse import urljoin, urlparse
 from xml.etree.ElementTree import Element
 
@@ -17,7 +18,6 @@ import feedparser
 from feedparser import FeedParserDict
 from flask_babel import lazy_gettext as _
 from lxml import etree
-from pydantic import AnyHttpUrl
 from requests import Response
 from sqlalchemy.orm.session import Session
 
@@ -81,6 +81,7 @@ from core.util.datetime_helpers import datetime_utc, to_utc, utc_now
 from core.util.http import HTTP, BadResponseException
 from core.util.log import LoggerMixin
 from core.util.opds_writer import OPDSFeed, OPDSMessage
+from core.util.pydantic import HttpUrl
 from core.util.xmlparser import XMLParser
 
 if TYPE_CHECKING:
@@ -101,13 +102,18 @@ class OPDSXMLParser(XMLParser):
     }
 
 
+class IdentifierSource(Enum):
+    ID = "id"
+    DCTERMS_IDENTIFIER = "first_dcterms_identifier"
+
+
 class OPDSImporterSettings(
     ConnectionSetting,
     SAMLWAYFlessSetttings,
     FormatPrioritiesSettings,
     BaseCirculationApiSettings,
 ):
-    external_account_id: AnyHttpUrl = FormField(
+    external_account_id: HttpUrl = FormField(
         form=ConfigurationFormItem(
             label=_("URL"),
             required=True,
@@ -136,23 +142,25 @@ class OPDSImporterSettings(
     )
 
     username: str | None = FormField(
+        None,
         form=ConfigurationFormItem(
             label=_("Username"),
             description=_(
                 "If HTTP Basic authentication is required to access the OPDS feed (it usually isn't), enter the username here."
             ),
             weight=-1,
-        )
+        ),
     )
 
     password: str | None = FormField(
+        None,
         form=ConfigurationFormItem(
             label=_("Password"),
             description=_(
                 "If HTTP Basic authentication is required to access the OPDS feed (it usually isn't), enter the password here."
             ),
             weight=-1,
-        )
+        ),
     )
 
     custom_accept_header: str = FormField(
@@ -174,19 +182,18 @@ class OPDSImporterSettings(
         ),
     )
 
-    primary_identifier_source: str | None = FormField(
+    primary_identifier_source: IdentifierSource = FormField(
+        IdentifierSource.ID,
         form=ConfigurationFormItem(
             label=_("Identifer"),
             required=False,
             description=_("Which book identifier to use as ID."),
             type=ConfigurationFormItemType.SELECT,
             options={
-                "": _("(Default) Use <id>"),
-                ExternalIntegration.DCTERMS_IDENTIFIER: _(
-                    "Use <dcterms:identifier> first, if not exist use <id>"
-                ),
+                IdentifierSource.ID: "(Default) Use <id>",
+                IdentifierSource.DCTERMS_IDENTIFIER: "Use <dcterms:identifier> first, if not exist use <id>",
             },
-        )
+        ),
     )
 
 
@@ -749,7 +756,7 @@ class OPDSImporter(BaseOPDSImporter[OPDSImporterSettings]):
             xml_data_dict = xml_data_meta.get(_id, {})
 
             external_identifier = None
-            if self.primary_identifier_source == ExternalIntegration.DCTERMS_IDENTIFIER:
+            if self.primary_identifier_source == IdentifierSource.DCTERMS_IDENTIFIER:
                 # If it should use <dcterms:identifier> as the primary identifier, it must use the
                 # first value from the dcterms identifier, that came from the metadata as an
                 # IdentifierData object and it must be validated as a foreign_id before be used
@@ -1929,7 +1936,7 @@ class OPDSImportMonitor(CollectionMonitor):
 
     def _get_feeds(self) -> Iterable[tuple[str, bytes]]:
         feeds = []
-        queue = [cast(str, self.feed_url)]
+        queue = [self.feed_url]
         seen_links = set()
 
         # First, follow the feed's next links until we reach a page with
