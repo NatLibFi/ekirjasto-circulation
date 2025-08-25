@@ -143,6 +143,7 @@ class Named(BaseOpdsModel):
 
     name: LanguageMap
 
+    # E-kirjasto specific validation
     @field_validator("name", mode="before")
     def validate_name(cls, value):
         if value is None or value == "":
