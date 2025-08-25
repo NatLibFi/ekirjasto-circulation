@@ -1,0 +1,26 @@
+{
+  "id": "123-456-789",
+  "status": "returned",
+  "message": "The loan is returned",
+  "links": [
+    {
+      "rel": "self",
+      "href": "https://opds-beta.ellibs.com/odl-test/readium_license_status_document.php?checkout_id=123-456-789",
+      "type": "application/vnd.readium.license.status.v1.0+json"
+    },
+    {
+      "rel": "license",
+      "href": "https://lcp-test.ellibs.net/fetch_license.php?license_id=6581e118-f3aa-4a16-9de1-bf15fd5dd4bd",
+      "type": "application/vnd.readium.lcp.license.v1.0+json",
+      "profile": "http://readium.org/lcp/basic-profile"
+    },
+    {
+      "rel": "return",
+      "href": "https://opds-beta.ellibs.com/odl-test/return.php?checkout_id=123-456-789",
+      "type": "application/vnd.readium.license.status.v1.0+json"
+    }
+  ],
+  "potential_rights": {
+    "end": "2025-08-21T12:14:55+00:00"
+  }
+}

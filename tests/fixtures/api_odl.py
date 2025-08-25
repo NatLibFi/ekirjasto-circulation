@@ -12,7 +12,7 @@ from api.odl import BaseODLImporter, ODLImporter
 from api.odl2 import ODL2API, ODL2Importer
 from core.coverage import CoverageFailure
 from core.model import Edition, LicensePool, Work
-from tests.fixtures.files import APIFilesFixture
+from tests.fixtures.files import OPDS2WithODLFilesFixture, OPDSODLFilesFixture
 
 if TYPE_CHECKING:
     from tests.fixtures.database import DatabaseTransactionFixture
@@ -80,7 +80,7 @@ class LicenseInfoHelper:
         return json.dumps(output)
 
 
-class ODLAPIFilesFixture(APIFilesFixture):
+class ODLAPIFilesFixture(OPDSODLFilesFixture):
     """A fixture providing access to ODL files."""
 
     def __init__(self):
@@ -91,19 +91,6 @@ class ODLAPIFilesFixture(APIFilesFixture):
 def api_odl_files_fixture() -> ODLAPIFilesFixture:
     """A fixture providing access to ODL files."""
     return ODLAPIFilesFixture()
-
-
-class ODL2APIFilesFixture(APIFilesFixture):
-    """A fixture providing access to ODL2 files."""
-
-    def __init__(self):
-        super().__init__("odl2")
-
-
-@pytest.fixture()
-def api_odl2_files_fixture() -> ODL2APIFilesFixture:
-    """A fixture providing access to ODL2 files."""
-    return ODL2APIFilesFixture()
 
 
 class MockGet:
@@ -160,7 +147,7 @@ class OdlImportTemplatedFixture:
         self,
         odl_mock_get: MockGet,
         importer: BaseODLImporter,
-        files_fixture: APIFilesFixture,
+        files_fixture: OPDS2WithODLFilesFixture,
         feed_template: str,
     ):
         self.mock_get = odl_mock_get
@@ -187,7 +174,10 @@ class OdlImportTemplatedFixture:
         return self.importer.import_from_feed(feed)
 
     def get_templated_feed(
-        self, files: APIFilesFixture, filename: str, licenses: list[LicenseHelper]
+        self,
+        files: OPDS2WithODLFilesFixture,
+        filename: str,
+        licenses: list[LicenseHelper],
     ) -> str:
         """Get the test ODL feed with specific licensing information.
 
@@ -209,18 +199,20 @@ def odl_import_templated(
     odl_mock_get: MockGet,
     odl_importer: ODLImporter,
     odl2_importer: ODL2Importer,
-    api_odl_files_fixture: ODLAPIFilesFixture,
-    api_odl2_files_fixture: ODL2APIFilesFixture,
+    opds2_with_odl_files_fixture: OPDS2WithODLFilesFixture,
 ) -> OdlImportTemplatedFixture:
     if request.param == "odl":
         return OdlImportTemplatedFixture(
-            odl_mock_get, odl_importer, api_odl_files_fixture, "feed_template.xml.jinja"
+            odl_mock_get,
+            odl_importer,
+            opds2_with_odl_files_fixture,
+            "feed_template.xml.jinja",
         )
     elif request.param == "odl2":
         return OdlImportTemplatedFixture(
             odl_mock_get,
             odl2_importer,
-            api_odl2_files_fixture,
+            opds2_with_odl_files_fixture,
             "feed_template.json.jinja",
         )
 

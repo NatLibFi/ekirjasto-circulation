@@ -31,8 +31,6 @@ pytest_plugins = [
     "tests.fixtures.flask",
     "tests.fixtures.library",
     "tests.fixtures.odl",
-    "tests.fixtures.opds2_files",
-    "tests.fixtures.opds_files",
     "tests.fixtures.sample_covers",
     "tests.fixtures.search",
     "tests.fixtures.services",

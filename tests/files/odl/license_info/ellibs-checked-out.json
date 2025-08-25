@@ -1,0 +1,26 @@
+{
+  "identifier": "urn:license:123",
+  "status": "unavailable",
+  "checkouts": {
+    "available": 0,
+    "left": 0,
+    "active": [
+      {
+        "href": "https://license.example.com/readium_license_status_document.php?checkout_id=123-456-789",
+        "patron_id": "b86d6bf6-4969-11f0-bc6a-5acd161bdbce",
+        "expires": "2025-08-23T18:35:09+00:00",
+        "id": "123-456-789"
+      },
+      {
+        "href": "https://license.example.com/readium_license_status_document.php?checkout_id=987-654-321",
+        "patron_id": "01433692-7162-11f0-87a6-22785876499c",
+        "expires": "2025-08-24T02:38:52+00:00",
+        "id": "987-654-321"
+      }
+    ]
+  },
+  "terms": {
+    "expires": "2025-08-13T06:10:13+00:00",
+    "concurrency": "2"
+  }
+}

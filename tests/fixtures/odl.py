@@ -29,7 +29,7 @@ from core.model.configuration import ExternalIntegration
 from core.util.datetime_helpers import utc_now
 from core.util.http import HTTP
 from tests.api.mockapi.mock import MockHTTPClient, MockRequestsResponse
-from tests.fixtures.api_odl import ODL2APIFilesFixture, ODLAPIFilesFixture
+from tests.fixtures.api_odl import ODLAPIFilesFixture
 from tests.fixtures.database import DatabaseTransactionFixture
 from tests.fixtures.files import APIFilesFixture, OPDS2WithODLFilesFixture
 from tests.mocks.odl import MockODL2Api, MockOPDS2WithODLApi
@@ -460,7 +460,7 @@ def odl_test_fixture(
     api_odl_files_fixture: ODLAPIFilesFixture,
     monkey_patch_odl: MonkeyPatchedODLFixture,
 ) -> ODLTestFixture:
-    return ODLTestFixture(db, api_odl_files_fixture, monkey_patch_odl)
+    return ODLTestFixture(db, api_odl_files_fixture, monkey_patch_odl)  # type: ignore
 
 
 class ODLAPITestFixture:
@@ -553,11 +553,11 @@ class ODL2APITestFixture(ODLAPITestFixture):
 @pytest.fixture(scope="function")
 def odl2_test_fixture(
     db: DatabaseTransactionFixture,
-    api_odl2_files_fixture: ODL2APIFilesFixture,
+    api_odl2_files_fixture: ODLAPIFilesFixture,
     monkey_patch_odl: MonkeyPatchedODLFixture,
 ) -> ODL2TestFixture:
     """The ODL2 API uses the ODL API in the background, so the mockeypatching is the same"""
-    return ODL2TestFixture(db, api_odl2_files_fixture, monkey_patch_odl)
+    return ODL2TestFixture(db, api_odl2_files_fixture, monkey_patch_odl)  # type: ignore
 
 
 @pytest.fixture(scope="function")
@@ -577,7 +577,7 @@ class ODL2ApiFixture:
     def __init__(
         self,
         db: DatabaseTransactionFixture,
-        files: ODL2APIFilesFixture,
+        files: ODLAPIFilesFixture,
     ):
         self.db = db
         self.files = files
@@ -738,6 +738,6 @@ class ODL2ApiFixture:
 @pytest.fixture(scope="function")
 def odl2_api_fixture(
     db: DatabaseTransactionFixture,
-    api_odl2_files_fixture: ODL2APIFilesFixture,
+    api_odl_files_fixture: ODLAPIFilesFixture,
 ) -> ODL2ApiFixture:
-    return ODL2ApiFixture(db, api_odl2_files_fixture)
+    return ODL2ApiFixture(db, api_odl_files_fixture)

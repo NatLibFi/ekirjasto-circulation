@@ -57,7 +57,7 @@ from core.util.opds_writer import AtomFeed, OPDSFeed, OPDSMessage
 from tests.api.mockapi.mock import MockRequestsResponse
 from tests.core.mock import DummyHTTPClient
 from tests.fixtures.database import DatabaseTransactionFixture
-from tests.fixtures.opds_files import OPDSFilesFixture
+from tests.fixtures.files import OPDSFilesFixture
 
 
 class DoomedOPDSImporter(OPDSImporter):
