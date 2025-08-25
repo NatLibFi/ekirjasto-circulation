@@ -5,7 +5,6 @@ from tests.fixtures.files import OPDS2WithODLFilesFixture
 
 
 class TestLicenseInfo:
-
     @pytest.mark.parametrize(
         "filename",
         [
@@ -37,4 +36,4 @@ class TestLicenseInfo:
             opds2_with_odl_files_fixture.sample_data("license_info/" + filename)
         )
         assert info.identifier == "urn:license:123"
-        assert len(info.protection.formats) == 0 # Ellibs does not provide this data
+        assert len(info.protection.formats) == 0  # Ellibs does not provide this data

@@ -5,7 +5,6 @@ from tests.fixtures.files import OPDS2FilesFixture
 
 
 class TestLicenseDocument:
-
     @pytest.mark.parametrize(
         "filename",
         [

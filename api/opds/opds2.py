@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-from enum import Enum
-import sys
 from collections.abc import Sequence
-from enum import auto
+from enum import Enum
 from functools import cached_property
 from typing import Annotated, Any, Generic, TypeVar
 

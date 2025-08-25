@@ -1,23 +1,24 @@
 from __future__ import annotations
 
-import sys
 from collections.abc import Sequence
 from datetime import date
-from enum import Enum, auto
+from enum import Enum
 from functools import cached_property
-from typing import Literal, Optional, TypeVar
+from typing import Literal, TypeVar
 
-from pydantic import AwareDatetime, Field, NonNegativeInt, PositiveFloat, PositiveInt, field_validator
+from pydantic import (
+    AwareDatetime,
+    Field,
+    NonNegativeInt,
+    PositiveFloat,
+    PositiveInt,
+    field_validator,
+)
 
 from api.opds.base import BaseOpdsModel
 from api.opds.types.language import LanguageCode, LanguageMap
 from api.opds.types.link import BaseLink, CompactCollection
-from api.opds.util import (
-    StrModelOrTuple,
-    StrOrModel,
-    StrOrTuple,
-    obj_or_tuple_to_tuple,
-)
+from api.opds.util import StrModelOrTuple, StrOrModel, StrOrTuple, obj_or_tuple_to_tuple
 
 
 class Encryption(BaseOpdsModel):
@@ -142,7 +143,7 @@ class Named(BaseOpdsModel):
 
     name: LanguageMap
 
-    @field_validator('name', mode='before')
+    @field_validator("name", mode="before")
     def validate_name(cls, value):
         if value is None or value == "":
             return "[Unknown]"

@@ -1,6 +1,5 @@
-import sys
-
 from enum import Enum
+
 from pydantic import Field, field_validator
 
 from api.opds.base import BaseOpdsModel

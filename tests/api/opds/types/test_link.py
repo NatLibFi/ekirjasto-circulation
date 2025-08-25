@@ -3,8 +3,8 @@ import json
 import pytest
 from pydantic import TypeAdapter, ValidationError
 
-from core.exceptions import PalaceValueError
 from api.opds.types.link import BaseLink, CompactCollection
+from core.exceptions import PalaceValueError
 
 
 class TestBaseLink:

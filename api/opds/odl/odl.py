@@ -4,9 +4,9 @@ from typing import Annotated, Any
 
 from pydantic import AwareDatetime, Discriminator, Field, Tag, field_validator
 
+from api.lcp.status import LoanStatus
 from api.opds import opds2, rwpm
 from api.opds.base import BaseOpdsModel
-from api.lcp.status import LoanStatus
 from api.opds.odl.license_info import LicenseInfo
 from api.opds.odl.protection import Protection
 from api.opds.odl.terms import Terms

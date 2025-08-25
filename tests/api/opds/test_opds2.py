@@ -1,11 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from api.opds.opds2 import (
-    Publication,
-    PublicationFeed,
-    PublicationFeedNoValidation,
-)
+from api.opds.opds2 import Publication, PublicationFeed, PublicationFeedNoValidation
 from tests.fixtures.files import OPDS2FilesFixture
 
 
@@ -19,7 +15,7 @@ from tests.fixtures.files import OPDS2FilesFixture
                 "http://example.org/huckleberry-finn",
                 "urn:proquest.com/document-id/181639",
                 "urn:isbn:9789523565593",
-                "urn:isbn:978-0-06-112008-4"
+                "urn:isbn:978-0-06-112008-4",
             ],
             id="feed.json",
         ),

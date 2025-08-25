@@ -4,12 +4,7 @@ import pytest
 from pydantic import TypeAdapter, ValidationError
 
 from api.opds.base import BaseOpdsModel
-from api.opds.util import (
-    StrModelOrTuple,
-    StrOrModel,
-    StrOrTuple,
-    obj_or_tuple_to_tuple,
-)
+from api.opds.util import StrModelOrTuple, StrOrModel, StrOrTuple, obj_or_tuple_to_tuple
 
 
 def test_obj_or_sequence_to_sequence():

@@ -7,7 +7,6 @@ from api.opds.types.language import LanguageCode, LanguageMap
 
 
 class TestLanguageCode:
-
     @pytest.mark.parametrize(
         "language_code, expected",
         [
@@ -166,7 +165,7 @@ class TestLanguageMap:
         string_map = str(test_map)
         assert string_map == "foo"
         assert isinstance(string_map, str)
-        assert not isinstance(test_map, str) # type: ignore
+        assert not isinstance(test_map, str)  # type: ignore
 
     def test__repr__(self) -> None:
         test_map = LanguageMap({"en": "foo", "fr": "bar"})

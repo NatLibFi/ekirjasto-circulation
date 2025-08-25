@@ -2,11 +2,12 @@ from collections.abc import Sequence
 from functools import cached_property
 
 from pydantic import AwareDatetime, Field, NonNegativeInt
+
 from api.opds.base import BaseOpdsModel
 from api.opds.odl.protection import Protection
 from api.opds.odl.terms import Terms
-from api.opds.util import StrOrTuple, obj_or_tuple_to_tuple
 from api.opds.opds2 import Price
+from api.opds.util import StrOrTuple, obj_or_tuple_to_tuple
 from core.model.licensing import LicenseStatus
 
 

@@ -129,13 +129,16 @@ class LanguageMap(Mapping[str, str]):
         )
 
     @overload
-    def get(self) -> str: ...
+    def get(self) -> str:
+        ...
 
     @overload
-    def get(self, language: str | None) -> str | None: ...
+    def get(self, language: str | None) -> str | None:
+        ...
 
     @overload
-    def get(self, language: str | None, default: str | T) -> str | T: ...
+    def get(self, language: str | None, default: str | T) -> str | T:
+        ...
 
     def get(
         self, language: str | None = None, default: str | T | None = None
