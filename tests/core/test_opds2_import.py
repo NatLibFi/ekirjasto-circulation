@@ -32,7 +32,7 @@ from core.opds2_import import (
     RWPMManifestParser,
 )
 from tests.fixtures.database import DatabaseTransactionFixture
-from tests.fixtures.opds2_files import OPDS2FilesFixture
+from tests.fixtures.files import OPDS2FilesFixture
 
 
 class OPDS2Test:
