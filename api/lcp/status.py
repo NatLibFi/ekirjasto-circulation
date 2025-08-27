@@ -98,7 +98,9 @@ class LoanStatus(BaseOpdsModel):
     status: Status
     message: str | None = None  # Ellibs does not provide this in their data
     updated: Updated | None = None  # Ellibs does not provide this in their data
-    links: CompactCollection[Link]
+    links: CompactCollection[
+        Link
+    ] | None = None  # Ellibs does not provide this in their data when circulation gets an ODL notification request
     potential_rights: PotentialRights = Field(default_factory=PotentialRights)
     events: list[Event] = Field(default_factory=list)
 

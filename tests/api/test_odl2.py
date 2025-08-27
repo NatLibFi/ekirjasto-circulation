@@ -32,7 +32,7 @@ from tests.fixtures.api_odl import (
     LicenseHelper,
     LicenseInfoHelper,
     MockGet,
-    ODL2APIFilesFixture,
+    ODLAPIFilesFixture,
 )
 from tests.fixtures.database import DatabaseTransactionFixture
 from tests.fixtures.odl import ODL2ApiFixture
@@ -69,7 +69,7 @@ class TestODL2Importer:
         self,
         odl2_importer: ODL2Importer,
         odl_mock_get: MockGet,
-        api_odl2_files_fixture: ODL2APIFilesFixture,
+        api_odl_files_fixture: ODLAPIFilesFixture,
     ) -> None:
         """Ensure that ODL2Importer2 correctly processes and imports the ODL feed encoded using OPDS 2.x.
 
@@ -88,7 +88,7 @@ class TestODL2Importer:
         )
 
         odl_mock_get.add(moby_dick_license)
-        feed = api_odl2_files_fixture.sample_text("feed.json")
+        feed = api_odl_files_fixture.sample_text("feed.json")
 
         config = odl2_importer.collection.integration_configuration
         odl2_importer.ignored_identifier_types = [IdentifierConstants.URI]
@@ -231,11 +231,11 @@ class TestODL2Importer:
         db: DatabaseTransactionFixture,
         odl2_importer: ODL2Importer,
         odl_mock_get: MockGet,
-        api_odl2_files_fixture: ODL2APIFilesFixture,
+        api_odl_files_fixture: ODLAPIFilesFixture,
     ) -> None:
         """Ensure that ODL2Importer2 correctly processes and imports a feed with an audiobook."""
-        license = api_odl2_files_fixture.sample_text("license-audiobook.json")
-        feed = api_odl2_files_fixture.sample_text("feed-audiobook-streaming.json")
+        license = api_odl_files_fixture.sample_text("license-audiobook.json")
+        feed = api_odl_files_fixture.sample_text("feed-audiobook-streaming.json")
         odl_mock_get.add(license)
 
         db.set_settings(
@@ -289,14 +289,14 @@ class TestODL2Importer:
         self,
         odl2_importer: ODL2Importer,
         odl_mock_get: MockGet,
-        api_odl2_files_fixture: ODL2APIFilesFixture,
+        api_odl_files_fixture: ODLAPIFilesFixture,
     ) -> None:
         """
         Ensure that ODL2Importer2 correctly processes and imports a feed with an audiobook
         that is not available for streaming.
         """
-        license = api_odl2_files_fixture.sample_text("license-audiobook.json")
-        feed = api_odl2_files_fixture.sample_text("feed-audiobook-no-streaming.json")
+        license = api_odl_files_fixture.sample_text("license-audiobook.json")
+        feed = api_odl_files_fixture.sample_text("feed-audiobook-no-streaming.json")
         odl_mock_get.add(license)
 
         imported_editions, pools, works, failures = odl2_importer.import_from_feed(feed)
@@ -335,13 +335,13 @@ class TestODL2Importer:
     def test_import_open_access(
         self,
         odl2_importer: ODL2Importer,
-        api_odl2_files_fixture: ODL2APIFilesFixture,
+        api_odl_files_fixture: ODLAPIFilesFixture,
     ) -> None:
         """
         Ensure that ODL2Importer2 correctly processes and imports a feed with an
         open access book.
         """
-        feed = api_odl2_files_fixture.sample_text("oa-title.json")
+        feed = api_odl_files_fixture.sample_text("open-access-title.json")
         imported_editions, pools, works, failures = odl2_importer.import_from_feed(feed)
 
         assert isinstance(imported_editions, list)
