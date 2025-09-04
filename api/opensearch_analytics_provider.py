@@ -217,7 +217,7 @@ class OpenSearchAnalyticsProvider(LocalAnalyticsProvider):
                 contribution.contributor.sort_name
                 for contribution in edition.contributions
                 if getattr(contribution.contributor, "role", None)
-                == Contributor.AUTHOR_ROLE
+                == Contributor.Role.AUTHOR
             ]
             if edition
             else None,
@@ -231,7 +231,7 @@ class OpenSearchAnalyticsProvider(LocalAnalyticsProvider):
                 for contribution in edition.contributions
                 if (
                     not getattr(contribution.contributor, "role", None)
-                    or contribution.contributor.role != Contributor.AUTHOR_ROLE
+                    or contribution.contributor.role != Contributor.Role.AUTHOR
                 )
             ]
             if edition

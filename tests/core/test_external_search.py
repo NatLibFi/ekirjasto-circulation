@@ -1642,7 +1642,7 @@ class TestAuthorFilter:
             Contribution,
             edition=edition,
             contributor=result.full,
-            role=Contributor.CONTRIBUTOR_ROLE,
+            role=Contributor.Role.CONTRIBUTOR,
         )
         result.literary_wonderlands = data.external_search.default_work(
             presentation_edition=edition

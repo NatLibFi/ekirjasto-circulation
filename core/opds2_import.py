@@ -1,42 +1,22 @@
 from __future__ import annotations
 
-import logging
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Mapping, Sequence
 from datetime import datetime
-from io import BytesIO, StringIO
-from typing import TYPE_CHECKING, Any
+from functools import cached_property
+from typing import Any
 from urllib.parse import urljoin, urlparse
 
-import webpub_manifest_parser.opds2.ast as opds2_ast
 from flask_babel import lazy_gettext as _
+from pydantic import ValidationError
 from requests import Response
 from sqlalchemy.orm import Session
 from uritemplate import URITemplate
-from webpub_manifest_parser.core import ManifestParserFactory, ManifestParserResult
-from webpub_manifest_parser.core.analyzer import NodeFinder
-from webpub_manifest_parser.core.ast import (
-    ArrayOfCollectionsProperty,
-    Link,
-    Manifestlike,
-)
-from webpub_manifest_parser.core.properties import BooleanProperty
-from webpub_manifest_parser.core.syntax import MissingPropertyError
-from webpub_manifest_parser.errors import BaseError
-from webpub_manifest_parser.opds2 import (
-    ManifestParser,
-    OPDS2CollectionRolesRegistry,
-    OPDS2FeedParserFactory,
-    OPDS2SemanticAnalyzer,
-    OPDS2SyntaxAnalyzer,
-)
-from webpub_manifest_parser.opds2.registry import (
-    OPDS2LinkRelationsRegistry,
-    OPDS2MediaTypesRegistry,
-)
-from webpub_manifest_parser.utils import encode, first_or_default
 
 from api.circulation import Fulfillment, FulfillmentInfo
 from api.circulation_exceptions import CannotFulfill
+from api.opds import opds2, rwpm
+from api.opds.opds2 import AcquisitionObject
+from api.opds.types.link import CompactCollection
 from core.coverage import CoverageFailure
 from core.integration.settings import (
     ConfigurationFormItem,
@@ -78,6 +58,7 @@ from core.opds_import import (
     OPDSImporterSettings,
     OPDSImportMonitor,
 )
+from core.util import first_or_default
 from core.util.http import HTTP, BadResponseException
 from core.util.opds_writer import OPDSFeed
 
@@ -791,37 +772,37 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
         subjects = self._extract_subjects(publication.metadata.subjects)
         contributors = (
             self._extract_contributors(
-                publication.metadata.authors, Contributor.AUTHOR_ROLE
+                publication.metadata.authors, Contributor.Role.AUTHOR
             )
             + self._extract_contributors(
-                publication.metadata.translators, Contributor.TRANSLATOR_ROLE
+                publication.metadata.translators, Contributor.Role.TRANSLATOR
             )
             + self._extract_contributors(
-                publication.metadata.editors, Contributor.EDITOR_ROLE
+                publication.metadata.editors, Contributor.Role.EDITOR
             )
             + self._extract_contributors(
-                publication.metadata.artists, Contributor.ARTIST_ROLE
+                publication.metadata.artists, Contributor.Role.ARTIST
             )
             + self._extract_contributors(
-                publication.metadata.illustrators, Contributor.ILLUSTRATOR_ROLE
+                publication.metadata.illustrators, Contributor.Role.ILLUSTRATOR
             )
             + self._extract_contributors(
-                publication.metadata.letterers, Contributor.LETTERER_ROLE
+                publication.metadata.letterers, Contributor.Role.LETTERER
             )
             + self._extract_contributors(
-                publication.metadata.pencilers, Contributor.PENCILER_ROLE
+                publication.metadata.pencilers, Contributor.Role.PENCILER
             )
             + self._extract_contributors(
-                publication.metadata.colorists, Contributor.COLORIST_ROLE
+                publication.metadata.colorists, Contributor.Role.COLORIST
             )
             + self._extract_contributors(
-                publication.metadata.inkers, Contributor.INKER_ROLE
+                publication.metadata.inkers, Contributor.Role.INKER
             )
             + self._extract_contributors(
-                publication.metadata.narrators, Contributor.NARRATOR_ROLE
+                publication.metadata.narrators, Contributor.Role.NARRATOR
             )
             + self._extract_contributors(
-                publication.metadata.contributors, Contributor.CONTRIBUTOR_ROLE
+                publication.metadata.contributors, Contributor.Role.CONTRIBUTOR
             )
         )
         # Audiobook duration
