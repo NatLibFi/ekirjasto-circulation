@@ -19,6 +19,19 @@
         "title": "Moby-Dick",
         "author": "Herman Melville",
         "identifier": "urn:isbn:978-3-16-148410-0",
+        "schema:encodingFormat": "application/audiobook+json",
+        "schema:workExample": [
+            {
+                "@type": "http://schema.org/Book",
+                "schema:bookFormat": "http://schema.org/Hardcover",
+                "schema:isbn": "urn:ISBN:9782070197736"
+            },
+            {
+                "@type": "http://schema.org/EBook",
+                "schema:encodingFormat": "application/pdf",
+                "schema:isbn": "urn:ISBN:9782070197736"
+            }
+        ],
         "language": "en",
         "publisher": {
           "name": "Test Publisher"

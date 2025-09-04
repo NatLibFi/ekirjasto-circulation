@@ -372,7 +372,9 @@ class BasePublicationFeed(BaseOpdsModel, Generic[T]):
 
     metadata: FeedMetadata
     links: CompactCollection[StrictLink]
-    publications: Annotated[list[T], Field(min_length=1)]
+    publications: Annotated[
+        list[T], Field(min_length=0)
+    ]  # E-Kirjasto: Ellibs' feed's last page contains an empty list, hence allowing it unlike in Palace code.
 
     _validate_links = field_validator("links")(validate_self_link)
 

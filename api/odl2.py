@@ -2,44 +2,36 @@ from __future__ import annotations
 
 import datetime
 import logging
-from collections.abc import Callable
-from typing import TYPE_CHECKING, Any
+from collections.abc import Callable, Sequence
+from typing import Any
 
 from flask_babel import lazy_gettext as _
 from pydantic import PositiveInt
+from requests import Response
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.expression import and_, or_
-from webpub_manifest_parser.odl import ODLFeedParserFactory
-from webpub_manifest_parser.opds2.registry import OPDS2LinkRelationsRegistry
 
-from api.circulation import LoanInfo
+from api.circulation import HoldInfo, LoanInfo
 from api.circulation_exceptions import PatronHoldLimitReached, PatronLoanLimitReached
+from api.lcp.status import LoanStatus
 from api.odl import BaseODLAPI, BaseODLImporter, ODLLibrarySettings, ODLSettings
+from api.opds import opds2, rwpm
+from api.opds.odl import odl
+from api.opds.odl.license_info import LicenseInfo
 from core.integration.settings import (
     ConfigurationFormItem,
     ConfigurationFormItemType,
     FormField,
 )
-from core.metadata_layer import FormatData, TimestampData
-from core.model import Edition, LicensePool, Loan, RightsStatus
+from core.metadata_layer import FormatData, LicenseData, Metadata, TimestampData
+from core.model import Collection, Edition, LicensePool, Loan, RightsStatus
 from core.model.configuration import ExternalIntegration
+from core.model.licensing import LicenseStatus
+from core.model.patron import Hold, Patron
 from core.monitor import CollectionMonitor
-from core.opds2_import import (
-    OPDS2Importer,
-    OPDS2ImporterSettings,
-    OPDS2ImportMonitor,
-    RWPMManifestParser,
-)
-from core.util import first_or_default
-from core.util.datetime_helpers import to_utc, utc_now
-
-if TYPE_CHECKING:
-    from webpub_manifest_parser.core.ast import Metadata
-    from webpub_manifest_parser.opds2.ast import OPDS2Feed, OPDS2Publication
-
-    from api.circulation import HoldInfo
-    from core.model import Collection, LicensePool
-    from core.model.patron import Hold, Patron
+from core.opds2_import import OPDS2Importer, OPDS2ImporterSettings, OPDS2ImportMonitor
+from core.util.datetime_helpers import utc_now
+from core.util.http import HTTP
 
 
 class ODL2Settings(ODLSettings, OPDS2ImporterSettings):
@@ -151,9 +143,8 @@ class ODL2Importer(BaseODLImporter[ODL2Settings], OPDS2Importer):
         self,
         db: Session,
         collection: Collection,
-        parser: RWPMManifestParser | None = None,
         data_source_name: str | None = None,
-        http_get: Callable[..., tuple[int, Any, bytes]] | None = None,
+        http_get: Callable[..., Response] | None = None,
     ):
         """Initialize a new instance of ODL2Importer class.
 
@@ -165,9 +156,6 @@ class ODL2Importer(BaseODLImporter[ODL2Settings], OPDS2Importer):
             If this is None, no LicensePools will be created -- only Editions.
         :type collection: Collection
 
-        :param parser: Feed parser
-        :type parser: RWPMManifestParser
-
         :param data_source_name: Name of the source of this OPDS feed.
             All Editions created by this import will be associated with this DataSource.
             If there is no DataSource with this name, one will be created.
@@ -178,19 +166,19 @@ class ODL2Importer(BaseODLImporter[ODL2Settings], OPDS2Importer):
         super().__init__(
             db,
             collection,
-            parser if parser else RWPMManifestParser(ODLFeedParserFactory()),
             data_source_name,
             http_get,
         )
         self._logger = logging.getLogger(__name__)
+        self.http_get = http_get or HTTP.get_with_timeout
 
     def _extract_publication_metadata(
         self,
-        feed: OPDS2Feed,
-        publication: OPDS2Publication,
+        publication: opds2.BasePublication,
         data_source_name: str | None,
+        feed_self_url: str,
     ) -> Metadata:
-        """Extract a Metadata object from webpub-manifest-parser's publication.
+        """Extract a Metadata object from opds2.BasePublication.
 
         :param publication: Feed object
         :param publication: Publication object
@@ -199,44 +187,49 @@ class ODL2Importer(BaseODLImporter[ODL2Settings], OPDS2Importer):
         :return: Publication's metadata
         """
         metadata = super()._extract_publication_metadata(
-            feed, publication, data_source_name
+            publication, data_source_name, feed_self_url
         )
+
         formats = []
         licenses = []
         medium = None
 
-        skipped_license_formats = set(self.settings.skipped_license_formats)
+        # E-Kirjasto: If this is a generic OPDS2 publication, it is an open-access title.
+        if isinstance(publication, odl.Publication):
+            skipped_license_formats = set(self.settings.skipped_license_formats)
+            publication_availability = publication.metadata.availability.available
 
-        if publication.licenses:
             for odl_license in publication.licenses:
                 identifier = odl_license.metadata.identifier
-                checkout_link = first_or_default(
-                    odl_license.links.get_by_rel(OPDS2LinkRelationsRegistry.BORROW.key)
-                )
-                if checkout_link:
-                    checkout_link = checkout_link.href
 
-                license_info_document_link = first_or_default(
-                    odl_license.links.get_by_rel(OPDS2LinkRelationsRegistry.SELF.key)
-                )
-                if license_info_document_link:
-                    license_info_document_link = license_info_document_link.href
+                checkout_link = odl_license.links.get(
+                    rel=opds2.AcquisitionLinkRelations.borrow,
+                    type=LoanStatus.content_type(),
+                    raising=True,
+                ).href
 
-                expires = (
-                    to_utc(odl_license.metadata.terms.expires)
-                    if odl_license.metadata.terms
-                    else None
-                )
-                concurrency = (
-                    int(odl_license.metadata.terms.concurrency)
-                    if odl_license.metadata.terms
-                    else None
-                )
+                license_info_document_link = odl_license.links.get(
+                    rel=rwpm.LinkRelations.self,
+                    type=LicenseInfo.content_type(),
+                    raising=True,
+                ).href
 
-                if not license_info_document_link:
-                    parsed_license = None
-                else:
-                    parsed_license = self.get_license_data(
+                expires = odl_license.metadata.terms.expires_datetime
+                concurrency = odl_license.metadata.terms.concurrency
+
+                parsed_license = (
+                    LicenseData(
+                        identifier=identifier,
+                        checkout_url=None,
+                        status_url=license_info_document_link,
+                        status=LicenseStatus.unavailable,
+                        checkouts_available=0,
+                    )
+                    if (
+                        not odl_license.metadata.availability.available
+                        or not publication_availability
+                    )
+                    else self.get_license_data(
                         license_info_document_link,
                         checkout_link,
                         identifier,
@@ -244,6 +237,7 @@ class ODL2Importer(BaseODLImporter[ODL2Settings], OPDS2Importer):
                         concurrency,
                         self.http_get,
                     )
+                )
 
                 if parsed_license is not None:
                     licenses.append(parsed_license)
@@ -259,7 +253,7 @@ class ODL2Importer(BaseODLImporter[ODL2Settings], OPDS2Importer):
                     if not medium:
                         medium = Edition.medium_from_media_type(license_format)
 
-                    drm_schemes: list[str | None]
+                    drm_schemes: Sequence[str | None]
                     if license_format in self.LICENSE_FORMATS:
                         # Special case to handle DeMarque audiobooks which include the protection
                         # in the content type. When we see a license format of
@@ -288,9 +282,6 @@ class ODL2Importer(BaseODLImporter[ODL2Settings], OPDS2Importer):
                             )
                         )
 
-        # If we don't have any licenses, then this title is an open-access title.
-        # So we don't change the circulation data.
-        if len(licenses) != 0:
             metadata.circulation.licenses = licenses
             metadata.circulation.licenses_owned = None
             metadata.circulation.licenses_available = None

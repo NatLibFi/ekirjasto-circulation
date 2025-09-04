@@ -95,6 +95,7 @@ def _get_publication_type(v: dict[str, Any] | Publication | opds2.Publication) -
     return "Opds2Publication"
 
 
+# E-Kirjasto: We only have OPDS2 with ODL2 publications but keeping this discrimination in for potential future needs.
 Opds2OrOpds2WithOdlPublication = Annotated[
     Annotated[Publication, Tag("OdlPublication")]
     | Annotated[opds2.Publication, Tag("Opds2Publication")],

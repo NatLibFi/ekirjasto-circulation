@@ -13,6 +13,7 @@ class PublicationTypes(str, Enum):
 
     book = "http://schema.org/Book"
     audiobook = "http://schema.org/Audiobook"
+    # ebook = "http://schema.org/EBook" # E-Kirjasto De Marque feed includes this type in WorkExample.
 
 
 class BookFormat(str, Enum):
@@ -27,7 +28,7 @@ class BookFormat(str, Enum):
     graphic_novel = "http://schema.org/GraphicNovel"
 
 
-class WorkExample(BaseOpdsModel):
+class WorkExample(BaseOpdsModel, LoggerMixin):
     """
     This isn't documented, but we see this information coming back in DeMarque feeds.
 
@@ -44,9 +45,20 @@ class WorkExample(BaseOpdsModel):
         ]
     """
 
-    type: PublicationTypes | None = Field(None, alias="@type")
+    type: str = Field(
+        ..., alias="@type"
+    )  # TODO: E-Kirjasto: We want to call out any diffs here, just like PalacePublicationMetadata.
     book_format: BookFormat | None = Field(None, alias="schema:bookFormat")
     isbn: str | None = Field(None, alias="schema:isbn")
+
+    @field_validator("type")
+    @classmethod
+    def warning_when_type_is_not_valid(cls, type_: str) -> str:
+        if type_ not in list(PublicationTypes):
+            cls.logger().warning(
+                f"@type '{type_}' is not a valid PublicationType in WorkExample."
+            )
+        return type_
 
 
 class PalacePublicationMetadata(BaseOpdsModel, LoggerMixin):
@@ -59,8 +71,8 @@ class PalacePublicationMetadata(BaseOpdsModel, LoggerMixin):
 
     # TODO: This isn't well specified by the OPDS 2.0 spec, but since we make decisions about the
     #   type of publication based on the type set, it would be nice to do some additional validation here
-    #   and constrain this to PublicationTypes. Right now the Palace Bookshelf feed uses
-    #   'https://schema.org/EBook' (which is not a valid type) both because it starts with
+    #   and constrain this to PublicationTypes. Right now the Palace Bookshelf feed (as well as E-Kirjasto)
+    #   uses 'https://schema.org/EBook' (which is not a valid type) both because it starts with
     #   https:// (schema.org uses http://) and because its a Format, not a Type. Once we get
     #   this sorted out, we should add validation here. For now we just accept any string but
     #   log a warning if it's not a valid PublicationType.

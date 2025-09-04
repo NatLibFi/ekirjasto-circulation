@@ -15,17 +15,12 @@ from api.lcp.license import LicenseDocument
 from api.lcp.status import LoanStatus
 from api.odl import ODLAPI, BaseODLAPI
 from api.odl2 import ODL2API
-from core.model import (
-    Collection,
-    Library,
-    License,
-    LicensePool,
-    Loan,
-    Patron,
-    Representation,
-    Work,
-)
+from core.model.collection import Collection
 from core.model.configuration import ExternalIntegration
+from core.model.library import Library
+from core.model.licensing import License, LicensePool
+from core.model.patron import Loan, Patron
+from core.model.work import Work
 from core.util.datetime_helpers import utc_now
 from core.util.http import HTTP
 from tests.api.mockapi.mock import MockHTTPClient, MockRequestsResponse

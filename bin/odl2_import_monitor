@@ -8,14 +8,11 @@ bin_dir = os.path.split(__file__)[0]
 package_dir = os.path.join(bin_dir, "..")
 sys.path.append(os.path.abspath(package_dir))
 
-from webpub_manifest_parser.odl import ODLFeedParserFactory
 
 from api.odl2 import ODL2Importer, ODL2ImportMonitor
-from core.opds2_import import RWPMManifestParser
 from core.scripts import RunCollectionMonitorScript
 
 RunCollectionMonitorScript(
     ODL2ImportMonitor,
     import_class=ODL2Importer,
-    parser=RWPMManifestParser(ODLFeedParserFactory()),
 ).run()

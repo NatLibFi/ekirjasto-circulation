@@ -2,11 +2,10 @@ from __future__ import annotations
 
 import binascii
 import datetime
-import json
 import uuid
 from abc import ABC
 from collections.abc import Callable
-from functools import partial
+from functools import cached_property, partial
 from typing import Any, TypeVar
 
 import dateutil
@@ -14,7 +13,7 @@ from dependency_injector.wiring import Provide, inject
 from flask import url_for
 from flask_babel import lazy_gettext as _
 from lxml.etree import Element
-from pydantic import PositiveInt, ValidationError
+from pydantic import PositiveInt, TypeAdapter, ValidationError
 from requests import Response
 from sqlalchemy.sql.expression import or_
 from uritemplate import URITemplate
@@ -34,8 +33,11 @@ from api.circulation_exceptions import *
 from api.lcp.hash import Hasher, HasherFactory, HashingAlgorithm
 from api.lcp.status import LoanStatus
 from api.odl_api.auth import OpdsWithOdlException
+from api.opds import opds2
+from api.opds.odl import odl
+from api.opds.odl.license_info import LicenseInfo
+from api.opds.odl.odl import Opds2OrOpds2WithOdlPublication
 from api.opds.types.link import BaseLink
-from core import util
 from core.integration.settings import (
     ConfigurationFormItem,
     ConfigurationFormItemType,
@@ -60,7 +62,6 @@ from core.model import (
     LicensePoolDeliveryMechanism,
     Loan,
     MediaTypes,
-    Representation,
     Resource,
     RightsStatus,
     Session,
@@ -897,23 +898,28 @@ class BaseODLImporter(BaseOPDSImporter[SettingsType], ABC):
 
     @classmethod
     def fetch_license_info(
-        cls, document_link: str, do_get: Callable[..., tuple[int, Any, bytes]]
-    ) -> dict[str, Any] | None:
-        status_code, _, response = do_get(document_link, headers={})
-        if status_code in (200, 201):
-            license_info_document = json.loads(response)
-            return license_info_document  # type: ignore[no-any-return]
-        else:
-            cls.logger().warning(
-                f"License Info Document is not available. "
-                f"Status link {document_link} failed with {status_code} code."
+        cls, document_link: str, do_get: Callable[..., Response]
+    ) -> bytes | None:
+        try:
+            resp = do_get(document_link, headers={})
+            if resp.status_code in (200, 201):
+                return resp.content
+            else:
+                cls.logger().warning(
+                    f"License Info Document is not available. "
+                    f"Status link {document_link} failed with {resp.status_code} code."
+                )
+                return None
+        except Exception as e:
+            cls.logger().error(
+                f"An error occurred while fetching the License Info Document from {document_link}: {e}"
             )
             return None
 
     @classmethod
     def parse_license_info(
         cls,
-        license_info_document: dict[str, Any],
+        license_info_document: bytes | str | None,
         license_info_link: str,
         checkout_link: str | None,
     ) -> LicenseData | None:
@@ -928,77 +934,30 @@ class BaseODLImporter(BaseOPDSImporter[SettingsType], ABC):
         :return: LicenseData if all the license's attributes are correct, None, otherwise
         """
 
-        identifier = license_info_document.get("identifier")
-        document_status = license_info_document.get("status")
-        document_checkouts = license_info_document.get("checkouts", {})
-        document_left = document_checkouts.get("left")
-        document_available = document_checkouts.get("available")
-        document_terms = license_info_document.get("terms", {})
-        document_expires = document_terms.get("expires")
-        document_concurrency = document_terms.get("concurrency")
-        document_format = license_info_document.get("format")
-
-        if identifier is None:
-            cls.logger().error("License info document has no identifier.")
+        if license_info_document is None:
             return None
 
-        expires = None
-        if document_expires is not None:
-            expires = dateutil.parser.parse(document_expires)
-            expires = util.datetime_helpers.to_utc(expires)
-
-        if document_status is not None:
-            status = LicenseStatus.get(document_status)
-            if status.value != document_status:
-                cls.logger().warning(
-                    f"Identifier # {identifier} unknown status value "
-                    f"{document_status} defaulting to {status.value}."
-                )
-        else:
-            status = LicenseStatus.unavailable
-            cls.logger().warning(
-                f"Identifier # {identifier} license info document does not have "
-                f"required key 'status'."
+        try:
+            document = LicenseInfo.model_validate_json(license_info_document)
+        except ValidationError as e:
+            cls.logger().error(
+                f"License Info Document at {license_info_link} is not valid. {e}"
             )
-
-        if document_available is not None:
-            available = int(document_available)
-        else:
-            available = 0
-            cls.logger().warning(
-                f"Identifier # {identifier} license info document does not have "
-                f"required key 'checkouts.available'."
-            )
-
-        left = None
-        if document_left is not None:
-            left = int(document_left)
-
-        concurrency = None
-        if document_concurrency is not None:
-            concurrency = int(document_concurrency)
-
-        content_types = None
-        if document_format is not None:
-            if isinstance(document_format, str):
-                content_types = [document_format]
-            elif isinstance(document_format, list):
-                content_types = document_format
+            return None
 
         cls.logger().info(
-            f"License identifier {identifier} / status {status} / concurrency {concurrency} / expires {expires} / checkouts left {left} / available / {available} / content types {content_types}"
+            f"License {document.identifier}: Status: {document.status}, Concurrency {document.terms.concurrency}, Checkouts left: {document.checkouts.left}, Checkouts available: {document.checkouts.available}, Expires: {document.terms.expires_datetime}"
         )
-
         return LicenseData(
-            identifier=identifier,
+            identifier=document.identifier,
             checkout_url=checkout_link,
             status_url=license_info_link,
-            expires=expires,
-            checkouts_left=left,
-            checkouts_available=available,
-            status=status,
-            terms_concurrency=concurrency,
-            content_types=content_types,
+            expires=document.terms.expires_datetime,
+            checkouts_left=document.checkouts.left,
+            checkouts_available=document.checkouts.available,
+            status=document.status,
+            terms_concurrency=document.terms.concurrency,
+            content_types=list(document.formats),
         )
 
     @classmethod
@@ -1009,13 +968,15 @@ class BaseODLImporter(BaseOPDSImporter[SettingsType], ABC):
         feed_license_identifier: str | None,
         feed_license_expires: datetime.datetime | None,
         feed_concurrency: int | None,
-        do_get: Callable[..., tuple[int, Any, bytes]],
+        do_get: Callable[..., Response],
     ) -> LicenseData | None:
         license_info_document = cls.fetch_license_info(license_info_link, do_get)
 
         if not license_info_document:
             return None
+
         cls.logger().info(f"Parsing License Info Document {license_info_link}")
+
         parsed_license = cls.parse_license_info(
             license_info_document, license_info_link, checkout_link
         )
@@ -1055,6 +1016,16 @@ class BaseODLImporter(BaseOPDSImporter[SettingsType], ABC):
 
         return parsed_license
 
+    @cached_property
+    def _publication_type_adapter(self) -> TypeAdapter[Opds2OrOpds2WithOdlPublication]:
+        return TypeAdapter(Opds2OrOpds2WithOdlPublication)
+
+    def _get_publication(
+        self,
+        publication: dict[str, Any],
+    ) -> opds2.Publication | odl.Publication:
+        return self._publication_type_adapter.validate_python(publication)
+
 
 class ODLImporter(OPDSImporter, BaseODLImporter[ODLSettings]):
     """Import information and formats from an ODL feed.
@@ -1080,10 +1051,9 @@ class ODLImporter(OPDSImporter, BaseODLImporter[ODLSettings]):
         parser: OPDSXMLParser,
         entry_tag: Element,
         feed_url: str | None = None,
-        do_get: Callable[..., tuple[int, Any, bytes]] | None = None,
+        do_get: Callable[..., Response] | None = None,
     ) -> dict[str, Any]:
-        do_get = do_get or Representation.cautious_http_get
-
+        do_get = do_get or HTTP.get_with_timeout
         # TODO: Review for consistency when updated ODL spec is ready.
         subtag = parser.text_of_optional_subtag
         data = OPDSImporter._detail_for_elementtree_entry(parser, entry_tag, feed_url)
