@@ -48,7 +48,7 @@ class MockHTTPClient:
         self.requests_args.append(kwargs)
         return HTTP._request_with_timeout(http_method, url, self._request, **kwargs)
 
-    def do_get(self, url: str, **kwargs: Unpack[GetRequestKwargs]) -> Response:
+    def do_get(self, url: str, *args, **kwargs: Unpack[GetRequestKwargs]) -> Response:
         return self.do_request("GET", url, **kwargs)
 
     @contextmanager

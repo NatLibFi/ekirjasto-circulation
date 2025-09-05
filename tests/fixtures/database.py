@@ -448,7 +448,7 @@ class DatabaseTransactionFixture:
         if authors:
             primary_author_name = str(authors[0])
             contributor = wr.add_contributor(
-                primary_author_name, Contributor.PRIMARY_AUTHOR_ROLE
+                primary_author_name, Contributor.Role.PRIMARY_AUTHOR
             )
             # add_contributor assumes authors[0] is a sort_name,
             # but it may be a display name. If so, set that field as well.
@@ -457,7 +457,7 @@ class DatabaseTransactionFixture:
             wr.author = primary_author_name
 
         for author in authors[1:]:
-            wr.add_contributor(str(author), Contributor.AUTHOR_ROLE)
+            wr.add_contributor(str(author), Contributor.Role.AUTHOR)
         if publication_date:
             wr.published = publication_date
 
@@ -861,7 +861,7 @@ class DatabaseTransactionFixture:
         )
         edition_std_ebooks.title = "The Standard Ebooks Title"
         edition_std_ebooks.subtitle = "The Standard Ebooks Subtitle"
-        edition_std_ebooks.add_contributor(alice, Contributor.AUTHOR_ROLE)
+        edition_std_ebooks.add_contributor(alice, Contributor.Role.AUTHOR)
 
         edition_git, pool_git = self.edition(
             DataSource.PROJECT_GITENBERG,
@@ -872,8 +872,8 @@ class DatabaseTransactionFixture:
         )
         edition_git.title = "The GItenberg Title"
         edition_git.subtitle = "The GItenberg Subtitle"
-        edition_git.add_contributor(bob, Contributor.AUTHOR_ROLE)
-        edition_git.add_contributor(alice, Contributor.AUTHOR_ROLE)
+        edition_git.add_contributor(bob, Contributor.Role.AUTHOR)
+        edition_git.add_contributor(alice, Contributor.Role.AUTHOR)
 
         edition_gut, pool_gut = self.edition(
             DataSource.GUTENBERG,
@@ -884,7 +884,7 @@ class DatabaseTransactionFixture:
         )
         edition_gut.title = "The GUtenberg Title"
         edition_gut.subtitle = "The GUtenberg Subtitle"
-        edition_gut.add_contributor(bob, Contributor.AUTHOR_ROLE)
+        edition_gut.add_contributor(bob, Contributor.Role.AUTHOR)
 
         work = self.work(presentation_edition=edition_git)
 

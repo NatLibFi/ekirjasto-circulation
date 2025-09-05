@@ -33,7 +33,7 @@ from core.model.coverage import CoverageRecord
 from core.model.datasource import DataSource
 from core.model.identifier import Identifier
 from core.model.licensing import DeliveryMechanism, LicensePool
-from core.util import LanguageCodes, TitleProcessor
+from core.util import LanguageCodes, MetadataSimilarity, TitleProcessor
 from core.util.permanent_work_id import WorkIDCalculator
 
 if TYPE_CHECKING:
@@ -205,7 +205,7 @@ class Edition(Base, EditionConstants):
         # There is more than one contributor. Try to pick out the ones
         # that rise to the level of being 'authors'.
         for x in self.contributions:
-            if not primary_author and x.role == Contributor.PRIMARY_AUTHOR_ROLE:
+            if not primary_author and x.role == Contributor.Role.PRIMARY_AUTHOR:
                 primary_author = x.contributor
             elif x.role in Contributor.AUTHOR_ROLES:
                 other_authors.append(x.contributor)

@@ -7,11 +7,13 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 from jinja2 import Template
+from requests import Response
 
 from api.odl import BaseODLImporter, ODLImporter
 from api.odl2 import ODL2API, ODL2Importer
 from core.coverage import CoverageFailure
 from core.model import Edition, LicensePool, Work
+from tests.core.mock import MockRequestsResponse
 from tests.fixtures.files import OPDS2WithODLFilesFixture, OPDSODLFilesFixture
 
 if TYPE_CHECKING:
@@ -79,6 +81,30 @@ class LicenseInfoHelper:
             output["checkouts"]["left"] = self.left  # type: ignore
         return json.dumps(output)
 
+    @property
+    def json(self) -> str:
+        """Return a JSON representation of the License Info Document."""
+        return json.dumps(self.dict)
+
+    @property
+    def dict(self) -> dict[str, Any]:
+        """Return a dictionary representation of the License Info Document."""
+        output: dict[str, Any] = {
+            "identifier": self.license.identifier,
+            "status": self.status,
+            "terms": {
+                "concurrency": self.license.concurrency,
+            },
+            "checkouts": {
+                "available": self.available,
+            },
+        }
+        if self.license.expires is not None:
+            output["terms"]["expires"] = self.license.expires
+        if self.left is not None:
+            output["checkouts"]["left"] = self.left
+        return output
+
 
 class ODLAPIFilesFixture(OPDSODLFilesFixture):
     """A fixture providing access to ODL files."""
@@ -97,8 +123,8 @@ class MockGet:
     def __init__(self):
         self.responses = []
 
-    def get(self, *args: Any, **kwargs: Any) -> tuple[int, dict[str, str], bytes]:
-        return 200, {}, self.responses.pop(0)
+    def get(self, *args: Any, **kwargs: Any) -> Response:
+        return MockRequestsResponse(200, content=self.responses.pop(0))  # type: ignore
 
     def add(self, item: LicenseInfoHelper | str | bytes) -> None:
         if isinstance(item, LicenseInfoHelper):
@@ -121,11 +147,13 @@ def odl_importer(
     odl_mock_get: MockGet,
 ) -> ODLImporter:
     library = odl_test_fixture.library()
-    return ODLImporter(
+    imp = ODLImporter(
         db.session,
         collection=odl_test_fixture.collection(library),
         http_get=odl_mock_get.get,
     )
+    print("imp ", imp.http_get)
+    return imp
 
 
 @pytest.fixture()

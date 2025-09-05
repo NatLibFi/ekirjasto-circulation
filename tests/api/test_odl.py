@@ -4,13 +4,14 @@ import datetime
 import json
 import urllib.parse
 import uuid
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock
 from urllib.parse import parse_qs, urlparse
 
 import dateutil
 import pytest
 from freezegun import freeze_time
+from requests import Response
 from sqlalchemy import delete
 
 from api.circulation import FetchFulfillment, HoldInfo, RedirectFulfillment
@@ -28,20 +29,22 @@ from api.circulation_exceptions import (
 )
 from api.lcp.status import LoanStatus
 from api.odl import ODLAPI, BaseODLImporter, ODLHoldReaper, ODLImporter
-from core.model import (
-    Collection,
-    DataSource,
+from core.metadata_layer import LicenseData
+from core.model.collection import Collection
+from core.model.datasource import DataSource
+from core.model.edition import Edition
+from core.model.licensing import (
     DeliveryMechanism,
-    Edition,
-    Hold,
     LicensePoolDeliveryMechanism,
-    Loan,
-    Representation,
+    LicenseStatus,
     RightsStatus,
 )
+from core.model.patron import Hold, Loan
+from core.model.resource import Representation
 from core.util import datetime_helpers
 from core.util.datetime_helpers import datetime_utc, utc_now
 from core.util.http import BadResponseException, RemoteIntegrationException
+from tests.api.mockapi.mock import MockHTTPClient
 from tests.fixtures.api_odl import (
     LicenseHelper,
     LicenseInfoHelper,
@@ -1934,6 +1937,263 @@ class TestOdlAndOdl2Importer:
 
             # Two licenses expired
             assert sum(l.is_inactive for l in imported_pool.licenses) == 2
+
+    @pytest.mark.parametrize(
+        "license",
+        [
+            pytest.param(
+                LicenseInfoHelper(
+                    license=LicenseHelper(expires="2027-01-01T00:01:00+01:00"),
+                    left=50,
+                    available=50,
+                ),
+                id="no concurrency",
+            ),
+        ],
+    )
+    @freeze_time("2021-01-01T00:00:00+00:00")
+    def test_odl_license_with_no_concurrency(
+        self,
+        odl_import_templated: OdlImportTemplatedFixture,
+        license: LicenseInfoHelper,
+    ):
+        """
+        It's possible to not have a set concurrency value.
+        """
+        # Import the test feed with a license.
+        (
+            imported_editions,
+            imported_pools,
+            imported_works,
+            failures,
+        ) = odl_import_templated([license])
+
+        [imported_pool] = imported_pools
+        # The license is active and does not have concurrency.
+        [imported_license] = imported_pool.licenses
+        assert imported_license.is_inactive is False
+        assert not imported_license.terms_concurrency
+        # Since there's no concurrency, there are as many licenses owned as available.
+        assert imported_pool.licenses_owned == 50
+        assert imported_pool.licenses_available == 50
+
+    def test_parse_license_info(self) -> None:
+        """Ensure that OPDS2WithODLImporter correctly parses license information."""
+
+        def license_info_dict() -> dict[str, Any]:
+            return LicenseInfoHelper(available=10, license=LicenseHelper()).dict
+
+        info_link = "http://example.org/info"
+        checkout_link = "http://example.org/checkout"
+
+        # All fields present
+        expiry = utc_now() + datetime.timedelta(days=1)
+        license_helper = LicenseInfoHelper(
+            available=10, left=4, license=LicenseHelper(concurrency=11, expires=expiry)
+        )
+        license_dict = license_helper.dict
+        parsed = ODLImporter.parse_license_info(
+            json.dumps(license_dict), info_link, checkout_link
+        )
+        assert parsed.checkouts_available == 10  # type: ignore[union-attr]
+        assert parsed.checkouts_left == 4  # type: ignore[union-attr]
+        assert parsed.terms_concurrency == 11  # type: ignore[union-attr]
+        assert parsed.expires == expiry  # type: ignore[union-attr]
+        assert parsed.status == LicenseStatus.available  # type: ignore[union-attr]
+        assert parsed.identifier == license_helper.license.identifier  # type: ignore[union-attr]
+
+        # No identifier
+        license_dict = license_info_dict()
+        license_dict.pop("identifier")
+        assert (
+            ODLImporter.parse_license_info(
+                json.dumps(license_dict), info_link, checkout_link
+            )
+            is None
+        )
+
+        # No status
+        license_dict = license_info_dict()
+        license_dict.pop("status")
+        assert (
+            ODLImporter.parse_license_info(
+                json.dumps(license_dict), info_link, checkout_link
+            )
+            is None
+        )
+
+        # Bad status
+        license_dict = license_info_dict()
+        license_dict["status"] = "bad"
+        assert (
+            ODLImporter.parse_license_info(
+                json.dumps(license_dict), info_link, checkout_link
+            )
+            is None
+        )
+
+        # No available
+        license_dict = license_info_dict()
+        license_dict["checkouts"].pop("available")
+        assert (
+            ODLImporter.parse_license_info(
+                json.dumps(license_dict), info_link, checkout_link
+            )
+            is None
+        )
+
+        # No concurrency
+        license_dict = license_info_dict()
+        license_dict["terms"].pop("concurrency")
+        parsed = ODLImporter.parse_license_info(
+            json.dumps(license_dict), info_link, checkout_link
+        )
+        assert parsed.terms_concurrency is None  # type: ignore[union-attr]
+
+        # Format str
+        license_dict = license_info_dict()
+        license_dict["format"] = "single format"
+        parsed = ODLImporter.parse_license_info(
+            json.dumps(license_dict), info_link, checkout_link
+        )
+        assert parsed.content_types == ["single format"]  # type: ignore[union-attr]
+
+        # Format list
+        license_dict = license_info_dict()
+        license_dict["format"] = ["format1", "format2"]
+        parsed = ODLImporter.parse_license_info(
+            json.dumps(license_dict), info_link, checkout_link
+        )
+        assert parsed.content_types == ["format1", "format2"]  # type: ignore[union-attr]
+
+    def test_fetch_license_info(self):
+        """Ensure that OPDS2WithODLImporter correctly retrieves license data from an OPDS2 feed."""
+
+        http = MockHTTPClient()
+
+        # Bad status code
+        http.queue_response(400, content=b"Bad Request")
+
+        assert (
+            ODLImporter.fetch_license_info("http://example.org/feed", http.do_get)
+            is None
+        )
+        assert len(http.requests) == 1
+        assert http.requests.pop() == "http://example.org/feed"
+
+        # 200 status - directly returns response body
+        content = b"data"
+        http.queue_response(200, content=content)
+        assert (
+            ODLImporter.fetch_license_info("http://example.org/feed", http.do_get)
+            == content
+        )
+        assert len(http.requests) == 1
+        assert http.requests.pop() == "http://example.org/feed"
+
+        # 201 status - directly returns response body
+        http.queue_response(201, content=content)
+        assert (
+            ODLImporter.fetch_license_info("http://example.org/feed", http.do_get)
+            == content
+        )
+        assert len(http.requests) == 1
+        assert http.requests.pop() == "http://example.org/feed"
+
+    def test_get_license_data(self, monkeypatch: pytest.MonkeyPatch):
+        expires = utc_now() + datetime.timedelta(days=1)
+
+        responses: list[tuple[int, str]] = []
+
+        def get(url: str, *args: Any, **kwargs: Any) -> Response:
+            status_code, body = responses.pop(0)
+            resp = Response()
+            resp.status_code = status_code
+            resp._content = body.encode("utf-8")
+            return resp
+
+        def get_license_data() -> LicenseData | None:
+            return ODLImporter.get_license_data(
+                "license_info_link",
+                "checkout_link",
+                "identifier",
+                expires,
+                12,
+                get,
+            )
+
+        # Bad status code returns None
+        responses.append((400, "Bad Request"))
+        assert get_license_data() is None
+
+        # Bad data returns None
+        responses.append((200, "{}"))
+        assert get_license_data() is None
+
+        # Identifier mismatch returns None
+        responses.append(
+            (
+                200,
+                LicenseInfoHelper(
+                    available=10, license=LicenseHelper(identifier="other")
+                ).json,
+            )
+        )
+        assert get_license_data() is None
+
+        # Expiry mismatch makes license unavailable
+        responses.append(
+            (
+                200,
+                LicenseInfoHelper(
+                    available=10,
+                    license=LicenseHelper(
+                        identifier="identifier",
+                        concurrency=12,
+                        expires=expires + datetime.timedelta(minutes=1),
+                    ),
+                ).json,
+            )
+        )
+        license_data = get_license_data()
+        assert license_data is not None
+        assert license_data.status == LicenseStatus.unavailable
+
+        # Concurrency mismatch makes license unavailable
+        responses.append(
+            (
+                200,
+                LicenseInfoHelper(
+                    available=10,
+                    license=LicenseHelper(
+                        identifier="identifier", concurrency=11, expires=expires
+                    ),
+                ).json,
+            )
+        )
+        license_data = get_license_data()
+        assert license_data is not None
+        assert license_data.status == LicenseStatus.unavailable
+
+        # Good data returns LicenseData
+        responses.append(
+            (
+                200,
+                LicenseInfoHelper(
+                    available=10,
+                    license=LicenseHelper(
+                        identifier="identifier", concurrency=12, expires=expires
+                    ),
+                ).json,
+            )
+        )
+        license_data = get_license_data()
+        assert license_data is not None
+        assert license_data.status == LicenseStatus.available
+        assert license_data.checkouts_available == 10
+        assert license_data.expires == expires
+        assert license_data.identifier == "identifier"
+        assert license_data.terms_concurrency == 12
 
 
 class TestODLHoldReaper:

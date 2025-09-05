@@ -64,7 +64,6 @@ from core.model import (
     LicensePoolDeliveryMechanism,
     Measurement,
     Patron,
-    Representation,
     RightsStatus,
     Subject,
     get_one,
@@ -368,7 +367,7 @@ class BaseOPDSImporter(
         _db: Session,
         collection: Collection,
         data_source_name: str | None,
-        http_get: Callable[..., tuple[int, Any, bytes]] | None = None,
+        http_get: Callable[..., Response] | None = None,
     ):
         self._db = _db
         if collection.id is None:
@@ -391,7 +390,7 @@ class BaseOPDSImporter(
         # In general, we are cautious when mirroring resources so that
         # we don't, e.g. accidentally get our IP banned from
         # gutenberg.org.
-        self.http_get = http_get or Representation.cautious_http_get
+        self.http_get = http_get or HTTP.get_with_timeout
         self.settings = integration_settings_load(
             self.settings_class(), collection.integration_configuration
         )
@@ -676,7 +675,7 @@ class OPDSImporter(BaseOPDSImporter[OPDSImporterSettings]):
         _db: Session,
         collection: Collection,
         data_source_name: str | None = None,
-        http_get: Callable[..., tuple[int, Any, bytes]] | None = None,
+        http_get: Callable[..., Response] | None = None,
     ):
         """:param collection: LicensePools created by this OPDS import
         will be associated with the given Collection. If this is None,
@@ -693,14 +692,14 @@ class OPDSImporter(BaseOPDSImporter[OPDSImporterSettings]):
         :param http_get: Use this method to make an HTTP GET request. This
         can be replaced with a stub method for testing purposes.
         """
-        super().__init__(_db, collection, data_source_name)
+        super().__init__(_db, collection, data_source_name, http_get)
 
         self.primary_identifier_source = self.settings.primary_identifier_source
 
         # In general, we are cautious when mirroring resources so that
         # we don't, e.g. accidentally get our IP banned from
         # gutenberg.org.
-        self.http_get = http_get or Representation.cautious_http_get
+        self.http_get = http_get or HTTP.get_with_timeout
 
     def extract_next_links(self, feed: str | bytes | FeedParserDict) -> list[str]:
         if isinstance(feed, (bytes, str)):
@@ -965,7 +964,7 @@ class OPDSImporter(BaseOPDSImporter[OPDSImporterSettings]):
         feed: bytes | str,
         data_source: DataSource,
         feed_url: str | None = None,
-        do_get: Callable[..., tuple[int, Any, bytes]] | None = None,
+        do_get: Callable[..., Response] | None = None,
     ) -> tuple[dict[str, Any], dict[str, CoverageFailure]]:
         """Parse the OPDS as XML and extract all author and subject
         information, as well as ratings and medium.
@@ -1295,7 +1294,7 @@ class OPDSImporter(BaseOPDSImporter[OPDSImporterSettings]):
         entry_tag: Element,
         data_source: DataSource,
         feed_url: str | None = None,
-        do_get: Callable[..., tuple[int, Any, bytes]] | None = None,
+        do_get: Callable[..., Response] | None = None,
     ) -> tuple[str | None, dict[str, Any] | None, CoverageFailure | None]:
         """Turn an <atom:entry> tag into a dictionary of metadata that can be
         used as keyword arguments to the Metadata contructor.
@@ -1329,7 +1328,7 @@ class OPDSImporter(BaseOPDSImporter[OPDSImporterSettings]):
         parser: OPDSXMLParser,
         entry_tag: Element,
         feed_url: str | None = None,
-        do_get: Callable[..., tuple[int, Any, bytes]] | None = None,
+        do_get: Callable[..., Response] | None = None,
     ) -> dict[str, Any]:
         """Helper method that extracts metadata and circulation data from an elementtree
         entry. This method can be overridden in tests to check that callers handle things

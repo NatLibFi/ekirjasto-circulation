@@ -89,6 +89,7 @@ module = [
     "api.marc",
     "api.metadata.*",
     "api.odl",
+    "api.odl.*",
     "api.odl2",
     "api.opds_for_distributors",
     "core.feed.*",
@@ -102,6 +103,7 @@ module = [
     "core.model.library",
     "core.opds2_import",
     "core.opds_import",
+    "core.opds_schema",
     "core.selftest",
     "core.service.*",
     "core.settings.*",
@@ -209,6 +211,7 @@ fuzzywuzzy = "0.18.0"  # fuzzywuzzy is for author name manipulations
 html-sanitizer = "^2.1.0"
 isbnlib = "^3.10.14"
 itsdangerous = "^2.1.2"
+jsonschema = "4.19.1"
 jwcrypto = "^1.4.2"
 levenshtein = "^0.24"
 lxml = "^4.9.3"
@@ -219,7 +222,6 @@ nltk = "3.8.1"  # nltk is a textblob dependency.
 openpyxl = "3.1.2"  # Finland
 opensearch-dsl = "~1.0"
 opensearch-py = "~1.1"
-palace-webpub-manifest-parser = "^3.1.1"
 pillow = "^10.0"
 pycountry = "^24.6.1"
 pycryptodome = "^3.18"
