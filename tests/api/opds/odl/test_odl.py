@@ -54,3 +54,17 @@ def test_feed_odl_failure(
 
     errors = exc_info.value.errors()
     assert len(errors) == 2
+
+
+@pytest.mark.parametrize(
+    "filename",
+    ["ellibs_feed_accessibility.json", "dm_feed_accessibility.json"],
+)
+def test_odl_feed_with_accessibility_metadata_success(
+    filename: str,
+    opds2_with_odl_files_fixture: OPDS2WithODLFilesFixture,
+) -> None:
+    """
+    Parse and validate a basic OPDS2 + ODL feed.
+    """
+    Feed.model_validate_json(opds2_with_odl_files_fixture.sample_data(filename))
