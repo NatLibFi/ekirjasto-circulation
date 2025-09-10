@@ -1,0 +1,662 @@
+{
+  "metadata": {
+    "title": "Example listing publications"
+  },
+  "links": [
+    {
+      "rel": "self",
+      "href": "http://example.com/new",
+      "type": "application/opds+json"
+    }
+  ],
+  "publications": [
+    {
+      "metadata": {
+        "@type": "http://schema.org/Book",
+        "title": "Don't Let the Forest In",
+        "abridged": "false",
+        "accessibility": {
+          "summary": "This publication lacks alternative text for non-text elements, but it otherwise meets WCAG 2.1 Level A. The publication generally has been produced to meet WCAG Level AA, but it has not been checked for language shifts or for color contrast within images.",
+          "feature": [
+            "readingOrder",
+            "structuralNavigation",
+            "tableOfContents",
+            "printPageNumbers"
+          ],
+          "accessModeSufficient": [
+            "textual"
+          ]
+        },
+        "language": "en",
+        "modified": "2025-06-12T21:49:22+02:00",
+        "published": "2024-10-29T00:00:00+01:00",
+        "identifier": "urn:ISBN:9781250895653",
+        "schema:encodingFormat": "application/epub+zip",
+        "presentation": {
+          "layout": "reflowable"
+        },
+        "schema:workExample": [
+          {
+            "@type": "http://schema.org/Book",
+            "schema:bookFormat": "http://schema.org/Hardcover",
+            "schema:isbn": "urn:ISBN:9781250895660"
+          }
+        ],
+        "author": [
+          {
+            "name": "Cg Drews",
+            "links": [
+              {
+                "type": "application/opds+json",
+                "href": "https://market.cantook.com/browse/recent.json?author_ids=2088699&languages=en"
+              }
+            ]
+          }
+        ],
+        "publisher": {
+          "name": "Feiwel & Friends",
+          "links": [
+            {
+              "type": "application/opds+json",
+              "href": "https://market.cantook.com/browse/recent.json?imprint_ids=5974&languages=en"
+            }
+          ]
+        },
+        "description": "<p><b>AN INSTANT <i>NEW YORK TIMES</i> BESTSELLER!<br></b><b><br>As alluring as it is unsettling, award-winning author CG Drews' debut YA psychological horror will leave readers breathless and hesitant to venture deeper into the woods.<br></b><br><i>Once upon a time, Andrew had cut out his heart and given it to this boy, and he was very sure Thomas had no idea that Andrew would do anything for him. Protect him. Lie for him. <br><br>Kill for him.<br></i><br>High school senior Andrew Perrault finds refuge in the twisted fairytales that he writes for the only person who can ground him to reality—Thomas Rye, the boy with perpetually ink-stained hands and hair like autumn leaves. And with his twin sister, Dove, inexplicably keeping him at a cold distance upon their return to Wickwood Academy, Andrew finds himself leaning on his friend even more.<br><br>But something strange is going on with Thomas. His abusive parents have mysteriously vanished, and he arrives at school with blood on his sleeve. Thomas won't say a word about it, and shuts down whenever Andrew tries to ask him questions. Stranger still, Thomas is haunted by something, and he seems to have lost interest in his artwork—whimsically macabre sketches of the monsters from Andrew's wicked stories.<br><br>Desperate to figure out what's wrong with his friend, Andrew follows Thomas into the off-limits forest one night and catches him fighting a nightmarish monster—Thomas's drawings have come to life and are killing anyone close to him. To make sure no one else dies, the boys battle the monsters every night. But as their obsession with each other grows stronger, so do the monsters, and Andrew begins to fear that the only way to stop the creatures might be to destroy their creator...<br><br><b>Also by CG Drews</b><br><i>Hazelthorn</i></p>",
+        "subject": [
+          {
+            "code": "YAF026000",
+            "name": "YOUNG ADULT FICTION / Horror",
+            "scheme": "http://www.bisg.org/standards/bisac_subject/"
+          },
+          {
+            "code": "YAF041000",
+            "name": "YOUNG ADULT FICTION / Monsters",
+            "scheme": "http://www.bisg.org/standards/bisac_subject/"
+          },
+          {
+            "code": "YAF031000",
+            "name": "YOUNG ADULT FICTION / LGBTQ+",
+            "scheme": "http://www.bisg.org/standards/bisac_subject/"
+          },
+          {
+            "code": "READ0000",
+            "scheme": "http://schema.org/Audience",
+            "name": "Adult",
+            "links": [
+              {
+                "type": "application/opds+json",
+                "href": "https://market.cantook.com/top/top.json?audiences=READ0000&languages=en"
+              }
+            ]
+          }
+        ]
+      },
+      "images": [
+        {
+          "href": "https://covers.feedbooks.net/item/6174422.jpg?size=large&t=1727861076",
+          "type": "image/jpeg",
+          "width": 260,
+          "height": 420
+        },
+        {
+          "href": "https://covers.feedbooks.net/item/6174422.jpg?t=1727861076",
+          "type": "image/jpeg",
+          "width": 100,
+          "height": 180
+        }
+      ],
+      "licenses": [
+        {
+          "metadata": {
+            "identifier": "urn:uuid:2e40e4c2-becd-4729",
+            "format": [
+              "application/epub+zip",
+              "text/html"
+            ],
+            "accessibility": {
+              "summary": "This publication lacks alternative text for non-text elements, but it otherwise meets WCAG 2.1 Level A. The publication generally has been produced to meet WCAG Level AA, but it has not been checked for language shifts or for color contrast within images.",
+              "feature": [
+                "readingOrder",
+                "structuralNavigation",
+                "tableOfContents",
+                "printPageNumbers"
+              ],
+              "accessModeSufficient": [
+                "textual"
+              ]
+            },
+            "created": "2025-01-15T15:22:52+01:00",
+            "source": "http://www.cantook.net/",
+            "price": {
+              "currency": "USD",
+              "value": "60.0"
+            },
+            "terms": {
+              "expires": "2027-01-15",
+              "concurrency": 1,
+              "length": 5097600
+            },
+            "markets": [
+              "public_library"
+            ],
+            "cap_loan_expiration_to_license": false,
+            "protection": {
+              "format": [
+                "application/vnd.adobe.adept+xml",
+                "application/vnd.readium.lcp.license.v1.0+json"
+              ],
+              "devices": 6,
+              "copy": false,
+              "print": false,
+              "tts": false
+            },
+            "order": {
+              "name": "Tammikuun ostot 1",
+              "identifier": "202501-1095-065031",
+              "href": "https://market.cantook.com/carts/65031"
+            }
+          },
+          "links": [
+            {
+              "rel": "http://opds-spec.org/acquisition/borrow",
+              "href": "https://license.feedbooks.net/loan/status/{?id,checkout_id,expires,patron_id,notification_url,passphrase,hint,hint_url}",
+              "type": "application/vnd.readium.license.status.v1.0+json",
+              "templated": true
+            },
+            {
+              "rel": "self",
+              "href": "https://license.feedbooks.net/copy/status/?uuid=2e40e4c2-becd-4729",
+              "type": "application/vnd.odl.info+json"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metadata": {
+        "@type": "http://schema.org/Book",
+        "title": "All Good People Here",
+        "abridged": "false",
+        "accessibility": {
+          "summary": "This title is a well-marked up and structured book, which is fully accessible. The images of this book are well described and, when necessary, short description are provided. This book passes the WCAG 2.0 Level AA.",
+          "conformsTo": "http://www.idpf.org/epub/a11y/accessibility-20170105.html#wcag-aa",
+          "feature": [
+            "alternativeText",
+            "structuralNavigation",
+            "printPageNumbers",
+            "readingOrder",
+            "tableOfContents",
+            "displayTransformability"
+          ],
+          "accessModeSufficient": [
+            "textual"
+          ]
+        },
+        "language": "en",
+        "modified": "2025-06-27T07:37:39+02:00",
+        "published": "2022-08-18T00:00:00+02:00",
+        "numberOfPages": 320,
+        "identifier": "urn:ISBN:9780008503116",
+        "schema:encodingFormat": "application/epub+zip",
+        "presentation": {
+          "layout": "reflowable"
+        },
+        "schema:workExample": [
+          {
+            "@type": "http://schema.org/Book",
+            "schema:bookFormat": "http://schema.org/Hardcover",
+            "schema:isbn": "urn:ISBN:9780008503109"
+          }
+        ],
+        "author": [
+          {
+            "name": "Ashley Flowers",
+            "links": [
+              {
+                "type": "application/opds+json",
+                "href": "https://market.cantook.com/browse/recent.json?author_ids=1599958&languages=en"
+              }
+            ]
+          }
+        ],
+        "publisher": {
+          "name": "HarperCollins",
+          "links": [
+            {
+              "type": "application/opds+json",
+              "href": "https://market.cantook.com/browse/recent.json?imprint_ids=977&languages=en"
+            }
+          ]
+        },
+        "description": "<h2><strong>*A gripping debut thriller from the host of the #1 podcast CRIME JUNKIE*</strong></h2>\n<p><strong>THE NO.1 NEW YORK TIMES BESTSELLER</strong></p>\n<p><strong>If you liked I&#x2019;LL BE GONE IN THE DARK and SHARP OBJECTS, you will love this!</strong></p>\n<p><strong>'A stunning debut from a fresh new voice in the thriller space'</strong></p>\n<p><strong>&#x2014;Karin Slaughter</strong></p>\n<p><strong>&#x2018;This is the perfect gripping, twisty thriller for fans of cold crime cases&#x2019; </strong></p>\n<p><strong>&#x2014;Cosmopolitan</strong></p>\n<p><strong>What really happened to January Jacobs?</strong></p>\n<p><strong>A MYSTERIOUS COLD CASE&#x2026;</strong></p>\n<p>Twenty-five years ago, January Jacob&#x2019;s parents awoke to find their daughter&#x2019;s bed empty, a horrifying message spray-painted onto their wall. Hours later, January&#x2019;s body was found discarded in a ditch. Her murder was never solved. But the town remembers.</p>\n<p><strong>A DANGEROUS OBSESSION&#x2026;</strong></p>\n<p>Journalist Margot Davies is tired of reporting meaningless stories. One night, she stumbles upon a clue in the most infamous crime in her hometown&#x2019;s history: the unsolved murder of six-year-old January.</p>\n<p><strong>A TOWN FULL OF SECRETS&#x2026;</strong></p>\n<p>As Margot digs deeper, she begins to suspect that there is something truly sinister lurking in the small community: a secret that endangers the lives of everyone involved&#x2026;including Margot.</p>\n<p><strong>A gripping, twisty thriller for fans of cold crime cases &#x2013; from the #1 CRIME JUNKIE podcast host Ashley Flowers.</strong></p>",
+        "subject": [
+          {
+            "code": "FIC050000",
+            "name": "FICTION / Crime",
+            "scheme": "http://www.bisg.org/standards/bisac_subject/"
+          },
+          {
+            "code": "FIC025000",
+            "name": "FICTION / Psychological",
+            "scheme": "http://www.bisg.org/standards/bisac_subject/"
+          },
+          {
+            "code": "FIC031010",
+            "name": "FICTION / Thrillers / Crime",
+            "scheme": "http://www.bisg.org/standards/bisac_subject/"
+          },
+          {
+            "code": "FIC031080",
+            "name": "FICTION / Thrillers / Psychological",
+            "scheme": "http://www.bisg.org/standards/bisac_subject/"
+          },
+          {
+            "code": "FIC022000",
+            "name": "FICTION / Mystery & Detective / General",
+            "scheme": "http://www.bisg.org/standards/bisac_subject/"
+          },
+          {
+            "code": "READ0000",
+            "scheme": "http://schema.org/Audience",
+            "name": "Adult",
+            "links": [
+              {
+                "type": "application/opds+json",
+                "href": "https://market.cantook.com/top/top.json?audiences=READ0000&languages=en"
+              }
+            ]
+          }
+        ]
+      },
+      "images": [
+        {
+          "href": "https://covers.feedbooks.net/item/4655667.jpg?size=large&t=1714584901",
+          "type": "image/jpeg",
+          "width": 260,
+          "height": 420
+        },
+        {
+          "href": "https://covers.feedbooks.net/item/4655667.jpg?t=1714584901",
+          "type": "image/jpeg",
+          "width": 100,
+          "height": 180
+        }
+      ],
+      "licenses": [
+        {
+          "metadata": {
+            "identifier": "urn:uuid:6adfede9-81e0-4573-a29b",
+            "format": [
+              "application/epub+zip",
+              "text/html"
+            ],
+            "accessibility": {
+              "summary": "This title is a well-marked up and structured book, which is fully accessible. The images of this book are well described and, when necessary, short description are provided. This book passes the WCAG 2.0 Level AA.",
+              "conformsTo": [
+                "http://www.idpf.org/epub/a11y/accessibility-20170105.html#wcag-aa"
+              ],
+              "feature": [
+                "alternativeText",
+                "structuralNavigation",
+                "printPageNumbers",
+                "readingOrder",
+                "tableOfContents",
+                "displayTransformabilty",
+                "displayTransformability",
+                "displayTransformability"
+              ],
+              "accessModeSufficient": [
+                "textual"
+              ]
+            },
+            "created": "2025-05-21T14:23:01+02:00",
+            "source": "http://www.cantook.net/",
+            "price": {
+              "currency": "EUR",
+              "value": "2.05"
+            },
+            "terms": {
+              "checkouts": 26,
+              "concurrency": 1,
+              "length": 5097600
+            },
+            "markets": [
+              "public_library",
+              "academic_library",
+              "corporate"
+            ],
+            "cap_loan_expiration_to_license": false,
+            "protection": {
+              "format": [
+                "application/vnd.adobe.adept+xml",
+                "application/vnd.readium.lcp.license.v1.0+json"
+              ],
+              "devices": 6,
+              "copy": false,
+              "print": false,
+              "tts": false
+            },
+            "order": {
+              "name": "Toukokuu2 tilaukset",
+              "identifier": "202505-1095-070333",
+              "href": "https://market.cantook.com/carts/70333"
+            }
+          },
+          "links": [
+            {
+              "rel": "http://opds-spec.org/acquisition/borrow",
+              "href": "https://license.feedbooks.net/loan/status/{?id,checkout_id,expires,patron_id,notification_url,passphrase,hint,hint_url}",
+              "type": "application/vnd.readium.license.status.v1.0+json",
+              "templated": true
+            },
+            {
+              "rel": "self",
+              "href": "https://license.feedbooks.net/copy/status/?uuid=6adfede9-81e0-4573-a29b",
+              "type": "application/vnd.odl.info+json"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metadata": {
+        "@type": "http://schema.org/Book",
+        "title": "Someone You Can Build a Nest In",
+        "abridged": "false",
+        "accessibility": {
+          "feature": [
+            "tableOfContents"
+          ]
+        },
+        "language": "en",
+        "modified": "2025-06-27T07:42:47+02:00",
+        "published": "2024-04-02T00:00:00+02:00",
+        "identifier": "urn:ISBN:9780756418861",
+        "schema:encodingFormat": "application/epub+zip",
+        "presentation": {
+          "layout": "reflowable"
+        },
+        "schema:workExample": [
+          {
+            "@type": "http://schema.org/Book",
+            "schema:bookFormat": "http://schema.org/Hardcover",
+            "schema:isbn": "urn:ISBN:9780756418854"
+          }
+        ],
+        "author": [
+          {
+            "name": "John Wiswell",
+            "links": [
+              {
+                "type": "application/opds+json",
+                "href": "https://market.cantook.com/browse/recent.json?author_ids=1604225&languages=en"
+              }
+            ]
+          }
+        ],
+        "publisher": {
+          "name": "DAW",
+          "links": [
+            {
+              "type": "application/opds+json",
+              "href": "https://market.cantook.com/browse/recent.json?imprint_ids=285&languages=en"
+            }
+          ]
+        },
+        "description": "<b>An NPR, Washington Post, Book Riot, Library Journal and Audible Best Book of 2024! <br><br>One of the Best Books of the Year So Far </b>from: Amazon, Barnes &amp; Noble, Polygon, LitHub, Bookpage, Crime Reads, and Geek Girl Authority<br><br>&ldquo;This <b>unusual queer romance is a heartfelt fable</b> about disability and the possibility of reconciling conflicting needs through love and understanding.&rdquo; &mdash;<i>The Guardian </i><br><br>\"<b>Sweetly furious, darkly funny, and gruesomely wholesome</b>. It's a love story for the unloved, a happily-ever-after with a higher-than-average body count. I just adored it.\" &mdash;Alix E. Harrow, <i>New York Times</i>-bestselling author of <i>Starling House</i><br><br><b>Shesheshen has made a mistake fatal to all monsters: she's fallen in love.</b><br><br>Shesheshen is a shapeshifter, who happily resides as an amorphous lump at the bottom of a ruined manor. When her rest is interrupted by impolite monster hunters, she constructs a body from the remains of past meals: a metal chain for a backbone, borrowed bones for limbs, and a bear trap as an extra mouth. <br><br>Badly hurt by the hunters, Shesheshen&rsquo;s nursed back to health by Homily, a warm-hearted human. Homily is kind and would make a great co-parent: an ideal place to lay Shesheshen&rsquo;s eggs so their young can devour Homily from the inside out. But as they grow close, Shesheshen realizes that eating her girlfriend isn&rsquo;t an option.<br><br>Just as Shesheshen&rsquo;s about to confess her identity, Homily reveals something else: she&rsquo;s hunting a shapeshifting monster that supposedly cursed her family. Has Shesheshen seen it anywhere?<br><br>Shesheshen didn&rsquo;t curse anyone, so now she has to figure out why Homily&rsquo;s twisted family thinks she did. As Shesheshen&rsquo;s hunt for the monster becomes increasingly deadly, the bigger challenge remains: learning how to build a life <i>with</i>, rather than <i>in</i>, the woman she loves.<br><br>&ldquo;<b>A stealthily funny, slyly smart, and remarkably touching story</b>. Its wisdom will creep up on you as surely as your affection for its monstrous main character.&rdquo;&mdash;Veronica Roth, #1 New York Times-bestselling author of <i>When Among Crows</i>",
+        "subject": [
+          {
+            "code": "FIC009070",
+            "name": "FICTION / Fantasy / Dark Fantasy",
+            "scheme": "http://www.bisg.org/standards/bisac_subject/"
+          },
+          {
+            "code": "FIC009080",
+            "name": "FICTION / Fantasy / Humorous",
+            "scheme": "http://www.bisg.org/standards/bisac_subject/"
+          },
+          {
+            "code": "FIC009090",
+            "name": "FICTION / Fantasy / Romance",
+            "scheme": "http://www.bisg.org/standards/bisac_subject/"
+          },
+          {
+            "code": "READ0000",
+            "scheme": "http://schema.org/Audience",
+            "name": "Adult",
+            "links": [
+              {
+                "type": "application/opds+json",
+                "href": "https://market.cantook.com/top/top.json?audiences=READ0000&languages=en"
+              }
+            ]
+          }
+        ]
+      },
+      "images": [
+        {
+          "href": "https://covers.feedbooks.net/item/5834498.jpg?size=large&t=1710304454",
+          "type": "image/jpeg",
+          "width": 260,
+          "height": 420
+        },
+        {
+          "href": "https://covers.feedbooks.net/item/5834498.jpg?t=1710304454",
+          "type": "image/jpeg",
+          "width": 100,
+          "height": 180
+        }
+      ],
+      "licenses": [
+        {
+          "metadata": {
+            "identifier": "urn:uuid:a4b59b18-ee13-4024-8992-a92fb84b2ac6",
+            "format": [
+              "application/epub+zip",
+              "text/html"
+            ],
+            "accessibility": {
+              "feature": [
+                "tableOfContents"
+              ]
+            },
+            "created": "2025-04-09T14:25:20+02:00",
+            "source": "http://www.cantook.net/",
+            "price": {
+              "currency": "USD",
+              "value": "35.0"
+            },
+            "terms": {
+              "expires": "2026-04-09",
+              "concurrency": 1,
+              "length": 5097600
+            },
+            "markets": [
+              "public_library",
+              "academic_library",
+              "corporate"
+            ],
+            "cap_loan_expiration_to_license": false,
+            "protection": {
+              "format": [
+                "application/vnd.adobe.adept+xml",
+                "application/vnd.readium.lcp.license.v1.0+json"
+              ],
+              "devices": 6,
+              "copy": true,
+              "print": false,
+              "tts": false
+            },
+            "order": {
+              "name": "Varatuimmat huhtikuu",
+              "identifier": "202504-1095-069202",
+              "href": "https://market.cantook.com/carts/69202"
+            }
+          },
+          "links": [
+            {
+              "rel": "http://opds-spec.org/acquisition/borrow",
+              "href": "https://license.feedbooks.net/loan/status/{?id,checkout_id,expires,patron_id,notification_url,passphrase,hint,hint_url}",
+              "type": "application/vnd.readium.license.status.v1.0+json",
+              "templated": true
+            },
+            {
+              "rel": "self",
+              "href": "https://license.feedbooks.net/copy/status/?uuid=a4b59b18-ee13-4024-8992-a92fb84b2ac6",
+              "type": "application/vnd.odl.info+json"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metadata": {
+        "@type": "http://schema.org/Book",
+        "title": "Harry Potter and the Deathly Hallows (UK Edition)",
+        "duration": 86374,
+        "abridged": "false",
+        "accessibility": {
+          "accessMode": [
+            "auditory"
+          ]
+        },
+        "language": "en",
+        "modified": "2025-04-17T12:36:58+02:00",
+        "published": "2015-11-20T00:00:00+01:00",
+        "identifier": "urn:ISBN:9781781102428",
+        "schema:encodingFormat": "application/audiobook+json",
+        "author": [
+          {
+            "name": "J.K. Rowling",
+            "links": [
+              {
+                "type": "application/opds+json",
+                "href": "https://market.cantook.com/browse/recent.json?author_ids=34962&languages=en"
+              }
+            ]
+          }
+        ],
+        "narrator": [
+          {
+            "name": "Stephen Fry",
+            "links": [
+              {
+                "type": "application/opds+json",
+                "href": "https://market.cantook.com/browse/recent.json?contributor_ids=23289&languages=en"
+              }
+            ]
+          }
+        ],
+        "publisher": {
+          "name": "Pottermore Audio",
+          "links": [
+            {
+              "type": "application/opds+json",
+              "href": "https://market.cantook.com/browse/recent.json?imprint_ids=70816&languages=en"
+            }
+          ]
+        },
+        "description": "<em>\"Give me Harry Potter,\" said Voldemort's voice, \"and none shall be harmed.  Give me Harry Potter, and I shall leave the school untouched. Give me Harry Potter, and you will be rewarded.\"</em><br /><br />As he climbs into the sidecar of Hagrid's motorbike and takes to the skies, leaving Privet Drive for the last time, Harry Potter knows that Lord Voldemort and the Death Eaters are not far behind. The protective charm that has kept Harry safe until now is broken, but he cannot keep hiding. The Dark Lord is breathing fear into everything Harry loves and to stop him Harry will have to find and destroy the remaining Horcruxes. The final battle must begin - Harry must stand and face his enemy ...",
+        "belongsTo": {
+          "collection": "Harry Potter"
+        },
+        "subject": [
+          {
+            "code": "JUV001000",
+            "name": "JUVENILE FICTION / Action & Adventure / General",
+            "scheme": "http://www.bisg.org/standards/bisac_subject/"
+          },
+          {
+            "code": "FIC002000",
+            "name": "FICTION / Action & Adventure",
+            "scheme": "http://www.bisg.org/standards/bisac_subject/"
+          },
+          {
+            "code": "FIC009000",
+            "name": "FICTION / Fantasy / General",
+            "scheme": "http://www.bisg.org/standards/bisac_subject/"
+          },
+          {
+            "code": "FIC009010",
+            "name": "FICTION / Fantasy / Contemporary",
+            "scheme": "http://www.bisg.org/standards/bisac_subject/"
+          }
+        ]
+      },
+      "images": [
+        {
+          "href": "https://covers.feedbooks.net/item/4519399.jpg?size=large&t=1654545673",
+          "type": "image/jpeg",
+          "width": 260,
+          "height": 420
+        },
+        {
+          "href": "https://covers.feedbooks.net/item/4519399.jpg?t=1654545673",
+          "type": "image/jpeg",
+          "width": 100,
+          "height": 180
+        }
+      ],
+      "licenses": [
+        {
+          "metadata": {
+            "identifier": "urn:uuid:aaae5b85-7eb9-442a-a669",
+            "format": [
+              "application/audiobook+lcp",
+              "text/html",
+              "application/audiobook+json; protection=http://www.feedbooks.com/audiobooks/access-restriction"
+            ],
+            "accessibility": {
+              "accessMode": [
+                "auditory"
+              ]
+            },
+            "created": "2024-11-20T15:26:11+01:00",
+            "source": "http://www.cantook.net/",
+            "price": {
+              "currency": "EUR",
+              "value": "75.0"
+            },
+            "terms": {
+              "expires": "2029-11-19",
+              "concurrency": 1,
+              "length": 2419200
+            },
+            "markets": [
+              "public_library",
+              "academic_library",
+              "corporate"
+            ],
+            "cap_loan_expiration_to_license": false,
+            "protection": {
+              "format": [
+                "application/vnd.readium.lcp.license.v1.0+json"
+              ],
+              "devices": 6
+            },
+            "order": {
+              "name": "Marraskuu/ ostot",
+              "po_number": "1",
+              "identifier": "202411-1095-054797",
+              "href": "https://market.cantook.com/carts/54797"
+            }
+          },
+          "links": [
+            {
+              "rel": "http://opds-spec.org/acquisition/borrow",
+              "href": "https://license.feedbooks.net/loan/status/{?id,checkout_id,expires,patron_id,notification_url,passphrase,hint,hint_url}",
+              "type": "application/vnd.readium.license.status.v1.0+json",
+              "templated": true
+            },
+            {
+              "rel": "self",
+              "href": "https://license.feedbooks.net/copy/status/?uuid=aaae5b85-7eb9-442a-a669",
+              "type": "application/vnd.odl.info+json"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

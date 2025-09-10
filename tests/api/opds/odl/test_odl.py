@@ -43,6 +43,20 @@ def test_feed_odl_success(
     Feed.model_validate_json(opds2_with_odl_files_fixture.sample_data("feed2.json"))
 
 
+@pytest.mark.parametrize(
+    "filename",
+    ["ellibs_feed_with_accessibility.json", "demarque_feed_with_accessibility.json"],
+)
+def test_odl_feed_with_accessibility_metadata_success(
+    filename: str,
+    opds2_with_odl_files_fixture: OPDS2WithODLFilesFixture,
+) -> None:
+    """
+    Parse and validate a basic OPDS2 + ODL feed.
+    """
+    Feed.model_validate_json(opds2_with_odl_files_fixture.sample_data(filename))
+
+
 def test_feed_odl_failure(
     opds2_with_odl_files_fixture: OPDS2WithODLFilesFixture,
 ) -> None:
