@@ -1,5 +1,4 @@
 from enum import Enum
-from typing import List, Optional, Union
 
 from pydantic import Field, field_validator
 
@@ -142,9 +141,9 @@ class AccessibilityDataExtension(BaseOpdsModel):
 
     # Ellibs provides an empty list if there's no data available.
     # accessibility: Accessibility | list[None] | None = None
-    accessibility: Optional[Union[Accessibility, List[None]]] = None
+    accessibility: Accessibility | list[None] | None = None
 
-    @field_validator('accessibility', mode='before')
+    @field_validator("accessibility", mode="before")
     def check_accessibility_type(cls, value):
         if isinstance(value, dict):
             return Accessibility(**value)
