@@ -53,7 +53,7 @@ def test_feed_odl_failure(
         Feed.model_validate_json(opds2_with_odl_files_fixture.sample_data("feed.json"))
 
     errors = exc_info.value.errors()
-    assert len(errors) == 2
+    assert len(errors) == 3
 
 
 @pytest.mark.parametrize(
