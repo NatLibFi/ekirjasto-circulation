@@ -53,7 +53,7 @@ def test_feed_odl_failure(
         Feed.model_validate_json(opds2_with_odl_files_fixture.sample_data("feed.json"))
 
     errors = exc_info.value.errors()
-    assert len(errors) == 3
+    assert len(errors) == 2
 
 
 @pytest.mark.parametrize(
@@ -68,3 +68,18 @@ def test_odl_feed_with_accessibility_metadata_success(
     Parse and validate a basic OPDS2 + ODL feed.
     """
     Feed.model_validate_json(opds2_with_odl_files_fixture.sample_data(filename))
+
+
+def test_feed_odl_bad_accessibility_data_failure(
+    opds2_with_odl_files_fixture: OPDS2WithODLFilesFixture,
+) -> None:
+    """
+    The ODL parser should fail to parse an OPDS2 feed with an ODL publication with invalid accessibility data.
+    """
+    with pytest.raises(ValidationError) as exc_info:
+        Feed.model_validate_json(
+            opds2_with_odl_files_fixture.sample_data("bad_accessibility_data.json")
+        )
+
+    errors = exc_info.value.errors()
+    assert len(errors) == 1

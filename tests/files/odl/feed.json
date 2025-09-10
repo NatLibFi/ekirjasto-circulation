@@ -32,9 +32,6 @@
                 "schema:isbn": "urn:ISBN:9782070197736"
             }
         ],
-        "accessibility": {
-          "feature": ["invalidFeature"]
-        },
         "language": "en",
         "publisher": {
           "name": "Test Publisher"
