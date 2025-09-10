@@ -47,7 +47,7 @@ class WorkExample(BaseOpdsModel, LoggerMixin):
 
     type: str = Field(
         ..., alias="@type"
-    )  # TODO: E-Kirjasto: We want to call out any diffs here, just like PalacePublicationMetadata.
+    )  # E-Kirjasto: We want to call out any diffs here, just like PalacePublicationMetadata.
     book_format: BookFormat | None = Field(None, alias="schema:bookFormat")
     isbn: str | None = Field(None, alias="schema:isbn")
 
