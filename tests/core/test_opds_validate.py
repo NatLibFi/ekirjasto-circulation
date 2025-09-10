@@ -16,8 +16,8 @@ class TestOPDS2Validation:
     @pytest.mark.parametrize(
         "feed_name, fail",
         [
-            ("feed.json", False),
-            ("feed2.json", False),
+            ("opds2_feed.json", False),
+            ("opds2_feed2.json", False),
             ("bad_feed.json", True),
             ("bad_feed2.json", True),
         ],
@@ -53,8 +53,8 @@ class TestOPDS2WithODLValidation:
     @pytest.mark.parametrize(
         "feed_name, fail",
         [
-            ("feed.json", True),
-            ("feed2.json", False),
+            ("odl_feed.json", True),
+            ("odl_feed2.json", False),
         ],
     )
     def test_opds2_with_odl_schema(

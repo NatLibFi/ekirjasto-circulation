@@ -143,7 +143,7 @@ class TestOPDS2Importer(OPDS2Test):
             opds2_importer_fixture.transaction,
             opds2_importer_fixture.transaction.session,
         )
-        content_server_feed_text = opds2_files_fixture.sample_text("feed.json")
+        content_server_feed_text = opds2_files_fixture.sample_text("opds2_feed.json")
         content_server_feed: str | bytes
 
         if manifest_type == "bytes":
@@ -462,7 +462,7 @@ class TestOPDS2Importer(OPDS2Test):
             t.value for t in ignore_identifier_type
         ]
         print(data.importer.ignored_identifier_types)
-        content_server_feed = opds2_files_fixture.sample_text("feed.json")
+        content_server_feed = opds2_files_fixture.sample_text("opds2_feed.json")
 
         # Act
         imported_editions, pools, works, failures = data.importer.import_from_feed(
@@ -564,10 +564,14 @@ class TestOPDS2Importer(OPDS2Test):
         assert extract_next_links(b"garbage") == []
 
         # No next links
-        assert extract_next_links(opds2_files_fixture.sample_data("feed.json")) == []
+        assert (
+            extract_next_links(opds2_files_fixture.sample_data("opds2_feed.json")) == []
+        )
 
         # One next link
-        assert extract_next_links(opds2_files_fixture.sample_data("feed2.json")) == [
+        assert extract_next_links(
+            opds2_files_fixture.sample_data("opds2_feed2.json")
+        ) == [
             "http://bookshelf-feed-demo.us-east-1.elasticbeanstalk.com/v1/publications?page=2&limit=100"
         ]
 
@@ -585,7 +589,7 @@ class TestOPDS2Importer(OPDS2Test):
 
         # Feed with last update dates
         assert extract_last_update_dates(
-            opds2_files_fixture.sample_data("feed.json")
+            opds2_files_fixture.sample_data("opds2_feed.json")
         ) == [
             (
                 "urn:isbn:978-3-16-148410-0",
@@ -620,7 +624,7 @@ class TestOPDS2Importer(OPDS2Test):
             opds2_importer_fixture.transaction,
             opds2_importer_fixture.transaction.session,
         )
-        feed_json = json.loads(opds2_files_fixture.sample_text("feed.json"))
+        feed_json = json.loads(opds2_files_fixture.sample_text("opds2_feed.json"))
 
         moby_dick_metadata = feed_json["publications"][0]["metadata"]
         huckleberry_finn_metadata = feed_json["publications"][1]["metadata"]

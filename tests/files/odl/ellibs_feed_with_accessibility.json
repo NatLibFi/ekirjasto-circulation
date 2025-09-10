@@ -26,7 +26,7 @@
                     "links": [
                         {
                             "type": "application/opds+json",
-                            "href": "https://opds-beta.ellibs.com/odl-test/publishers/11991"
+                            "href": "https://example.com/odl-test/publishers/11991"
                         }
                     ]
                 },
@@ -52,7 +52,7 @@
                     "links": [
                         {
                             "type": "application/opds+json",
-                            "href": "https://opds-beta.ellibs.com/odl-test/authors/1775459"
+                            "href": "https://example.com/odl-test/authors/1775459"
                         }
                     ]
                 },
@@ -80,7 +80,7 @@
                     "links": [
                         {
                             "type": "application/opds+json",
-                            "href": "https://opds-beta.ellibs.com/odl-test/authors/2009830"
+                            "href": "https://example.com/odl-test/authors/2009830"
                         }
                     ]
                 }
@@ -88,12 +88,12 @@
             "images": [
                 {
                     "rel": "http://opds-spec.org/image",
-                    "href": "https://www.ellibslibrary.com/sites/default/files/imagecache/product_full/bookcover_9789512445448.jpg",
+                    "href": "https://www.example.com/sites/default/files/imagecache/product_full/bookcover_9789512445448.jpg",
                     "type": "image/jpeg"
                 },
                 {
                     "rel": "http://opds-spec.org/image/thumbnail",
-                    "href": "https://www.ellibslibrary.com/sites/default/files/imagecache/product/bookcover_9789512445448.jpg",
+                    "href": "https://www.example.com/sites/default/files/imagecache/product/bookcover_9789512445448.jpg",
                     "type": "image/jpeg"
                 }
             ],
@@ -118,13 +118,13 @@
                     "links": [
                         {
                             "rel": "http://opds-spec.org/acquisition/borrow",
-                            "href": "https://opds-beta.ellibs.com/odl-test/get.php{?id,checkout_id,expires,patron_id,notification_url,passphrase}",
+                            "href": "https://example.com/odl-test/get.php{?id,checkout_id,expires,patron_id,notification_url,passphrase}",
                             "type": "application/vnd.readium.license.status.v1.0+json",
                             "templated": "true"
                         },
                         {
                             "rel": "self",
-                            "href": "https://opds-beta.ellibs.com/odl-test/status.php?license_id=222",
+                            "href": "https://example.com/odl-test/status.php?license_id=222",
                             "type": "application/vnd.odl.info+json"
                         }
                     ]
@@ -133,19 +133,19 @@
             "link": [
                 {
                     "rel": "http://readium.org/lcp/status",
-                    "href": "https://opds-beta.ellibs.com/odl-test/status.php?license_id=222"
+                    "href": "https://example.com/odl-test/status.php?license_id=222"
                 },
                 {
                     "rel": "http://readium.org/lcp/register",
-                    "href": "https://opds-beta.ellibs.com/odl-test/register.php?license_id=222"
+                    "href": "https://example.com/odl-test/register.php?license_id=222"
                 },
                 {
                     "rel": "http://readium.org/lcp/return",
-                    "href": "https://opds-beta.ellibs.com/odl-test/return.php?license_id=222"
+                    "href": "https://example.com/odl-test/return.php?license_id=222"
                 },
                 {
                     "rel": "http://readium.org/lcp/renew",
-                    "href": "https://opds-beta.ellibs.com/odl-test/renew.php?license_id=222"
+                    "href": "https://example.com/odl-test/renew.php?license_id=222"
                 }
             ]
         },
@@ -163,7 +163,7 @@
                     "links": [
                         {
                             "type": "application/opds+json",
-                            "href": "https://opds-beta.ellibs.com/odl-test/publishers/13529"
+                            "href": "https://example.com/odl-test/publishers/13529"
                         }
                     ]
                 },
@@ -184,7 +184,7 @@
                     "links": [
                         {
                             "type": "application/opds+json",
-                            "href": "https://opds-beta.ellibs.com/odl-test/authors/2057762"
+                            "href": "https://example.com/odl-test/authors/2057762"
                         }
                     ]
                 },
@@ -222,7 +222,7 @@
                     "links": [
                         {
                             "type": "application/opds+json",
-                            "href": "https://opds-beta.ellibs.com/odl-test/authors/2057761"
+                            "href": "https://example.com/odl-test/authors/2057761"
                         }
                     ]
                 }
@@ -230,12 +230,12 @@
             "images": [
                 {
                     "rel": "http://opds-spec.org/image",
-                    "href": "https://www.ellibslibrary.com/sites/default/files/imagecache/product_full/bookcover_9789164244673.jpg",
+                    "href": "https://www.example.com/sites/default/files/imagecache/product_full/bookcover_9789164244673.jpg",
                     "type": "image/jpeg"
                 },
                 {
                     "rel": "http://opds-spec.org/image/thumbnail",
-                    "href": "https://www.ellibslibrary.com/sites/default/files/imagecache/product/bookcover_9789164244673.jpg",
+                    "href": "https://www.example.com/sites/default/files/imagecache/product/bookcover_9789164244673.jpg",
                     "type": "image/jpeg"
                 }
             ],
@@ -261,13 +261,13 @@
                     "links": [
                         {
                             "rel": "http://opds-spec.org/acquisition/borrow",
-                            "href": "https://opds-beta.ellibs.com/odl-test/get.php{?id,checkout_id,expires,patron_id,notification_url,passphrase}",
+                            "href": "https://example.com/odl-test/get.php{?id,checkout_id,expires,patron_id,notification_url,passphrase}",
                             "type": "application/vnd.readium.license.status.v1.0+json",
                             "templated": "true"
                         },
                         {
                             "rel": "self",
-                            "href": "https://opds-beta.ellibs.com/odl-test/status.php?license_id=333",
+                            "href": "https://example.com/odl-test/status.php?license_id=333",
                             "type": "application/vnd.odl.info+json"
                         }
                     ]
@@ -276,19 +276,19 @@
             "link": [
                 {
                     "rel": "http://readium.org/lcp/status",
-                    "href": "https://opds-beta.ellibs.com/odl-test/status.php?license_id=333"
+                    "href": "https://example.com/odl-test/status.php?license_id=333"
                 },
                 {
                     "rel": "http://readium.org/lcp/register",
-                    "href": "https://opds-beta.ellibs.com/odl-test/register.php?license_id=333"
+                    "href": "https://example.com/odl-test/register.php?license_id=333"
                 },
                 {
                     "rel": "http://readium.org/lcp/return",
-                    "href": "https://opds-beta.ellibs.com/odl-test/return.php?license_id=333"
+                    "href": "https://example.com/odl-test/return.php?license_id=333"
                 },
                 {
                     "rel": "http://readium.org/lcp/renew",
-                    "href": "https://opds-beta.ellibs.com/odl-test/renew.php?license_id=333"
+                    "href": "https://example.com/odl-test/renew.php?license_id=333"
                 }
             ]
         },
@@ -306,7 +306,7 @@
                     "links": [
                         {
                             "type": "application/opds+json",
-                            "href": "https://opds-beta.ellibs.com/odl-test/publishers/12181"
+                            "href": "https://example.com/odl-test/publishers/12181"
                         }
                     ]
                 },
@@ -338,7 +338,7 @@
                     "links": [
                         {
                             "type": "application/opds+json",
-                            "href": "https://opds-beta.ellibs.com/odl-test/authors/1518178"
+                            "href": "https://example.com/odl-test/authors/1518178"
                         }
                     ]
                 },
@@ -349,7 +349,7 @@
                         "links": [
                             {
                                 "type": "application/opds+json",
-                                "href": "https://opds-beta.ellibs.com/odl-test/authors/2074653"
+                                "href": "https://example.com/odl-test/authors/2074653"
                             }
                         ]
                     },
@@ -358,7 +358,7 @@
                         "links": [
                             {
                                 "type": "application/opds+json",
-                                "href": "https://opds-beta.ellibs.com/odl-test/authors/2069156"
+                                "href": "https://example.com/odl-test/authors/2069156"
                             }
                         ]
                     }
@@ -368,7 +368,7 @@
                     "links": [
                         {
                             "type": "application/opds+json",
-                            "href": "https://opds-beta.ellibs.com/odl-test/authors/1518176"
+                            "href": "https://example.com/odl-test/authors/1518176"
                         }
                     ]
                 }
@@ -376,12 +376,12 @@
             "images": [
                 {
                     "rel": "http://opds-spec.org/image",
-                    "href": "https://www.ellibslibrary.com/sites/default/files/imagecache/product_full/bookcover_9789510504437.jpg",
+                    "href": "https://www.example.com/sites/default/files/imagecache/product_full/bookcover_9789510504437.jpg",
                     "type": "image/jpeg"
                 },
                 {
                     "rel": "http://opds-spec.org/image/thumbnail",
-                    "href": "https://www.ellibslibrary.com/sites/default/files/imagecache/product/bookcover_9789510504437.jpg",
+                    "href": "https://www.example.com/sites/default/files/imagecache/product/bookcover_9789510504437.jpg",
                     "type": "image/jpeg"
                 }
             ],
@@ -406,13 +406,13 @@
                     "links": [
                         {
                             "rel": "http://opds-spec.org/acquisition/borrow",
-                            "href": "https://opds-beta.ellibs.com/odl-test/get.php{?id,checkout_id,expires,patron_id,notification_url,passphrase}",
+                            "href": "https://example.com/odl-test/get.php{?id,checkout_id,expires,patron_id,notification_url,passphrase}",
                             "type": "application/vnd.readium.license.status.v1.0+json",
                             "templated": "true"
                         },
                         {
                             "rel": "self",
-                            "href": "https://opds-beta.ellibs.com/odl-test/status.php?license_id=444",
+                            "href": "https://example.com/odl-test/status.php?license_id=444",
                             "type": "application/vnd.odl.info+json"
                         }
                     ]
@@ -421,19 +421,19 @@
             "link": [
                 {
                     "rel": "http://readium.org/lcp/status",
-                    "href": "https://opds-beta.ellibs.com/odl-test/status.php?license_id=444"
+                    "href": "https://example.com/odl-test/status.php?license_id=444"
                 },
                 {
                     "rel": "http://readium.org/lcp/register",
-                    "href": "https://opds-beta.ellibs.com/odl-test/register.php?license_id=444"
+                    "href": "https://example.com/odl-test/register.php?license_id=444"
                 },
                 {
                     "rel": "http://readium.org/lcp/return",
-                    "href": "https://opds-beta.ellibs.com/odl-test/return.php?license_id=444"
+                    "href": "https://example.com/odl-test/return.php?license_id=444"
                 },
                 {
                     "rel": "http://readium.org/lcp/renew",
-                    "href": "https://opds-beta.ellibs.com/odl-test/renew.php?license_id=444"
+                    "href": "https://example.com/odl-test/renew.php?license_id=444"
                 }
             ]
         }

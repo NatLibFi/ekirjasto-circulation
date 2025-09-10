@@ -160,13 +160,13 @@
           "links": [
             {
               "rel": "http://opds-spec.org/acquisition/borrow",
-              "href": "https://license.feedbooks.net/loan/status/{?id,checkout_id,expires,patron_id,notification_url,passphrase,hint,hint_url}",
+              "href": "https://example.net/loan/status/{?id,checkout_id,expires,patron_id,notification_url,passphrase,hint,hint_url}",
               "type": "application/vnd.readium.license.status.v1.0+json",
               "templated": true
             },
             {
               "rel": "self",
-              "href": "https://license.feedbooks.net/copy/status/?uuid=2e40e4c2-becd-4729",
+              "href": "https://example.net/copy/status/?uuid=2e40e4c2-becd-4729",
               "type": "application/vnd.odl.info+json"
             }
           ]
@@ -346,13 +346,13 @@
           "links": [
             {
               "rel": "http://opds-spec.org/acquisition/borrow",
-              "href": "https://license.feedbooks.net/loan/status/{?id,checkout_id,expires,patron_id,notification_url,passphrase,hint,hint_url}",
+              "href": "https://example.net/loan/status/{?id,checkout_id,expires,patron_id,notification_url,passphrase,hint,hint_url}",
               "type": "application/vnd.readium.license.status.v1.0+json",
               "templated": true
             },
             {
               "rel": "self",
-              "href": "https://license.feedbooks.net/copy/status/?uuid=6adfede9-81e0-4573-a29b",
+              "href": "https://example.net/copy/status/?uuid=6adfede9-81e0-4573-a29b",
               "type": "application/vnd.odl.info+json"
             }
           ]
@@ -497,13 +497,13 @@
           "links": [
             {
               "rel": "http://opds-spec.org/acquisition/borrow",
-              "href": "https://license.feedbooks.net/loan/status/{?id,checkout_id,expires,patron_id,notification_url,passphrase,hint,hint_url}",
+              "href": "https://example.net/loan/status/{?id,checkout_id,expires,patron_id,notification_url,passphrase,hint,hint_url}",
               "type": "application/vnd.readium.license.status.v1.0+json",
               "templated": true
             },
             {
               "rel": "self",
-              "href": "https://license.feedbooks.net/copy/status/?uuid=a4b59b18-ee13-4024-8992-a92fb84b2ac6",
+              "href": "https://example.net/copy/status/?uuid=a4b59b18-ee13-4024-8992-a92fb84b2ac6",
               "type": "application/vnd.odl.info+json"
             }
           ]
@@ -645,13 +645,13 @@
           "links": [
             {
               "rel": "http://opds-spec.org/acquisition/borrow",
-              "href": "https://license.feedbooks.net/loan/status/{?id,checkout_id,expires,patron_id,notification_url,passphrase,hint,hint_url}",
+              "href": "https://example.net/loan/status/{?id,checkout_id,expires,patron_id,notification_url,passphrase,hint,hint_url}",
               "type": "application/vnd.readium.license.status.v1.0+json",
               "templated": true
             },
             {
               "rel": "self",
-              "href": "https://license.feedbooks.net/copy/status/?uuid=aaae5b85-7eb9-442a-a669",
+              "href": "https://example.net/copy/status/?uuid=aaae5b85-7eb9-442a-a669",
               "type": "application/vnd.odl.info+json"
             }
           ]

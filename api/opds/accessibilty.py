@@ -1,9 +1,10 @@
 from enum import Enum
-from typing import List, Optional, Union
+
 from pydantic import Field
 
 from api.opds.base import BaseOpdsModel
 from core.util.log import LoggerMixin
+
 
 class AccessMode(str, Enum):
     """
@@ -52,7 +53,7 @@ class AccessibilityFeature(str, Enum):
     transcript = "transcript"
     index_name = "index"
     print_page_numbers = "printPageNumbers"
-    page_break_markers = "pageBreakMarkers" # previously printPageNumbers https://www.w3.org/community/reports/a11y-discov-vocab/CG-FINAL-vocabulary-20241209/#pageBreakMarkers
+    page_break_markers = "pageBreakMarkers"  # previously printPageNumbers https://www.w3.org/community/reports/a11y-discov-vocab/CG-FINAL-vocabulary-20241209/#pageBreakMarkers
     audio_description = "audioDescription"
     open_captions = "openCaptions"
     page_break_source = "pageBreakSource"
@@ -86,7 +87,6 @@ class AccessibilityFeature(str, Enum):
     without_additional_word_segmentation = "withoutAdditionalWordSegmentation"
 
 
-
 class Hazard(str, Enum):
     """
     https://w3c.github.io/a11y-discov-vocab/crosswalk/#accessibilityhazard
@@ -110,7 +110,7 @@ class Certification(BaseOpdsModel):
     https://www.w3.org/TR/epub-a11y-11/#certifiedBy
     """
 
-    certified_by: Optional[str] = Field(None, alias="certifiedBy")
+    certified_by: str | None = Field(None, alias="certifiedBy")
 
 
 class Accessibility(BaseOpdsModel, LoggerMixin):
@@ -119,8 +119,10 @@ class Accessibility(BaseOpdsModel, LoggerMixin):
     """
 
     feature: list[AccessibilityFeature] | None = None
-    access_mode: Optional[list[AccessMode]] = Field(None, alias="accessMode")
-    access_mode_suffifient: Optional[list[AccessModeSufficient]] = Field(None, alias="accessModeSufficient")
+    access_mode: list[AccessMode] | None = Field(None, alias="accessMode")
+    access_mode_suffifient: list[AccessModeSufficient] | None = Field(
+        None, alias="accessModeSufficient"
+    )
     hazard: list[Hazard] | None = None
 
     # https://w3c.github.io/a11y-discov-vocab/crosswalk/#accessibilitysummary
@@ -129,7 +131,7 @@ class Accessibility(BaseOpdsModel, LoggerMixin):
 
     # https://w3c.github.io/a11y-discov-vocab/crosswalk/#conformance-and-exemption-declarations
     # Ellibs provides the data as a list, De Marque as a string. It's really a url but there's no need to validate it as such.
-    conformance: Optional[Union[str, List[str]]] = Field(None, alias="conformsTo")
+    conformance: str | list[str] | None = Field(None, alias="conformsTo")
 
 
 class AccessibilityDataExtension(BaseOpdsModel):
@@ -138,4 +140,4 @@ class AccessibilityDataExtension(BaseOpdsModel):
     """
 
     # Ellibs provides an empty list if there's no data available.
-    accessibility: Optional[Union[Accessibility, List[None]]] = None
+    accessibility: Accessibility | list[None] | None = None
