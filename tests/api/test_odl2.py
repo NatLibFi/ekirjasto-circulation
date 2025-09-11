@@ -114,6 +114,7 @@ class TestODL2Importer:
         }
 
         assert "Moby-Dick" == moby_dick_edition.title
+        assert not moby_dick_edition.subtitle
         assert "eng" == moby_dick_edition.language
         assert "eng" == moby_dick_edition.language
         assert EditionConstants.BOOK_MEDIUM == moby_dick_edition.medium
