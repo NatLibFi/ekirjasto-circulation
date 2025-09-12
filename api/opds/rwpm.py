@@ -245,6 +245,172 @@ def _named_or_sequence_to_sequence(
     )
 
 
+class AccessMode(str, Enum):
+    """
+    https://github.com/readium/webpub-manifest/tree/master/contexts/default#accessmode-and-accessmodesufficient
+    """
+
+    auditory = "auditory"
+    visual = "visual"
+    textual = "textual"
+    chart_on_visual = "chartOnVisual"
+    chem_on_visual = "chemOnVisual"
+    color_dependent = "colorDependent"
+    diagram_on_visual = "diagramOnVisual"
+    math_on_visual = "mathOnVisual"
+    music_on_visual = "musicOnVisual"
+    text_on_visual = "textOnVisual"
+    tactile = "tactile"
+
+
+class AccessModeSufficient(str, Enum):
+    """
+    https://github.com/readium/webpub-manifest/tree/master/contexts/default#accessmode-and-accessmodesufficient
+    """
+
+    auditory = "auditory"
+    visual = "visual"
+    textual = "textual"
+    textual_visual = "textual, visual"
+    visual_textual = "visual, textual"
+    tactile = "tactile"
+
+
+class AccessibilityFeature(str, Enum):
+    """
+    https://github.com/readium/webpub-manifest/tree/master/contexts/default#features-and-hazards
+    """
+
+    structural_navigation = "structuralNavigation"
+    table_of_contents = "tableOfContents"
+    alternative_text = "alternativeText"
+    display_transformability = "displayTransformability"
+    reading_order = "readingOrder"
+    is_fixed_layout = "isFixedLayout"
+    long_description = "longDescription"
+    described_math = "describedMath"
+    transcript = "transcript"
+    index_name = "index"
+    print_page_numbers = "printPageNumbers"
+    page_break_markers = "pageBreakMarkers"  # previously printPageNumbers https://www.w3.org/community/reports/a11y-discov-vocab/CG-FINAL-vocabulary-20241209/#pageBreakMarkers
+    audio_description = "audioDescription"
+    open_captions = "openCaptions"
+    page_break_source = "pageBreakSource"
+    page_navigation = "pageNavigation"
+    sign_language = "signLanguage"
+    synchronized_audio_text = "synchronizedAudioText"
+    tactile_graphic = "tactileGraphic"
+    tactile_object = "tactileObject"
+    large_print = "largePrint"
+    high_contrast_audio = "highContrastAudio"
+    high_contrast_display = "highContrastDisplay"
+    braille = "braille"
+    closed_captions = "closedCaptions"
+    tts_markup = "ttsMarkup"
+    tagged_pdf = "taggedPDF"
+    math_ml = "MathML"
+    ruby_annotations = "rubyAnnotations"
+    full_ruby_annotations = "fullRubyAnnotations"
+    aria = "aria"
+    bookmarks = "bookmarks"
+    captions = "captions"
+    chem_ml = "ChemML"
+    horizontal_writing = "horizontalWriting"
+    latex = "latex"
+    latex_chemistry = "latex-chemistry"
+    math_ml_chemistry = "MathML-chemistry"
+    timing_control = "timingControl"
+    unlocked = "unlocked"
+    vertical_writing = "verticalWriting"
+    with_additional_word_segmentation = "withAdditionalWordSegmentation"
+    without_additional_word_segmentation = "withoutAdditionalWordSegmentation"
+
+
+class Hazard(str, Enum):
+    """
+    https://github.com/readium/webpub-manifest/tree/master/contexts/default#features-and-hazards
+    """
+
+    flashing = "flashing"
+    no_flashing_hazard = "noFlashingHazard"
+    unknown_flashing_hazard = "unknownFlashingHazard"
+    motion_simulation = "motionSimulation"
+    no_motion_simulation_hazard = "noMotionSimulationHazard"
+    unknown_motion_simulation_hazard = "unknownMotionSimulationHazard"
+    sound = "sound"
+    no_sound_hazard = "noSoundHazard"
+    unknown_sound_hazard = "unknownSoundHazard"
+    none: str = "none"
+    unknown = "unknown"
+
+
+class Certification(BaseOpdsModel):
+    """
+    https://github.com/readium/webpub-manifest/tree/master/contexts/default#certification
+    """
+
+    certified_by: str | None = Field(None, alias="certifiedBy")
+    report: str | list[str] | None = None
+    credential: str | None = None
+
+
+class ConformsTo(str, Enum):
+    """
+    https://github.com/readium/webpub-manifest/tree/master/contexts/default#conformance
+    """
+
+    epub_1_0_wcag_2_0_level_a = (
+        "http://www.idpf.org/epub/a11y/accessibility-20170105.html#wcag-a"
+    )
+    epub_1_0_wcag_2_0_level_aa = (
+        "http://www.idpf.org/epub/a11y/accessibility-20170105.html#wcag-aa"
+    )
+    epub_1_0_wcag_2_0_level_aaa = (
+        "http://www.idpf.org/epub/a11y/accessibility-20170105.html#wcag-aaa"
+    )
+    epub_1_1_wcag_2_0_level_a = "https://www.w3.org/TR/epub-a11y-11#wcag-2.0-a"
+    epub_1_1_wcag_2_0_level_aa = "https://www.w3.org/TR/epub-a11y-11#wcag-2.0-aa"
+    epub_1_1_wcag_2_0_level_aaa = "https://www.w3.org/TR/epub-a11y-11#wcag-2.0-aaa"
+    epub_1_1_wcag_2_1_level_a = "https://www.w3.org/TR/epub-a11y-11#wcag-2.1-a"
+    epub_1_1_wcag_2_1_level_aa = "https://www.w3.org/TR/epub-a11y-11#wcag-2.1-aa"
+    epub_1_1_wcag_2_1_level_aaa = "https://www.w3.org/TR/epub-a11y-11#wcag-2.1-aaa"
+    epub_1_1_wcag_2_2_level_a = "https://www.w3.org/TR/epub-a11y-11#wcag-2.2-a"
+    epub_1_1_wcag_2_2_level_aa = "https://www.w3.org/TR/epub-a11y-11#wcag-2.2-aa"
+    epub_1_1_wcag_2_2_level_aaa = "https://www.w3.org/TR/epub-a11y-11#wcag-2.2-aaa"
+
+
+class Exemption(str, Enum):
+    """
+    https://github.com/readium/webpub-manifest/tree/master/contexts/default#exemption
+    """
+
+    eaa_disproportionate_burden = "eaa-disproportionate-burden"
+    eaa_fundamental_alteration = "eaa-fundamental-alteration"
+    eaa_microenterprise = "eaa-microenterprise"
+
+
+class Accessibility(BaseOpdsModel):
+    """
+    https://github.com/readium/webpub-manifest/tree/master/contexts/default#accessibility-metadata
+    """
+
+    feature: list[AccessibilityFeature] | None = None
+    access_mode: list[AccessMode] | None = Field(None, alias="accessMode")
+    access_mode_suffifient: list[AccessModeSufficient] | None = Field(
+        None, alias="accessModeSufficient"
+    )
+    hazard: list[Hazard] | None = None
+
+    # https://github.com/readium/webpub-manifest/tree/master/contexts/default#summary
+    summary: str | None = None
+    certification: Certification | None = None
+
+    # https://github.com/readium/webpub-manifest/tree/master/contexts/default#conformance
+    # Ellibs provides the data as a list, De Marque as a string. RWPM does not define either, it just says it can hold one or more profiles.
+    conforms_to: ConformsTo | list[ConformsTo] | None = Field(None, alias="conformsTo")
+    exemption: Exemption | None = None
+
+
 class Metadata(BaseOpdsModel):
     """
     Metadata associated with a publication.
@@ -373,6 +539,16 @@ class Metadata(BaseOpdsModel):
     belongs_to: BelongsTo = Field(default_factory=BelongsTo, alias="belongsTo")
 
     presentation: PresentationProperties = Field(default_factory=PresentationProperties)
+
+    # Ellibs provides an empty list if there's no data available.
+    # accessibility: Accessibility | list[None] | None = None
+    accessibility: Accessibility | list[None] | None = None
+
+    @field_validator("accessibility", mode="before")
+    def check_accessibility_type(cls, value):
+        if isinstance(value, dict):
+            return Accessibility(**value)
+        return None
 
 
 class LinkRelations(str, Enum):
