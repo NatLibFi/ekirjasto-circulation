@@ -1,0 +1,158 @@
+{
+  "metadata": {
+    "title": "Example listing publications"
+  },
+  "links": [
+    {
+      "rel": "self",
+      "href": "http://example.com/new",
+      "type": "application/opds+json"
+    }
+  ],
+  "publications": [
+    {
+      "metadata": {
+        "@type": "http://schema.org/Book",
+        "title": "Don't Let the Forest In",
+        "abridged": "false",
+        "accessibility": {
+          "feature": [
+            "thisIsAnInvalidFeature"
+          ]
+        },
+        "language": "en",
+        "modified": "2025-06-12T21:49:22+02:00",
+        "published": "2024-10-29T00:00:00+01:00",
+        "identifier": "urn:ISBN:9781250895653",
+        "schema:encodingFormat": "application/epub+zip",
+        "presentation": {
+          "layout": "reflowable"
+        },
+        "schema:workExample": [
+          {
+            "@type": "http://schema.org/Book",
+            "schema:bookFormat": "http://schema.org/Hardcover",
+            "schema:isbn": "urn:ISBN:9781250895660"
+          }
+        ],
+        "author": [
+          {
+            "name": "Cg Drews",
+            "links": [
+              {
+                "type": "application/opds+json",
+                "href": "https://market.cantook.com/browse/recent.json?author_ids=2088699&languages=en"
+              }
+            ]
+          }
+        ],
+        "publisher": {
+          "name": "Feiwel & Friends",
+          "links": [
+            {
+              "type": "application/opds+json",
+              "href": "https://market.cantook.com/browse/recent.json?imprint_ids=5974&languages=en"
+            }
+          ]
+        },
+        "description": "<p><b>AN INSTANT <i>NEW YORK TIMES</i> BESTSELLER!<br></b><b><br>As alluring as it is unsettling, award-winning author CG Drews' debut YA psychological horror will leave readers breathless and hesitant to venture deeper into the woods.<br></b><br><i>Once upon a time, Andrew had cut out his heart and given it to this boy, and he was very sure Thomas had no idea that Andrew would do anything for him. Protect him. Lie for him. <br><br>Kill for him.<br></i><br>High school senior Andrew Perrault finds refuge in the twisted fairytales that he writes for the only person who can ground him to reality—Thomas Rye, the boy with perpetually ink-stained hands and hair like autumn leaves. And with his twin sister, Dove, inexplicably keeping him at a cold distance upon their return to Wickwood Academy, Andrew finds himself leaning on his friend even more.<br><br>But something strange is going on with Thomas. His abusive parents have mysteriously vanished, and he arrives at school with blood on his sleeve. Thomas won't say a word about it, and shuts down whenever Andrew tries to ask him questions. Stranger still, Thomas is haunted by something, and he seems to have lost interest in his artwork—whimsically macabre sketches of the monsters from Andrew's wicked stories.<br><br>Desperate to figure out what's wrong with his friend, Andrew follows Thomas into the off-limits forest one night and catches him fighting a nightmarish monster—Thomas's drawings have come to life and are killing anyone close to him. To make sure no one else dies, the boys battle the monsters every night. But as their obsession with each other grows stronger, so do the monsters, and Andrew begins to fear that the only way to stop the creatures might be to destroy their creator...<br><br><b>Also by CG Drews</b><br><i>Hazelthorn</i></p>",
+        "subject": [
+          {
+            "code": "YAF026000",
+            "name": "YOUNG ADULT FICTION / Horror",
+            "scheme": "http://www.bisg.org/standards/bisac_subject/"
+          },
+          {
+            "code": "YAF041000",
+            "name": "YOUNG ADULT FICTION / Monsters",
+            "scheme": "http://www.bisg.org/standards/bisac_subject/"
+          },
+          {
+            "code": "YAF031000",
+            "name": "YOUNG ADULT FICTION / LGBTQ+",
+            "scheme": "http://www.bisg.org/standards/bisac_subject/"
+          },
+          {
+            "code": "READ0000",
+            "scheme": "http://schema.org/Audience",
+            "name": "Adult",
+            "links": [
+              {
+                "type": "application/opds+json",
+                "href": "https://market.cantook.com/top/top.json?audiences=READ0000&languages=en"
+              }
+            ]
+          }
+        ]
+      },
+      "images": [
+        {
+          "href": "https://covers.feedbooks.net/item/6174422.jpg?size=large&t=1727861076",
+          "type": "image/jpeg",
+          "width": 260,
+          "height": 420
+        },
+        {
+          "href": "https://covers.feedbooks.net/item/6174422.jpg?t=1727861076",
+          "type": "image/jpeg",
+          "width": 100,
+          "height": 180
+        }
+      ],
+      "licenses": [
+        {
+          "metadata": {
+            "identifier": "urn:uuid:111",
+            "format": [
+              "application/epub+zip",
+              "text/html"
+            ],
+            "created": "2025-01-15T15:22:52+01:00",
+            "source": "http://www.cantook.net/",
+            "price": {
+              "currency": "USD",
+              "value": "60.0"
+            },
+            "terms": {
+              "expires": "2027-01-15",
+              "concurrency": 1,
+              "length": 5097600
+            },
+            "markets": [
+              "public_library"
+            ],
+            "cap_loan_expiration_to_license": false,
+            "protection": {
+              "format": [
+                "application/vnd.adobe.adept+xml",
+                "application/vnd.readium.lcp.license.v1.0+json"
+              ],
+              "devices": 6,
+              "copy": false,
+              "print": false,
+              "tts": false
+            },
+            "order": {
+              "name": "Tammikuun ostot 1",
+              "identifier": "202501-1095-065031",
+              "href": "https://market.cantook.com/carts/65031"
+            }
+          },
+          "links": [
+            {
+              "rel": "http://opds-spec.org/acquisition/borrow",
+              "href": "https://example.net/loan/status/{?id,checkout_id,expires,patron_id,notification_url,passphrase,hint,hint_url}",
+              "type": "application/vnd.readium.license.status.v1.0+json",
+              "templated": true
+            },
+            {
+              "rel": "self",
+              "href": "https://example.net/copy/status/?uuid=111",
+              "type": "application/vnd.odl.info+json"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

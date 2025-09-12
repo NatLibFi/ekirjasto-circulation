@@ -196,9 +196,7 @@ class SubjectScheme(str, Enum):
     https://github.com/readium/webpub-manifest/tree/master/contexts/default#subjects
     """
 
-    BIC = "https://bic.org.uk/"
     BISAC = "https://www.bisg.org/#bisac"
-    CLIL = "http://clil.org/"
     Thema = "https://ns.editeur.org/thema/"
 
 

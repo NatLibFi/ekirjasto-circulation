@@ -18,6 +18,7 @@ from pydantic import (
 from typing_extensions import Self
 
 from api.opds import rwpm
+from api.opds.accessibility import AccessibilityDataExtension
 from api.opds.base import BaseOpdsModel
 from api.opds.palace import PalacePublicationMetadata
 from api.opds.types.currency import CurrencyCode
@@ -203,7 +204,9 @@ class FeedMetadata(BaseOpdsModel):
     number_of_items: NonNegativeInt | None = Field(None, alias="numberOfItems")
 
 
-class PublicationMetadata(PalacePublicationMetadata, rwpm.Metadata):
+class PublicationMetadata(
+    PalacePublicationMetadata, rwpm.Metadata, AccessibilityDataExtension
+):
     """
     OPDS2 publication metadata.
 
