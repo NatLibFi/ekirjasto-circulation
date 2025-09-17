@@ -1127,7 +1127,7 @@ class CirculationData:
 
 class Metadata:
 
-    """A (potentially partial) set of metadata for a published work."""
+    """A (potentially partial) set of bibliographic metadata for a published work."""
 
     log = logging.getLogger("Abstract metadata layer")
 
@@ -1169,6 +1169,7 @@ class Metadata:
         links=None,
         data_source_last_updated=None,
         duration=None,
+        accessibility=None,
         # Note: brought back to keep callers of bibliographic extraction process_one() methods simple.
         circulation=None,
         **kwargs,
@@ -1196,6 +1197,7 @@ class Metadata:
         self.issued = issued
         self.published = published
         self.duration = duration
+        self.accessibility = accessibility
 
         self.primary_identifier = primary_identifier
         self.identifiers = identifiers or []
@@ -1482,6 +1484,7 @@ class Metadata:
         replace_links=False,
         replace_formats=False,
         replace_rights=False,
+        replace_accessibility=False,
         force=False,
     ):
         """Apply this metadata to the given edition.
@@ -1548,7 +1551,10 @@ class Metadata:
         identifier = edition.primary_identifier
 
         self.log.info("APPLYING METADATA TO EDITION: %s", self.title)
+
+        # Apply basic bibiolgraphic information, e.g. title, subtitle, etc.
         fields = self.BASIC_EDITION_FIELDS + ["permanent_work_id"]
+
         for field in fields:
             old_edition_value = getattr(edition, field)
             new_metadata_value = getattr(self, field)
@@ -1638,6 +1644,13 @@ class Metadata:
                 self.log.error(
                     f"Error classifying subject: {subject} for identifier {identifier}: {e}"
                 )
+
+        if self.accessibility:
+            result = edition.save_accessibility_data(edition, self.accessibility)
+            print("RESULT ", edition.accessibility)
+            work_requires_full_recalculation = (
+                True  # TODO: implement comparing old vs new data
+            )
 
         # Associate all links with the primary identifier.
         if replace.links and self.links is not None:
