@@ -21,6 +21,7 @@ from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy.orm import Mapped, relationship
 from sqlalchemy.orm.session import Session
 
+from core.data_conversion.accessibility_mapper import AccessibilityDataMapper
 from core.model import Base, PresentationCalculationPolicy, get_one, get_one_or_create
 from core.model.accessibility import Accessibility
 from core.model.constants import (
@@ -507,6 +508,31 @@ class Edition(Base, EditionConstants):
                 _db, Contribution, edition=self, contributor=contributor, role=role
             )
         return contributor
+
+    def save_accessibility_data(self, edition, accessibility_data):
+        _db = Session.object_session(self)
+        if accessibility_data.conforms_to[0]:
+            key = accessibility_data.conforms_to[0]
+            conforms_to = AccessibilityDataMapper(edition).map_conformance(
+                accessibility_data.conforms_to[0].name
+            )
+            accessibility = Accessibility(
+                # access_modes=accessibility_data.access_modes,
+                # access_mode_sufficients=accessibility_data.access_mode_sufficients,
+                # features=accessibility_data.features,
+                # certification=accessibility_data.certification,
+                # summary=accessibility_data.summary,
+                # hazards=accessibility_data.hazards,
+                conforms_to=conforms_to,
+                # exemption=accessibility_data.exemption
+            )
+
+            self.accessibility = accessibility
+            _db.add(self)
+            _db.commit()
+            return accessibility
+        else:
+            return None
 
     def similarity_to(self, other_record):
         """How likely is it that this record describes the same book as the
