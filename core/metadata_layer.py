@@ -165,6 +165,28 @@ class SubjectData:
         )
 
 
+class AccessibilityData:
+    def __init__(
+        self,
+        access_modes=None,
+        access_mode_sufficients=None,
+        features=None,
+        certification=None,
+        summary=None,
+        hazards=None,
+        conforms_to=None,
+        exemption=None,
+    ):
+        self.access_modes = access_modes
+        self.access_mode_sufficients = access_mode_sufficients
+        self.features = features
+        self.certification = certification
+        self.summary = summary
+        self.hazards = hazards
+        self.conforms_to = (conforms_to,)
+        self.exemption = exemption
+
+
 class ContributorData:
     def __init__(
         self,

@@ -24,6 +24,7 @@ from core.integration.settings import (
     FormField,
 )
 from core.metadata_layer import (
+    AccessibilityData,
     CirculationData,
     ContributorData,
     FormatData,
@@ -624,6 +625,21 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
         """
         return self.parse_identifier(publication.metadata.identifier)
 
+    def _extract_accessibility(self, accessibility_data: rwpm.Accessibility):
+        if accessibility_data:
+            accessibility_metadata = AccessibilityData(
+                access_mode_sufficients=accessibility_data.access_mode,
+                access_modes=accessibility_data.access_mode,
+                features=accessibility_data.feature,
+                hazards=accessibility_data.hazard,
+                summary=accessibility_data.summary,
+                conforms_to=accessibility_data.conforms_to,
+                certification=accessibility_data.certification,
+                exemption=accessibility_data.exemption,
+            )
+            return accessibility_metadata
+        return None
+
     def _extract_publication_metadata(
         self,
         publication: opds2.BasePublication,
@@ -646,6 +662,7 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
             if publication.metadata.subtitle
             else None
         )
+        accessibility = self._extract_accessibility(publication.metadata.accessibility)
 
         languages = first_or_default(publication.metadata.languages)
         derived_medium = self._extract_medium_from_links(publication.links)
@@ -766,6 +783,7 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
             links=links,
             data_source_last_updated=last_opds_update,
             duration=duration,
+            accessibility=accessibility,
             circulation=circulation_data,
         )
 
