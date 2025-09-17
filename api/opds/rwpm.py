@@ -541,7 +541,6 @@ class Metadata(BaseOpdsModel):
     presentation: PresentationProperties = Field(default_factory=PresentationProperties)
 
     # Ellibs provides an empty list if there's no data available.
-    # accessibility: Accessibility | list[None] | None = None
     accessibility: Accessibility | list[None] | None = None
 
     @field_validator("accessibility", mode="before")
