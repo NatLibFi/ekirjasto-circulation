@@ -547,6 +547,38 @@ class TestODL2Importer:
             license_status=LicenseStatus.unavailable,
         )
 
+    @freeze_time("2016-01-01T00:00:00+00:00")
+    def test_import_accessibility(
+        self,
+        odl2_importer: ODL2Importer,
+        odl_mock_get: MockGet,
+        api_odl_files_fixture: ODLAPIFilesFixture,
+    ) -> None:
+        forest_license = LicenseInfoHelper(
+            license=LicenseHelper(
+                identifier="urn:uuid:111",
+                concurrency=1,
+                expires="2027-01-15",
+            ),
+            available=1,
+        )
+        odl_mock_get.add(forest_license)
+        feed = api_odl_files_fixture.sample_text("dm_feed_accessibility.json")
+        config = odl2_importer.collection.integration_configuration
+
+        # Act
+        imported_editions, pools, works, failures = odl2_importer.import_from_feed(feed)
+
+        # Assert
+
+        # 1. Make sure that there is a single edition only
+        assert isinstance(imported_editions, list)
+        assert 1 == len(imported_editions)
+        [book] = imported_editions
+        assert book.accessibility.conforms_to == [
+            "This publication meets minimum accessibility standards"
+        ]
+
 
 class TestODL2API:
     def test_loan_limit(self, odl2_api_fixture: ODL2ApiFixture):

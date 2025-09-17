@@ -17,6 +17,7 @@
         "abridged": "false",
         "accessibility": {
           "summary": "This publication lacks alternative text for non-text elements, but it otherwise meets WCAG 2.1 Level A. The publication generally has been produced to meet WCAG Level AA, but it has not been checked for language shifts or for color contrast within images.",
+          "conformsTo": "https://www.w3.org/TR/epub-a11y-11#wcag-2.1-a",
           "feature": [
             "readingOrder",
             "structuralNavigation",
