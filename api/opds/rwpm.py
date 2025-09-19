@@ -410,6 +410,15 @@ class Accessibility(BaseOpdsModel):
     conforms_to: ConformsTo | list[ConformsTo] | None = Field(None, alias="conformsTo")
     exemption: Exemption | None = None
 
+    @field_validator("conforms_to")
+    def validate_conforms_to(cls, value: str | list[str]) -> list[str]:
+        """Ensure that the conforms_to field is always a list of ConformsTo enums."""
+        if isinstance(value, str):
+            return [ConformsTo(value)]
+        elif isinstance(value, list):
+            return [ConformsTo(v) for v in value]
+        return None
+
 
 class Metadata(BaseOpdsModel):
     """

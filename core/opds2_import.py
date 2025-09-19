@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import enum
 from collections.abc import Callable, Mapping, Sequence
 from datetime import datetime
 from functools import cached_property
@@ -246,7 +247,7 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
         :return: List of subjects metadata
         """
         self.log.debug("Started extracting subjects metadata")
-
+        print(subjects)
         subject_metadata_list = []
 
         for subject in subjects:
@@ -626,18 +627,36 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
         return self.parse_identifier(publication.metadata.identifier)
 
     def _extract_accessibility(self, accessibility_data: rwpm.Accessibility):
+        # TODO: we need to parse the data better before handing it off to Metadata
         if accessibility_data:
+            hazards = self._parse_element_names(accessibility_data.hazard)
+            conforms_to = self._parse_element_names(accessibility_data.conforms_to)
+            access_modes = self._parse_element_names(accessibility_data.access_mode)
+            features = self._parse_element_names(accessibility_data.feature)
+
             accessibility_metadata = AccessibilityData(
-                access_mode_sufficients=accessibility_data.access_mode,
-                access_modes=accessibility_data.access_mode,
-                features=accessibility_data.feature,
-                hazards=accessibility_data.hazard,
+                access_mode_sufficient=accessibility_data.access_mode_suffifient,
+                access_mode=access_modes,
+                features=features,
+                hazards=hazards,
                 summary=accessibility_data.summary,
-                conforms_to=accessibility_data.conforms_to,
+                conforms_to=conforms_to,
                 certification=accessibility_data.certification,
                 exemption=accessibility_data.exemption,
             )
+            self.log.info(f"Finished extracting accessibility {accessibility_metadata}")
             return accessibility_metadata
+        return None
+
+    def _parse_element_names(
+        self, element_list: list[enum.Enum] | None
+    ) -> list[str] | None:
+        """
+        Extracts the names of the provided enum elements from a list.
+        """
+        if element_list:
+            list_of_element_names = [element.name for element in element_list]
+            return list_of_element_names
         return None
 
     def _extract_publication_metadata(

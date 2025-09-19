@@ -511,28 +511,37 @@ class Edition(Base, EditionConstants):
 
     def save_accessibility_data(self, edition, accessibility_data):
         _db = Session.object_session(self)
-        if accessibility_data.conforms_to[0]:
-            key = accessibility_data.conforms_to[0]
-            conforms_to = AccessibilityDataMapper(edition).map_conformance(
-                accessibility_data.conforms_to[0].name
+        if accessibility_data.conforms_to:
+            conforms_to = AccessibilityDataMapper.map_conforms_to(
+                accessibility_data.conforms_to
             )
-            accessibility = Accessibility(
-                # access_modes=accessibility_data.access_modes,
-                # access_mode_sufficients=accessibility_data.access_mode_sufficients,
-                # features=accessibility_data.features,
-                # certification=accessibility_data.certification,
-                # summary=accessibility_data.summary,
-                # hazards=accessibility_data.hazards,
-                conforms_to=conforms_to,
-                # exemption=accessibility_data.exemption
-            )
+        if accessibility_data.summary:
+            summary = accessibility_data.summary
 
-            self.accessibility = accessibility
-            _db.add(self)
-            _db.commit()
-            return accessibility
-        else:
-            return None
+        if accessibility_data.hazards:
+            hazards = AccessibilityDataMapper.map_hazards(accessibility_data.hazards)
+
+        ways_of_reading = AccessibilityDataMapper.map_ways_of_reading(
+            access_mode_list=accessibility_data.access_mode,
+            access_mode_suffiecient_list=accessibility_data.access_mode_sufficient,
+            feature_list=accessibility_data.features,
+        )
+
+        accessibility = Accessibility(
+            ways_of_reading=ways_of_reading,
+            # access_mode_sufficients=accessibility_data.access_mode_sufficients,
+            # features=accessibility_data.features,
+            # certification=accessibility_data.certification,
+            summary=accessibility_data.summary,
+            hazards=hazards,
+            conforms_to=conforms_to,
+            # exemption=accessibility_data.exemption
+        )
+        print(accessibility)
+        self.accessibility = accessibility
+        _db.add(self)
+        _db.commit()
+        return accessibility
 
     def similarity_to(self, other_record):
         """How likely is it that this record describes the same book as the

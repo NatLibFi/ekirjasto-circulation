@@ -168,8 +168,8 @@ class SubjectData:
 class AccessibilityData:
     def __init__(
         self,
-        access_modes=None,
-        access_mode_sufficients=None,
+        access_mode=None,
+        access_mode_sufficient=None,
         features=None,
         certification=None,
         summary=None,
@@ -177,13 +177,13 @@ class AccessibilityData:
         conforms_to=None,
         exemption=None,
     ):
-        self.access_modes = access_modes
-        self.access_mode_sufficients = access_mode_sufficients
+        self.access_mode = access_mode
+        self.access_mode_sufficient = access_mode_sufficient
         self.features = features
         self.certification = certification
         self.summary = summary
         self.hazards = hazards
-        self.conforms_to = (conforms_to,)
+        self.conforms_to = conforms_to
         self.exemption = exemption
 
 
@@ -1646,7 +1646,7 @@ class Metadata:
                 )
 
         if self.accessibility:
-            result = edition.save_accessibility_data(edition, self.accessibility)
+            edition.save_accessibility_data(edition, self.accessibility)
             print("RESULT ", edition.accessibility)
             work_requires_full_recalculation = (
                 True  # TODO: implement comparing old vs new data
