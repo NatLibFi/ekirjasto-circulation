@@ -396,7 +396,7 @@ class Accessibility(BaseOpdsModel):
 
     feature: list[AccessibilityFeature] | None = None
     access_mode: list[AccessMode] | None = Field(None, alias="accessMode")
-    access_mode_suffifient: list[AccessModeSufficient] | None = Field(
+    access_mode_sufficient: list[AccessModeSufficient] | None = Field(
         None, alias="accessModeSufficient"
     )
     hazard: list[Hazard] | None = None

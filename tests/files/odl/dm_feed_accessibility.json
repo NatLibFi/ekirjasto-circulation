@@ -22,10 +22,13 @@
             "readingOrder",
             "structuralNavigation",
             "tableOfContents",
-            "printPageNumbers"
+            "alternativeText"
           ],
           "accessModeSufficient": [
             "textual"
+          ],
+          "hazard": [
+            "noFlashingHazard"
           ]
         },
         "language": "en",

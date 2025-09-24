@@ -1,30 +1,40 @@
 from enum import Enum
+from typing import Any
 
-from core.util.log import LoggerMixin
+from api.opds.rwpm import AccessibilityFeature, AccessMode, AccessModeSufficient, Hazard
 
+class W3CVariable:
 
-class W3C:
-    @classmethod
-    def get_display_text(cls, value: str) -> str | None:
-        """get_display_text the display text for a given conformance level."""
-        try:
-            level = cls[value.lower()]
-            return level.value
-        except KeyError:
-            return None
+    # Ways of reading
+    all_necessary_content_textual = "all_necessary_content_textual"
+    some_sufficient_text = "some_sufficient_text"
+    textual_alternatives = "textual_alternatives"
+    audio_only_content = "audio_only_content"
+    visual_only_content = "visual_only_content"
+    all_content_audio = "all_content_audio"
+    audio_content = "audio_content"
+    textual_alternatives = "textual_alternatives"
+    all_textual_content_can_be_modified = "all_textual_content_can_be_modified"
+    is_fixed_layout = "is_fixed_layout"
+    synchronised_pre_recorded_audio = "synchronised_pre_recorded_audio"
+    
+    # Hazards
+    flashing_hazard = "flashing_hazard"
+    motion_simulation_hazard = "motion_simulation_hazard"
+    sound_hazard = "sound_hazard"
+    no_flashing_hazards = "no_flashing_hazards"
+    no_hazards_or_warnings_confirmed = "no_hazards_or_warnings_confirmed"
+    no_motion_hazards = "no_motion_hazards"
+    no_sound_hazards = "no_sound_hazards"
+    unknown_if_contains_hazards = "unknown_if_contains_hazards"
 
+class W3CDisplayText:
 
-class W3CConformanceLevel(W3C, Enum):
-    """
-    https://w3c.github.io/publ-a11y/a11y-meta-display-guide/2.0/techniques/epub-metadata/#conformance-group
-    """
-
+    # Conformance
     a = "This publication meets minimum accessibility standards"
     aa = "This publication meets accepted accessibility standards"
     aaa = "This publication exceeds accepted accessibility standards"
 
-
-class W3CIds(W3C, Enum):
     # Ways of reading
     ways_of_reading_nonvisual_reading_readable = (
         "Readable in read aloud or dynamic braille"
@@ -39,6 +49,14 @@ class W3CIds(W3C, Enum):
         "No information about nonvisual reading is available"
     )
     ways_of_reading_nonvisual_reading_alt_text = "Has alternative text"
+    ways_of_reading_visual_adjustments_modifiable = "Appearance can be modified"
+    ways_of_reading_visual_adjustments_unmodifiable = "Appearance cannot be modified"
+    ways_of_reading_prerecorded_audio_synchronized = (
+        "Prerecorded audio synchronized with text"
+    )
+    ways_of_reading_prerecorded_audio_only = "Prerecorded audio only"
+    ways_of_reading_prerecorded_audio_complementary = "Prerecorded audio clips"
+
     # Hazards
     hazards_none = "No hazards"
     hazards_flashing = "Flashing content"
@@ -47,237 +65,278 @@ class W3CIds(W3C, Enum):
     hazards_unknown = "The presence of hazards is unknown"
     hazards_no_metadata = "No information is available"
 
+class AccessibilityDataMapper:
+    """Maps Schema.org Accessibility metadata to W3C display data."""
 
-class AccessibilityDataMapper(LoggerMixin):
-    """Maps Schema.org data to W3C display data."""
-
-    def __init__(self):
-        pass
 
     @classmethod
-    def map_conforms_to(self, conformance: list[str] | None) -> list[str] | None:
+    def map_accessibility(self, accessibility_data: Any | None) -> dict | None:
         """
-        Map the conformance level to a display category.
+        Maps all accessibility metadata to W3C display content.
+
+        Returns:
+            dict | None: A dictionary of W3C display fields.
+
         """
-
-        def get_display_text_w3c_conformance_level(level_str: str) -> str | None:
-            # A helper function to extract the level from AccessibilityData.conforms_to
-            level = level_str.split("_")[-1]
-            return W3CConformanceLevel.get_display_text(level)
-
-        if conformance:
-            w3c_id = [
-                get_display_text_w3c_conformance_level(item) for item in conformance
-            ]
-            return w3c_id
+        mappings = dict()
+        if accessibility_data:
+            conforms_to = self._map_conforms_to(accessibility_data.conforms_to)
+            mappings["conforms_to"] = conforms_to
+            ways_of_reading = self._map_ways_of_reading(accessibility_data.access_mode, accessibility_data.access_mode_sufficient, accessibility_data.features)
+            mappings["ways_of_reading"] = ways_of_reading
+            hazards = self._map_hazards(accessibility_data.hazards)
+            mappings["hazards"] = hazards
+            return mappings
 
         return None
 
     @classmethod
-    def map_hazards(self, hazards: list[str] | None) -> list[str] | None:
+    def _map_conforms_to(cls, conforms_to: list[str] | None) -> list[str] | None:
+        """
+        Map the conformance level to a display texts according to logic in https://w3c.github.io/publ-a11y/a11y-meta-display-guide/2.0/techniques/epub-metadata/#conformance-instructions.
+        """
+        level_mappings = {
+            "a": W3CDisplayText.a,
+            "aa": W3CDisplayText.aa,
+            "aaa": W3CDisplayText.aaa
+        }
+
+        display_texts = list()
+        if conforms_to:
+            # Extract the WCAG level from the url so we get a W3C id like string (= resembles a W3C variable).
+            w3c_ids = [item.split("#")[-1].split("-")[-1] for item in conforms_to]
+            for id in w3c_ids:
+                display_texts.append(level_mappings[id])
+            return display_texts
+        return None
+
+    @classmethod
+    def _map_hazards(cls, hazards: list[str] | None) -> list[str] | None:
         """
         Map schema.org based hazards to W3C hazard display texts.
         """
-        w3c_variables = self._get_w3c_hazard_variables(hazards)
-        w3c_display_texts = self._get_w3c_hazard_display_text(w3c_variables)
-        return w3c_display_texts
+        if hazards:
+            w3c_variables = cls._get_w3c_hazard_variables(hazards)
+            if w3c_variables:
+                w3c_display_texts = cls._get_w3c_hazard_display_texts(w3c_variables)
+                return w3c_display_texts
+        return None
 
     @classmethod
-    def _get_w3c_hazard_display_text(self, w3c_variables: list[str]) -> list[str]:
+    def _get_w3c_hazard_display_texts(cls, w3c_variables: list[str]) -> list[str]:
         """
         W3C variables are mapped to appropriate displayable texts according to logic in https://w3c.github.io/publ-a11y/a11y-meta-display-guide/2.0/techniques/epub-metadata/#hazards-instructions.
 
         Returns:
             list[str] | None: A list of W3C display texts.
         """
-        w3c_ids = []
+        display_texts = list()
 
-        # There are no hazards
-        if "no_hazards_or_warnings_confirmed" in w3c_variables or (
-            "no_flashing_hazards" in w3c_variables
-            and "no_motion_hazards" in w3c_variables
-            and "no_sound_hazards" in w3c_variables
+        hazard_mapping = {
+            # There are no hazards
+            W3CVariable.no_hazards_or_warnings_confirmed: W3CDisplayText.hazards_none,
+            # There is a flashing hazard
+            W3CVariable.flashing_hazard: W3CDisplayText.hazards_flashing,
+            # There is a motion simulation hazard
+            W3CVariable.motion_simulation_hazard: W3CDisplayText.hazards_motion,
+            # There is a sound hazard
+            W3CVariable.sound_hazard: W3CDisplayText.hazards_sound,
+            # Hazards are not known
+            W3CVariable.unknown_if_contains_hazards: W3CDisplayText.hazards_unknown,
+        }
+
+        # First check that there are no hazards
+        if W3CVariable.no_hazards_or_warnings_confirmed in w3c_variables or (
+            W3CVariable.no_flashing_hazards in w3c_variables and 
+            W3CVariable.no_motion_hazards in w3c_variables and 
+            W3CVariable.no_sound_hazards in w3c_variables
         ):
-            w3c_ids.append("hazards_none")
-
-        # There is a flashing hazard
-        elif "flashing_hazard" in w3c_variables:
-            w3c_ids.append("hazards_flashing")
-
-        # There is a motion simulation hazard
-        elif "motion_simulation_hazard" in w3c_variables:
-            w3c_ids.append("hazards_motion")
-
-        # There is a sound hazard
-        elif "sound_hazard" in w3c_variables:
-            w3c_ids.append("hazards_sound")
-
-        # Hazards are not known
-        elif "unknown_if_contains_hazards" in w3c_variables:
-            w3c_ids.append("hazards_unknown")
-
-        # No metadata is provided
+            display_texts.append(hazard_mapping[W3CVariable.no_hazards_or_warnings_confirmed])
         else:
-            w3c_ids.append("hazards_no_metadata")
+            for variable in w3c_variables:
+                if variable in hazard_mapping:
+                    display_texts.append(hazard_mapping[variable])
 
-        display_texts = [W3CIds.get_display_text(w3c_id) for w3c_id in w3c_ids]
-
-        return sorted(list(display_texts))
+        return display_texts
 
     @classmethod
-    def _get_w3c_hazard_variables(self, hazards: list[str]) -> list[str]:
+    def _get_w3c_hazard_variables(cls, hazards: list[str]) -> list[str]:
         """
-        The function takes schema.org accessMode, accessModeSufficient and feature lists and finds equivalent W3C variables according to the logic descriibed in https://w3c.github.io/publ-a11y/a11y-meta-display-guide/2.0/techniques/epub-metadata/#variables-setup-5.
-
-        The variables are described in https://w3c.github.io/publ-a11y/a11y-meta-display-guide/2.0/techniques/epub-metadata/#understanding-the-variables-5.
+        The function takes schema.org hazard and finds equivalent W3C variables according to the logic described in https://w3c.github.io/publ-a11y/a11y-meta-display-guide/2.0/techniques/epub-metadata/#variables-setup-5.
 
         Returns:
             list[str] | None: A list of W3C hazard variables.
         """
-        variables = []
+        w3c_variables = list()
 
-        # Flashing hazards is present in the package document.
-        if "flashing" in hazards:
-            variables.append("flashing_hazard")
+        hazard_mapping = {
+            # Flashing hazards is present.
+            Hazard.flashing: W3CVariable.flashing_hazard,
+            # Motion simulation hazard is present.
+            Hazard.motion_simulation: W3CVariable.motion_simulation_hazard,
+            # No flashing hazard warning is present.
+            Hazard.no_flashing_hazard: W3CVariable.no_flashing_hazards,
+            # No accessibility hazards is present.
+            Hazard.none: W3CVariable.no_hazards_or_warnings_confirmed,
+            # No motion simulation hazard warning is present.
+            Hazard.no_motion_simulation_hazard: W3CVariable.no_motion_hazards,
+            # No sound hazard warning is present.
+            Hazard.no_sound_hazard: W3CVariable.no_sound_hazards,
+            # Sound hazard is present.
+            Hazard.sound: W3CVariable.sound_hazard,
+            # Unknown hazards is present.
+            Hazard.unknown: W3CVariable.unknown_if_contains_hazards,
+        }
 
-        # Motion simulation hazard is present in the package document.
-        if "motion_simulation" in hazards:
-            variables.append("motion_simulation_hazards")
+        for hazard in hazards:
+            if hazard in hazard_mapping:
+                w3c_variables.append(hazard_mapping[hazard])
 
-        # No flashing hazard warning is present in the package document.
-        if "no_flashing_hazard" in hazards:
-            variables.append("no_flashing_hazards")
-
-        # No accessibility hazards is present in the package document.
-        if "none" in hazards:
-            variables.append("no_hazards_or_warnings_confirmed")
-
-        # No motion simulation hazard warning is present in the package document.
-        if "no_motion_simulation_hazard" in hazards:
-            variables.append("no_motion_hazards")
-
-        # No sound hazard warning is present in the package document.
-        if "no_sound_hazard" in hazards:
-            variables.append("no_sound_hazards")
-
-        # Sound hazard is present in the package document.
-        if "sound" in hazards:
-            variables.append("sound_hazard")
-
-        # Unknown hazards is present in the package document.
-        if "unknown" in hazards:
-            variables.append("unknown_if_contains_hazards")
-
-        return variables
+        return w3c_variables
 
     @classmethod
-    def map_ways_of_reading(
-        self,
+    def _map_ways_of_reading(
+        cls,
         access_mode_list: list[str] | None,
         access_mode_suffiecient_list: list[str] | None,
         feature_list: list[str] | None,
     ) -> list[str] | None:
         """
         Map schema.org accessMode, accessModeSufficient and features to W3C Ways of Reading display texts.
-        """
-
-        w3c_ids = self._get_nonvisual_reading_support_w3c_variables(
-            access_mode_list=access_mode_list,
-            access_mode_sufficient_list=access_mode_suffiecient_list,
-            feature_list=feature_list,
-        )
-        display_texts = self._get_ways_of_reading_display_texts(w3c_ids)
-
-        return display_texts
-
-    @classmethod
-    def _get_ways_of_reading_display_texts(self, w3c_variables: list[str]):
-        """
-        W3C variables are mapped to appropriate displayable texts according to logic in https://w3c.github.io/publ-a11y/a11y-meta-display-guide/2.0/techniques/epub-metadata/#instructions-0.
 
         Returns:
             list[str] | None: A list of W3C display texts.
         """
-        w3c_ids = set()
 
-        for variable in w3c_variables:
-            # All content is readable in text form.
-            if variable == "all_necessary_content_textual":
-                w3c_ids.add("ways_of_reading_nonvisual_reading_readable")
+        w3c_ids = cls._get_ways_of_reading_w3c_variables(
+            access_mode_list=access_mode_list,
+            access_mode_sufficient_list=access_mode_suffiecient_list,
+            feature_list=feature_list,
+        )
+        if w3c_ids:
+            display_texts = cls._get_ways_of_reading_display_texts(w3c_ids)
+            return display_texts
 
-            # Not all content is readable in text form.
-            elif (
-                variable == "some_sufficient_text" or variable == "textual_alternatives"
-            ):
-                w3c_ids.add("ways_of_reading_nonvisual_reading_not_fully")
-
-            # The content cannot be read in text form.
-            elif variable == "audio_only_content" or variable == "visual_only_content":
-                w3c_ids.add("ways_of_reading_nonvisual_reading_none")
-
-            # Text alternatives are provided.
-            if variable == "textual_alternatives":
-                w3c_ids.add("ways_of_reading_nonvisual_reading_alt_text")
-
-            # No metadata is provided.
-        if not w3c_ids:
-            w3c_ids.add("ways_of_reading_nonvisual_reading_no_metadata")
-
-        display_texts = [W3CIds.get_display_text(w3c_id) for w3c_id in w3c_ids]
-
-        return sorted(list(display_texts))
+        return None
 
     @classmethod
-    def _get_nonvisual_reading_support_w3c_variables(
-        self,
+    def _get_ways_of_reading_display_texts(cls, w3c_variables: list[str]):
+        """
+        W3C variables are mapped to appropriate displayable texts according to logic in
+        https://w3c.github.io/publ-a11y/a11y-meta-display-guide/2.0/techniques/epub-metadata/#instructions,
+        https://w3c.github.io/publ-a11y/a11y-meta-display-guide/2.0/techniques/epub-metadata/#instructions-0,
+        https://w3c.github.io/publ-a11y/a11y-meta-display-guide/2.0/techniques/epub-metadata/#instructions-1
+
+        Returns:
+            list[str] | None: A list of W3C display texts.
+        """
+        display_texts = set()
+
+        mappings = {
+            # All content is readable in text form.
+            W3CVariable.all_necessary_content_textual: W3CDisplayText.ways_of_reading_nonvisual_reading_readable,
+            # Not all content is readable in text form.
+            W3CVariable.some_sufficient_text: W3CDisplayText.ways_of_reading_nonvisual_reading_not_fully,
+            W3CVariable.textual_alternatives: W3CDisplayText.ways_of_reading_nonvisual_reading_not_fully,
+            # The content cannot be read in text form.
+            W3CVariable.audio_only_content: W3CDisplayText.ways_of_reading_nonvisual_reading_none,
+            W3CVariable.visual_only_content: W3CDisplayText.ways_of_reading_nonvisual_reading_none,
+            # All main content is provided in audio form.
+            W3CVariable.all_content_audio: W3CDisplayText.ways_of_reading_prerecorded_audio_only,
+            # Prerecorded audio content is included as part of the work.
+            W3CVariable.audio_content: W3CDisplayText.ways_of_reading_prerecorded_audio_complementary,
+            # Text alternatives are provided.
+            W3CVariable.textual_alternatives: W3CDisplayText.ways_of_reading_nonvisual_reading_alt_text,
+            # All textual content can be modified is present.
+            W3CVariable.all_textual_content_can_be_modified: W3CDisplayText.ways_of_reading_visual_adjustments_modifiable,
+            # Fixed format is present.
+            W3CVariable.is_fixed_layout: W3CDisplayText.ways_of_reading_visual_adjustments_unmodifiable,
+            # Text-synchronised prerecorded audio narration (natural or synthesized voice) is included for substantially all textual matter, including all alternative descriptions, e.g. via a SMIL media overlay.
+            W3CVariable.synchronised_pre_recorded_audio: W3CDisplayText.ways_of_reading_prerecorded_audio_synchronized,
+        }
+
+        for variable in w3c_variables:
+            if variable in mappings:
+                display_texts.add(mappings[variable])
+        
+        return sorted(list(display_texts))
+
+
+    @classmethod
+    def _get_ways_of_reading_w3c_variables(
+        cls,
         access_mode_list: list[str] | None,
         access_mode_sufficient_list: list[str] | None,
         feature_list: list[str] | None,
     ) -> list[str] | None:
         """
         The function takes schema.org accessMode, accessModeSufficient and feature lists and finds equivalent W3C variables
-        according to the logic descriibed in https://w3c.github.io/publ-a11y/a11y-meta-display-guide/2.0/techniques/epub-metadata/#variables-setup-0.
-
-        The W3C variables are described in https://w3c.github.io/publ-a11y/a11y-meta-display-guide/2.0/techniques/epub-metadata/#understanding-the-variables-0.
+        according to the logic descriibed in:
+        https://w3c.github.io/publ-a11y/a11y-meta-display-guide/2.0/techniques/epub-metadata/#variables-setup,
+        https://w3c.github.io/publ-a11y/a11y-meta-display-guide/2.0/techniques/epub-metadata/#variables-setup-0,
+        https://w3c.github.io/publ-a11y/a11y-meta-display-guide/2.0/techniques/epub-metadata/#variables-setup-1.
 
         Returns:
             list[str] | None: A list of W3C nonvisual reading support variables.
         """
 
-        variables = []
+        w3c_variables = list()
+        
         if access_mode_list is not None:
-            # There is only a single access mode of textual or accessModeSufficient="textual" (all main content is provided in textual form) is present in the package document.
-            if (len(access_mode_list) == 1 and "textual" in access_mode_list) or (
+            # All main content is provided in textual form.
+            if (
+                len(access_mode_list) == 1 and AccessMode.textual in access_mode_list
+            ) or (
                 access_mode_sufficient_list is not None
-                and "textual" in access_mode_sufficient_list
+                and AccessModeSufficient.textual in access_mode_sufficient_list
             ):
-                variables.append("all_necessary_content_textual")
+                w3c_variables.append(W3CVariable.all_necessary_content_textual)
 
             # There is only a single access mode of auditory (an audiobook).
-            elif "auditory" in access_mode_list:
-                variables.append("audio_only_content")
+            elif len(access_mode_list) == 1 and AccessMode.auditory in access_mode_list:
+                w3c_variables.append(W3CVariable.audio_only_content)
+
+            # Prerecorded audio content is included as part of the work.
+            elif AccessMode.auditory in access_mode_list:
+                w3c_variables.append(W3CVariable.audio_content)
 
             # There is only a single access mode of visual and there are no sufficient access modes that include textual (e.g., comics and manga with no alternative text).
-            elif "visual" in access_mode_list and len(access_mode_list) == 1:
+            elif AccessMode.visual in access_mode_list and len(access_mode_list) == 1:
                 if (
                     access_mode_sufficient_list is None
-                    or "textual" not in access_mode_sufficient_list
+                    or AccessMode.textual not in access_mode_sufficient_list
                 ):
-                    variables.append("visual_only_content")
+                    w3c_variables.append(W3CVariable.visual_only_content)
 
         if access_mode_sufficient_list is not None:
-            # Sufficient access mode metadata indicates that the content is at least partially readable in textual form (i.e., "textual" is one of a set of sufficient access modes).
-            if "textual" in access_mode_sufficient_list:
-                variables.append("some_sufficient_text")
+            # The content is at least partially readable in textual form (i.e., "textual" is one of a set of sufficient access modes).
+            if AccessModeSufficient.textual in access_mode_sufficient_list or AccessModeSufficient.textual_visual in access_mode_sufficient_list or AccessModeSufficient.visual_textual in access_mode_sufficient_list:
+                w3c_variables.append(W3CVariable.some_sufficient_text)
+
+            # All main content is provided in audio form.
+            if AccessModeSufficient.auditory in access_mode_sufficient_list:
+                w3c_variables.append(W3CVariable.all_content_audio)
 
         if feature_list:
-            # At least one of the following is present in the package document:
+            # At least one of the following is present:
             if {
-                "long_description",
-                "alternative_text",
-                "described_math",
-                "transcript",
+                AccessibilityFeature.long_description,
+                AccessibilityFeature.alternative_text,
+                AccessibilityFeature.described_math,
+                AccessibilityFeature.transcript,
             } & set(feature_list):
-                variables.append("textual_alternatives")
+                w3c_variables.append(W3CVariable.textual_alternatives)
 
-        return variables
+            # All textual content can be modified is present.
+            if AccessibilityFeature.display_transformability in feature_list:
+                w3c_variables.append(W3CVariable.all_textual_content_can_be_modified)
+
+            # Fixed format is present.
+            if AccessibilityFeature.is_fixed_layout in feature_list:
+                w3c_variables.append(W3CVariable.is_fixed_layout)
+
+            # Text-synchronised prerecorded audio narration is present.
+            if AccessibilityFeature.synchronized_audio_text in feature_list:
+                w3c_variables.append(W3CVariable.synchronised_pre_recorded_audio)
+
+        return w3c_variables if w3c_variables else None

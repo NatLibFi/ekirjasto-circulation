@@ -1646,10 +1646,9 @@ class Metadata:
                 )
 
         if self.accessibility:
-            edition.save_accessibility_data(edition, self.accessibility)
-            print("RESULT ", edition.accessibility)
-            work_requires_full_recalculation = (
-                True  # TODO: implement comparing old vs new data
+            edition.add_accessibility_data(self.accessibility)
+            self.log.info(
+                f"Finshed mapping accessibility metadata: {edition.accessibility}"
             )
 
         # Associate all links with the primary identifier.

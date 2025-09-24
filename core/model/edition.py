@@ -509,39 +509,26 @@ class Edition(Base, EditionConstants):
             )
         return contributor
 
-    def save_accessibility_data(self, edition, accessibility_data):
+    def add_accessibility_data(self, accessibility_data):
+        """
+        Assign accessibility to an Edition.
+        """
         _db = Session.object_session(self)
-        if accessibility_data.conforms_to:
-            conforms_to = AccessibilityDataMapper.map_conforms_to(
-                accessibility_data.conforms_to
+
+        if accessibility_data:
+            mapped = AccessibilityDataMapper.map_accessibility(
+                accessibility_data
             )
-        if accessibility_data.summary:
-            summary = accessibility_data.summary
 
-        if accessibility_data.hazards:
-            hazards = AccessibilityDataMapper.map_hazards(accessibility_data.hazards)
-
-        ways_of_reading = AccessibilityDataMapper.map_ways_of_reading(
-            access_mode_list=accessibility_data.access_mode,
-            access_mode_suffiecient_list=accessibility_data.access_mode_sufficient,
-            feature_list=accessibility_data.features,
-        )
-
-        accessibility = Accessibility(
-            ways_of_reading=ways_of_reading,
-            # access_mode_sufficients=accessibility_data.access_mode_sufficients,
-            # features=accessibility_data.features,
-            # certification=accessibility_data.certification,
-            summary=accessibility_data.summary,
-            hazards=hazards,
-            conforms_to=conforms_to,
-            # exemption=accessibility_data.exemption
-        )
-        print(accessibility)
-        self.accessibility = accessibility
-        _db.add(self)
-        _db.commit()
-        return accessibility
+            accessibility = Accessibility(
+                ways_of_reading=mapped.get("ways_of_reading"),
+                conforms_to=mapped.get("conforms_to"),
+                hazards=mapped.get("hazards")
+            )
+            self.accessibility = accessibility
+            _db.add(self)
+            _db.commit()
+            return self.accessibility
 
     def similarity_to(self, other_record):
         """How likely is it that this record describes the same book as the

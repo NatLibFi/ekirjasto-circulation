@@ -2,6 +2,7 @@ import random
 import string
 
 from core.model import PresentationCalculationPolicy, get_one_or_create
+from core.metadata_layer import AccessibilityData
 from core.model.constants import MediaTypes
 from core.model.contributor import Contributor
 from core.model.coverage import CoverageRecord
@@ -70,6 +71,29 @@ class TestEdition:
         # Only the author shows up in .author_contributors, and she
         # only shows up once.
         assert [alice] == edition.author_contributors
+
+    def test_add_accessibility(self, db: DatabaseTransactionFixture):
+        """test that accessibility data is added to the edition."""
+        data_source = DataSource.lookup(db.session, DataSource.GUTENBERG)
+        id = db.fresh_str()
+        type = Identifier.GUTENBERG_ID
+        edition, was_new = Edition.for_foreign_id(db.session, data_source, type, id)
+
+        accessibility_data = AccessibilityData(conforms_to=["https://www.w3.org/TR/epub-a11y-11#wcag-2.2-aaa"])
+        edition.add_accessibility_data(accessibility_data)
+        assert edition.accessibility.conforms_to == ["This publication exceeds accepted accessibility standards"]
+
+    def test_add_accessibility_none(self, db: DatabaseTransactionFixture):
+        """test that accessibility data is added to the edition."""
+        data_source = DataSource.lookup(db.session, DataSource.GUTENBERG)
+        id = db.fresh_str()
+        type = Identifier.GUTENBERG_ID
+        edition, was_new = Edition.for_foreign_id(db.session, data_source, type, id)
+
+        accessibility_data = None
+        edition.add_accessibility_data(accessibility_data)
+        assert not edition.accessibility
+
 
     def test_for_foreign_id(self, db: DatabaseTransactionFixture):
         """Verify we can get a data source's view of a foreign id."""

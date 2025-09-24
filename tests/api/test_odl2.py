@@ -569,15 +569,17 @@ class TestODL2Importer:
         # Act
         imported_editions, pools, works, failures = odl2_importer.import_from_feed(feed)
 
-        # Assert
-
-        # 1. Make sure that there is a single edition only
-        assert isinstance(imported_editions, list)
-        assert 1 == len(imported_editions)
         [book] = imported_editions
+
+        # Check that the relevant fields have mappings.
         assert book.accessibility.conforms_to == [
             "This publication meets minimum accessibility standards"
         ]
+        assert book.accessibility.ways_of_reading == [
+            "Has alternative text",
+            "Not fully readable in read aloud or dynamic braille",
+        ]
+        assert not book.accessibility.hazards
 
 
 class TestODL2API:

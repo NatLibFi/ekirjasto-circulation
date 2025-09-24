@@ -42,4 +42,4 @@ class Accessibility(Base):
     edition = relationship("Edition", back_populates="accessibility")
 
     def __repr__(self):
-        return f"Accessibility data conforms_to: {self.conforms_to} hazards: {self.hazards} summary: {self.summary} ways of reading: {self.ways_of_reading}"
+        return f"Accessibility data: Conforms_to: {self.conforms_to}, Hazards: {self.hazards}, Ways of reading: {self.ways_of_reading}"
