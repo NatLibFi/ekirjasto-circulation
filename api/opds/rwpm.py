@@ -407,17 +407,16 @@ class Accessibility(BaseOpdsModel):
 
     # https://github.com/readium/webpub-manifest/tree/master/contexts/default#conformance
     # Ellibs provides the data as a list, De Marque as a string. RWPM does not define either, it just says it can hold one or more profiles.
-    conforms_to: ConformsTo | list[ConformsTo] | None = Field(None, alias="conformsTo")
+    conforms_to: list[ConformsTo] | None = Field(None, alias="conformsTo")
     exemption: Exemption | None = None
 
-    @field_validator("conforms_to")
+    @field_validator("conforms_to", mode="before")
     def validate_conforms_to(cls, value: str | list[str]) -> list[str]:
         """Ensure that the conforms_to field is always a list of ConformsTo enums."""
         if isinstance(value, str):
             return [ConformsTo(value)]
         elif isinstance(value, list):
             return [ConformsTo(v) for v in value]
-        return None
 
 
 class Metadata(BaseOpdsModel):
@@ -550,7 +549,7 @@ class Metadata(BaseOpdsModel):
     presentation: PresentationProperties = Field(default_factory=PresentationProperties)
 
     # Ellibs provides an empty list if there's no data available.
-    accessibility: Accessibility | list[None] | None = None
+    accessibility: Accessibility | list | None = None
 
     @field_validator("accessibility", mode="before")
     def check_accessibility_type(cls, value):

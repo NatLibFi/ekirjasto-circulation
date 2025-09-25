@@ -1,23 +1,44 @@
 import pytest
 
-from api.opds.rwpm import ConformsTo, AccessMode, AccessModeSufficient, AccessibilityFeature, Hazard
-from core.data_conversion.accessibility_mapper import AccessibilityDataMapper, W3CDisplayText
+from api.opds.rwpm import (
+    AccessibilityFeature,
+    AccessMode,
+    AccessModeSufficient,
+    ConformsTo,
+)
+from core.data_conversion.accessibility_mapper import (
+    AccessibilityDataMapper,
+    W3CDisplayText,
+)
 from core.metadata_layer import AccessibilityData
+
 
 class TestAccessibilityDataMapper:
     @pytest.fixture
     def data_mapper(self):
         return AccessibilityDataMapper()
 
-        
     def test_map_accessibility_with_data(self, data_mapper):
-        mock_data = AccessibilityData(conforms_to=[ConformsTo.epub_1_0_wcag_2_0_level_a], access_mode=[AccessMode.textual], access_mode_sufficient=[AccessModeSufficient.textual], features=[AccessibilityFeature.alternative_text])
+        mock_data = AccessibilityData(
+            conforms_to=[ConformsTo.epub_1_0_wcag_2_0_level_a],
+            access_mode=[AccessMode.textual],
+            access_mode_sufficient=[AccessModeSufficient.textual],
+            features=[AccessibilityFeature.alternative_text],
+        )
         data_mapper.accessibility = mock_data
 
         result = data_mapper.map_accessibility(mock_data)
 
-        assert result == {"conforms_to": data_mapper._map_conforms_to(mock_data.conforms_to), "ways_of_reading": data_mapper._map_ways_of_reading(mock_data.access_mode, mock_data.access_mode_sufficient, mock_data.features), "hazards": None}
-    
+        assert result == {
+            "conforms_to": data_mapper._map_conforms_to(mock_data.conforms_to),
+            "ways_of_reading": data_mapper._map_ways_of_reading(
+                mock_data.access_mode,
+                mock_data.access_mode_sufficient,
+                mock_data.features,
+            ),
+            "hazards": None,
+        }
+
     def test_map_accessibility_with_no_data(self, data_mapper):
         mock_data = None
         result = data_mapper.map_accessibility(mock_data)
@@ -74,7 +95,7 @@ class TestAccessibilityDataMapper:
                 ["longDescription"],
                 [
                     "Has alternative text",
-                    "Not fully readable in read aloud or dynamic braille", # kuvia, joissa vaihtoehtoinen tekstitys
+                    "Not fully readable in read aloud or dynamic braille",  # kuvia, joissa vaihtoehtoinen tekstitys
                     "Readable in read aloud or dynamic braille",
                 ],
                 id="textual",
@@ -90,14 +111,21 @@ class TestAccessibilityDataMapper:
                 ["textual"],
                 ["textual"],
                 ["tableOfContents", "displayTransformability"],
-                ["Appearance can be modified", "Not fully readable in read aloud or dynamic braille", "Readable in read aloud or dynamic braille"],
+                [
+                    "Appearance can be modified",
+                    "Not fully readable in read aloud or dynamic braille",
+                    "Readable in read aloud or dynamic braille",
+                ],
                 id="textual, textual",
             ),
             pytest.param(
                 ["textual", "visual"],
                 ["textual"],
                 ["tableOfContents"],
-                ["Not fully readable in read aloud or dynamic braille", "Readable in read aloud or dynamic braille"],
+                [
+                    "Not fully readable in read aloud or dynamic braille",
+                    "Readable in read aloud or dynamic braille",
+                ],
                 id="textual,visual and textual",
             ),
             pytest.param(
@@ -111,11 +139,16 @@ class TestAccessibilityDataMapper:
                 ["textual", "visual"],
                 ["textual, visual", "textual"],
                 ["displayTransformability", "alternativeText"],
-                ["Appearance can be modified", "Has alternative text", "Not fully readable in read aloud or dynamic braille", "Readable in read aloud or dynamic braille"],
+                [
+                    "Appearance can be modified",
+                    "Has alternative text",
+                    "Not fully readable in read aloud or dynamic braille",
+                    "Readable in read aloud or dynamic braille",
+                ],
                 id="textual,visual and textual,visual, textual",
             ),
             pytest.param(
-                ["visual"], # todnäk kuvakirja, ei tekstitystä
+                ["visual"],  # todnäk kuvakirja, ei tekstitystä
                 None,
                 None,
                 ["Not readable in read aloud or dynamic braille"],

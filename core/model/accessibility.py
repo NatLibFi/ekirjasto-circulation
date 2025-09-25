@@ -1,8 +1,9 @@
 from sqlalchemy import Column, Integer, Unicode
 from sqlalchemy.dialects.postgresql import ARRAY
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, relationship
 
 from core.model import Base
+from core.model.edition import Edition
 
 
 class Accessibility(Base):
@@ -39,7 +40,9 @@ class Accessibility(Base):
     # https://w3c.github.io/publ-a11y/a11y-meta-display-guide/2.0/guidelines/#legal-considerations
     legal_considerations = Column(Unicode, nullable=True)
 
-    edition = relationship("Edition", back_populates="accessibility")
+    edition: Mapped[list[Edition]] = relationship(
+        "Edition", back_populates="accessibility"
+    )
 
     def __repr__(self):
         return f"Accessibility data: Conforms_to: {self.conforms_to}, Hazards: {self.hazards}, Ways of reading: {self.ways_of_reading}"

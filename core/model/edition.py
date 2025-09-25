@@ -41,6 +41,7 @@ from core.util.permanent_work_id import WorkIDCalculator
 if TYPE_CHECKING:
     # This is needed during type checking so we have the
     # types of related models.
+    from core.metadata_layer import AccessibilityData
     from core.model import CustomListEntry, DataSource, Work
 
 
@@ -155,7 +156,9 @@ class Edition(Base, EditionConstants):
     # Information kept in here probably won't be used.
     extra: Mapped[dict[str, str]] = Column(MutableDict.as_mutable(JSON), default={})
 
-    accessibility = relationship("Accessibility", back_populates="edition")
+    accessibility: Mapped[Accessibility] = relationship(
+        "Accessibility", back_populates="edition"
+    )
     accessibility_id = Column(Integer, ForeignKey("accessibility.id"), nullable=True)
 
     def __repr__(self):
@@ -509,21 +512,18 @@ class Edition(Base, EditionConstants):
             )
         return contributor
 
-    def add_accessibility_data(self, accessibility_data):
+    def add_accessibility_data(self, accessibility_data: AccessibilityData):
         """
         Assign accessibility to an Edition.
         """
         _db = Session.object_session(self)
 
         if accessibility_data:
-            mapped = AccessibilityDataMapper.map_accessibility(
-                accessibility_data
-            )
-
+            mapped = AccessibilityDataMapper.map_accessibility(accessibility_data)
             accessibility = Accessibility(
                 ways_of_reading=mapped.get("ways_of_reading"),
                 conforms_to=mapped.get("conforms_to"),
-                hazards=mapped.get("hazards")
+                hazards=mapped.get("hazards"),
             )
             self.accessibility = accessibility
             _db.add(self)

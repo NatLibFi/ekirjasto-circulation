@@ -1,10 +1,9 @@
-from enum import Enum
 from typing import Any
 
 from api.opds.rwpm import AccessibilityFeature, AccessMode, AccessModeSufficient, Hazard
 
-class W3CVariable:
 
+class W3CVariable:
     # Ways of reading
     all_necessary_content_textual = "all_necessary_content_textual"
     some_sufficient_text = "some_sufficient_text"
@@ -17,7 +16,7 @@ class W3CVariable:
     all_textual_content_can_be_modified = "all_textual_content_can_be_modified"
     is_fixed_layout = "is_fixed_layout"
     synchronised_pre_recorded_audio = "synchronised_pre_recorded_audio"
-    
+
     # Hazards
     flashing_hazard = "flashing_hazard"
     motion_simulation_hazard = "motion_simulation_hazard"
@@ -28,8 +27,8 @@ class W3CVariable:
     no_sound_hazards = "no_sound_hazards"
     unknown_if_contains_hazards = "unknown_if_contains_hazards"
 
-class W3CDisplayText:
 
+class W3CDisplayText:
     # Conformance
     a = "This publication meets minimum accessibility standards"
     aa = "This publication meets accepted accessibility standards"
@@ -65,9 +64,9 @@ class W3CDisplayText:
     hazards_unknown = "The presence of hazards is unknown"
     hazards_no_metadata = "No information is available"
 
+
 class AccessibilityDataMapper:
     """Maps Schema.org Accessibility metadata to W3C display data."""
-
 
     @classmethod
     def map_accessibility(self, accessibility_data: Any | None) -> dict | None:
@@ -80,12 +79,15 @@ class AccessibilityDataMapper:
         """
         mappings = dict()
         if accessibility_data:
+            # E-kirjasto only maps the W3C recommended fields.
             conforms_to = self._map_conforms_to(accessibility_data.conforms_to)
             mappings["conforms_to"] = conforms_to
-            ways_of_reading = self._map_ways_of_reading(accessibility_data.access_mode, accessibility_data.access_mode_sufficient, accessibility_data.features)
+            ways_of_reading = self._map_ways_of_reading(
+                accessibility_data.access_mode,
+                accessibility_data.access_mode_sufficient,
+                accessibility_data.features,
+            )
             mappings["ways_of_reading"] = ways_of_reading
-            hazards = self._map_hazards(accessibility_data.hazards)
-            mappings["hazards"] = hazards
             return mappings
 
         return None
@@ -94,11 +96,14 @@ class AccessibilityDataMapper:
     def _map_conforms_to(cls, conforms_to: list[str] | None) -> list[str] | None:
         """
         Map the conformance level to a display texts according to logic in https://w3c.github.io/publ-a11y/a11y-meta-display-guide/2.0/techniques/epub-metadata/#conformance-instructions.
+
+        Returns:
+            list[str] | None: A list of W3C display texts.
         """
         level_mappings = {
             "a": W3CDisplayText.a,
             "aa": W3CDisplayText.aa,
-            "aaa": W3CDisplayText.aaa
+            "aaa": W3CDisplayText.aaa,
         }
 
         display_texts = list()
@@ -114,6 +119,9 @@ class AccessibilityDataMapper:
     def _map_hazards(cls, hazards: list[str] | None) -> list[str] | None:
         """
         Map schema.org based hazards to W3C hazard display texts.
+
+        Returns:
+            list[str] | None: A list of W3C display texts.
         """
         if hazards:
             w3c_variables = cls._get_w3c_hazard_variables(hazards)
@@ -147,17 +155,19 @@ class AccessibilityDataMapper:
 
         # First check that there are no hazards
         if W3CVariable.no_hazards_or_warnings_confirmed in w3c_variables or (
-            W3CVariable.no_flashing_hazards in w3c_variables and 
-            W3CVariable.no_motion_hazards in w3c_variables and 
-            W3CVariable.no_sound_hazards in w3c_variables
+            W3CVariable.no_flashing_hazards in w3c_variables
+            and W3CVariable.no_motion_hazards in w3c_variables
+            and W3CVariable.no_sound_hazards in w3c_variables
         ):
-            display_texts.append(hazard_mapping[W3CVariable.no_hazards_or_warnings_confirmed])
+            display_texts.append(
+                hazard_mapping[W3CVariable.no_hazards_or_warnings_confirmed]
+            )
         else:
             for variable in w3c_variables:
                 if variable in hazard_mapping:
                     display_texts.append(hazard_mapping[variable])
 
-        return display_texts
+        return sorted(display_texts)
 
     @classmethod
     def _get_w3c_hazard_variables(cls, hazards: list[str]) -> list[str]:
@@ -190,7 +200,7 @@ class AccessibilityDataMapper:
 
         for hazard in hazards:
             if hazard in hazard_mapping:
-                w3c_variables.append(hazard_mapping[hazard])
+                w3c_variables.append(hazard_mapping[hazard])  # type:ignore[index]
 
         return w3c_variables
 
@@ -258,9 +268,8 @@ class AccessibilityDataMapper:
         for variable in w3c_variables:
             if variable in mappings:
                 display_texts.add(mappings[variable])
-        
-        return sorted(list(display_texts))
 
+        return sorted(list(display_texts))
 
     @classmethod
     def _get_ways_of_reading_w3c_variables(
@@ -277,11 +286,11 @@ class AccessibilityDataMapper:
         https://w3c.github.io/publ-a11y/a11y-meta-display-guide/2.0/techniques/epub-metadata/#variables-setup-1.
 
         Returns:
-            list[str] | None: A list of W3C nonvisual reading support variables.
+            list[str] | None: A list of W3C variables.
         """
 
         w3c_variables = list()
-        
+
         if access_mode_list is not None:
             # All main content is provided in textual form.
             if (
@@ -310,7 +319,11 @@ class AccessibilityDataMapper:
 
         if access_mode_sufficient_list is not None:
             # The content is at least partially readable in textual form (i.e., "textual" is one of a set of sufficient access modes).
-            if AccessModeSufficient.textual in access_mode_sufficient_list or AccessModeSufficient.textual_visual in access_mode_sufficient_list or AccessModeSufficient.visual_textual in access_mode_sufficient_list:
+            if (
+                AccessModeSufficient.textual in access_mode_sufficient_list
+                or AccessModeSufficient.textual_visual in access_mode_sufficient_list
+                or AccessModeSufficient.visual_textual in access_mode_sufficient_list
+            ):
                 w3c_variables.append(W3CVariable.some_sufficient_text)
 
             # All main content is provided in audio form.

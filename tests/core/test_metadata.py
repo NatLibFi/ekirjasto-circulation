@@ -31,7 +31,6 @@ from core.model import (
     RightsStatus,
     Subject,
     Timestamp,
-    Work,
     WorkCoverageRecord,
 )
 from core.util.datetime_helpers import datetime_utc, utc_now
@@ -140,7 +139,6 @@ class TestMetadataImporter:
                 "Cannot look up Subject when neither identifier nor name is provided."
             )
         assert len(identifier.classifications) == 0
-    
 
     def test_links(self, db: DatabaseTransactionFixture):
         edition = db.edition()
@@ -743,10 +741,12 @@ class TestMetadata:
             published=datetime.date(1987, 5, 4),
             issued=datetime.date(1989, 4, 5),
             duration=10,
-            accessibility=AccessibilityData(conforms_to=["https://www.w3.org/TR/epub-a11y-11#wcag-2.2-aa"])
+            accessibility=AccessibilityData(
+                conforms_to=["https://www.w3.org/TR/epub-a11y-11#wcag-2.2-aa"]
+            ),
         )
         edition_new, changed = metadata.apply(edition_old, pool.collection)
-        
+
         assert edition_new.accessibility
 
     def test_apply_wipes_presentation_calculation_records(

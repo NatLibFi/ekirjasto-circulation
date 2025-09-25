@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import enum
 from collections.abc import Callable, Mapping, Sequence
 from datetime import datetime
 from functools import cached_property
@@ -626,7 +625,9 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
         """
         return self.parse_identifier(publication.metadata.identifier)
 
-    def _extract_accessibility(self, accessibility_data: rwpm.Accessibility):
+    def _extract_accessibility(
+        self, accessibility_data: rwpm.Accessibility | None
+    ) -> AccessibilityData | None:
         if accessibility_data:
             conforms_to = (
                 self._parse_element_values(accessibility_data.conforms_to)
@@ -648,28 +649,37 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
                 if accessibility_data.feature
                 else None
             )
-            hazards = self._parse_element_values(accessibility_data.hazard) if accessibility_data.hazard else None
-
+            hazards = (
+                self._parse_element_values(accessibility_data.hazard)
+                if accessibility_data.hazard
+                else None
+            )
             accessibility_metadata = AccessibilityData(
                 access_mode_sufficient=access_mode_sufficient,
                 access_mode=access_mode,
                 features=features,
                 conforms_to=conforms_to,
-                hazards=hazards
+                hazards=hazards,
             )
             self.log.info(f"Finished extracting accessibility {accessibility_metadata}")
             return accessibility_metadata
         return None
 
     def _parse_element_values(
-        self, element_list: list[enum.Enum] | None
+        self,
+        element_list: list[rwpm.ConformsTo]
+        | list[rwpm.AccessMode]
+        | list[rwpm.AccessModeSufficient]
+        | list[rwpm.AccessibilityFeature]
+        | list[rwpm.Hazard]
+        | None,
     ) -> list[str] | None:
         """
         Extracts the names of the provided enum elements from a list.
         """
         if element_list:
-            list_of_element_names = [element.value for element in element_list]
-            return list_of_element_names
+            values = [element.value for element in element_list]
+            return values
         return None
 
     def _extract_publication_metadata(
@@ -694,7 +704,7 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
             if publication.metadata.subtitle
             else None
         )
-        accessibility = self._extract_accessibility(publication.metadata.accessibility)
+        accessibility = self._extract_accessibility(publication.metadata.accessibility)  # type: ignore[arg-type]
 
         languages = first_or_default(publication.metadata.languages)
         derived_medium = self._extract_medium_from_links(publication.links)

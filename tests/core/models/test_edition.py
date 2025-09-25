@@ -1,8 +1,8 @@
 import random
 import string
 
-from core.model import PresentationCalculationPolicy, get_one_or_create
 from core.metadata_layer import AccessibilityData
+from core.model import PresentationCalculationPolicy, get_one_or_create
 from core.model.constants import MediaTypes
 from core.model.contributor import Contributor
 from core.model.coverage import CoverageRecord
@@ -79,9 +79,13 @@ class TestEdition:
         type = Identifier.GUTENBERG_ID
         edition, was_new = Edition.for_foreign_id(db.session, data_source, type, id)
 
-        accessibility_data = AccessibilityData(conforms_to=["https://www.w3.org/TR/epub-a11y-11#wcag-2.2-aaa"])
+        accessibility_data = AccessibilityData(
+            conforms_to=["https://www.w3.org/TR/epub-a11y-11#wcag-2.2-aaa"]
+        )
         edition.add_accessibility_data(accessibility_data)
-        assert edition.accessibility.conforms_to == ["This publication exceeds accepted accessibility standards"]
+        assert edition.accessibility.conforms_to == [
+            "This publication exceeds accepted accessibility standards"
+        ]
 
     def test_add_accessibility_none(self, db: DatabaseTransactionFixture):
         """test that accessibility data is added to the edition."""
@@ -93,7 +97,6 @@ class TestEdition:
         accessibility_data = None
         edition.add_accessibility_data(accessibility_data)
         assert not edition.accessibility
-
 
     def test_for_foreign_id(self, db: DatabaseTransactionFixture):
         """Verify we can get a data source's view of a foreign id."""
