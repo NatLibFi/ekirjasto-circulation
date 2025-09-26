@@ -23,7 +23,6 @@ from sqlalchemy.orm.session import Session
 
 from core.data_conversion.accessibility_mapper import AccessibilityDataMapper
 from core.model import Base, PresentationCalculationPolicy, get_one, get_one_or_create
-from core.model.accessibility import Accessibility
 from core.model.constants import (
     DataSourceConstants,
     EditionConstants,
@@ -43,6 +42,7 @@ if TYPE_CHECKING:
     # types of related models.
     from core.metadata_layer import AccessibilityData
     from core.model import CustomListEntry, DataSource, Work
+    from core.model.accessibility import Accessibility
 
 
 class Edition(Base, EditionConstants):
@@ -159,7 +159,12 @@ class Edition(Base, EditionConstants):
     accessibility: Mapped[Accessibility] = relationship(
         "Accessibility", back_populates="edition"
     )
-    accessibility_id = Column(Integer, ForeignKey("accessibility.id"), nullable=True)
+    accessibility_id = Column(
+        Integer,
+        ForeignKey("accessibility.id"),
+        nullable=True,
+        name="fk_editions_accessibility_id_fkey",
+    )
 
     def __repr__(self):
         id_repr = repr(self.primary_identifier)
@@ -516,18 +521,21 @@ class Edition(Base, EditionConstants):
         """
         Assign accessibility to an Edition.
         """
+        from core.model.accessibility import Accessibility
+
         _db = Session.object_session(self)
 
         if accessibility_data:
             mapped = AccessibilityDataMapper.map_accessibility(accessibility_data)
-            accessibility = Accessibility(
-                ways_of_reading=mapped.get("ways_of_reading"),
-                conforms_to=mapped.get("conforms_to"),
-                hazards=mapped.get("hazards"),
-            )
-            self.accessibility = accessibility
-            _db.add(self)
-            _db.commit()
+            if mapped:
+                accessibility = Accessibility(
+                    ways_of_reading=mapped.get("ways_of_reading"),
+                    conforms_to=mapped.get("conforms_to"),
+                    hazards=mapped.get("hazards"),
+                )
+                self.accessibility = accessibility
+                _db.add(self)
+                _db.commit()
             return self.accessibility
 
     def similarity_to(self, other_record):

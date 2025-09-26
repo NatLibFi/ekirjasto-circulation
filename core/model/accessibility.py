@@ -40,8 +40,8 @@ class Accessibility(Base):
     # https://w3c.github.io/publ-a11y/a11y-meta-display-guide/2.0/guidelines/#legal-considerations
     legal_considerations = Column(Unicode, nullable=True)
 
-    edition: Mapped[list[Edition]] = relationship(
-        "Edition", back_populates="accessibility"
+    edition: Mapped[Edition] = relationship(
+        "Edition", back_populates="accessibility", uselist=False
     )
 
     def __repr__(self):

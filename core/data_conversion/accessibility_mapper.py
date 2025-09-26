@@ -66,10 +66,15 @@ class W3CDisplayText:
 
 
 class AccessibilityDataMapper:
-    """Maps Schema.org Accessibility metadata to W3C display data."""
+    """
+    Maps Schema.org Accessibility metadata to W3C display data.
+
+    Apart from conformance, the schema.org data is first mapped to W3C variables
+    because they define which W3C id - and its display text - should be given.
+    """
 
     @classmethod
-    def map_accessibility(self, accessibility_data: Any | None) -> dict | None:
+    def map_accessibility(self, accessibility_data: Any) -> dict | None:
         """
         Maps all accessibility metadata to W3C display content.
 
@@ -95,7 +100,8 @@ class AccessibilityDataMapper:
     @classmethod
     def _map_conforms_to(cls, conforms_to: list[str] | None) -> list[str] | None:
         """
-        Map the conformance level to a display texts according to logic in https://w3c.github.io/publ-a11y/a11y-meta-display-guide/2.0/techniques/epub-metadata/#conformance-instructions.
+        Map the conformance level to a display texts according to logic in
+        https://w3c.github.io/publ-a11y/a11y-meta-display-guide/2.0/techniques/epub-metadata/#conformance-instructions.
 
         Returns:
             list[str] | None: A list of W3C display texts.
@@ -133,7 +139,8 @@ class AccessibilityDataMapper:
     @classmethod
     def _get_w3c_hazard_display_texts(cls, w3c_variables: list[str]) -> list[str]:
         """
-        W3C variables are mapped to appropriate displayable texts according to logic in https://w3c.github.io/publ-a11y/a11y-meta-display-guide/2.0/techniques/epub-metadata/#hazards-instructions.
+        W3C variables are mapped to appropriate displayable texts according to logic in
+        https://w3c.github.io/publ-a11y/a11y-meta-display-guide/2.0/techniques/epub-metadata/#hazards-instructions.
 
         Returns:
             list[str] | None: A list of W3C display texts.
@@ -172,7 +179,9 @@ class AccessibilityDataMapper:
     @classmethod
     def _get_w3c_hazard_variables(cls, hazards: list[str]) -> list[str]:
         """
-        The function takes schema.org hazard and finds equivalent W3C variables according to the logic described in https://w3c.github.io/publ-a11y/a11y-meta-display-guide/2.0/techniques/epub-metadata/#variables-setup-5.
+        The function takes schema.org hazard and finds equivalent W3C variables
+        according to the logic described in
+        https://w3c.github.io/publ-a11y/a11y-meta-display-guide/2.0/techniques/epub-metadata/#variables-setup-5.
 
         Returns:
             list[str] | None: A list of W3C hazard variables.
@@ -261,7 +270,8 @@ class AccessibilityDataMapper:
             W3CVariable.all_textual_content_can_be_modified: W3CDisplayText.ways_of_reading_visual_adjustments_modifiable,
             # Fixed format is present.
             W3CVariable.is_fixed_layout: W3CDisplayText.ways_of_reading_visual_adjustments_unmodifiable,
-            # Text-synchronised prerecorded audio narration (natural or synthesized voice) is included for substantially all textual matter, including all alternative descriptions, e.g. via a SMIL media overlay.
+            # Text-synchronised prerecorded audio narration (natural or synthesized voice) is
+            # included for substantially all textual matter, including all alternative descriptions, e.g. via a SMIL media overlay.
             W3CVariable.synchronised_pre_recorded_audio: W3CDisplayText.ways_of_reading_prerecorded_audio_synchronized,
         }
 
@@ -309,7 +319,8 @@ class AccessibilityDataMapper:
             elif AccessMode.auditory in access_mode_list:
                 w3c_variables.append(W3CVariable.audio_content)
 
-            # There is only a single access mode of visual and there are no sufficient access modes that include textual (e.g., comics and manga with no alternative text).
+            # There is only a single access mode of visual and there are no sufficient access modes
+            # that include textual (e.g., comics and manga with no alternative text).
             elif AccessMode.visual in access_mode_list and len(access_mode_list) == 1:
                 if (
                     access_mode_sufficient_list is None
@@ -318,7 +329,8 @@ class AccessibilityDataMapper:
                     w3c_variables.append(W3CVariable.visual_only_content)
 
         if access_mode_sufficient_list is not None:
-            # The content is at least partially readable in textual form (i.e., "textual" is one of a set of sufficient access modes).
+            # The content is at least partially readable in textual form (i.e., "textual" is one
+            # of a set of sufficient access modes).
             if (
                 AccessModeSufficient.textual in access_mode_sufficient_list
                 or AccessModeSufficient.textual_visual in access_mode_sufficient_list
