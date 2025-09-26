@@ -514,6 +514,7 @@ from api.saml.metadata.federations.model import (
     SAMLFederatedIdentityProvider,
     SAMLFederation,
 )
+from core.model.accessibility import Accessibility
 from core.model.admin import Admin, AdminRole
 from core.model.apitokens import ApiToken
 from core.model.circulationevent import CirculationEvent

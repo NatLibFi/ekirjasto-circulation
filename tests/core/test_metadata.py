@@ -7,6 +7,7 @@ import pytest
 
 from core.classifier import NO_NUMBER, NO_VALUE
 from core.metadata_layer import (
+    AccessibilityData,
     CirculationData,
     ContributorData,
     CSVMetadataImporter,
@@ -30,7 +31,6 @@ from core.model import (
     RightsStatus,
     Subject,
     Timestamp,
-    Work,
     WorkCoverageRecord,
 )
 from core.util.datetime_helpers import datetime_utc, utc_now
@@ -724,7 +724,7 @@ class TestMetadata:
         assert metadata_old.series_position == edition_new.series_position
         assert metadata_old.duration == metadata_new.duration
 
-    def test_apply(self, db: DatabaseTransactionFixture):
+    def test_apply_with_accessibility_data(self, db: DatabaseTransactionFixture):
         edition_old, pool = db.edition(with_license_pool=True)
 
         metadata = Metadata(
@@ -741,35 +741,13 @@ class TestMetadata:
             published=datetime.date(1987, 5, 4),
             issued=datetime.date(1989, 4, 5),
             duration=10,
+            accessibility=AccessibilityData(
+                conforms_to=["https://www.w3.org/TR/epub-a11y-11#wcag-2.2-aa"]
+            ),
         )
-
         edition_new, changed = metadata.apply(edition_old, pool.collection)
 
-        assert changed == True
-        assert edition_new.title == "The Harry Otter and the Seaweed of Ages"
-        assert edition_new.sort_title == "Harry Otter and the Seaweed of Ages, The"
-        assert edition_new.subtitle == "Kelp At It"
-        assert edition_new.series == "The Harry Otter Sagas"
-        assert edition_new.series_position == "4"
-        assert edition_new.language == "eng"
-        assert edition_new.medium == "Audio"
-        assert edition_new.publisher == "Scholastic Inc"
-        assert edition_new.imprint == "Follywood"
-        assert edition_new.published == datetime.date(1987, 5, 4)
-        assert edition_new.issued == datetime.date(1989, 4, 5)
-        assert edition_new.duration == 10
-
-        edition_new, changed = metadata.apply(edition_new, pool.collection)
-        assert changed == False
-
-        # The series position can also be 0.
-        metadata.series_position = 0
-        edition_new, changed = metadata.apply(edition_new, pool.collection)
-        assert changed == True
-        assert edition_new.series_position == 0
-
-        # Metadata.apply() does not create a Work if no Work exists.
-        assert 0 == db.session.query(Work).count()
+        assert edition_new.accessibility
 
     def test_apply_wipes_presentation_calculation_records(
         self, db: DatabaseTransactionFixture

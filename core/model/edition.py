@@ -21,6 +21,7 @@ from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy.orm import Mapped, relationship
 from sqlalchemy.orm.session import Session
 
+from core.data_conversion.accessibility_mapper import AccessibilityDataMapper
 from core.model import Base, PresentationCalculationPolicy, get_one, get_one_or_create
 from core.model.constants import (
     DataSourceConstants,
@@ -39,7 +40,9 @@ from core.util.permanent_work_id import WorkIDCalculator
 if TYPE_CHECKING:
     # This is needed during type checking so we have the
     # types of related models.
+    from core.metadata_layer import AccessibilityData
     from core.model import CustomListEntry, DataSource, Work
+    from core.model.accessibility import Accessibility
 
 
 class Edition(Base, EditionConstants):
@@ -152,6 +155,16 @@ class Edition(Base, EditionConstants):
 
     # Information kept in here probably won't be used.
     extra: Mapped[dict[str, str]] = Column(MutableDict.as_mutable(JSON), default={})
+
+    accessibility: Mapped[Accessibility] = relationship(
+        "Accessibility", back_populates="edition"
+    )
+    accessibility_id = Column(
+        Integer,
+        ForeignKey("accessibility.id"),
+        nullable=True,
+        name="fk_editions_accessibility_id_fkey",
+    )
 
     def __repr__(self):
         id_repr = repr(self.primary_identifier)
@@ -503,6 +516,27 @@ class Edition(Base, EditionConstants):
                 _db, Contribution, edition=self, contributor=contributor, role=role
             )
         return contributor
+
+    def add_accessibility_data(self, accessibility_data: AccessibilityData):
+        """
+        Assign accessibility to an Edition.
+        """
+        from core.model.accessibility import Accessibility
+
+        _db = Session.object_session(self)
+
+        if accessibility_data:
+            mapped = AccessibilityDataMapper.map_accessibility(accessibility_data)
+            if mapped:
+                accessibility = Accessibility(
+                    ways_of_reading=mapped.get("ways_of_reading"),
+                    conforms_to=mapped.get("conforms_to"),
+                    hazards=mapped.get("hazards"),
+                )
+                self.accessibility = accessibility
+                _db.add(self)
+                _db.commit()
+            return self.accessibility
 
     def similarity_to(self, other_record):
         """How likely is it that this record describes the same book as the
