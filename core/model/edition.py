@@ -39,7 +39,7 @@ from core.util.permanent_work_id import WorkIDCalculator
 if TYPE_CHECKING:
     # This is needed during type checking so we have the
     # types of related models.
-    from core.model import CustomListEntry, DataSource, Work
+    from core.model import Accessibility, CustomListEntry, DataSource, Work
 
 
 class Edition(Base, EditionConstants):
@@ -152,6 +152,16 @@ class Edition(Base, EditionConstants):
 
     # Information kept in here probably won't be used.
     extra: Mapped[dict[str, str]] = Column(MutableDict.as_mutable(JSON), default={})
+
+    accessibility: Mapped[Accessibility] = relationship(
+        "Accessibility", back_populates="edition"
+    )
+    # A one-to-one relationship to Accessibility
+    accessibility_id = Column(
+        Integer,
+        ForeignKey("accessibility.id", name="fk_editions_accessibility_id"),
+        nullable=True,
+    )
 
     def __repr__(self):
         id_repr = repr(self.primary_identifier)
