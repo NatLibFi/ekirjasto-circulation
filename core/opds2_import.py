@@ -24,6 +24,7 @@ from core.integration.settings import (
     FormField,
 )
 from core.metadata_layer import (
+    AccessibilityData,
     CirculationData,
     ContributorData,
     FormatData,
@@ -624,6 +625,63 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
         """
         return self.parse_identifier(publication.metadata.identifier)
 
+    def _extract_accessibility(
+        self, accessibility_data: rwpm.Accessibility | None
+    ) -> AccessibilityData | None:
+        if accessibility_data:
+            conforms_to = (
+                self._parse_element_values(accessibility_data.conforms_to)
+                if accessibility_data.conforms_to
+                else None
+            )
+            access_mode = (
+                self._parse_element_values(accessibility_data.access_mode)
+                if accessibility_data.access_mode
+                else None
+            )
+            access_mode_sufficient = (
+                self._parse_element_values(accessibility_data.access_mode_sufficient)
+                if accessibility_data.access_mode_sufficient
+                else None
+            )
+            features = (
+                self._parse_element_values(accessibility_data.feature)
+                if accessibility_data.feature
+                else None
+            )
+            hazards = (
+                self._parse_element_values(accessibility_data.hazard)
+                if accessibility_data.hazard
+                else None
+            )
+            accessibility_metadata = AccessibilityData(
+                access_mode_sufficient=access_mode_sufficient,
+                access_mode=access_mode,
+                features=features,
+                conforms_to=conforms_to,
+                hazards=hazards,
+            )
+            self.log.info(f"Finished extracting accessibility {accessibility_metadata}")
+            return accessibility_metadata
+        return None
+
+    def _parse_element_values(
+        self,
+        element_list: list[rwpm.ConformsTo]
+        | list[rwpm.AccessMode]
+        | list[rwpm.AccessModeSufficient]
+        | list[rwpm.AccessibilityFeature]
+        | list[rwpm.Hazard]
+        | None,
+    ) -> list[str] | None:
+        """
+        Extracts the names of the provided enum elements from a list.
+        """
+        if element_list:
+            values = [element.value for element in element_list]
+            return values
+        return None
+
     def _extract_publication_metadata(
         self,
         publication: opds2.BasePublication,
@@ -696,6 +754,9 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
         )
         # Audiobook duration
         duration = publication.metadata.duration
+
+        accessibility = self._extract_accessibility(publication.metadata.accessibility)  # type: ignore[arg-type]
+        
         # Not all parsers support time_tracking
         time_tracking = getattr(publication.metadata, "time_tracking", False)
         if medium != Edition.AUDIO_MEDIUM and time_tracking is True:
@@ -766,6 +827,7 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
             links=links,
             data_source_last_updated=last_opds_update,
             duration=duration,
+            accessibility=accessibility,
             circulation=circulation_data,
         )
 
