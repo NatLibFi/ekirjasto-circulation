@@ -164,6 +164,7 @@ class SubjectData:
             self.weight,
         )
 
+
 class AccessibilityData:
     def __init__(
         self,
@@ -184,6 +185,7 @@ class AccessibilityData:
         self.hazards = hazards
         self.conforms_to = conforms_to
         self.exemption = exemption
+
 
 class ContributorData:
     def __init__(
@@ -1640,7 +1642,6 @@ class Metadata:
                 self.log.error(
                     f"Error classifying subject: {subject} for identifier {identifier}: {e}"
                 )
-
 
         if self.accessibility:
             edition.add_accessibility_data(self.accessibility)

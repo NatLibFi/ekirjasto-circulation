@@ -756,7 +756,7 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
         duration = publication.metadata.duration
 
         accessibility = self._extract_accessibility(publication.metadata.accessibility)  # type: ignore[arg-type]
-        
+
         # Not all parsers support time_tracking
         time_tracking = getattr(publication.metadata, "time_tracking", False)
         if medium != Edition.AUDIO_MEDIUM and time_tracking is True:

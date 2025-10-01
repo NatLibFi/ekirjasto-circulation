@@ -18,7 +18,6 @@ class TestAccessibilityDataMapper:
     def data_mapper(self):
         return AccessibilityDataMapper()
 
-
     def test_map_accessibility_with_data(self, data_mapper):
         mock_data = AccessibilityData(
             conforms_to=[ConformsTo.epub_1_0_wcag_2_0_level_a],
@@ -37,9 +36,7 @@ class TestAccessibilityDataMapper:
                 mock_data.access_mode_sufficient,
                 mock_data.features,
             ),
-            "hazards": None,
         }
-
 
     def test_map_accessibility_with_no_data(self, data_mapper):
         mock_data = None
@@ -70,7 +67,6 @@ class TestAccessibilityDataMapper:
     def test__map_conforms_to(self, data_mapper, conformance, expected_output):
         assert data_mapper._map_conforms_to(conformance) == expected_output
 
-
     @pytest.mark.parametrize(
         "hazards, expected_output",
         [
@@ -88,7 +84,6 @@ class TestAccessibilityDataMapper:
     )
     def test__map_hazards(self, data_mapper, hazards, expected_output):
         assert data_mapper._map_hazards(hazards) == expected_output
-
 
     @pytest.mark.parametrize(
         "access_mode_list, access_mode_sufficient_list, feature_list, expected_output",
@@ -185,7 +180,6 @@ class TestAccessibilityDataMapper:
             )
             == expected_output
         )
-
 
     @pytest.mark.parametrize(
         "access_mode_list, access_mode_sufficient_list, feature_list, expected_output",
