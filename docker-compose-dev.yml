@@ -49,13 +49,12 @@ services:
     ports:
       - "6500:80"
 
-
   scripts:
-      container_name: scripts
-      <<: *cm
-      build:
-        <<: *cm-build
-        target: scripts
+    container_name: scripts
+    <<: *cm
+    build:
+      <<: *cm-build
+      target: scripts
 
   pg:
     image: "postgres:12"
@@ -85,7 +84,7 @@ services:
       - "5050:80"
 
   minio:
-    image: "bitnami/minio:2023.2.27"
+    image: "bitnamilegacy/minio:latest"
     ports:
       - "9000:9000"
       - "9001:9001"
