@@ -21,6 +21,7 @@ from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy.orm import Mapped, relationship
 from sqlalchemy.orm.session import Session
 
+from core.data_conversion.accessibility_mapper import AccessibilityDataMapper
 from core.model import Base, PresentationCalculationPolicy, get_one, get_one_or_create
 from core.model.constants import (
     DataSourceConstants,
@@ -39,7 +40,9 @@ from core.util.permanent_work_id import WorkIDCalculator
 if TYPE_CHECKING:
     # This is needed during type checking so we have the
     # types of related models.
+    from core.metadata_layer import AccessibilityData
     from core.model import Accessibility, CustomListEntry, DataSource, Work
+    from core.model.accessibility import Accessibility
 
 
 class Edition(Base, EditionConstants):
@@ -513,6 +516,26 @@ class Edition(Base, EditionConstants):
                 _db, Contribution, edition=self, contributor=contributor, role=role
             )
         return contributor
+
+    def add_accessibility_data(self, accessibility_data: AccessibilityData):
+        """
+        Map accessibility metadata and add it to an edition.
+        """
+        from core.model.accessibility import Accessibility
+
+        _db = Session.object_session(self)
+
+        if accessibility_data:
+            mapped = AccessibilityDataMapper.map_accessibility(accessibility_data)
+            if mapped:
+                accessibility = Accessibility(
+                    ways_of_reading=mapped.get("ways_of_reading"),
+                    conforms_to=mapped.get("conforms_to"),
+                )
+                self.accessibility = accessibility
+                _db.add(self)
+                _db.commit()
+            return self.accessibility
 
     def similarity_to(self, other_record):
         """How likely is it that this record describes the same book as the
