@@ -1,0 +1,153 @@
+{
+    "metadata": {
+        "currentPage": 1,
+        "itemsPerPage": 5,
+        "title": "Ellibs OPDS 2.0"
+    },
+    "links": [
+        {
+            "rel": "self",
+            "href": "http://example.com/new",
+            "type": "application/opds+json"
+        }
+    ],
+    "publications": [
+        {
+            "metadata": {
+                "type": "https://schema.org/EBook",
+                "title": "Maahan kätketty",
+                "identifier": "urn:isbn:9789512445448",
+                "modified": "2025-09-08T10:09:22+03:00",
+                "published": "2025",
+                "language": "fi",
+                "description": "Julia Malmros -jännärisarjan piinaavan jännittävä toinen osa.  Kim Ribbing on vanginnut talonsa kellariin tohtori Martin Rudbeckin, jonka kidutuksen kaltaisista hoitomenetelmistä Kim joutui nuorena kärsimään. Nyt roolit ovat vaihtuneet, mutta poliisi etsii jo kadonnutta tohtoria ja silmukka Kimin ympärillä kiristyy.  Kirjailija Julia Malmros puolestaan tutkii äärioikeistolaista puoluetta ja sen yhteyksiä moottoripyöräkerhoon. Tutkinta osoittautuu kaikkea muuta kuin vaarattomaksi.",
+                "publisher": {
+                    "name": "Gummerus",
+                    "links": [
+                        {
+                            "type": "application/opds+json",
+                            "href": "https://example.com/odl-test/publishers/11991"
+                        }
+                    ]
+                },
+                "subject": [
+                    {
+                        "code": "FIC031000",
+                        "name": "FICTION / Thrillers / General",
+                        "scheme": "http://www.bisg.org/standards/bisac_subject/"
+                    },
+                    {
+                        "code": "FIC000000",
+                        "name": "FICTION / General",
+                        "scheme": "http://www.bisg.org/standards/bisac_subject/"
+                    },
+                    {
+                        "code": "Adult",
+                        "name": "Adult",
+                        "scheme": "http://schema.org/audience"
+                    }
+                ],
+                "translator": {
+                    "name": "Anna Heroja",
+                    "links": [
+                        {
+                            "type": "application/opds+json",
+                            "href": "https://example.com/odl-test/authors/1775459"
+                        }
+                    ]
+                },
+                "accessibility": {
+                    "summary": "Tämä sähkökirja täyttää WCAG 2.1 AA-tason EPUB-saavutettavuusvaatimukset.",
+                    "accessMode": [
+                        "textual"
+                    ],
+                    "accessModeSufficient": [
+                        "textual"
+                    ],
+                    "feature": [
+                        "structuralNavigation",
+                        "tableOfContents",
+                        "alternativeText",
+                        "displayTransformability",
+                        "readingOrder"
+                    ],
+                    "hazard": [
+                        "none"
+                    ]
+                },
+                "author": {
+                    "name": "John Ajvide Lindqvist",
+                    "links": [
+                        {
+                            "type": "application/opds+json",
+                            "href": "https://example.com/odl-test/authors/2009830"
+                        }
+                    ]
+                }
+            },
+            "images": [
+                {
+                    "rel": "http://opds-spec.org/image",
+                    "href": "https://www.library.com/sites/default/files/imagecache/product_full/bookcover_9789512445448.jpg",
+                    "type": "image/jpeg"
+                },
+                {
+                    "rel": "http://opds-spec.org/image/thumbnail",
+                    "href": "https://www.library.com/sites/default/files/imagecache/product/bookcover_9789512445448.jpg",
+                    "type": "image/jpeg"
+                }
+            ],
+            "licenses": [
+                {
+                    "metadata": {
+                        "identifier": "urn:license:222",
+                        "format": "application/epub+zip",
+                        "created": "2025-06-05T14:23:33+03:00",
+                        "terms": {
+                            "concurrency": "1",
+                            "max_checkout_length": "1209600"
+                        },
+                        "protection": {
+                            "format": "application/vnd.readium.lcp.license.v1.0+json",
+                            "devices": "6",
+                            "copy": "false",
+                            "print": "false",
+                            "tts": "false"
+                        }
+                    },
+                    "links": [
+                        {
+                            "rel": "http://opds-spec.org/acquisition/borrow",
+                            "href": "https://example.com/odl-test/get.php{?id,checkout_id,expires,patron_id,notification_url,passphrase}",
+                            "type": "application/vnd.readium.license.status.v1.0+json",
+                            "templated": "true"
+                        },
+                        {
+                            "rel": "self",
+                            "href": "https://example.com/odl-test/status.php?license_id=222",
+                            "type": "application/vnd.odl.info+json"
+                        }
+                    ]
+                }
+            ],
+            "link": [
+                {
+                    "rel": "http://readium.org/lcp/status",
+                    "href": "https://example.com/odl-test/status.php?license_id=222"
+                },
+                {
+                    "rel": "http://readium.org/lcp/register",
+                    "href": "https://example.com/odl-test/register.php?license_id=222"
+                },
+                {
+                    "rel": "http://readium.org/lcp/return",
+                    "href": "https://example.com/odl-test/return.php?license_id=222"
+                },
+                {
+                    "rel": "http://readium.org/lcp/renew",
+                    "href": "https://example.com/odl-test/renew.php?license_id=222"
+                }
+            ]
+        }
+    ]
+}

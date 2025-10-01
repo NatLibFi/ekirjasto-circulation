@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from datetime import date
+from datetime import date, datetime
 from enum import Enum
 from functools import cached_property
 from typing import Literal, TypeVar
@@ -445,6 +445,17 @@ class Metadata(BaseOpdsModel):
 
     modified: AwareDatetime | None = None
     published: AwareDatetime | date | None = None
+
+    @field_validator("published", mode="before")
+    def check_year(cls, value):
+        """
+        Format a year into a datetime object.
+        """
+        if isinstance(value, str) and value.isdigit() and len(value) == 4:
+            year = int(value)
+            return datetime(year, 1, 1)
+        return value
+
     language: StrOrTuple[LanguageCode] | None = None
 
     @cached_property

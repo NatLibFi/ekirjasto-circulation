@@ -88,12 +88,12 @@
             "images": [
                 {
                     "rel": "http://opds-spec.org/image",
-                    "href": "https://www.ellibslibrary.com/sites/default/files/imagecache/product_full/bookcover_9789512445448.jpg",
+                    "href": "https://www.library.com/sites/default/files/imagecache/product_full/bookcover_9789512445448.jpg",
                     "type": "image/jpeg"
                 },
                 {
                     "rel": "http://opds-spec.org/image/thumbnail",
-                    "href": "https://www.ellibslibrary.com/sites/default/files/imagecache/product/bookcover_9789512445448.jpg",
+                    "href": "https://www.library.com/sites/default/files/imagecache/product/bookcover_9789512445448.jpg",
                     "type": "image/jpeg"
                 }
             ],
@@ -230,12 +230,12 @@
             "images": [
                 {
                     "rel": "http://opds-spec.org/image",
-                    "href": "https://www.ellibslibrary.com/sites/default/files/imagecache/product_full/bookcover_9789164244673.jpg",
+                    "href": "https://www.library.com/sites/default/files/imagecache/product_full/bookcover_9789164244673.jpg",
                     "type": "image/jpeg"
                 },
                 {
                     "rel": "http://opds-spec.org/image/thumbnail",
-                    "href": "https://www.ellibslibrary.com/sites/default/files/imagecache/product/bookcover_9789164244673.jpg",
+                    "href": "https://www.library.com/sites/default/files/imagecache/product/bookcover_9789164244673.jpg",
                     "type": "image/jpeg"
                 }
             ],
@@ -376,12 +376,12 @@
             "images": [
                 {
                     "rel": "http://opds-spec.org/image",
-                    "href": "https://www.ellibslibrary.com/sites/default/files/imagecache/product_full/bookcover_9789510504437.jpg",
+                    "href": "https://www.library.com/sites/default/files/imagecache/product_full/bookcover_9789510504437.jpg",
                     "type": "image/jpeg"
                 },
                 {
                     "rel": "http://opds-spec.org/image/thumbnail",
-                    "href": "https://www.ellibslibrary.com/sites/default/files/imagecache/product/bookcover_9789510504437.jpg",
+                    "href": "https://www.library.com/sites/default/files/imagecache/product/bookcover_9789510504437.jpg",
                     "type": "image/jpeg"
                 }
             ],
