@@ -661,7 +661,6 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
                 conforms_to=conforms_to,
                 hazards=hazards,
             )
-            self.log.info(f"Finished extracting accessibility {accessibility_metadata}")
             return accessibility_metadata
         return None
 

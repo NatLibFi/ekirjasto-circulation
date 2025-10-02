@@ -1643,6 +1643,7 @@ class Metadata:
                     f"Error classifying subject: {subject} for identifier {identifier}: {e}"
                 )
 
+        # Apply accessibility metadata to the edition.
         if self.accessibility:
             edition.add_accessibility_data(self.accessibility)
             self.log.info(

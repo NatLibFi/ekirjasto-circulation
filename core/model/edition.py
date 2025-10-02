@@ -532,10 +532,14 @@ class Edition(Base, EditionConstants):
                     ways_of_reading=mapped.get("ways_of_reading"),
                     conforms_to=mapped.get("conforms_to"),
                 )
-                self.accessibility = accessibility
-                _db.add(self)
-                _db.commit()
-            return self.accessibility
+                accessibility, was_new = get_one_or_create(
+                    _db,
+                    Accessibility,
+                    edition=self,
+                    conforms_to=accessibility.conforms_to,
+                    ways_of_reading=accessibility.ways_of_reading,
+                )
+                return accessibility
 
     def similarity_to(self, other_record):
         """How likely is it that this record describes the same book as the
