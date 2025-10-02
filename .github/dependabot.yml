@@ -9,8 +9,9 @@ updates:
       interval: "daily"
     versioning-strategy: increase-if-necessary
     # Ignore everything for now (and stay in pace with the upstream)
-    # ignore:
-    #    - dependency-name: "*"
+    ignore:
+      - dependency-name: "poetry"
+        versions: ["1.8.5"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
