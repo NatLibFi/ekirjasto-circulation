@@ -327,7 +327,7 @@ class AccessibilityDataMapper:
             elif AccessMode.visual in access_mode_list and len(access_mode_list) == 1:
                 if (
                     access_mode_sufficient_list is None
-                    or AccessMode.textual not in access_mode_sufficient_list
+                    or AccessModeSufficient.textual not in access_mode_sufficient_list
                 ):
                     w3c_variables.append(W3CVariables.visual_only_content)
 
