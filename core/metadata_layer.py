@@ -165,6 +165,28 @@ class SubjectData:
         )
 
 
+class AccessibilityData:
+    def __init__(
+        self,
+        access_mode=None,
+        access_mode_sufficient=None,
+        features=None,
+        certification=None,
+        summary=None,
+        hazards=None,
+        conforms_to=None,
+        exemption=None,
+    ):
+        self.access_mode = access_mode
+        self.access_mode_sufficient = access_mode_sufficient
+        self.features = features
+        self.certification = certification
+        self.summary = summary
+        self.hazards = hazards
+        self.conforms_to = conforms_to
+        self.exemption = exemption
+
+
 class ContributorData:
     def __init__(
         self,
@@ -1105,7 +1127,7 @@ class CirculationData:
 
 class Metadata:
 
-    """A (potentially partial) set of metadata for a published work."""
+    """A (potentially partial) set of bibliographic metadata for a published work."""
 
     log = logging.getLogger("Abstract metadata layer")
 
@@ -1147,6 +1169,7 @@ class Metadata:
         links=None,
         data_source_last_updated=None,
         duration=None,
+        accessibility=None,
         # Note: brought back to keep callers of bibliographic extraction process_one() methods simple.
         circulation=None,
         **kwargs,
@@ -1174,6 +1197,7 @@ class Metadata:
         self.issued = issued
         self.published = published
         self.duration = duration
+        self.accessibility = accessibility
 
         self.primary_identifier = primary_identifier
         self.identifiers = identifiers or []
@@ -1526,6 +1550,8 @@ class Metadata:
         identifier = edition.primary_identifier
 
         self.log.info("APPLYING METADATA TO EDITION: %s", self.title)
+
+        # Apply basic bibiolgraphic information, e.g. title, subtitle, etc.
         fields = self.BASIC_EDITION_FIELDS + ["permanent_work_id"]
         for field in fields:
             old_edition_value = getattr(edition, field)
@@ -1616,6 +1642,13 @@ class Metadata:
                 self.log.error(
                     f"Error classifying subject: {subject} for identifier {identifier}: {e}"
                 )
+
+        # Apply accessibility metadata to the edition.
+        if self.accessibility:
+            edition.add_accessibility_data(self.accessibility)
+            self.log.info(
+                f"Finshed mapping accessibility metadata: {edition.accessibility}"
+            )
 
         # Associate all links with the primary identifier.
         if replace.links and self.links is not None:

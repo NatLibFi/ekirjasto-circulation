@@ -45,4 +45,4 @@ class Accessibility(Base):
     )
 
     def __repr__(self):
-        return f"Accessibility data: Conforms_to: {self.conforms_to}, Hazards: {self.hazards}, Ways of reading: {self.ways_of_reading}"
+        return f"Accessibility data: Conforms_to: {self.conforms_to}, Ways of reading: {self.ways_of_reading}"
