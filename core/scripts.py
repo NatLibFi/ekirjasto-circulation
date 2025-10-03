@@ -2404,6 +2404,29 @@ class Explain(IdentifierInputScript):
                     license.expires,
                 )
             )
+            self.write("Active loans:")
+            if license.loans:
+                for loan in license.loans:
+                    self.write(
+                        "   Loan ID: {}, Patron external id: {}".format(
+                            loan.external_identifier, loan.patron.external_identifier
+                        )
+                    )
+                    self.write(f"   From {loan.start} to {loan.end}")
+            else:
+                self.write("    No active loans.")
+            self.write("Holds:")
+            if pool.patrons_in_hold_queue or pool.holds:
+                self.write(
+                    "Patrons in queue: {}, Holds: {}".format(
+                        pool.patrons_in_hold_queue, len(pool.holds)
+                    )
+                )
+                for hold in pool.holds:
+                    self.write("   %s" % (hold))
+                    self.write("   Last notified: %s" % (hold.patron_last_notified))
+            else:
+                self.write("No holds")
 
     def explain_work(self, work):
         self.write("Work info:")
