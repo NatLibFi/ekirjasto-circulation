@@ -688,9 +688,7 @@ class Hold(Base, LoanAndHoldMixin):
         return self.id < other.id
 
     def __repr__(self):
-        return (
-            f"Hold id={self.id} start={self.start}->{self.end} position={self.position}"
-        )
+        return f"Patron external id={self.patron.external_identifier} Hold id={self.id} From {self.start} to {self.end} Position={self.position}"
 
     @classmethod
     def _calculate_until(

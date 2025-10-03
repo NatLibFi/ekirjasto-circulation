@@ -902,6 +902,7 @@ class LicenseReportScript(Script):
             "Title",
             "Author",
             "Collection",
+            "Language",
             "First seen",
             "Last seen (best guess)",
             "Current copies owned",
@@ -916,6 +917,7 @@ class LicenseReportScript(Script):
             "License concurrency",
             "Active loans",
             "License expiration",
+            "License status url",
         ]
         print(",".join(first_row))
 
@@ -989,7 +991,8 @@ class LicenseReportScript(Script):
         data = [identifier.identifier]
         if edition:
             data.extend([f'"{edition.title}"', f'"{edition.author}"'])
-        data.append(licensepool.collection.name)
+        data.append(f'"{licensepool.collection.name}"')
+        data.append(f'"{edition.language}"')
         if licensepool.availability_time:
             first_seen = licensepool.availability_time.strftime(self.format)
         else:
@@ -1014,10 +1017,11 @@ class LicenseReportScript(Script):
                 license.expires.strftime(self.format) if license.expires else ""
             )
             license_data = [
-                identifier.identifier,
-                edition.title,
-                "",
-                "",
+                f'"{identifier.identifier}"',
+                f'"{edition.title}"',
+                f'"{edition.author}"',
+                f'"{licensepool.collection.name}"',
+                f'"{edition.language}"',
                 "",
                 "",
                 "",
@@ -1032,6 +1036,7 @@ class LicenseReportScript(Script):
                 license.terms_concurrency,
                 len(license.loans),
                 expire_date,
+                license.status_url,
             ]
             # And print each license on a new line
             print(",".join(str(item) for item in license_data))
