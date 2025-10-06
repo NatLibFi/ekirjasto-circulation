@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from core.classifier import Classifier
 from core.feed.types import (
+    AccessibilityType,
     Author,
     FeedData,
     FeedEntryType,
@@ -222,6 +223,20 @@ class ToFeedEntry:
 
         return categories
 
+    def accessibility(cls, edition: Edition) -> AccessibilityType:
+        """
+        Return accessibility information for this edition.
+
+        :return: AccessibilityType FeedEntryType object.
+        """
+        accessibility = edition.accessibility
+        entry = AccessibilityType(
+            ways_of_reading=accessibility.ways_of_reading,  # type:ignore[arg-type]
+            conformance=accessibility.conforms_to,  # type:ignore[arg-type]
+        )
+
+        return entry
+
     @classmethod
     def content(cls, work: Work | None) -> str:
         """Return an HTML summary of this work."""
@@ -340,6 +355,10 @@ class Annotator(ToFeedEntry):
 
         if identifier:
             computed.identifier = identifier.urn
+
+        if edition.accessibility:
+            accessibility = self.accessibility(edition)
+            computed.accessibility = accessibility
 
         if pool:
             data_source = pool.data_source.name
