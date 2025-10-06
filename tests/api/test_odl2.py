@@ -219,6 +219,142 @@ class TestODL2Importer:
         assert "2 validation errors" in huck_finn_failure.exception
 
     @freeze_time("2016-01-01T00:00:00+00:00")
+    def test_import_from_feed_ellibs(
+        self,
+        odl2_importer: ODL2Importer,
+        odl_mock_get: MockGet,
+        api_odl_files_fixture: ODLAPIFilesFixture,
+    ) -> None:
+        """Ensure that ODL2Importer2 correctly processes and imports the ODL feed rom Ellibs encoded using OPDS 2.x.
+
+        NOTE: `freeze_time` decorator is required to treat the licenses in the ODL feed as non-expired.
+        """
+        # Arrange
+        maahan_katketty_license = LicenseInfoHelper(
+            license=LicenseHelper(
+                identifier="urn:license:222",
+                concurrency=1,
+            ),
+            available=1,
+        )
+
+        odl_mock_get.add(maahan_katketty_license)
+        feed = api_odl_files_fixture.sample_text("ellibs_feed_single_publication.json")
+
+        config = odl2_importer.collection.integration_configuration
+        odl2_importer.ignored_identifier_types = [IdentifierConstants.URI]
+        DatabaseTransactionFixture.set_settings(
+            config, odl2_skipped_license_formats=["text/html"]
+        )
+
+        # Act
+        imported_editions, pools, works, failures = odl2_importer.import_from_feed(feed)
+
+        # Assert
+
+        # 1. Make sure that there is a single edition only
+        assert isinstance(imported_editions, list)
+        assert 1 == len(imported_editions)
+
+        [maahan_katketty_edition] = imported_editions
+        assert isinstance(maahan_katketty_edition, Edition)
+        assert maahan_katketty_edition.primary_identifier.identifier == "9789512445448"
+        assert maahan_katketty_edition.primary_identifier.type == "ISBN"
+
+        assert "Maahan kätketty" == maahan_katketty_edition.title
+        assert not maahan_katketty_edition.subtitle
+        assert "fin" == maahan_katketty_edition.language
+        assert EditionConstants.BOOK_MEDIUM == maahan_katketty_edition.medium
+        assert "John Ajvide Lindqvist" == maahan_katketty_edition.author
+
+        assert 1 == len(maahan_katketty_edition.author_contributors)
+        [maahan_katketty_author] = maahan_katketty_edition.author_contributors
+        assert isinstance(maahan_katketty_author, Contributor)
+        assert "John Ajvide Lindqvist" == maahan_katketty_author.display_name
+        assert "Lindqvist, John Ajvide" == maahan_katketty_author.sort_name
+
+        assert 1 == len(maahan_katketty_author.contributions)
+        [
+            maahan_katketty_author_author_contribution
+        ] = maahan_katketty_author.contributions
+        assert isinstance(maahan_katketty_author_author_contribution, Contribution)
+        assert (
+            maahan_katketty_author
+            == maahan_katketty_author_author_contribution.contributor
+        )
+        assert (
+            maahan_katketty_edition
+            == maahan_katketty_author_author_contribution.edition
+        )
+        assert (
+            Contributor.Role.AUTHOR == maahan_katketty_author_author_contribution.role
+        )
+
+        assert (
+            "Feedbooks" == maahan_katketty_edition.data_source.name
+        )  # Based on some default value in tests. It's based on what's set as the collection's datasource in the admin UI.
+
+        assert "Gummerus" == maahan_katketty_edition.publisher
+        assert (
+            datetime.date(2025, 1, 1) == maahan_katketty_edition.published
+        )  # The data constains only year
+
+        assert (
+            "https://www.library.com/sites/default/files/imagecache/product_full/bookcover_9789512445448.jpg"
+            == maahan_katketty_edition.cover_full_url
+        )
+        assert (
+            "https://www.library.com/sites/default/files/imagecache/product/bookcover_9789512445448.jpg"
+            == maahan_katketty_edition.cover_thumbnail_url
+        )
+
+        # 2. Make sure that license pools and licenses have correct configuration
+        assert isinstance(pools, list)
+        assert 1 == len(pools)
+
+        [maahan_katketty_licensepool] = pools
+        assert isinstance(maahan_katketty_licensepool, LicensePool)
+        assert (
+            maahan_katketty_licensepool.identifier.identifier == "9789512445448"
+        )  # Same as the book's ISBN
+        assert maahan_katketty_licensepool.identifier.type == "ISBN"
+        assert not maahan_katketty_licensepool.open_access
+        assert 1 == maahan_katketty_licensepool.licenses_owned
+        assert 1 == maahan_katketty_licensepool.licenses_available
+
+        assert 1 == len(maahan_katketty_licensepool.licenses)
+        [maahan_katketty_license] = maahan_katketty_licensepool.licenses  # type: ignore
+        assert "urn:license:222" == maahan_katketty_license.identifier  # type: ignore
+        assert (
+            "https://example.com/odl-test/get.php{?id,checkout_id,expires,patron_id,notification_url,passphrase}"
+            == maahan_katketty_license.checkout_url  # type: ignore
+        )
+        assert "https://example.com/odl-test/status.php?license_id=222" == maahan_katketty_license.status_url  # type: ignore
+        assert 1 == maahan_katketty_license.checkouts_available  # type: ignore
+
+        # 3. Make our delivery mechanisms are set
+        assert 1 == len(maahan_katketty_licensepool.delivery_mechanisms)
+
+        maahan_katketty_epub_lcp_drm_delivery_mechanism = (
+            self._get_delivery_mechanism_by_drm_scheme_and_content_type(
+                maahan_katketty_licensepool.delivery_mechanisms,
+                MediaTypes.EPUB_MEDIA_TYPE,
+                DeliveryMechanism.LCP_DRM,
+            )
+        )
+        assert maahan_katketty_epub_lcp_drm_delivery_mechanism is not None
+
+        # 4. Make sure that work objects contain all the required metadata
+        assert isinstance(works, list)
+        assert 1 == len(works)
+
+        [maahan_katketty_work] = works
+        assert isinstance(maahan_katketty_work, Work)
+        assert maahan_katketty_edition == maahan_katketty_work.presentation_edition
+        assert 1 == len(maahan_katketty_work.license_pools)
+        assert maahan_katketty_licensepool == maahan_katketty_work.license_pools[0]
+
+    @freeze_time("2016-01-01T00:00:00+00:00")
     def test_import_audiobook_with_streaming(
         self,
         db: DatabaseTransactionFixture,
