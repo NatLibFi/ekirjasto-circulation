@@ -8,6 +8,7 @@ from lxml import etree
 
 from core.feed.serializer.base import SerializerInterface
 from core.feed.types import (
+    AccessibilityType,
     Acquisition,
     Author,
     DataEntry,
@@ -255,6 +256,11 @@ class OPDS1Serializer(SerializerInterface[etree._Element], OPDSFeed):
         for contributor in feed_entry.contributors:
             entry.append(self._serialize_author_tag("contributor", contributor))
 
+        if feed_entry.accessibility:
+            entry.append(
+                self._serialize_accessibility("accessibility", feed_entry.accessibility)
+            )
+
         for link in feed_entry.image_links:
             entry.append(OPDSFeed.link(**link.asdict()))
 
@@ -305,6 +311,27 @@ class OPDS1Serializer(SerializerInterface[etree._Element], OPDSFeed):
                         ATTRIBUTE_MAPPING.get(attrib, attrib),
                         value if value is not None else "",
                     )
+        return entry
+
+    def _serialize_accessibility(
+        self, tag: str, accessibility: AccessibilityType
+    ) -> etree._Element:
+        entry: etree._Element = self._tag(tag)
+        if accessibility.ways_of_reading:
+            reading: etree._Element = self._tag("waysOfReading")
+            for feature in accessibility.ways_of_reading:
+                element = self._tag("feature")
+                element.text = feature
+                reading.append(element)
+            entry.append(reading)
+        if accessibility.conformance:
+            conformance: etree._Element = self._tag("conformance")
+            for conforms in accessibility.conformance:
+                element = self._tag("conformsTo")
+                element.text = conforms
+                conformance.append(element)
+            entry.append(conformance)
+
         return entry
 
     def _serialize_author_tag(self, tag: str, author: Author) -> etree._Element:
