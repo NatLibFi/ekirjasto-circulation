@@ -223,19 +223,20 @@ class ToFeedEntry:
 
         return categories
 
-    def accessibility(cls, edition: Edition) -> AccessibilityType:
+    def accessibility(cls, edition: Edition) -> AccessibilityType | None:
         """
         Return accessibility information for this edition.
 
         :return: AccessibilityType FeedEntryType object.
         """
         accessibility = edition.accessibility
-        entry = AccessibilityType(
-            ways_of_reading=accessibility.ways_of_reading,  # type:ignore[arg-type]
-            conformance=accessibility.conforms_to,  # type:ignore[arg-type]
-        )
-
-        return entry
+        if accessibility.ways_of_reading or accessibility.conforms_to:
+            entry = AccessibilityType(
+                ways_of_reading=accessibility.ways_of_reading,  # type:ignore[arg-type]
+                conformance=accessibility.conforms_to,  # type:ignore[arg-type]
+            )
+            return entry
+        return None
 
     @classmethod
     def content(cls, work: Work | None) -> str:
@@ -358,7 +359,8 @@ class Annotator(ToFeedEntry):
 
         if edition.accessibility:
             accessibility = self.accessibility(edition)
-            computed.accessibility = accessibility
+            if accessibility:
+                computed.accessibility = accessibility
 
         if pool:
             data_source = pool.data_source.name
