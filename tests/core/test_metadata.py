@@ -7,6 +7,7 @@ import pytest
 
 from core.classifier import NO_NUMBER, NO_VALUE
 from core.metadata_layer import (
+    AccessibilityData,
     CirculationData,
     ContributorData,
     CSVMetadataImporter,
@@ -950,6 +951,61 @@ class TestMetadata:
         assert 2 == records.count()
         for record in records.all():
             assert CoverageRecord.SUCCESS == record.status
+
+    def test_apply_with_accessibility_data(self, db: DatabaseTransactionFixture):
+        edition_old, pool = db.edition(with_license_pool=True)
+
+        metadata = Metadata(
+            data_source=DataSource.OVERDRIVE,
+            title="The Harry Otter and the Seaweed of Ages",
+            sort_title="Harry Otter and the Seaweed of Ages, The",
+            subtitle="Kelp At It",
+            series="The Harry Otter Sagas",
+            series_position=4,
+            language="eng",
+            medium="Audio",
+            publisher="Scholastic Inc",
+            imprint="Follywood",
+            published=datetime.date(1987, 5, 4),
+            issued=datetime.date(1989, 4, 5),
+            duration=10,
+            accessibility=AccessibilityData(
+                conforms_to=["https://www.w3.org/TR/epub-a11y-11#wcag-2.2-aa"]
+            ),
+        )
+
+        edition_new, changed = metadata.apply(edition_old, pool.collection)
+
+        assert edition_new.accessibility.conforms_to == [
+            "This publication meets accepted accessibility standards"
+        ]
+
+        # Next time the accessibility conformance changes.
+        metadata = Metadata(
+            data_source=DataSource.OVERDRIVE,
+            title="The Harry Otter and the Seaweed of Ages",
+            sort_title="Harry Otter and the Seaweed of Ages, The",
+            subtitle="Kelp At It",
+            series="The Harry Otter Sagas",
+            series_position=4,
+            language="eng",
+            medium="Audio",
+            publisher="Scholastic Inc",
+            imprint="Follywood",
+            published=datetime.date(1987, 5, 4),
+            issued=datetime.date(1989, 4, 5),
+            duration=10,
+            accessibility=AccessibilityData(
+                conforms_to=["https://www.w3.org/TR/epub-a11y-11#wcag-2.2-aaa"]
+            ),
+        )
+
+        edition_new, changed = metadata.apply(edition_new, pool.collection)
+
+        # Check that the new conformance data is saved.
+        assert edition_new.accessibility.conforms_to == [
+            "This publication exceeds accepted accessibility standards"
+        ]
 
     def test_update_contributions(self, db: DatabaseTransactionFixture):
         edition = db.edition()

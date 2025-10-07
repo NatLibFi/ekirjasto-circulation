@@ -1,6 +1,7 @@
 import random
 import string
 
+from core.metadata_layer import AccessibilityData
 from core.model import PresentationCalculationPolicy, get_one_or_create
 from core.model.constants import MediaTypes
 from core.model.contributor import Contributor
@@ -662,3 +663,29 @@ class TestEdition:
         # possibly unrelated thumbnail.
         assert main_image.resource.url == edition.cover_full_url
         assert thumbnail_2.resource.url == edition.cover_thumbnail_url
+
+    def test_add_accessibility(self, db: DatabaseTransactionFixture):
+        """Test that accessibility data is added to the edition."""
+        data_source = DataSource.lookup(db.session, DataSource.GUTENBERG)
+        id = db.fresh_str()
+        type = Identifier.GUTENBERG_ID
+        edition, was_new = Edition.for_foreign_id(db.session, data_source, type, id)
+
+        accessibility_data = AccessibilityData(
+            conforms_to=["https://www.w3.org/TR/epub-a11y-11#wcag-2.2-aaa"]
+        )
+        edition.add_accessibility_data(accessibility_data)
+        assert edition.accessibility.conforms_to == [
+            "This publication exceeds accepted accessibility standards"
+        ]
+
+    def test_add_accessibility_none(self, db: DatabaseTransactionFixture):
+        """Non-existent accessibility data doesn't cause problems."""
+        data_source = DataSource.lookup(db.session, DataSource.GUTENBERG)
+        id = db.fresh_str()
+        type = Identifier.GUTENBERG_ID
+        edition, was_new = Edition.for_foreign_id(db.session, data_source, type, id)
+
+        accessibility_data = None
+        edition.add_accessibility_data(accessibility_data)
+        assert not edition.accessibility
