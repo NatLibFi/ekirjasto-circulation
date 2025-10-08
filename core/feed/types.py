@@ -145,6 +145,12 @@ class Author(FeedEntryType):
 
 
 @dataclass
+class AccessibilityType(FeedEntryType):
+    ways_of_reading: list[str] = field(default_factory=list)
+    conformance: list[str] = field(default_factory=list)
+
+
+@dataclass
 class WorkEntryData(BaseModel):
     """All the metadata possible for a work. This is not a FeedEntryType because we want strict control."""
 
@@ -171,6 +177,9 @@ class WorkEntryData(BaseModel):
     categories: list[FeedEntryType] = field(default_factory=list)
     ratings: list[FeedEntryType] = field(default_factory=list)
     distribution: FeedEntryType | None = None
+
+    # Accessibility
+    accessibility: AccessibilityType | None = None
 
     # Links
     acquisition_links: list[Acquisition] = field(default_factory=list)
