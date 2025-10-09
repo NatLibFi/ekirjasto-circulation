@@ -8,7 +8,7 @@ import pytest
 from freezegun import freeze_time
 
 from api.circulation_exceptions import PatronHoldLimitReached, PatronLoanLimitReached
-from api.odl2 import ODL2Importer, ODL2LoanReaper
+from api.odl2 import ODL2HoldReaper, ODL2Importer, ODL2LoanReaper
 from core.coverage import CoverageFailure
 from core.model import (
     Collection,
@@ -18,6 +18,7 @@ from core.model import (
     DeliveryMechanism,
     Edition,
     EditionConstants,
+    Hold,
     LicensePool,
     LicensePoolDeliveryMechanism,
     Loan,
@@ -830,6 +831,65 @@ class TestODL2LoanReaper:
 
         # The TimestampData returned reflects what work was done.
         assert "Loans deleted: 3. License pools updated: 1" == progress.achievements
+
+        # The TimestampData does not include any timing information --
+        # that will be applied by run().
+        assert None == progress.start
+        assert None == progress.finish
+
+
+class TestODL2HoldReaper:
+    def test_run_once(
+        self, odl2_api_fixture: ODL2ApiFixture, db: DatabaseTransactionFixture
+    ):
+        pool = odl2_api_fixture.work.active_license_pool()
+
+        data_source = DataSource.lookup(db.session, "Feedbooks", autocreate=True)
+        DatabaseTransactionFixture.set_settings(
+            odl2_api_fixture.collection.integration_configuration,
+            **{Collection.DATA_SOURCE_NAME_SETTING: data_source.name},
+        )
+        reaper = ODL2HoldReaper(
+            db.session, odl2_api_fixture.collection, api=odl2_api_fixture.api
+        )
+
+        now = utc_now()
+        yesterday = now - datetime.timedelta(days=1)
+
+        odl2_api_fixture.setup_license(concurrency=3, available=3)
+        expired_hold1, ignore = pool.on_hold_to(  # type:ignore
+            db.patron(), end=yesterday, position=0
+        )
+        expired_hold2, ignore = pool.on_hold_to(  # type:ignore
+            db.patron(), end=yesterday, position=0
+        )
+        current_hold, ignore = pool.on_hold_to(db.patron(), position=3)  # type:ignore
+        # This hold has an end date in the past, but its position is greater than 0
+        # so the end date is not reliable.
+        bad_end_date, ignore = pool.on_hold_to(  # type:ignore
+            db.patron(), end=yesterday, position=4
+        )
+        # This hold has no end date.
+        no_end_date, ignore = pool.on_hold_to(  # type:ignore
+            db.patron(), end=None, position=0
+        )
+
+        progress = reaper.run_once(reaper.timestamp().to_data())
+
+        # The expired holds have been deleted and the other holds have been updated to be reserved.
+        assert 2 == db.session.query(Hold).count()
+        assert [current_hold, bad_end_date] == db.session.query(Hold).order_by(
+            Hold.start
+        ).all()
+        assert 0 == current_hold.position
+        assert 0 == bad_end_date.position
+        assert current_hold.end > now
+        assert bad_end_date.end > now
+        assert 1 == pool.licenses_available  # type:ignore
+        assert 2 == pool.licenses_reserved  # type:ignore
+
+        # The TimestampData returned reflects what work was done.
+        assert "Holds deleted: 3. License pools updated: 1" == progress.achievements
 
         # The TimestampData does not include any timing information --
         # that will be applied by run().

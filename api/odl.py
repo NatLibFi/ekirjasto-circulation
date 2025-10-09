@@ -48,7 +48,7 @@ from core.lcp.credential import (
     LCPHashedPassphrase,
     LCPUnhashedPassphrase,
 )
-from core.metadata_layer import FormatData, LicenseData, TimestampData
+from core.metadata_layer import FormatData, LicenseData
 from core.model import (
     Collection,
     DataSource,
@@ -69,7 +69,6 @@ from core.model import (
 )
 from core.model.licensing import LicenseStatus
 from core.model.patron import Patron
-from core.monitor import CollectionMonitor
 from core.opds_import import (
     BaseOPDSImporter,
     OPDSImporter,
@@ -1180,48 +1179,3 @@ class ODLImportMonitor(OPDSImportMonitor):
         super().__init__(
             _db, collection, import_class, force_reimport=True, **import_class_kwargs
         )
-
-
-class ODLHoldReaper(CollectionMonitor):
-    """Check for holds that have expired and delete them, and update
-    the holds queues for their pools."""
-
-    SERVICE_NAME = "ODL Hold Reaper"
-    PROTOCOL = ODLAPI.label()
-
-    def __init__(
-        self,
-        _db: Session,
-        collection: Collection,
-        api: ODLAPI | None = None,
-        **kwargs: Any,
-    ):
-        super().__init__(_db, collection, **kwargs)
-        self.api = api or ODLAPI(_db, collection)
-
-    def run_once(self, progress: TimestampData) -> TimestampData:
-        # Find holds that have expired.
-        expired_holds = (
-            self._db.query(Hold)
-            .join(Hold.license_pool)
-            .filter(LicensePool.collection_id == self.api.collection_id)
-            .filter(Hold.end < utc_now())
-            .filter(Hold.position == 0)
-        )
-
-        changed_pools = set()
-        total_deleted_holds = 0
-        for hold in expired_holds:
-            changed_pools.add(hold.license_pool)
-            self._db.delete(hold)
-            total_deleted_holds += 1
-
-        for pool in changed_pools:
-            self.api.update_licensepool_and_hold_queue(pool)
-
-        message = "Holds deleted: %d. License pools updated: %d" % (
-            total_deleted_holds,
-            len(changed_pools),
-        )
-        progress = TimestampData(achievements=message)
-        return progress

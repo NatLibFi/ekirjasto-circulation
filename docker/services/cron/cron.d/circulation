@@ -88,12 +88,12 @@ HOME=/var/www/circulation
 # OPDS 1.x + ODL
 #
 15 * * * * root core/bin/run odl_import_monitor >> /var/log/cron.log 2>&1
-0 */4 * * * root core/bin/run odl_hold_reaper >> /var/log/cron.log 2>&1
 
 # OPDS 2.x + ODL
 #
 0 3 * * * root core/bin/run odl2_import_monitor >> /var/log/cron.log 2>&1
 0 4 * * * root core/bin/run odl2_loan_reaper >> /var/log/cron.log 2>&1
+0 5 * * * root core/bin/run odl2_hold_reaper >> /var/log/cron.log 2>&1
 
 # SAML
 #
