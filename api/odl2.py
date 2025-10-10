@@ -373,3 +373,50 @@ class ODL2LoanReaper(CollectionMonitor):
         )
         progress = TimestampData(achievements=message)
         return progress
+
+
+class ODL2HoldReaper(CollectionMonitor):
+    """Check for loans that have expired and delete them, and update
+    the holds queues for their pools."""
+
+    SERVICE_NAME = "ODL2 Loan Reaper"
+    PROTOCOL = ODL2API.label()
+
+    def __init__(
+        self,
+        _db: Session,
+        collection: Collection,
+        api: ODL2API | None = None,
+        **kwargs: Any,
+    ):
+        super().__init__(_db, collection, **kwargs)
+        self.api = api or ODL2API(_db, collection)
+
+    def run_once(self, progress: TimestampData) -> TimestampData:
+        """Find expired holds."""
+        self.log.info("Hold Reaper Job started")
+        now = utc_now()
+        expired_holds = (
+            self._db.query(Hold)
+            .join(Hold.license_pool)
+            .filter(LicensePool.collection_id == self.api.collection_id)
+            .filter(or_(Hold.end < now, Hold.end == None))
+            .filter(Hold.position == 0)
+        )
+        changed_pools = set()
+        total_deleted_holds = 0
+        for hold in expired_holds:
+            changed_pools.add(hold.license_pool)
+            self._db.delete(hold)
+            # log circulation event:  hold expired
+            total_deleted_holds += 1
+
+        for pool in changed_pools:
+            self.api.update_licensepool_and_hold_queue(pool)
+
+        message = "Holds deleted: %d. License pools updated: %d" % (
+            total_deleted_holds,
+            len(changed_pools),
+        )
+        progress = TimestampData(achievements=message)
+        return progress

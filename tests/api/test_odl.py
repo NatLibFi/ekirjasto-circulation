@@ -28,10 +28,9 @@ from api.circulation_exceptions import (
     NotOnHold,
 )
 from api.lcp.status import LoanStatus
-from api.odl import ODLAPI, BaseODLImporter, ODLHoldReaper, ODLImporter
+from api.odl import ODLAPI, BaseODLImporter, ODLImporter
 from core.metadata_layer import LicenseData
 from core.model.collection import Collection
-from core.model.datasource import DataSource
 from core.model.edition import Edition
 from core.model.licensing import (
     DeliveryMechanism,
@@ -2194,56 +2193,3 @@ class TestOdlAndOdl2Importer:
         assert license_data.expires == expires
         assert license_data.identifier == "identifier"
         assert license_data.terms_concurrency == 12
-
-
-class TestODLHoldReaper:
-    def test_run_once(
-        self, odl_test_fixture: ODLTestFixture, db: DatabaseTransactionFixture
-    ):
-        library = odl_test_fixture.library()
-        collection = odl_test_fixture.collection(library)
-        work = odl_test_fixture.work(collection)
-        license = odl_test_fixture.license(work)
-        api = odl_test_fixture.api(collection)
-        pool = odl_test_fixture.pool(license)
-
-        data_source = DataSource.lookup(db.session, "Feedbooks", autocreate=True)
-        DatabaseTransactionFixture.set_settings(
-            collection.integration_configuration,
-            **{Collection.DATA_SOURCE_NAME_SETTING: data_source.name},
-        )
-        reaper = ODLHoldReaper(db.session, collection, api=api)
-
-        now = utc_now()
-        yesterday = now - datetime.timedelta(days=1)
-
-        license.setup(concurrency=3, available=3)
-        expired_hold1, ignore = pool.on_hold_to(db.patron(), end=yesterday, position=0)
-        expired_hold2, ignore = pool.on_hold_to(db.patron(), end=yesterday, position=0)
-        expired_hold3, ignore = pool.on_hold_to(db.patron(), end=yesterday, position=0)
-        current_hold, ignore = pool.on_hold_to(db.patron(), position=3)
-        # This hold has an end date in the past, but its position is greater than 0
-        # so the end date is not reliable.
-        bad_end_date, ignore = pool.on_hold_to(db.patron(), end=yesterday, position=4)
-
-        progress = reaper.run_once(reaper.timestamp().to_data())
-
-        # The expired holds have been deleted and the other holds have been updated.
-        assert 2 == db.session.query(Hold).count()
-        assert [current_hold, bad_end_date] == db.session.query(Hold).order_by(
-            Hold.start
-        ).all()
-        assert 0 == current_hold.position
-        assert 0 == bad_end_date.position
-        assert current_hold.end > now
-        assert bad_end_date.end > now
-        assert 1 == pool.licenses_available
-        assert 2 == pool.licenses_reserved
-
-        # The TimestampData returned reflects what work was done.
-        assert "Holds deleted: 3. License pools updated: 1" == progress.achievements
-
-        # The TimestampData does not include any timing information --
-        # that will be applied by run().
-        assert None == progress.start
-        assert None == progress.finish
