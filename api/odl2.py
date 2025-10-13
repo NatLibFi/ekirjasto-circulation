@@ -379,7 +379,7 @@ class ODL2HoldReaper(CollectionMonitor):
     """Check for loans that have expired and delete them, and update
     the holds queues for their pools."""
 
-    SERVICE_NAME = "ODL2 Loan Reaper"
+    SERVICE_NAME = "ODL2 Hold Reaper"
     PROTOCOL = ODL2API.label()
 
     def __init__(
