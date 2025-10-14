@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2024-04-27 23:15+0300\n"
+"POT-Creation-Date: 2025-10-14 14:45+0300\n"
 "PO-Revision-Date: 2016-06-14 13:24-0400\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -230,112 +230,112 @@ msgstr ""
 msgid "Gardening"
 msgstr ""
 
-#: core/classifier/localized_names.py:20 default_lane_names_to_localize.py:61
+#: core/classifier/localized_names.py:25 default_lane_names_to_localize.py:61
+msgid "General Fiction"
+msgstr ""
+
+#: core/classifier/localized_names.py:20 default_lane_names_to_localize.py:62
 msgid "Ghost Stories"
 msgstr ""
 
-#: core/classifier/localized_names.py:19 default_lane_names_to_localize.py:62
+#: core/classifier/localized_names.py:19 default_lane_names_to_localize.py:63
 msgid "Gothic Horror"
 msgstr ""
 
-#: core/classifier/localized_names.py:39 default_lane_names_to_localize.py:63
+#: core/classifier/localized_names.py:39 default_lane_names_to_localize.py:64
 msgid "Gothic Romance"
 msgstr ""
 
-#: core/classifier/localized_names.py:29 default_lane_names_to_localize.py:64
+#: core/classifier/localized_names.py:29 default_lane_names_to_localize.py:65
 msgid "Hard-Boiled Mystery"
 msgstr ""
 
-#: core/classifier/localized_names.py:89 default_lane_names_to_localize.py:65
+#: core/classifier/localized_names.py:89 default_lane_names_to_localize.py:66
 msgid "Health & Diet"
 msgstr ""
 
-#: core/classifier/localized_names.py:131 default_lane_names_to_localize.py:66
+#: core/classifier/localized_names.py:131 default_lane_names_to_localize.py:67
 msgid "Hinduism"
 msgstr ""
 
-#: core/classifier/localized_names.py:14 default_lane_names_to_localize.py:67
+#: core/classifier/localized_names.py:14 default_lane_names_to_localize.py:68
 msgid "Historical Fantasy"
 msgstr ""
 
-#: core/classifier/localized_names.py:17 default_lane_names_to_localize.py:68
+#: core/classifier/localized_names.py:17 default_lane_names_to_localize.py:69
 msgid "Historical Fiction"
 msgstr ""
 
-#: core/classifier/localized_names.py:32 default_lane_names_to_localize.py:69
+#: core/classifier/localized_names.py:32 default_lane_names_to_localize.py:70
 msgid "Historical Mystery"
 msgstr ""
 
-#: core/classifier/localized_names.py:40 default_lane_names_to_localize.py:70
+#: core/classifier/localized_names.py:40 default_lane_names_to_localize.py:71
 msgid "Historical Romance"
 msgstr ""
 
-#: core/classifier/localized_names.py:55 default_lane_names_to_localize.py:71
+#: core/classifier/localized_names.py:55 default_lane_names_to_localize.py:72
 msgid "Historical Thriller"
 msgstr ""
 
-#: core/classifier/localized_names.py:91 default_lane_names_to_localize.py:72
+#: core/classifier/localized_names.py:91 default_lane_names_to_localize.py:73
 msgid "History"
 msgstr ""
 
-#: default_lane_names_to_localize.py:73
+#: default_lane_names_to_localize.py:74
 msgid "History & Sociology"
 msgstr ""
 
-#: core/classifier/localized_names.py:105 default_lane_names_to_localize.py:74
+#: core/classifier/localized_names.py:105 default_lane_names_to_localize.py:75
 msgid "Hobbies & Home"
 msgstr ""
 
-#: core/classifier/localized_names.py:18 default_lane_names_to_localize.py:75
+#: core/classifier/localized_names.py:18 default_lane_names_to_localize.py:76
 msgid "Horror"
 msgstr ""
 
-#: core/classifier/localized_names.py:110 default_lane_names_to_localize.py:76
+#: core/classifier/localized_names.py:110 default_lane_names_to_localize.py:77
 msgid "House & Home"
 msgstr ""
 
-#: default_lane_names_to_localize.py:77
+#: default_lane_names_to_localize.py:78
 msgid "Humor"
 msgstr ""
 
-#: default_lane_names_to_localize.py:78
+#: default_lane_names_to_localize.py:79
 msgid "Informational Books"
 msgstr ""
 
-#: core/classifier/localized_names.py:132 default_lane_names_to_localize.py:79
+#: core/classifier/localized_names.py:132 default_lane_names_to_localize.py:80
 msgid "Islam"
 msgstr ""
 
-#: core/classifier/localized_names.py:133 default_lane_names_to_localize.py:80
+#: core/classifier/localized_names.py:133 default_lane_names_to_localize.py:81
 msgid "Judaism"
 msgstr ""
 
-#: core/classifier/localized_names.py:97 default_lane_names_to_localize.py:81
+#: core/classifier/localized_names.py:97 default_lane_names_to_localize.py:82
 msgid "Latin American History"
 msgstr ""
 
-#: core/classifier/localized_names.py:125 default_lane_names_to_localize.py:82
+#: core/classifier/localized_names.py:125 default_lane_names_to_localize.py:83
 msgid "Law"
 msgstr ""
 
-#: core/classifier/localized_names.py:62 default_lane_names_to_localize.py:83
+#: core/classifier/localized_names.py:62 default_lane_names_to_localize.py:84
 msgid "Legal Thriller"
 msgstr ""
 
-#: core/classifier/localized_names.py:26 default_lane_names_to_localize.py:84
+#: core/classifier/localized_names.py:26 default_lane_names_to_localize.py:85
 msgid "LGBTQ Fiction"
 msgstr ""
 
-#: core/classifier/localized_names.py:117 default_lane_names_to_localize.py:85
+#: core/classifier/localized_names.py:117 default_lane_names_to_localize.py:86
 msgid "Life Strategies"
 msgstr ""
 
-#: core/classifier/localized_names.py:118 default_lane_names_to_localize.py:86
+#: core/classifier/localized_names.py:118 default_lane_names_to_localize.py:87
 msgid "Literary Criticism"
-msgstr ""
-
-#: core/classifier/localized_names.py:25 default_lane_names_to_localize.py:87
-msgid "Literary Fiction"
 msgstr ""
 
 #: core/classifier/localized_names.py:80 default_lane_names_to_localize.py:88
@@ -724,11 +724,11 @@ msgstr ""
 msgid "False"
 msgstr ""
 
-#: core/connection_config.py:17
+#: core/connection_config.py:16
 msgid "Connection retry limit"
 msgstr ""
 
-#: core/connection_config.py:18
+#: core/connection_config.py:17
 msgid ""
 "The maximum number of times to retry a request for certain connection-"
 "related errors."
@@ -856,129 +856,121 @@ msgstr ""
 msgid "Others"
 msgstr ""
 
-#: core/lane.py:386
+#: core/lane.py:385
 #, fuzzy, python-format
 msgid "I don't know how to order a feed by '%(order)s'"
 msgstr "No sé cómo pedir un suministro por '%(order)s"
 
-#: core/lane.py:394
+#: core/lane.py:393
 #, fuzzy, python-format
 msgid "I don't understand the availability term '%(availability)s'"
 msgstr "No entiendo el término de disponibilidad '%(availability)s"
 
-#: core/lane.py:406
+#: core/lane.py:405
 #, fuzzy, python-format
 msgid "I don't understand what '%(collection)s' refers to."
 msgstr "No entiendo a qué colección '%(collection)s' se refiere."
 
-#: core/lane.py:422
+#: core/lane.py:421
 #, fuzzy, python-format
 msgid "I don't understand which distributor '%(distributor)s' refers to."
 msgstr "No entiendo a qué colección '%(collection)s' se refiere."
 
-#: core/lane.py:438
+#: core/lane.py:437
 #, fuzzy, python-format
 msgid "I don't understand which collection '%(collection_name)s' refers to."
 msgstr "No entiendo a qué colección '%(collection)s' se refiere."
 
-#: core/lane.py:1255
+#: core/lane.py:1249
 #, python-format
 msgid "Invalid page size: %(size)s"
 msgstr "Tamaño de página inválido: %(size)s"
 
-#: core/lane.py:1273
+#: core/lane.py:1267
 #, python-format
 msgid "Invalid offset: %(offset)s"
 msgstr "Desplazamiento inválido: %(offset)s"
 
-#: core/lane.py:1596
+#: core/lane.py:1591
 #, python-format
 msgid "All %(worklist)s"
 msgstr ""
 
-#: core/opds2_import.py:194 core/opds_import.py:166
+#: core/opds2_import.py:72 core/opds_import.py:175
 msgid "Custom accept header"
 msgstr ""
 
-#: core/opds2_import.py:195 core/opds_import.py:168
+#: core/opds2_import.py:73 core/opds_import.py:177
 msgid ""
 "Some servers expect an accept header to decide which file to send. You "
 "can use */* if the server doesn't expect anything."
 msgstr ""
 
-#: core/opds2_import.py:207
+#: core/opds2_import.py:84
 msgid "List of identifiers that will be skipped"
 msgstr ""
 
-#: core/opds2_import.py:208
+#: core/opds2_import.py:85
 msgid ""
 "Circulation Manager will not be importing publications with identifiers "
 "having one of the selected types."
 msgstr ""
 
-#: core/opds2_import.py:326
+#: core/opds2_import.py:203
 msgid "Import books from a publicly-accessible OPDS 2.0 feed."
 msgstr ""
 
-#: core/opds_import.py:110
+#: core/opds_import.py:117
 msgid "URL"
 msgstr ""
 
-#: core/opds_import.py:116
+#: core/opds_import.py:123
 msgid "Data source name"
 msgstr ""
 
-#: core/opds_import.py:122
+#: core/opds_import.py:129
 msgid "Default audience"
 msgstr ""
 
-#: core/opds_import.py:123
+#: core/opds_import.py:130
 msgid ""
 "If the vendor does not specify the target audience for their books, "
 "assume the books have this target audience."
 msgstr ""
 
-#: core/opds_import.py:129
+#: core/opds_import.py:136
 msgid "No default audience"
 msgstr ""
 
-#: core/opds_import.py:138
+#: core/opds_import.py:146
 msgid "Username"
 msgstr ""
 
-#: core/opds_import.py:139
+#: core/opds_import.py:147
 msgid ""
 "If HTTP Basic authentication is required to access the OPDS feed (it "
 "usually isn't), enter the username here."
 msgstr ""
 
-#: core/opds_import.py:148
+#: core/opds_import.py:157
 msgid "Password"
 msgstr ""
 
-#: core/opds_import.py:149
+#: core/opds_import.py:158
 msgid ""
 "If HTTP Basic authentication is required to access the OPDS feed (it "
 "usually isn't), enter the password here."
 msgstr ""
 
-#: core/opds_import.py:177
+#: core/opds_import.py:187
 msgid "Identifer"
 msgstr ""
 
-#: core/opds_import.py:179
+#: core/opds_import.py:189
 msgid "Which book identifier to use as ID."
 msgstr ""
 
-#: core/opds_import.py:182
-msgid "(Default) Use <id>"
-msgstr ""
-
-#: core/opds_import.py:183
-msgid "Use <dcterms:identifier> first, if not exist use <id>"
-msgstr ""
-
-#: core/opds_import.py:654
+#: core/opds_import.py:662
 msgid "Import books from a publicly-accessible OPDS feed."
 msgstr ""
 
@@ -1114,11 +1106,63 @@ msgstr ""
 msgid "Political Science"
 msgstr ""
 
-#: core/util/http.py:27
+#: core/data_conversion/accessibility_mapper.py:35
+msgid "This publication meets minimum accessibility standards"
+msgstr ""
+
+#: core/data_conversion/accessibility_mapper.py:36
+msgid "This publication meets accepted accessibility standards"
+msgstr ""
+
+#: core/data_conversion/accessibility_mapper.py:37
+msgid "This publication exceeds accepted accessibility standards"
+msgstr ""
+
+#: core/data_conversion/accessibility_mapper.py:40
+msgid "Readable in read aloud or dynamic braille"
+msgstr ""
+
+#: core/data_conversion/accessibility_mapper.py:43
+msgid "Not fully readable in read aloud or dynamic braille"
+msgstr ""
+
+#: core/data_conversion/accessibility_mapper.py:46
+msgid "Not readable in read aloud or dynamic braille"
+msgstr ""
+
+#: core/data_conversion/accessibility_mapper.py:49
+msgid "No information about nonvisual reading is available"
+msgstr ""
+
+#: core/data_conversion/accessibility_mapper.py:52
+msgid "Has alternative text"
+msgstr ""
+
+#: core/data_conversion/accessibility_mapper.py:53
+msgid "Appearance can be modified"
+msgstr ""
+
+#: core/data_conversion/accessibility_mapper.py:54
+msgid "Appearance cannot be modified"
+msgstr ""
+
+#: core/data_conversion/accessibility_mapper.py:55
+msgid "Prerecorded audio synchronized with text"
+msgstr ""
+
+#: core/data_conversion/accessibility_mapper.py:58
+msgid "Prerecorded audio only"
+msgstr ""
+
+#: core/data_conversion/accessibility_mapper.py:59
+msgid "Prerecorded audio clips"
+msgstr ""
+
+#: core/util/http.py:34
 msgid "Failure contacting external service"
 msgstr "Error al ponerse en contacto con el servidor externo."
 
-#: core/util/http.py:28
+#: core/util/http.py:35
 #, python-format
 msgid ""
 "The server tried to access %(service)s but the third-party service "
@@ -1127,11 +1171,11 @@ msgstr ""
 "El servidor ha intentado acceder a %(service)s , pero el servicio de "
 "terceros ha experimentado un error."
 
-#: core/util/http.py:75
+#: core/util/http.py:101
 msgid "Bad response"
 msgstr "Mala respuesta"
 
-#: core/util/http.py:76
+#: core/util/http.py:102
 #, python-format
 msgid ""
 "The server made a request to %(service)s, and got an unexpected or "
@@ -1140,22 +1184,22 @@ msgstr ""
 "El servidor hizo una petición al servicio %(service)s, y consiguió una "
 "respuesta inesperada o inválida."
 
-#: core/util/http.py:148
+#: core/util/http.py:156
 msgid "Network failure contacting third-party service"
 msgstr "Fallo en la red al contactar el servicio de terceros."
 
-#: core/util/http.py:149
+#: core/util/http.py:157
 #, python-format
 msgid "The server experienced a network error while contacting %(service)s."
 msgstr "El servidor sufrío un error de red mientras contactaba %(service)s."
 
-#: core/util/http.py:158
+#: core/util/http.py:166
 msgid "Timeout"
 msgstr ""
 "El servidor no respondió. Por favor, verifique su conexión o intente de "
 "nuevo más tarde."
 
-#: core/util/http.py:159
+#: core/util/http.py:167
 #, python-format
 msgid "The server made a request to %(service)s, and that request timed out."
 msgstr "El servidor hizo una petición al servicio (%) s, y esa solicitud expiró."
@@ -1218,5 +1262,14 @@ msgstr "El servidor hizo una petición al servicio (%) s, y esa solicitud expir�
 #~ msgstr ""
 
 #~ msgid "svenska"
+#~ msgstr ""
+
+#~ msgid "Literary Fiction"
+#~ msgstr ""
+
+#~ msgid "(Default) Use <id>"
+#~ msgstr ""
+
+#~ msgid "Use <dcterms:identifier> first, if not exist use <id>"
 #~ msgstr ""
 
