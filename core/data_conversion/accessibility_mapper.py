@@ -1,7 +1,5 @@
 from typing import Any
 
-from flask_babel import gettext as _
-
 from api.opds.rwpm import AccessibilityFeature, AccessMode, AccessModeSufficient, Hazard
 
 
@@ -32,34 +30,33 @@ class W3CVariables:
 
 class W3CDisplayTexts:
     # Conformance
-    a = _("This publication meets minimum accessibility standards")
-    aa = _("This publication meets accepted accessibility standards")
-    aaa = _("This publication exceeds accepted accessibility standards")
+    a = "This publication meets minimum accessibility standards"
+    aa = "This publication meets accepted accessibility standards"
+    aaa = "This publication exceeds accepted accessibility standards"
 
     # Ways of reading
-    ways_of_reading_nonvisual_reading_readable = _(
+    ways_of_reading_nonvisual_reading_readable = (
         "Readable in read aloud or dynamic braille"
     )
-    ways_of_reading_nonvisual_reading_not_fully = _(
+    ways_of_reading_nonvisual_reading_not_fully = (
         "Not fully readable in read aloud or dynamic braille"
     )
-    ways_of_reading_nonvisual_reading_none = _(
+    ways_of_reading_nonvisual_reading_none = (
         "Not readable in read aloud or dynamic braille"
     )
-    ways_of_reading_nonvisual_reading_no_metadata = _(
+    ways_of_reading_nonvisual_reading_no_metadata = (
         "No information about nonvisual reading is available"
     )
-    ways_of_reading_nonvisual_reading_alt_text = _("Has alternative text")
-    ways_of_reading_visual_adjustments_modifiable = _("Appearance can be modified")
-    ways_of_reading_visual_adjustments_unmodifiable = _("Appearance cannot be modified")
-    ways_of_reading_prerecorded_audio_synchronized = _(
+    ways_of_reading_nonvisual_reading_alt_text = "Has alternative text"
+    ways_of_reading_visual_adjustments_modifiable = "Appearance can be modified"
+    ways_of_reading_visual_adjustments_unmodifiable = "Appearance cannot be modified"
+    ways_of_reading_prerecorded_audio_synchronized = (
         "Prerecorded audio synchronized with text"
     )
-    ways_of_reading_prerecorded_audio_only = _("Prerecorded audio only")
-    ways_of_reading_prerecorded_audio_complementary = _("Prerecorded audio clips")
+    ways_of_reading_prerecorded_audio_only = "Prerecorded audio only"
+    ways_of_reading_prerecorded_audio_complementary = "Prerecorded audio clips"
 
     # Hazards
-    # TODO: Add as localizable strings when needed.
     hazards_none = "No hazards"
     hazards_flashing = "Flashing content"
     hazards_motion = "Motion simulation"
