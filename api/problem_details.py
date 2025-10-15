@@ -296,7 +296,7 @@ MISSING_USER_INFO = pd(
     "http://librarysimplified.org/terms/problem/credentials-invalid",
     status_code=500,
     title=_("Missing permanent id"),
-    detail="Value for permanent_id is missing in remote user info.",
+    detail=_("Value for permanent_id is missing in remote user info."),
 )
 
 # Finland
@@ -446,9 +446,9 @@ PATRON_AUTH_ACCESS_TOKEN_NOT_POSSIBLE = pd(
 
 COULD_NOT_MIRROR_TO_REMOTE = pd(
     "http://librarysimplified.org/terms/problem/cannot-mirror-to-remote",
-    503,
-    _("Loan deleted locally but remote failed."),
-    _(
+    status_code=503,
+    title=_("Loan deleted locally but remote failed."),
+    detail=_(
         "Could not convince a third party to accept the change you made. It's likely to show up again soon."
     ),
 )

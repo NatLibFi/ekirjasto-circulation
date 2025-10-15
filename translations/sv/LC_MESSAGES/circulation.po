@@ -10,7 +10,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2025-10-14 14:45+0300\n"
+"POT-Creation-Date: 2025-10-15 11:56+0300\n"
 "PO-Revision-Date: 2024-03-01 11:36+0000\n"
 "Last-Translator: Rasmus Smeds, 2024\n"
 "Language: sv\n"
@@ -779,6 +779,10 @@ msgstr "E-bibliotekets token kunde inte verifieras för e-bibliotekets API."
 
 #: api/problem_details.py:298
 msgid "Missing permanent id"
+msgstr ""
+
+#: api/problem_details.py:299
+msgid "Value for permanent_id is missing in remote user info."
 msgstr ""
 
 #: api/problem_details.py:314

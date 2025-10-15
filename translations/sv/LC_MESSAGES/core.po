@@ -12,7 +12,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2025-10-14 14:45+0300\n"
+"POT-Creation-Date: 2025-10-15 11:56+0300\n"
 "PO-Revision-Date: 2024-03-01 11:37+0000\n"
 "Last-Translator: Marja Hjelt, 2024\n"
 "Language: sv\n"
@@ -1143,57 +1143,83 @@ msgstr "Humoristisk facklitteratur"
 msgid "Political Science"
 msgstr "Statsvetenskap"
 
-#: core/data_conversion/accessibility_mapper.py:35
+#: core/data_conversion/localized_w3c_display_texts.py:7
 msgid "This publication meets minimum accessibility standards"
 msgstr ""
 
-#: core/data_conversion/accessibility_mapper.py:36
+#: core/data_conversion/localized_w3c_display_texts.py:8
 msgid "This publication meets accepted accessibility standards"
 msgstr ""
 
-#: core/data_conversion/accessibility_mapper.py:37
+#: core/data_conversion/localized_w3c_display_texts.py:9
 msgid "This publication exceeds accepted accessibility standards"
 msgstr ""
 
-#: core/data_conversion/accessibility_mapper.py:40
-msgid "Readable in read aloud or dynamic braille"
+#: core/data_conversion/localized_w3c_display_texts.py:10
+#, fuzzy
+msgid "Flashing content"
+msgstr "Mode"
+
+#: core/data_conversion/localized_w3c_display_texts.py:11
+msgid "Motion simulation"
 msgstr ""
 
-#: core/data_conversion/accessibility_mapper.py:43
-msgid "Not fully readable in read aloud or dynamic braille"
+#: core/data_conversion/localized_w3c_display_texts.py:12
+#, fuzzy
+msgid "No information is available"
+msgstr "Informativ"
+
+#: core/data_conversion/localized_w3c_display_texts.py:13
+msgid "No hazards"
 msgstr ""
 
-#: core/data_conversion/accessibility_mapper.py:46
-msgid "Not readable in read aloud or dynamic braille"
+#: core/data_conversion/localized_w3c_display_texts.py:14
+msgid "Sounds"
 msgstr ""
 
-#: core/data_conversion/accessibility_mapper.py:49
-msgid "No information about nonvisual reading is available"
+#: core/data_conversion/localized_w3c_display_texts.py:15
+msgid "The presence of hazards is unknown"
 msgstr ""
 
-#: core/data_conversion/accessibility_mapper.py:52
+#: core/data_conversion/localized_w3c_display_texts.py:16
 #, fuzzy
 msgid "Has alternative text"
 msgstr "Alternativ historia"
 
-#: core/data_conversion/accessibility_mapper.py:53
-msgid "Appearance can be modified"
+#: core/data_conversion/localized_w3c_display_texts.py:17
+msgid "No information about nonvisual reading is available"
 msgstr ""
 
-#: core/data_conversion/accessibility_mapper.py:54
-msgid "Appearance cannot be modified"
+#: core/data_conversion/localized_w3c_display_texts.py:18
+msgid "Not readable in read aloud or dynamic braille"
 msgstr ""
 
-#: core/data_conversion/accessibility_mapper.py:55
-msgid "Prerecorded audio synchronized with text"
+#: core/data_conversion/localized_w3c_display_texts.py:19
+msgid "Not fully readable in read aloud or dynamic braille"
 msgstr ""
 
-#: core/data_conversion/accessibility_mapper.py:58
+#: core/data_conversion/localized_w3c_display_texts.py:20
+msgid "Readable in read aloud or dynamic braille"
+msgstr ""
+
+#: core/data_conversion/localized_w3c_display_texts.py:21
+msgid "Prerecorded audio clips"
+msgstr ""
+
+#: core/data_conversion/localized_w3c_display_texts.py:22
 msgid "Prerecorded audio only"
 msgstr ""
 
-#: core/data_conversion/accessibility_mapper.py:59
-msgid "Prerecorded audio clips"
+#: core/data_conversion/localized_w3c_display_texts.py:23
+msgid "Prerecorded audio synchronized with text"
+msgstr ""
+
+#: core/data_conversion/localized_w3c_display_texts.py:24
+msgid "Appearance can be modified"
+msgstr ""
+
+#: core/data_conversion/localized_w3c_display_texts.py:25
+msgid "Appearance cannot be modified"
 msgstr ""
 
 #: core/util/http.py:34
