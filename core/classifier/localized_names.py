@@ -22,7 +22,7 @@ genres = {
     "Werewolves": _("Werewolves"),
     "Occult Horror": _("Occult Horror"),
     "Humorous Fiction": _("Humorous Fiction"),
-    "Literary Fiction": _("Literary Fiction"),
+    "General Fiction": _("General Fiction"),
     "LGBTQ Fiction": _("LGBTQ Fiction"),
     "Mystery": _("Mystery"),
     "Crime & Detective Stories": _("Crime & Detective Stories"),

@@ -2,27 +2,29 @@
 # Copyright (C) 2024 ORGANIZATION
 # This file is distributed under the same license as the PROJECT project.
 # FIRST AUTHOR <EMAIL@ADDRESS>, 2024.
-# 
+#
 msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2024-04-27 23:15+0300\n"
+"POT-Creation-Date: 2025-10-14 14:45+0300\n"
 "PO-Revision-Date: 2024-02-19 22:15+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: en\n"
 "Language-Team: en <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.13.0\n"
-"Language: en\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: api/authenticator.py:324
 msgid ""
-"SAML providers are configured, but secret for signing bearer tokens is not."
+"SAML providers are configured, but secret for signing bearer tokens is "
+"not."
 msgstr ""
-"SAML providers are configured, but secret for signing bearer tokens is not."
+"SAML providers are configured, but secret for signing bearer tokens is "
+"not."
 
 #: api/authenticator.py:563
 msgid "No SAML providers are configured."
@@ -33,44 +35,44 @@ msgstr "No SAML providers are configured."
 msgid " The known providers are: %s"
 msgstr " The known providers are: %s"
 
-#: api/authenticator.py:756
+#: api/authenticator.py:766
 msgid "Library"
 msgstr "Library"
 
-#: api/axis.py:99
+#: api/axis.py:98
 msgid "Username"
 msgstr "Username"
 
-#: api/axis.py:102
+#: api/axis.py:101
 msgid "Password"
 msgstr "Password"
 
-#: api/axis.py:106 api/bibliotheca.py:101 api/enki.py:81 api/overdrive.py:134
+#: api/axis.py:105 api/bibliotheca.py:101 api/enki.py:81 api/overdrive.py:134
 #: api/overdrive.py:195
 msgid "Library ID"
 msgstr "Library ID"
 
-#: api/axis.py:113
+#: api/axis.py:112
 msgid "Server"
 msgstr "Server"
 
-#: api/axis.py:120
+#: api/axis.py:119
 msgid "Verify SSL Certificate"
 msgstr "Verify SSL Certificate"
 
-#: api/axis.py:121
+#: api/axis.py:120
 msgid ""
-"This should always be True in production, it may need to be set to False to "
-"use theAxis 360 QA Environment."
+"This should always be True in production, it may need to be set to False "
+"to use theAxis 360 QA Environment."
 msgstr ""
-"This should always be True in production, it may need to be set to False to "
-"use theAxis 360 QA Environment."
+"This should always be True in production, it may need to be set to False "
+"to use theAxis 360 QA Environment."
 
-#: api/axis.py:127
+#: api/axis.py:126
 msgid "True"
 msgstr "True"
 
-#: api/axis.py:128
+#: api/axis.py:127
 msgid "False"
 msgstr "False"
 
@@ -82,49 +84,49 @@ msgstr "Account ID"
 msgid "Account Key"
 msgstr "Account Key"
 
-#: api/bibliotheca.py:110 api/enki.py:85
+#: api/bibliotheca.py:110 api/enki.py:86
 msgid "Show/Hide Titles with No Available Loans"
 msgstr "Show/Hide Titles with No Available Loans"
 
-#: api/bibliotheca.py:112 api/enki.py:87
-msgid ""
-"Titles with no available loans will not be displayed in the Catalog view."
-msgstr ""
-"Titles with no available loans will not be displayed in the Catalog view."
+#: api/bibliotheca.py:112 api/enki.py:88
+msgid "Titles with no available loans will not be displayed in the Catalog view."
+msgstr "Titles with no available loans will not be displayed in the Catalog view."
 
-#: api/circulation.py:508
+#: api/circulation.py:733
 msgid "Ebook Loan Duration (in Days)"
 msgstr "Ebook Loan Duration (in Days)"
 
-#: api/circulation.py:510
+#: api/circulation.py:735
 msgid ""
-"When a patron uses SimplyE to borrow an ebook from this collection, SimplyE "
-"will ask for a loan that lasts this number of days. This must be equal to or"
-" less than the maximum loan duration negotiated with the distributor."
+"When a patron uses SimplyE to borrow an ebook from this collection, "
+"SimplyE will ask for a loan that lasts this number of days. This must be "
+"equal to or less than the maximum loan duration negotiated with the "
+"distributor."
 msgstr ""
-"When a patron uses SimplyE to borrow an ebook from this collection, SimplyE "
-"will ask for a loan that lasts this number of days. This must be equal to or"
-" less than the maximum loan duration negotiated with the distributor."
+"When a patron uses SimplyE to borrow an ebook from this collection, "
+"SimplyE will ask for a loan that lasts this number of days. This must be "
+"equal to or less than the maximum loan duration negotiated with the "
+"distributor."
 
-#: api/circulation.py:523
+#: api/circulation.py:748
 msgid "Default Loan Period (in Days)"
 msgstr "Default Loan Period (in Days)"
 
-#: api/circulation.py:525
+#: api/circulation.py:750
 msgid ""
-"Until it hears otherwise from the distributor, this server will assume that "
-"any given loan for this library from this collection will last this number "
-"of days. This number is usually a negotiated value between the library and "
-"the distributor. This only affects estimates&mdash;it cannot affect the "
-"actual length of loans."
+"Until it hears otherwise from the distributor, this server will assume "
+"that any given loan for this library from this collection will last this "
+"number of days. This number is usually a negotiated value between the "
+"library and the distributor. This only affects estimates&mdash;it cannot "
+"affect the actual length of loans."
 msgstr ""
-"Until it hears otherwise from the distributor, this server will assume that "
-"any given loan for this library from this collection will last this number "
-"of days. This number is usually a negotiated value between the library and "
-"the distributor. This only affects estimates&mdash;it cannot affect the "
-"actual length of loans."
+"Until it hears otherwise from the distributor, this server will assume "
+"that any given loan for this library from this collection will last this "
+"number of days. This number is usually a negotiated value between the "
+"library and the distributor. This only affects estimates&mdash;it cannot "
+"affect the actual length of loans."
 
-#: api/circulation.py:555
+#: api/circulation.py:780
 #, python-format
 msgid ""
 "Could not map delivery mechanism %(mechanism_name)s to internal delivery "
@@ -133,33 +135,33 @@ msgstr ""
 "Could not map delivery mechanism %(mechanism_name)s to internal delivery "
 "mechanism!"
 
-#: api/circulation.py:1070
+#: api/circulation.py:1271
 msgid "You cannot renew a loan if other patrons have the work on hold."
 msgstr "You cannot renew a loan if other patrons have the work on hold."
 
-#: api/circulation.py:1347
+#: api/circulation.py:1539
 msgid "Cannot find your active loan for this work."
 msgstr "Cannot find your active loan for this work."
 
-#: api/circulation.py:1354
+#: api/circulation.py:1547
 #, python-format
 msgid ""
-"You already fulfilled this loan as %(loan_delivery_mechanism)s, you can't "
-"also do it as %(requested_delivery_mechanism)s"
+"You already fulfilled this loan as %(loan_delivery_mechanism)s, you can't"
+" also do it as %(requested_delivery_mechanism)s"
 msgstr ""
-"You already fulfilled this loan as %(loan_delivery_mechanism)s, you can't "
-"also do it as %(requested_delivery_mechanism)s"
+"You already fulfilled this loan as %(loan_delivery_mechanism)s, you can't"
+" also do it as %(requested_delivery_mechanism)s"
 
-#: api/circulation_exceptions.py:41
+#: api/circulation_exceptions.py:59
 #, python-format
 msgid "Integration error communicating with %(service_name)s"
 msgstr "Integration error communicating with %(service_name)s"
 
-#: api/circulation_manager.py:158
+#: api/circulation_manager.py:160
 msgid "Lane does not exist"
 msgstr "Lane does not exist"
 
-#: api/circulation_manager.py:378
+#: api/circulation_manager.py:381
 msgid "All Books"
 msgstr "All Books"
 
@@ -177,21 +179,21 @@ msgstr "Hostnames for web application access"
 
 #: api/config.py:93
 msgid ""
-"Only web applications from these hosts can access this circulation manager. "
-"This can be a single hostname (http://catalog.library.org) or a pipe-"
-"separated list of hostnames "
-"(http://catalog.library.org|https://beta.library.org). You must include the "
-"scheme part of the URI (http:// or https://). You can also set this to '*' "
-"to allow access from any host, but you must not do this in a production "
-"environment -- only during development."
+"Only web applications from these hosts can access this circulation "
+"manager. This can be a single hostname (http://catalog.library.org) or a "
+"pipe-separated list of hostnames "
+"(http://catalog.library.org|https://beta.library.org). You must include "
+"the scheme part of the URI (http:// or https://). You can also set this "
+"to '*' to allow access from any host, but you must not do this in a "
+"production environment -- only during development."
 msgstr ""
-"Only web applications from these hosts can access this circulation manager. "
-"This can be a single hostname (http://catalog.library.org) or a pipe-"
-"separated list of hostnames "
-"(http://catalog.library.org|https://beta.library.org). You must include the "
-"scheme part of the URI (http:// or https://). You can also set this to '*' "
-"to allow access from any host, but you must not do this in a production "
-"environment -- only during development."
+"Only web applications from these hosts can access this circulation "
+"manager. This can be a single hostname (http://catalog.library.org) or a "
+"pipe-separated list of hostnames "
+"(http://catalog.library.org|https://beta.library.org). You must include "
+"the scheme part of the URI (http:// or https://). You can also set this "
+"to '*' to allow access from any host, but you must not do this in a "
+"production environment -- only during development."
 
 #: api/config.py:99
 msgid "Cache time for static images and JS and CSS files (in seconds)"
@@ -207,15 +209,15 @@ msgstr "Custom Terms of Service link"
 
 #: api/config.py:117
 msgid ""
-"If your inclusion in the SimplyE mobile app is governed by terms other than "
-"the default, put the URL to those terms in this link so that librarians will"
-" have access to them. This URL will be used for all libraries on this "
-"circulation manager."
+"If your inclusion in the SimplyE mobile app is governed by terms other "
+"than the default, put the URL to those terms in this link so that "
+"librarians will have access to them. This URL will be used for all "
+"libraries on this circulation manager."
 msgstr ""
-"If your inclusion in the SimplyE mobile app is governed by terms other than "
-"the default, put the URL to those terms in this link so that librarians will"
-" have access to them. This URL will be used for all libraries on this "
-"circulation manager."
+"If your inclusion in the SimplyE mobile app is governed by terms other "
+"than the default, put the URL to those terms in this link so that "
+"librarians will have access to them. This URL will be used for all "
+"libraries on this circulation manager."
 
 #: api/config.py:123
 msgid "Custom Terms of Service link text"
@@ -292,42 +294,42 @@ msgstr "Delegate token expire time in seconds"
 #: api/ekirjasto_authentication.py:110
 msgid ""
 "Expire time for a delegate token to authorize in behalf of a ekirjasto "
-"token. This should be less than the expire time for ekirjasto token, so it "
-"can be refreshed."
+"token. This should be less than the expire time for ekirjasto token, so "
+"it can be refreshed."
 msgstr ""
 "Expire time for a delegate token to authorize in behalf of a ekirjasto "
-"token. This should be less than the expire time for ekirjasto token, so it "
-"can be refreshed."
+"token. This should be less than the expire time for ekirjasto token, so "
+"it can be refreshed."
 
 #: api/enki.py:74 api/kansas_patron.py:20
 msgid "URL"
 msgstr "URL"
 
-#: api/enki.py:105
+#: api/enki.py:106
 msgid "Integrate an Enki collection."
 msgstr "Integrate an Enki collection."
 
-#: api/millenium_patron.py:177
+#: api/millenium_patron.py:178
 msgid "III Millenium Patron API"
 msgstr "III Millenium Patron API"
 
-#: api/odl.py:85
+#: api/odl.py:95
 msgid "ODL feed URL"
 msgstr "ODL feed URL"
 
-#: api/odl.py:92
+#: api/odl.py:102
 msgid "Library's API username"
 msgstr "Library's API username"
 
-#: api/odl.py:100
+#: api/odl.py:109
 msgid "Library's API password"
 msgstr "Library's API password"
 
-#: api/odl.py:108
+#: api/odl.py:117
 msgid "Default Reservation Period (in Days)"
 msgstr "Default Reservation Period (in Days)"
 
-#: api/odl.py:109
+#: api/odl.py:118
 msgid ""
 "The number of days a patron has to check out a book after a hold becomes "
 "available."
@@ -335,61 +337,61 @@ msgstr ""
 "The number of days a patron has to check out a book after a hold becomes "
 "available."
 
-#: api/odl.py:120
+#: api/odl.py:129
 msgid "Passphrase hint"
 msgstr "Passphrase hint"
 
-#: api/odl.py:121
+#: api/odl.py:130
 msgid "Hint displayed to the user when opening an LCP protected publication."
 msgstr "Hint displayed to the user when opening an LCP protected publication."
 
-#: api/odl.py:132
+#: api/odl.py:141
 msgid "Passphrase hint URL"
 msgstr "Passphrase hint URL"
 
-#: api/odl.py:133
-msgid ""
-"Hint URL available to the user when opening an LCP protected publication."
-msgstr ""
-"Hint URL available to the user when opening an LCP protected publication."
+#: api/odl.py:142
+msgid "Hint URL available to the user when opening an LCP protected publication."
+msgstr "Hint URL available to the user when opening an LCP protected publication."
 
-#: api/odl.py:144
+#: api/odl.py:153
 msgid "Passphrase encryption algorithm"
 msgstr "Passphrase encryption algorithm"
 
-#: api/odl.py:145
+#: api/odl.py:154
 msgid "Algorithm used for encrypting the passphrase."
 msgstr "Algorithm used for encrypting the passphrase."
 
-#: api/odl2.py:46
+#: api/odl2.py:42
 msgid "Skipped license formats"
 msgstr "Skipped license formats"
 
-#: api/odl2.py:47
+#: api/odl2.py:43
 msgid ""
-"List of license formats that will NOT be imported into Circulation Manager."
+"List of license formats that will NOT be imported into Circulation "
+"Manager."
 msgstr ""
-"List of license formats that will NOT be imported into Circulation Manager."
+"List of license formats that will NOT be imported into Circulation "
+"Manager."
 
-#: api/odl2.py:59
+#: api/odl2.py:55
 msgid "Loan limit per patron"
 msgstr "Loan limit per patron"
 
-#: api/odl2.py:60
+#: api/odl2.py:56
 msgid ""
-"The maximum number of books a patron can have loaned out at any given time."
+"The maximum number of books a patron can have loaned out at any given "
+"time."
 msgstr ""
-"The maximum number of books a patron can have loaned out at any given time."
+"The maximum number of books a patron can have loaned out at any given "
+"time."
 
-#: api/odl2.py:72
+#: api/odl2.py:68
 msgid "Hold limit per patron"
 msgstr "Hold limit per patron"
 
-#: api/odl2.py:73
-msgid ""
-"The maximum number of books a patron can have on hold at any given time."
-msgstr ""
-"The maximum number of books a patron can have on hold at any given time."
+#: api/odl2.py:69
+msgid "The maximum number of books a patron can have on hold at any given time."
+msgstr "The maximum number of books a patron can have on hold at any given time."
 
 #: api/opds_for_distributors.py:52
 msgid "Library's username or access key"
@@ -425,13 +427,13 @@ msgstr "ILS Name"
 
 #: api/overdrive.py:185
 msgid ""
-"When multiple libraries share an Overdrive account, Overdrive uses a setting"
-" called 'ILS Name' to determine which ILS to check when validating a given "
-"patron."
+"When multiple libraries share an Overdrive account, Overdrive uses a "
+"setting called 'ILS Name' to determine which ILS to check when validating"
+" a given patron."
 msgstr ""
-"When multiple libraries share an Overdrive account, Overdrive uses a setting"
-" called 'ILS Name' to determine which ILS to check when validating a given "
-"patron."
+"When multiple libraries share an Overdrive account, Overdrive uses a "
+"setting called 'ILS Name' to determine which ILS to check when validating"
+" a given patron."
 
 #: api/problem_details.py:9
 msgid "Third-party service failed."
@@ -439,11 +441,11 @@ msgstr "Third-party service failed."
 
 #: api/problem_details.py:10
 msgid ""
-"The library could not complete your request because a third-party service "
-"has failed."
+"The library could not complete your request because a third-party service"
+" has failed."
 msgstr ""
-"The library could not complete your request because a third-party service "
-"has failed."
+"The library could not complete your request because a third-party service"
+" has failed."
 
 #: api/problem_details.py:18
 msgid "Feed should be been pre-cached."
@@ -515,20 +517,20 @@ msgstr "You have already checked out this book."
 
 #: api/problem_details.py:73
 msgid ""
-"You have reached your loan limit. You cannot borrow anything further until "
-"you return something."
+"You have reached your loan limit. You cannot borrow anything further "
+"until you return something."
 msgstr ""
-"You have reached your loan limit. You cannot borrow anything further until "
-"you return something."
+"You have reached your loan limit. You cannot borrow anything further "
+"until you return something."
 
 #: api/problem_details.py:76
 #, python-format
 msgid ""
-"You have reached your loan limit of %(limit)d. You cannot borrow anything "
-"further until you return something."
+"You have reached your loan limit of %(limit)d. You cannot borrow anything"
+" further until you return something."
 msgstr ""
-"You have reached your loan limit of %(limit)d. You cannot borrow anything "
-"further until you return something."
+"You have reached your loan limit of %(limit)d. You cannot borrow anything"
+" further until you return something."
 
 #: api/problem_details.py:82
 msgid "Loan limit reached."
@@ -545,11 +547,11 @@ msgstr ""
 #: api/problem_details.py:89
 #, python-format
 msgid ""
-"You have reached your hold limit of %(limit)d. You cannot place another item"
-" on hold until you borrow something or remove a hold."
+"You have reached your hold limit of %(limit)d. You cannot place another "
+"item on hold until you borrow something or remove a hold."
 msgstr ""
-"You have reached your hold limit of %(limit)d. You cannot place another item"
-" on hold until you borrow something or remove a hold."
+"You have reached your hold limit of %(limit)d. You cannot place another "
+"item on hold until you borrow something or remove a hold."
 
 #: api/problem_details.py:95
 msgid "Limit reached."
@@ -616,10 +618,8 @@ msgid "No active loan or hold."
 msgstr "No active loan or hold."
 
 #: api/problem_details.py:152
-msgid ""
-"You can't do this without first borrowing this book or putting it on hold."
-msgstr ""
-"You can't do this without first borrowing this book or putting it on hold."
+msgid "You can't do this without first borrowing this book or putting it on hold."
+msgstr "You can't do this without first borrowing this book or putting it on hold."
 
 #: api/problem_details.py:158
 msgid "Loan not found."
@@ -641,13 +641,13 @@ msgstr "You don't have a hold with the provided id."
 msgid "Could not mirror local state to remote."
 msgstr "Could not mirror local state to remote."
 
-#: api/problem_details.py:173
+#: api/problem_details.py:173 api/problem_details.py:451
 msgid ""
-"Could not convince a third party to accept the change you made. It's likely "
-"to show up again soon."
+"Could not convince a third party to accept the change you made. It's "
+"likely to show up again soon."
 msgstr ""
-"Could not convince a third party to accept the change you made. It's likely "
-"to show up again soon."
+"Could not convince a third party to accept the change you made. It's "
+"likely to show up again soon."
 
 #: api/problem_details.py:181
 msgid "No such lane."
@@ -690,10 +690,8 @@ msgid "Library policy prevents us from carrying out your request."
 msgstr "Library policy prevents us from carrying out your request."
 
 #: api/problem_details.py:214
-msgid ""
-"Library policy considers this title inappropriate for your patron type."
-msgstr ""
-"Library policy considers this title inappropriate for your patron type."
+msgid "Library policy considers this title inappropriate for your patron type."
+msgstr "Library policy considers this title inappropriate for your patron type."
 
 #: api/problem_details.py:221 api/problem_details.py:222
 msgid "Could not fulfill loan."
@@ -776,155 +774,158 @@ msgid "The provided ekirjasto token couldn't be verified for ekirjasto API."
 msgstr "The provided ekirjasto token couldn't be verified for ekirjasto API."
 
 #: api/problem_details.py:298
+msgid "Missing permanent id"
+msgstr ""
+
+#: api/problem_details.py:314
 msgid "Authentication with ekirjasto API failed."
 msgstr "Authentication with ekirjasto API failed."
 
-#: api/problem_details.py:299
+#: api/problem_details.py:315
 msgid "Authentication with ekirjasto API failed, for unknown reason."
 msgstr "Authentication with ekirjasto API failed, for unknown reason."
 
-#: api/problem_details.py:306
+#: api/problem_details.py:322
 msgid "Call to ekirjasto API failed."
 msgstr "Call to ekirjasto API failed."
 
-#: api/problem_details.py:307
+#: api/problem_details.py:323
 msgid "Call to ekirjasto API failed, for unknown reason."
 msgstr "Call to ekirjasto API failed, for unknown reason."
 
-#: api/problem_details.py:313
+#: api/problem_details.py:329
 msgid "Unsupported authentication mechanism."
 msgstr "Unsupported authentication mechanism."
 
-#: api/problem_details.py:314
+#: api/problem_details.py:330
 msgid "The specified authentication mechanism isn't supported."
 msgstr "The specified authentication mechanism isn't supported."
 
-#: api/problem_details.py:320
+#: api/problem_details.py:336
 msgid "Invalid analytics event type."
 msgstr "Invalid analytics event type."
 
-#: api/problem_details.py:321
+#: api/problem_details.py:337
 msgid "The analytics event must be a supported type."
 msgstr "The analytics event must be a supported type."
 
-#: api/problem_details.py:327
+#: api/problem_details.py:343
 msgid "Invalid annotation motivation."
 msgstr "Invalid annotation motivation."
 
-#: api/problem_details.py:328
+#: api/problem_details.py:344
 msgid "The annotation must have a supported motivation."
 msgstr "The annotation must have a supported motivation."
 
-#: api/problem_details.py:334
+#: api/problem_details.py:350
 msgid "Invalid annotation target."
 msgstr "Invalid annotation target."
 
-#: api/problem_details.py:335
+#: api/problem_details.py:351
 msgid "The annotation target must be a work in your current loans."
 msgstr "The annotation target must be a work in your current loans."
 
-#: api/problem_details.py:341
+#: api/problem_details.py:357
 msgid "Invalid annotation format."
 msgstr "Invalid annotation format."
 
-#: api/problem_details.py:342
+#: api/problem_details.py:358
 msgid "The annotation could not be parsed as JSON-LD."
 msgstr "The annotation could not be parsed as JSON-LD."
 
-#: api/problem_details.py:348
+#: api/problem_details.py:364
 msgid "No annotation."
 msgstr "No annotation."
 
-#: api/problem_details.py:349
+#: api/problem_details.py:365
 msgid "The annotation you requested does not exist."
 msgstr "The annotation you requested does not exist."
 
-#: api/problem_details.py:355
+#: api/problem_details.py:371
 msgid "Library not found."
 msgstr "Library not found."
 
-#: api/problem_details.py:356
+#: api/problem_details.py:372
 msgid "No library with the requested name on this server."
 msgstr "No library with the requested name on this server."
 
-#: api/problem_details.py:362
+#: api/problem_details.py:378
 msgid "Wrong library"
 msgstr "Wrong library"
 
-#: api/problem_details.py:363
+#: api/problem_details.py:379
 msgid "You are not a patron of the selected library."
 msgstr "You are not a patron of the selected library."
 
-#: api/problem_details.py:369
+#: api/problem_details.py:385
 msgid "Invalid loan for ODL notification"
 msgstr "Invalid loan for ODL notification"
 
-#: api/problem_details.py:370
+#: api/problem_details.py:386
 msgid "The ODL notification is for a loan that's not from an ODL collection."
 msgstr "The ODL notification is for a loan that's not from an ODL collection."
 
-#: api/problem_details.py:376
+#: api/problem_details.py:392
 msgid "Invalid registration"
 msgstr "Invalid registration"
 
-#: api/problem_details.py:377
+#: api/problem_details.py:393
 msgid "You did not submit enough information to register with the collection."
-msgstr ""
-"You did not submit enough information to register with the collection."
+msgstr "You did not submit enough information to register with the collection."
 
-#: api/problem_details.py:383
+#: api/problem_details.py:399
 msgid "Decryption error"
 msgstr "Decryption error"
 
-#: api/problem_details.py:384
+#: api/problem_details.py:400
 msgid "Failed to decrypt a shared secret retrieved from another computer."
 msgstr "Failed to decrypt a shared secret retrieved from another computer."
 
-#: api/problem_details.py:390
+#: api/problem_details.py:406
 msgid "Device token not found"
 msgstr "Device token not found"
 
-#: api/problem_details.py:391
+#: api/problem_details.py:407
 msgid "Patron does not have a device registered with this token."
 msgstr "Patron does not have a device registered with this token."
 
-#: api/problem_details.py:397
+#: api/problem_details.py:413
 msgid "Device token already exists"
 msgstr "Device token already exists"
 
-#: api/problem_details.py:398
+#: api/problem_details.py:414
 msgid "A device token with the same token already exists."
 msgstr "A device token with the same token already exists."
 
-#: api/problem_details.py:404
+#: api/problem_details.py:420
 msgid "Device token type invalid"
 msgstr "Device token type invalid"
 
-#: api/problem_details.py:405
+#: api/problem_details.py:421
 msgid "The token type provided is not valid."
 msgstr "The token type provided is not valid."
 
-#: api/problem_details.py:411
+#: api/problem_details.py:427
 msgid "Access token expired"
 msgstr "Access token expired"
 
-#: api/problem_details.py:412
+#: api/problem_details.py:428
 msgid "The patron authentication access token has expired."
 msgstr "The patron authentication access token has expired."
 
-#: api/problem_details.py:418
+#: api/problem_details.py:434
 msgid "Access token invalid"
 msgstr "Access token invalid"
 
-#: api/problem_details.py:419
+#: api/problem_details.py:435
 msgid "The patron authentication access token is invalid."
 msgstr "The patron authentication access token is invalid."
 
-#: api/problem_details.py:425
+#: api/problem_details.py:441
 msgid "Access token not possible"
 msgstr "Access token not possible"
 
-#: api/problem_details.py:426
+#: api/problem_details.py:442
 msgid ""
 "The patron authentication access token is not possible for this type of "
 "authentication."
@@ -932,14 +933,19 @@ msgstr ""
 "The patron authentication access token is not possible for this type of "
 "authentication."
 
-#: api/sirsidynix_authentication_provider.py:32
+#: api/problem_details.py:450
+msgid "Loan deleted locally but remote failed."
+msgstr ""
+
+#: api/sirsidynix_authentication_provider.py:31
 msgid "Patron has not yet been approved"
 msgstr "Patron has not yet been approved"
 
-#: api/sirsidynix_authentication_provider.py:33
+#: api/sirsidynix_authentication_provider.py:32
 msgid "Patron membership has expired"
 msgstr "Patron membership has expired"
 
-#: api/sirsidynix_authentication_provider.py:34
+#: api/sirsidynix_authentication_provider.py:33
 msgid "Patron has been blocked."
 msgstr "Patron has been blocked."
+
