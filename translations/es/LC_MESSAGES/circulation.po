@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2025-10-14 14:45+0300\n"
+"POT-Creation-Date: 2025-10-15 11:56+0300\n"
 "PO-Revision-Date: 2016-06-14 13:24-0400\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -750,6 +750,10 @@ msgstr ""
 
 #: api/problem_details.py:298
 msgid "Missing permanent id"
+msgstr ""
+
+#: api/problem_details.py:299
+msgid "Value for permanent_id is missing in remote user info."
 msgstr ""
 
 #: api/problem_details.py:314
