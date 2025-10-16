@@ -18,6 +18,7 @@ Examples:
   ./tox-docker.sh core
   ./tox-docker.sh all
   ./tox-docker.sh api -- tests/api/test_opds2.py -vv
+  ./tox-docker.sh core -- tests/core/test_circulation.py -vv
 EOF
 }
 
@@ -34,7 +35,11 @@ cmd_api() {
 }
 
 cmd_core() {
-  docker compose -f "$COMPOSE_FILE" run --rm "$SERVICE" tox -e py311-core-docker
+  if [[ "$#" -gt 0 ]]; then
+    docker compose -f "$COMPOSE_FILE" run --rm "$SERVICE" tox -e py311-core-docker -- "$@"
+  else
+    docker compose -f "$COMPOSE_FILE" run --rm "$SERVICE" tox -e py311-core-docker
+  fi
 }
 
 cmd_all() {
