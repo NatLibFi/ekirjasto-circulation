@@ -775,11 +775,11 @@ msgstr "The provided ekirjasto token couldn't be verified for ekirjasto API."
 
 #: api/problem_details.py:298
 msgid "Missing permanent id"
-msgstr ""
+msgstr "TRANSLATE"
 
 #: api/problem_details.py:299
 msgid "Value for permanent_id is missing in remote user info."
-msgstr ""
+msgstr "TRANSLATE"
 
 #: api/problem_details.py:314
 msgid "Authentication with ekirjasto API failed."

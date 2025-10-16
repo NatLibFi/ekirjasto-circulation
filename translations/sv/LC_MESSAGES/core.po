@@ -1145,82 +1145,82 @@ msgstr "Statsvetenskap"
 
 #: core/data_conversion/localized_w3c_display_texts.py:7
 msgid "This publication meets minimum accessibility standards"
-msgstr ""
+msgstr "TRANSLATE"
 
 #: core/data_conversion/localized_w3c_display_texts.py:8
 msgid "This publication meets accepted accessibility standards"
-msgstr ""
+msgstr "TRANSLATE"
 
 #: core/data_conversion/localized_w3c_display_texts.py:9
 msgid "This publication exceeds accepted accessibility standards"
-msgstr ""
+msgstr "TRANSLATE"
 
 #: core/data_conversion/localized_w3c_display_texts.py:10
 #, fuzzy
 msgid "Flashing content"
-msgstr "Mode"
+msgstr "TRANSLATE"
 
 #: core/data_conversion/localized_w3c_display_texts.py:11
 msgid "Motion simulation"
-msgstr ""
+msgstr "TRANSLATE"
 
 #: core/data_conversion/localized_w3c_display_texts.py:12
 #, fuzzy
 msgid "No information is available"
-msgstr "Informativ"
+msgstr "TRANSLATE"
 
 #: core/data_conversion/localized_w3c_display_texts.py:13
 msgid "No hazards"
-msgstr ""
+msgstr "TRANSLATE"
 
 #: core/data_conversion/localized_w3c_display_texts.py:14
 msgid "Sounds"
-msgstr ""
+msgstr "TRANSLATE"
 
 #: core/data_conversion/localized_w3c_display_texts.py:15
 msgid "The presence of hazards is unknown"
-msgstr ""
+msgstr "TRANSLATE"
 
 #: core/data_conversion/localized_w3c_display_texts.py:16
 #, fuzzy
 msgid "Has alternative text"
-msgstr "Alternativ historia"
+msgstr "TRANSLATE"
 
 #: core/data_conversion/localized_w3c_display_texts.py:17
 msgid "No information about nonvisual reading is available"
-msgstr ""
+msgstr "TRANSLATE"
 
 #: core/data_conversion/localized_w3c_display_texts.py:18
 msgid "Not readable in read aloud or dynamic braille"
-msgstr ""
+msgstr "TRANSLATE"
 
 #: core/data_conversion/localized_w3c_display_texts.py:19
 msgid "Not fully readable in read aloud or dynamic braille"
-msgstr ""
+msgstr "TRANSLATE"
 
 #: core/data_conversion/localized_w3c_display_texts.py:20
 msgid "Readable in read aloud or dynamic braille"
-msgstr ""
+msgstr "TRANSLATE"
 
 #: core/data_conversion/localized_w3c_display_texts.py:21
 msgid "Prerecorded audio clips"
-msgstr ""
+msgstr "TRANSLATE"
 
 #: core/data_conversion/localized_w3c_display_texts.py:22
 msgid "Prerecorded audio only"
-msgstr ""
+msgstr "TRANSLATE"
 
 #: core/data_conversion/localized_w3c_display_texts.py:23
 msgid "Prerecorded audio synchronized with text"
-msgstr ""
+msgstr "TRANSLATE"
 
 #: core/data_conversion/localized_w3c_display_texts.py:24
 msgid "Appearance can be modified"
-msgstr ""
+msgstr "TRANSLATE"
 
 #: core/data_conversion/localized_w3c_display_texts.py:25
 msgid "Appearance cannot be modified"
-msgstr ""
+msgstr "TRANSLATE"
 
 #: core/util/http.py:34
 msgid "Failure contacting external service"
