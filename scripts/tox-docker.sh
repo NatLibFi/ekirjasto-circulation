@@ -17,8 +17,8 @@ Examples:
   ./tox-docker.sh api
   ./tox-docker.sh core
   ./tox-docker.sh all
-  ./tox-docker.sh api -- tests/api/test_opds2.py -vv
-  ./tox-docker.sh core -- tests/core/test_circulation.py -vv
+  ./tox-docker.sh api -- tests/api/test_opds2.py
+  ./tox-docker.sh core -- tests/core/test_circulation.py
 EOF
 }
 
