@@ -700,6 +700,40 @@ Tox has an environment for each python version, the module being tested, and an 
 automatically use docker to deploy service containers used for the tests. You can select the environment you would like
 to test with the tox `-e` flag.
 
+### Running tox inside Docker
+
+Use the `scripts/tox-docker.sh` helper to run tox in the container defined in `docker-compose-tox.yml`. Docker Desktop
+(macOS/Windows) or a running Docker Engine (Linux) is required.
+
+Build the image (only needed after dependency or Dockerfile changes):
+
+```sh
+./scripts/tox-docker.sh build
+```
+
+Run the API or core suites:
+
+```sh
+./scripts/tox-docker.sh api
+./scripts/tox-docker.sh core
+```
+
+Run both suites in one go:
+
+```sh
+./scripts/tox-docker.sh all
+```
+
+Pass extra pytest arguments after `--` and they will be forwarded to tox:
+
+```sh
+./scripts/tox-docker.sh api -- tests/api/test_opds2.py -vv
+```
+
+The script wraps `docker compose -f docker-compose-tox.yml run --rm tox` so the repository mounts into `/workspace` and
+the host Docker daemon remains available for `tox-docker`. Export `LOCAL_UID` and `LOCAL_GID` before invoking the script
+if you need container file ownership to match your host user.
+
 ### Factors
 
 When running tox without an environment specified, it tests `circulation` and `core` using all supported Python versions
