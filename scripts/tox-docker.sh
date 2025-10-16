@@ -7,18 +7,18 @@ SERVICE="tox"
 usage() {
   cat <<'EOF'
 Usage:
-  tox-docker.sh build
-  tox-docker.sh api [-- test_path ...]
-  tox-docker.sh core [-- test_path ...]
-  tox-docker.sh all
+  ./scripts/tox-docker.sh build
+  ./scripts/tox-docker.sh api [-- test_path ...]
+  ./scripts/tox-docker.sh core [-- test_path ...]
+  ./scripts/tox-docker.sh all
 
 Examples:
-  ./tox-docker.sh build
-  ./tox-docker.sh api
-  ./tox-docker.sh core
-  ./tox-docker.sh all
-  ./tox-docker.sh api -- tests/api/test_opds2.py
-  ./tox-docker.sh core -- tests/core/test_circulation.py
+  ./scripts/tox-docker.sh build
+  ./scripts/tox-docker.sh api
+  ./scripts/tox-docker.sh core
+  ./scripts/tox-docker.sh all
+  ./scripts/tox-docker.sh api -- tests/api/opds/test_opds2.py
+  ./scripts/tox-docker.sh core -- tests/core/test_circulation_data.py
 EOF
 }
 
