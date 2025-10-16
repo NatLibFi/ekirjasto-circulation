@@ -727,7 +727,7 @@ Run both suites in one go:
 Pass extra pytest arguments after `--` and they will be forwarded to tox:
 
 ```sh
-./scripts/tox-docker.sh api -- tests/api/test_opds2.py -vv
+./scripts/tox-docker.sh api -- tests/api/test_opds2.py
 ```
 
 The script wraps `docker compose -f docker-compose-tox.yml run --rm tox` so the repository mounts into `/workspace` and
