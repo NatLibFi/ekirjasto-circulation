@@ -775,11 +775,11 @@ msgstr "The provided ekirjasto token couldn't be verified for ekirjasto API."
 
 #: api/problem_details.py:298
 msgid "Missing permanent id"
-msgstr "TRANSLATE"
+msgstr "Missing permanent id"
 
 #: api/problem_details.py:299
 msgid "Value for permanent_id is missing in remote user info."
-msgstr "TRANSLATE"
+msgstr "Value for permanent_id is missing in remote user info."
 
 #: api/problem_details.py:314
 msgid "Authentication with ekirjasto API failed."
@@ -939,7 +939,7 @@ msgstr ""
 
 #: api/problem_details.py:450
 msgid "Loan deleted locally but remote failed."
-msgstr "TRANSLATE"
+msgstr "Loan deleted locally but remote failed."
 
 #: api/sirsidynix_authentication_provider.py:31
 msgid "Patron has not yet been approved"
