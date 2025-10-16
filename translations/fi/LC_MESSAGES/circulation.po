@@ -786,11 +786,11 @@ msgstr "Annettua E-kirjaston tunnusta ei voitu vahvistaa E-kirjaston API:lle."
 
 #: api/problem_details.py:298
 msgid "Missing permanent id"
-msgstr ""
+msgstr "TRANSLATE"
 
 #: api/problem_details.py:299
 msgid "Value for permanent_id is missing in remote user info."
-msgstr ""
+msgstr "TRANSLATE"
 
 #: api/problem_details.py:314
 msgid "Authentication with ekirjasto API failed."
