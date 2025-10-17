@@ -1,0 +1,62 @@
+# syntax=docker/dockerfile:1.7
+# Dedicated image for running tox-based test suites locally.
+# Extends the project base image so all system dependencies match production.
+
+FROM ghcr.io/natlibfi/ekirjasto-circ-baseimage:latest
+
+USER root
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    software-properties-common \
+    curl \
+    ca-certificates \
+    gnupg \
+    lsb-release && \
+    add-apt-repository ppa:deadsnakes/ppa && \
+    install -d -m 0755 /etc/apt/keyrings && \
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+    build-essential \
+    docker-ce-cli \
+    git \
+    libffi-dev \
+    libjpeg-dev \
+    libpq-dev \
+    libxml2-dev \
+    libxmlsec1-dev \
+    libxmlsec1-openssl \
+    libxslt1-dev \
+    python3.11 \
+    python3.11-dev \
+    python3.11-venv \
+    unzip \
+    wget && \
+    python3.11 -m ensurepip --upgrade && \
+    python3.11 -m pip install --upgrade \
+    pip \
+    setuptools \
+    wheel \
+    "urllib3<2" \
+    "requests==2.31.0" \
+    docker==6.1.3 \
+    requests-unixsocket==0.3.0 \
+    tox==4.18.0 \
+    tox-docker==4.1.0 \
+    tox-gh-actions==3.2.0 && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Provide a predictable workdir for bind mounts.
+WORKDIR /workspace
+
+ENV POETRY_VIRTUALENVS_CREATE=false \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONIOENCODING=UTF-8 \
+    LC_ALL=C.UTF-8
+
+ENTRYPOINT ["/bin/bash", "-lc"]
+CMD ["bash"]

@@ -1,0 +1,26 @@
+services:
+  tox:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.tox
+    image: ekirjasto-circulation-tox
+    entrypoint: []
+    command: ["/bin/bash"]
+    tty: true
+    stdin_open: true
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      POETRY_VIRTUALENVS_CREATE: "false"
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+      PYTHONIOENCODING: UTF-8
+      LC_ALL: C.UTF-8
+      TOX_WORK_DIR: /workspace/.tox
+      TOX_SKIP_ENV: py310-*
+      DOCKER_HOST: unix:///var/run/docker.sock
+      TOX_SERVICE_HOST: host.docker.internal
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    user: "${LOCAL_UID:-0}:${LOCAL_GID:-0}"
