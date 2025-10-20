@@ -1,4 +1,5 @@
 from typing import Any
+
 from flask_babel import gettext as _
 
 from api.opds.rwpm import AccessibilityFeature, AccessMode, AccessModeSufficient, Hazard

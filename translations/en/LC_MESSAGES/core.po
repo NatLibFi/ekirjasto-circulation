@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2025-10-15 11:56+0300\n"
+"POT-Creation-Date: 2025-10-20 10:46+0300\n"
 "PO-Revision-Date: 2024-02-19 22:14+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -235,7 +235,6 @@ msgid "Gardening"
 msgstr "Gardening"
 
 #: core/classifier/localized_names.py:25 default_lane_names_to_localize.py:61
-#, fuzzy
 msgid "General Fiction"
 msgstr "Science Fiction"
 
@@ -1137,84 +1136,81 @@ msgstr "Humorous Nonfiction"
 msgid "Political Science"
 msgstr "Political Science"
 
-#: core/data_conversion/localized_w3c_display_texts.py:7
+#: core/data_conversion/accessibility_mapper.py:34
 msgid "This publication meets minimum accessibility standards"
 msgstr "This publication meets minimum accessibility standards"
 
-#: core/data_conversion/localized_w3c_display_texts.py:8
+#: core/data_conversion/accessibility_mapper.py:35
 msgid "This publication meets accepted accessibility standards"
 msgstr "This publication meets accepted accessibility standards"
 
-#: core/data_conversion/localized_w3c_display_texts.py:9
+#: core/data_conversion/accessibility_mapper.py:36
 msgid "This publication exceeds accepted accessibility standards"
 msgstr "This publication exceeds accepted accessibility standards"
 
-#: core/data_conversion/localized_w3c_display_texts.py:10
-#, fuzzy
-msgid "Flashing content"
-msgstr "Flashing content"
-
-#: core/data_conversion/localized_w3c_display_texts.py:11
-msgid "Motion simulation"
-msgstr "Motion simulation"
-
-#: core/data_conversion/localized_w3c_display_texts.py:12
-#, fuzzy
-msgid "No information is available"
-msgstr "No information is available"
-
-#: core/data_conversion/localized_w3c_display_texts.py:13
-msgid "No hazards"
-msgstr "No hazards"
-
-#: core/data_conversion/localized_w3c_display_texts.py:14
-msgid "Sounds"
-msgstr "Sounds"
-
-#: core/data_conversion/localized_w3c_display_texts.py:15
-msgid "The presence of hazards is unknown"
-msgstr "The presence of hazards is unknown"
-
-#: core/data_conversion/localized_w3c_display_texts.py:16
-#, fuzzy
-msgid "Has alternative text"
-msgstr "Has alternative text"
-
-#: core/data_conversion/localized_w3c_display_texts.py:17
-msgid "No information about nonvisual reading is available"
-msgstr "No information about nonvisual reading is available"
-
-#: core/data_conversion/localized_w3c_display_texts.py:18
-msgid "Not readable in read aloud or dynamic braille"
-msgstr "Not readable in read aloud or dynamic braille"
-
-#: core/data_conversion/localized_w3c_display_texts.py:19
-msgid "Not fully readable in read aloud or dynamic braille"
-msgstr "Not fully readable in read aloud or dynamic braille"
-
-#: core/data_conversion/localized_w3c_display_texts.py:20
+#: core/data_conversion/accessibility_mapper.py:39
 msgid "Readable in read aloud or dynamic braille"
 msgstr "Readable in read aloud or dynamic braille"
 
-#: core/data_conversion/localized_w3c_display_texts.py:21
-msgid "Prerecorded audio clips"
-msgstr "Prerecorded audio clips"
+#: core/data_conversion/accessibility_mapper.py:42
+msgid "Not fully readable in read aloud or dynamic braille"
+msgstr "Not fully readable in read aloud or dynamic braille"
 
-#: core/data_conversion/localized_w3c_display_texts.py:22
-msgid "Prerecorded audio only"
-msgstr "Prerecorded audio only"
+#: core/data_conversion/accessibility_mapper.py:45
+msgid "Not readable in read aloud or dynamic braille"
+msgstr "Not readable in read aloud or dynamic braille"
 
-#: core/data_conversion/localized_w3c_display_texts.py:23
-msgid "Prerecorded audio synchronized with text"
-msgstr "Prerecorded audio synchronized with text"
+#: core/data_conversion/accessibility_mapper.py:48
+msgid "No information about nonvisual reading is available"
+msgstr "No information about nonvisual reading is available"
 
-#: core/data_conversion/localized_w3c_display_texts.py:24
+#: core/data_conversion/accessibility_mapper.py:51
+msgid "Has alternative text"
+msgstr "Has alternative text"
+
+#: core/data_conversion/accessibility_mapper.py:52
 msgid "Appearance can be modified"
 msgstr "Appearance can be modified"
 
-#: core/data_conversion/localized_w3c_display_texts.py:25
+#: core/data_conversion/accessibility_mapper.py:53
 msgid "Appearance cannot be modified"
 msgstr "Appearance cannot be modified"
+
+#: core/data_conversion/accessibility_mapper.py:54
+msgid "Prerecorded audio synchronized with text"
+msgstr "Prerecorded audio synchronized with text"
+
+#: core/data_conversion/accessibility_mapper.py:57
+msgid "Prerecorded audio only"
+msgstr "Prerecorded audio only"
+
+#: core/data_conversion/accessibility_mapper.py:58
+msgid "Prerecorded audio clips"
+msgstr "Prerecorded audio clips"
+
+#: core/data_conversion/accessibility_mapper.py:61
+msgid "No hazards"
+msgstr "No hazards"
+
+#: core/data_conversion/accessibility_mapper.py:62
+msgid "Flashing content"
+msgstr "Flashing content"
+
+#: core/data_conversion/accessibility_mapper.py:63
+msgid "Motion simulation"
+msgstr "Motion simulation"
+
+#: core/data_conversion/accessibility_mapper.py:64
+msgid "Sounds"
+msgstr "Sounds"
+
+#: core/data_conversion/accessibility_mapper.py:65
+msgid "The presence of hazards is unknown"
+msgstr "The presence of hazards is unknown"
+
+#: core/data_conversion/accessibility_mapper.py:66
+msgid "No information is available"
+msgstr "No information is available"
 
 #: core/util/http.py:34
 msgid "Failure contacting external service"

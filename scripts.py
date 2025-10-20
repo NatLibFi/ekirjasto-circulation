@@ -8,7 +8,6 @@ import time
 import uuid
 from collections.abc import Sequence
 from datetime import timedelta
-from inspect import getmembers, ismethod
 from pathlib import Path
 from typing import Any
 
@@ -35,7 +34,6 @@ from api.opds_for_distributors import (
 )
 from api.overdrive import OverdriveAPI
 from core import classifier
-from core.data_conversion.accessibility_mapper import W3CDisplayTexts
 from core.integration.goals import Goals
 from core.lane import Lane
 from core.marc import Annotator as MarcAnnotator
