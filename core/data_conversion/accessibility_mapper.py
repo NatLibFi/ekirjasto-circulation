@@ -1,4 +1,5 @@
 from typing import Any
+from flask_babel import gettext as _
 
 from api.opds.rwpm import AccessibilityFeature, AccessMode, AccessModeSufficient, Hazard
 
@@ -30,39 +31,39 @@ class W3CVariables:
 
 class W3CDisplayTexts:
     # Conformance
-    a = "This publication meets minimum accessibility standards"
-    aa = "This publication meets accepted accessibility standards"
-    aaa = "This publication exceeds accepted accessibility standards"
+    a = _("This publication meets minimum accessibility standards")
+    aa = _("This publication meets accepted accessibility standards")
+    aaa = _("This publication exceeds accepted accessibility standards")
 
     # Ways of reading
-    ways_of_reading_nonvisual_reading_readable = (
+    ways_of_reading_nonvisual_reading_readable = _(
         "Readable in read aloud or dynamic braille"
     )
-    ways_of_reading_nonvisual_reading_not_fully = (
+    ways_of_reading_nonvisual_reading_not_fully = _(
         "Not fully readable in read aloud or dynamic braille"
     )
-    ways_of_reading_nonvisual_reading_none = (
+    ways_of_reading_nonvisual_reading_none = _(
         "Not readable in read aloud or dynamic braille"
     )
-    ways_of_reading_nonvisual_reading_no_metadata = (
+    ways_of_reading_nonvisual_reading_no_metadata = _(
         "No information about nonvisual reading is available"
     )
-    ways_of_reading_nonvisual_reading_alt_text = "Has alternative text"
-    ways_of_reading_visual_adjustments_modifiable = "Appearance can be modified"
-    ways_of_reading_visual_adjustments_unmodifiable = "Appearance cannot be modified"
-    ways_of_reading_prerecorded_audio_synchronized = (
+    ways_of_reading_nonvisual_reading_alt_text = _("Has alternative text")
+    ways_of_reading_visual_adjustments_modifiable = _("Appearance can be modified")
+    ways_of_reading_visual_adjustments_unmodifiable = _("Appearance cannot be modified")
+    ways_of_reading_prerecorded_audio_synchronized = _(
         "Prerecorded audio synchronized with text"
     )
-    ways_of_reading_prerecorded_audio_only = "Prerecorded audio only"
-    ways_of_reading_prerecorded_audio_complementary = "Prerecorded audio clips"
+    ways_of_reading_prerecorded_audio_only = _("Prerecorded audio only")
+    ways_of_reading_prerecorded_audio_complementary = _("Prerecorded audio clips")
 
     # Hazards
-    hazards_none = "No hazards"
-    hazards_flashing = "Flashing content"
-    hazards_motion = "Motion simulation"
-    hazards_sound = "Sounds"
-    hazards_unknown = "The presence of hazards is unknown"
-    hazards_no_metadata = "No information is available"
+    hazards_none = _("No hazards")
+    hazards_flashing = _("Flashing content")
+    hazards_motion = _("Motion simulation")
+    hazards_sound = _("Sounds")
+    hazards_unknown = _("The presence of hazards is unknown")
+    hazards_no_metadata = _("No information is available")
 
 
 class AccessibilityDataMapper:
