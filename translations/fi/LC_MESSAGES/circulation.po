@@ -954,7 +954,7 @@ msgstr ""
 
 #: api/problem_details.py:450
 msgid "Loan deleted locally but remote failed."
-msgstr "Laina poistettu paikallisesti, mutta etäpalvelusta."
+msgstr "Laina poistettu paikallisesti, mutta ei etäpalvelusta."
 
 #: api/sirsidynix_authentication_provider.py:31
 msgid "Patron has not yet been approved"
