@@ -356,7 +356,7 @@ Local analytics are enabled by default. S3 analytics can be enabled via the foll
 OpenSearch analytics can be enabled via the following environment variables:
 
 - PALACE_OPENSEARCH_ANALYTICS_ENABLED: A boolean value to disable or enable OpenSearch analytics. The default is false.
-- PALACE_OPENSEARCH_ANALYTICS_URL: The url of your OpenSearch instance, eg. "http://localhost:9200"
+- PALACE_OPENSEARCH_ANALYTICS_URL: The url of your OpenSearch instance, eg. "<http://localhost:9200>"
 - PALACE_OPENSEARCH_ANALYTICS_INDEX_PREFIX: The prefix of the event index name, eg. "circulation-events"
 
 #### Email
@@ -699,6 +699,42 @@ The Github Actions CI service runs the unit tests against Python 3.10, and 3.11 
 Tox has an environment for each python version, the module being tested, and an optional `-docker` factor that will
 automatically use docker to deploy service containers used for the tests. You can select the environment you would like
 to test with the tox `-e` flag.
+
+### Running tox inside Docker
+
+Use the `scripts/tox-docker.sh` helper to run tox in the container defined in `docker-compose-tox.yml`. Docker Desktop
+(macOS/Windows) or a running Docker Engine (Linux) is required.
+
+Build the image (only needed after dependency or Dockerfile changes):
+
+```sh
+./scripts/tox-docker.sh build
+```
+
+Run the API or core suites:
+
+```sh
+./scripts/tox-docker.sh api
+./scripts/tox-docker.sh core
+```
+
+Run both suites in one go:
+
+```sh
+./scripts/tox-docker.sh all
+```
+
+When you skip the `api`/`core` subcommand the script infers the environment from the test paths and forwards any
+pytest options after an optional `--`:
+
+```sh
+./scripts/tox-docker.sh tests/api/test_odl2.py -k test_import
+./scripts/tox-docker.sh tests/core/test_circulation_data.py::TestCirculationData
+```
+
+The script wraps `docker compose -f docker-compose-tox.yml run --rm tox` so the repository mounts into `/workspace` and
+the host Docker daemon remains available for `tox-docker`. Export `LOCAL_UID` and `LOCAL_GID` before invoking the script
+if you need container file ownership to match your host user.
 
 ### Factors
 
