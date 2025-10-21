@@ -100,7 +100,7 @@ class AccessibilityDataMapper:
         return None
 
     @classmethod
-    def _map_conforms_to(cls, conforms_to: list[str] | None) -> list[str] | None:
+    def _map_conforms_to(cls, conforms_to: list[str] | None) -> list[Any] | None:
         """
         Map the conformance level to a display texts according to logic in
         https://w3c.github.io/publ-a11y/a11y-meta-display-guide/2.0/techniques/epub-metadata/#conformance-instructions.
@@ -114,12 +114,21 @@ class AccessibilityDataMapper:
             "aaa": W3CDisplayTexts.aaa,
         }
 
-        display_texts = list()
         if conforms_to:
-            # Extract the WCAG level from the url so we get a W3C id like string (= resembles a W3C variable).
-            w3c_ids = [item.split("#")[-1].split("-")[-1] for item in conforms_to]
-            for id in w3c_ids:
-                display_texts.append(level_mappings[id])
+            # Extract W3C IDs whether they are links or descriptions.
+            w3c_ids = [
+                item.split("#")[-1].split("-")[-1]
+                if item.startswith("http")
+                else item.split(" ")[-1].lower()
+                for item in conforms_to
+            ]
+            # Map W3C IDs to display texts
+            display_texts = [
+                level_mappings.get(w3c_id)
+                for w3c_id in w3c_ids
+                if w3c_id in level_mappings
+            ]
+
             return display_texts
         return None
 
