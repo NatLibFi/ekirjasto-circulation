@@ -262,8 +262,8 @@ a storage service, you can set the following environment variables:
   public access to the files.
 - `PALACE_STORAGE_ANALYTICS_BUCKET`: Required if you want to use the storage service to store analytics data.
 - `PALACE_STORAGE_ACCESS_KEY`: The access key (optional).
-  - If this key is set it will be passed to boto3 when connecting to the storage service.
-  - If it is not set boto3 will attempt to find credentials as outlined in their
+    - If this key is set it will be passed to boto3 when connecting to the storage service.
+    - If it is not set boto3 will attempt to find credentials as outlined in their
     [documentation](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html#configuring-credentials).
 - `PALACE_STORAGE_SECRET_KEY`: The secret key (optional).
 - `PALACE_STORAGE_REGION`: The AWS region of the storage service (optional).
@@ -271,11 +271,11 @@ a storage service, you can set the following environment variables:
   s3 compatible storage service like [minio](https://min.io/).
 - `PALACE_STORAGE_URL_TEMPLATE`: The url template to use when generating urls for files stored in the storage service
   (optional).
-  - The default value is `https://{bucket}.s3.{region}.amazonaws.com/{key}`.
-  - The following variables can be used in the template:
-    - `{bucket}`: The name of the bucket.
-    - `{key}`: The key of the file.
-    - `{region}`: The region of the storage service.
+    - The default value is `https://{bucket}.s3.{region}.amazonaws.com/{key}`.
+    - The following variables can be used in the template:
+        - `{bucket}`: The name of the bucket.
+        - `{key}`: The key of the file.
+        - `{region}`: The region of the storage service.
 
 #### Reporting
 
@@ -300,8 +300,8 @@ the logging:
 - `PALACE_LOG_CLOUDWATCH_INTERVAL`: The interval in seconds to send logs to CloudWatch. Default is `60`.
 - `PALACE_LOG_CLOUDWATCH_CREATE_GROUP`: Whether to create the log group if it does not exist. Default is `true`.
 - `PALACE_LOG_CLOUDWATCH_ACCESS_KEY`: The access key to use when sending logs to CloudWatch. This is optional.
-  - If this key is set it will be passed to boto3 when connecting to CloudWatch.
-  - If it is not set boto3 will attempt to find credentials as outlined in their
+    - If this key is set it will be passed to boto3 when connecting to CloudWatch.
+    - If it is not set boto3 will attempt to find credentials as outlined in their
     [documentation](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html#configuring-credentials).
 - `PALACE_LOG_CLOUDWATCH_SECRET_KEY`: The secret key to use when sending logs to CloudWatch. This is optional.
 
@@ -852,7 +852,7 @@ enabled by setting environment variables while starting the application.
 - `PALACE_XRAY_NAME`: The name of the service shown in x-ray for these traces.
 - `PALACE_XRAY_ANNOTATE_`: Any environment variable starting with this prefix will be added to to the trace as an
   annotation.
-  - For example setting `PALACE_XRAY_ANNOTATE_KEY=value` will set the annotation `key=value` on all xray traces sent
+    - For example setting `PALACE_XRAY_ANNOTATE_KEY=value` will set the annotation `key=value` on all xray traces sent
     from the application.
 - `PALACE_XRAY_INCLUDE_BARCODE`: If this environment variable is set to `true` then the tracing code will try to include
   the patrons barcode in the user parameter of the trace, if a barcode is available.
@@ -915,10 +915,10 @@ pyinstrument -m pytest --no-cov tests/api/
 - `PALACE_PYINSTRUMENT`: Profiling will the enabled if this variable is set. The saved profile data will be available at
   path specified in the environment variable.
 
-  - The profile data will have the extension `.pyisession`.
-  - The data can be accessed with the
+    - The profile data will have the extension `.pyisession`.
+    - The data can be accessed with the
       [`pyinstrument.session.Session` class](https://pyinstrument.readthedocs.io/en/latest/reference.html#pyinstrument.session.Session).
-  - Example code to print details of the gathered statistics:
+    - Example code to print details of the gathered statistics:
 
     ```python
     import os
