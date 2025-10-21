@@ -236,7 +236,7 @@ msgstr "Gardening"
 
 #: core/classifier/localized_names.py:25 default_lane_names_to_localize.py:61
 msgid "General Fiction"
-msgstr "Science Fiction"
+msgstr "General Fiction"
 
 #: core/classifier/localized_names.py:20 default_lane_names_to_localize.py:62
 msgid "Ghost Stories"
