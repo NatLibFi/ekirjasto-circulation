@@ -2,10 +2,11 @@
 # Copyright (C) 2024 ORGANIZATION
 # This file is distributed under the same license as the PROJECT project.
 # FIRST AUTHOR <EMAIL@ADDRESS>, 2024.
-#
+# 
 # Translators:
 # Joona Kupe, 2025
 # Kaisa Kuivalahti, 2025
+# 
 msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
@@ -13,14 +14,13 @@ msgstr ""
 "POT-Creation-Date: 2025-10-20 10:46+0300\n"
 "PO-Revision-Date: 2025-10-16 10:07+0000\n"
 "Last-Translator: Kaisa Kuivalahti, 2025\n"
-"Language: fi\n"
-"Language-Team: Finnish (https://app.transifex.com/national-library-of-"
-"finland/teams/183401/fi/)\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"Language-Team: Finnish (https://app.transifex.com/national-library-of-finland/teams/183401/fi/)\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=utf-8\n"
+"Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.13.0\n"
+"Language: fi\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: core/classifier/localized_names.py:7 default_lane_names_to_localize.py:7
 msgid "Adventure"
@@ -239,9 +239,8 @@ msgid "Gardening"
 msgstr "Puutarhanhoito"
 
 #: core/classifier/localized_names.py:25 default_lane_names_to_localize.py:61
-#, fuzzy
 msgid "General Fiction"
-msgstr "Science Fiction"
+msgstr "Yleinen kaunokirjallisuus"
 
 #: core/classifier/localized_names.py:20 default_lane_names_to_localize.py:62
 msgid "Ghost Stories"
@@ -403,7 +402,8 @@ msgstr "Dekkarit"
 msgid "Mystery & Thriller"
 msgstr "Dekkarit ja jännitys"
 
-#: core/classifier/localized_names.py:138 default_lane_names_to_localize.py:102
+#: core/classifier/localized_names.py:138
+#: default_lane_names_to_localize.py:102
 msgid "Nature"
 msgstr "Luonto"
 
@@ -431,11 +431,13 @@ msgstr "Vanhemmuus"
 msgid "Parenting & Family"
 msgstr "Vanhemmuus ja perhe"
 
-#: core/classifier/localized_names.py:116 default_lane_names_to_localize.py:109
+#: core/classifier/localized_names.py:116
+#: default_lane_names_to_localize.py:109
 msgid "Performing Arts"
 msgstr "Esittävät taiteet"
 
-#: core/classifier/localized_names.py:119 default_lane_names_to_localize.py:110
+#: core/classifier/localized_names.py:119
+#: default_lane_names_to_localize.py:110
 msgid "Periodicals"
 msgstr "Aikakauslehdet"
 
@@ -447,11 +449,13 @@ msgstr "Oma talous ja liiketoiminta"
 msgid "Personal Finance & Investing"
 msgstr "Oma talous ja sijoittaminen"
 
-#: core/classifier/localized_names.py:111 default_lane_names_to_localize.py:113
+#: core/classifier/localized_names.py:111
+#: default_lane_names_to_localize.py:113
 msgid "Pets"
 msgstr "Lemmikkieläimet"
 
-#: core/classifier/localized_names.py:120 default_lane_names_to_localize.py:114
+#: core/classifier/localized_names.py:120
+#: default_lane_names_to_localize.py:114
 msgid "Philosophy"
 msgstr "Filosofia"
 
@@ -487,7 +491,8 @@ msgstr "Politiikka ja ajankohtaiset tapahtumat"
 msgid "Psychological Thriller"
 msgstr "Psykologinen jännitys"
 
-#: core/classifier/localized_names.py:139 default_lane_names_to_localize.py:123
+#: core/classifier/localized_names.py:139
+#: default_lane_names_to_localize.py:123
 msgid "Psychology"
 msgstr "Psykologia"
 
@@ -499,11 +504,13 @@ msgstr "Kiinteistöt"
 msgid "Realistic Fiction"
 msgstr "Realistinen fiktio"
 
-#: core/classifier/localized_names.py:122 default_lane_names_to_localize.py:126
+#: core/classifier/localized_names.py:122
+#: default_lane_names_to_localize.py:126
 msgid "Reference & Study Aids"
 msgstr "Tiede- ja tutkimuskirjallisuus"
 
-#: core/classifier/localized_names.py:127 default_lane_names_to_localize.py:127
+#: core/classifier/localized_names.py:127
+#: default_lane_names_to_localize.py:127
 msgid "Religion & Spirituality"
 msgstr "Uskonto ja hengellisyys"
 
@@ -511,7 +518,8 @@ msgstr "Uskonto ja hengellisyys"
 msgid "Religious Fiction"
 msgstr "Uskonnollinen kaunokirjallisuus"
 
-#: core/classifier/localized_names.py:102 default_lane_names_to_localize.py:129
+#: core/classifier/localized_names.py:102
+#: default_lane_names_to_localize.py:129
 msgid "Renaissance & Early Modern History"
 msgstr "Renessanssi ja uuden ajan alun historia"
 
@@ -527,7 +535,8 @@ msgstr "Romanttinen scifi"
 msgid "Romantic Suspense"
 msgstr "Romanttinen jännitys"
 
-#: core/classifier/localized_names.py:140 default_lane_names_to_localize.py:133
+#: core/classifier/localized_names.py:140
+#: default_lane_names_to_localize.py:133
 msgid "Science"
 msgstr "Tiede"
 
@@ -535,11 +544,13 @@ msgstr "Tiede"
 msgid "Science Fiction"
 msgstr "Science Fiction"
 
-#: core/classifier/localized_names.py:134 default_lane_names_to_localize.py:135
+#: core/classifier/localized_names.py:134
+#: default_lane_names_to_localize.py:135
 msgid "Science & Technology"
 msgstr "Tiede ja teknologia"
 
-#: core/classifier/localized_names.py:143 default_lane_names_to_localize.py:136
+#: core/classifier/localized_names.py:143
+#: default_lane_names_to_localize.py:136
 msgid "Self-Help"
 msgstr "Elämäntaito"
 
@@ -547,7 +558,8 @@ msgstr "Elämäntaito"
 msgid "Short Stories"
 msgstr "Novellit"
 
-#: core/classifier/localized_names.py:141 default_lane_names_to_localize.py:138
+#: core/classifier/localized_names.py:141
+#: default_lane_names_to_localize.py:138
 msgid "Social Sciences"
 msgstr "Yhteiskuntatieteet"
 
@@ -555,7 +567,8 @@ msgstr "Yhteiskuntatieteet"
 msgid "Space Opera"
 msgstr "Avaruusooppera"
 
-#: core/classifier/localized_names.py:144 default_lane_names_to_localize.py:140
+#: core/classifier/localized_names.py:144
+#: default_lane_names_to_localize.py:140
 msgid "Sports"
 msgstr "Urheilu ja liikunta"
 
@@ -563,7 +576,8 @@ msgstr "Urheilu ja liikunta"
 msgid "Steampunk"
 msgstr "Steampunk"
 
-#: core/classifier/localized_names.py:126 default_lane_names_to_localize.py:142
+#: core/classifier/localized_names.py:126
+#: default_lane_names_to_localize.py:142
 msgid "Study Aids"
 msgstr "Tutkimuskirjallisuus"
 
@@ -571,7 +585,8 @@ msgstr "Tutkimuskirjallisuus"
 msgid "Supernatural Thriller"
 msgstr "Yliluonnollinen jännitys"
 
-#: core/classifier/localized_names.py:142 default_lane_names_to_localize.py:144
+#: core/classifier/localized_names.py:142
+#: default_lane_names_to_localize.py:144
 msgid "Technology"
 msgstr "Teknologia"
 
@@ -583,15 +598,18 @@ msgstr "Teknotrillerit"
 msgid "Thriller"
 msgstr "Jännitys"
 
-#: core/classifier/localized_names.py:145 default_lane_names_to_localize.py:147
+#: core/classifier/localized_names.py:145
+#: default_lane_names_to_localize.py:147
 msgid "Travel"
 msgstr "Matkailu"
 
-#: core/classifier/localized_names.py:146 default_lane_names_to_localize.py:148
+#: core/classifier/localized_names.py:146
+#: default_lane_names_to_localize.py:148
 msgid "True Crime"
 msgstr "True Crime"
 
-#: core/classifier/localized_names.py:103 default_lane_names_to_localize.py:149
+#: core/classifier/localized_names.py:103
+#: default_lane_names_to_localize.py:149
 msgid "United States History"
 msgstr "Yhdysvaltojen historia"
 
@@ -631,7 +649,8 @@ msgstr "Naisetsivät"
 msgid "Women's Fiction"
 msgstr "Viihdekirjallisuus"
 
-#: core/classifier/localized_names.py:104 default_lane_names_to_localize.py:159
+#: core/classifier/localized_names.py:104
+#: default_lane_names_to_localize.py:159
 msgid "World History"
 msgstr "Maailmanhistoria"
 
@@ -678,13 +697,12 @@ msgstr "Sovelluksen nimi"
 #: core/config.py:120
 msgid ""
 "Log messages originating from this application will be tagged with this "
-"name. If you run multiple instances, giving each one a different "
-"application name will help you determine which instance is having "
-"problems."
+"name. If you run multiple instances, giving each one a different application"
+" name will help you determine which instance is having problems."
 msgstr ""
-"Tästä sovelluksesta peräisin olevat lokiviestit merkitään tällä nimellä. "
-"Jos suoritat useita esiintymiä, voit antaa kullekin eri sovelluksen "
-"nimen, jotta sinun on helpompi määrittää, missä esiintymässä on ongelmia."
+"Tästä sovelluksesta peräisin olevat lokiviestit merkitään tällä nimellä. Jos"
+" suoritat useita esiintymiä, voit antaa kullekin eri sovelluksen nimen, "
+"jotta sinun on helpompi määrittää, missä esiintymässä on ongelmia."
 
 #: core/config.py:128
 msgid "Database Log Level"
@@ -692,9 +710,9 @@ msgstr "Tietokantalokitaso"
 
 #: core/config.py:131
 msgid ""
-"Database logs are extremely verbose, so unless you're diagnosing a "
-"database-related problem, it's a good idea to set a higher log level for "
-"database messages."
+"Database logs are extremely verbose, so unless you're diagnosing a database-"
+"related problem, it's a good idea to set a higher log level for database "
+"messages."
 msgstr ""
 "Tietokantalokit ovat erittäin monisanaisia, joten ellei kyseessä ole "
 "tietokantaan liittyvän ongelman määrittäminen, tietokantaviesteille "
@@ -706,11 +724,11 @@ msgstr "Poissuljetut äänikirjalähteet"
 
 #: core/config.py:139
 msgid ""
-"Audiobooks from these data sources will be hidden from the collection, "
-"even if they would otherwise show up as available."
+"Audiobooks from these data sources will be hidden from the collection, even "
+"if they would otherwise show up as available."
 msgstr ""
-"Näistä tietolähteistä peräisin olevat äänikirjat piilotetaan kokoelmasta,"
-" vaikka ne muuten näkyisivät saatavilla olevina."
+"Näistä tietolähteistä peräisin olevat äänikirjat piilotetaan kokoelmasta, "
+"vaikka ne muuten näkyisivät saatavilla olevina."
 
 #: core/config.py:147
 msgid "Cleanup old measurement data"
@@ -718,13 +736,12 @@ msgstr "Vanhojen mittaustietojen puhdistus"
 
 #: core/config.py:149
 msgid ""
-"If this settings is 'true' old book measurement data will be cleaned out "
-"of the database. Some sites may want to keep this data for later "
-"analysis."
+"If this settings is 'true' old book measurement data will be cleaned out of "
+"the database. Some sites may want to keep this data for later analysis."
 msgstr ""
 "Jos tämän asetuksen arvona on \"tosi\", kirjan vanhat mittaustiedot "
-"poistetaan tietokannasta. Jotkut sivustot saattavat haluta säilyttää nämä"
-" tiedot myöhempää analysointia varten."
+"poistetaan tietokannasta. Jotkut sivustot saattavat haluta säilyttää nämä "
+"tiedot myöhempää analysointia varten."
 
 #: core/config.py:157
 msgid "Push notifications status"
@@ -732,12 +749,12 @@ msgstr "Push-ilmoitusten tila"
 
 #: core/config.py:159
 msgid ""
-"If this settings is 'true' push notification jobs will run as scheduled, "
-"and attempt to notify patrons via mobile push notifications."
+"If this settings is 'true' push notification jobs will run as scheduled, and"
+" attempt to notify patrons via mobile push notifications."
 msgstr ""
-"Jos tämän asetuksen arvona on \"tosi\", push-ilmoitustehtävät suoritetaan"
-" aikataulun mukaisesti, ja asiakkaille yritetään ilmoittaa "
-"mobiililaitteille tulevien push-ilmoitusten kautta."
+"Jos tämän asetuksen arvona on \"tosi\", push-ilmoitustehtävät suoritetaan "
+"aikataulun mukaisesti, ja asiakkaille yritetään ilmoittaa mobiililaitteille "
+"tulevien push-ilmoitusten kautta."
 
 #: core/config.py:163
 msgid "True"
@@ -927,8 +944,8 @@ msgstr "Mukautettu hyväksymisen otsikko"
 
 #: core/opds2_import.py:73 core/opds_import.py:177
 msgid ""
-"Some servers expect an accept header to decide which file to send. You "
-"can use */* if the server doesn't expect anything."
+"Some servers expect an accept header to decide which file to send. You can "
+"use */* if the server doesn't expect anything."
 msgstr ""
 "Jotkin palvelimet olettavat, että hyväksymisen otsikko päättää, mikä "
 "tiedosto lähetetään. Voit käyttää merkkejä */*, jos palvelin ei oleta "
@@ -964,8 +981,8 @@ msgstr "Oletusyleisö"
 
 #: core/opds_import.py:130
 msgid ""
-"If the vendor does not specify the target audience for their books, "
-"assume the books have this target audience."
+"If the vendor does not specify the target audience for their books, assume "
+"the books have this target audience."
 msgstr ""
 "Jos toimittaja ei määritä kirjojensa kohdeyleisöä, oleta, että kirjojen "
 "kohdeyleisö on tämä."
@@ -980,8 +997,8 @@ msgstr "Käyttäjänimi"
 
 #: core/opds_import.py:147
 msgid ""
-"If HTTP Basic authentication is required to access the OPDS feed (it "
-"usually isn't), enter the username here."
+"If HTTP Basic authentication is required to access the OPDS feed (it usually"
+" isn't), enter the username here."
 msgstr ""
 "Jos HTTP Basic -tunnistus vaaditaan OPDS-syötteen käyttämiseksi (yleensä "
 "sitä ei vaadita), kirjoita käyttäjänimi tähän."
@@ -992,8 +1009,8 @@ msgstr "Salasana"
 
 #: core/opds_import.py:158
 msgid ""
-"If HTTP Basic authentication is required to access the OPDS feed (it "
-"usually isn't), enter the password here."
+"If HTTP Basic authentication is required to access the OPDS feed (it usually"
+" isn't), enter the password here."
 msgstr ""
 "Jos HTTP Basic -tunnistus vaaditaan OPDS-syötteen käyttämiseksi (yleensä "
 "sitä ei vaadita), kirjoita salasana tähän."
@@ -1154,7 +1171,8 @@ msgstr ""
 
 #: core/data_conversion/accessibility_mapper.py:36
 msgid "This publication exceeds accepted accessibility standards"
-msgstr "Tämä julkaisu ylittää saavutettavuusstandardien yleisesti hyväksytyn tason"
+msgstr ""
+"Tämä julkaisu ylittää saavutettavuusstandardien yleisesti hyväksytyn tason"
 
 #: core/data_conversion/accessibility_mapper.py:39
 msgid "Readable in read aloud or dynamic braille"
@@ -1173,9 +1191,8 @@ msgid "No information about nonvisual reading is available"
 msgstr "Ei tietoa tukeeko muita kuin näköön perustuvia tapoja lukea"
 
 #: core/data_conversion/accessibility_mapper.py:51
-#, fuzzy
 msgid "Has alternative text"
-msgstr "Vaihtoehtohistoria"
+msgstr "Sisältää vaihtoehtoiset tekstit"
 
 #: core/data_conversion/accessibility_mapper.py:52
 msgid "Appearance can be modified"
@@ -1202,9 +1219,8 @@ msgid "No hazards"
 msgstr "Ei vaaratekijöitä"
 
 #: core/data_conversion/accessibility_mapper.py:62
-#, fuzzy
 msgid "Flashing content"
-msgstr "Muoti"
+msgstr "Välkkyvää sisältöä"
 
 #: core/data_conversion/accessibility_mapper.py:63
 msgid "Motion simulation"
@@ -1219,9 +1235,8 @@ msgid "The presence of hazards is unknown"
 msgstr "Ei tietoa vaaratekijöistä"
 
 #: core/data_conversion/accessibility_mapper.py:66
-#, fuzzy
 msgid "No information is available"
-msgstr "Ei tietoa tukeeko muita kuin näköön perustuvia tapoja lukea"
+msgstr "Tietoa ei ole saatavilla"
 
 #: core/util/http.py:34
 msgid "Failure contacting external service"
@@ -1243,8 +1258,8 @@ msgstr "Väärä vastaus"
 #: core/util/http.py:102
 #, python-format
 msgid ""
-"The server made a request to %(service)s, and got an unexpected or "
-"invalid response."
+"The server made a request to %(service)s, and got an unexpected or invalid "
+"response."
 msgstr ""
 "Palvelin teki pyynnön palveluun %(service)s ja sai odottamattoman tai "
 "virheellisen vastauksen."
@@ -1267,7 +1282,8 @@ msgstr "Aikakatkaisu"
 #: core/util/http.py:167
 #, python-format
 msgid "The server made a request to %(service)s, and that request timed out."
-msgstr "Palvelin teki pyynnön palveluun %(service)s, ja pyyntö aikakatkaistiin."
+msgstr ""
+"Palvelin teki pyynnön palveluun %(service)s, ja pyyntö aikakatkaistiin."
 
 #~ msgid "Literary Fiction"
 #~ msgstr "Yleinen kaunokirjallisuus"
@@ -1277,4 +1293,3 @@ msgstr "Palvelin teki pyynnön palveluun %(service)s, ja pyyntö aikakatkaistiin
 
 #~ msgid "Use <dcterms:identifier> first, if not exist use <id>"
 #~ msgstr "Käytä ensin <dcterms:identifier>, jos sitä ei ole, käytä <id>"
-
