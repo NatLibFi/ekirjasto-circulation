@@ -65,13 +65,15 @@ poetry install --only ci
     - [3. Run an individual file or test](#Run-an-individual-file-or-test)
 - [Localization (i18n, l10n, flask-pybabel, managing translations)](#localization-i18n-l10n-flask-pybabel-managing-translations)
 - [Code Style](#code-style)
-    - [1. Pre-Commit Configuration](#1-pre-commit-configuration)
-    - [2. Linters](#2-linters)
+    - [1. venv - Virtual environment](#1-venv---Virtual-environment)
+    - [2. Poetry](#2-Poetry)
+    - [3. Pre-Commit Configuration](#3-pre-commit-configuration)
+    - [4. Linters](#4-linters)
         - [Built in](#built-in)
         - [Black](#black)
         - [isort](#isort)
         - [autoflake](#autoflake)
-    - [3. Mypy](#3-Mypy)
+    - [5. Mypy](#5-Mypy)
 - [PyInstrument](#pyinstrument)
     - [Profiling tests suite](#profiling-tests-suite)
     - [Environment Variables](#environment-variables-1)
@@ -111,8 +113,9 @@ curl http://localhost:6500/
 
 This is all you need for day-to-day development.
 
-Check out the not-so-up-to-date [Docker README](/docker/README.md) in the `/docker` directory for in-depth information on running and
-developing the Circulation Manager locally with Docker, or for deploying the Circulation Manager with Docker.
+Check out the not-so-up-to-date [Docker README](/docker/README.md) in the `/docker` directory for in-depth information
+on running and developing the Circulation Manager locally with Docker, or for deploying the Circulation Manager with
+Docker.
 
 Now that you have a running application, you need to set up a library, add collections, etc.
 
@@ -316,7 +319,6 @@ pytest options after an optional `--`:
 The script wraps `docker compose -f docker-compose-tox.yml run --rm tox` so the repository mounts into `/workspace` and
 the host Docker daemon remains available for `tox-docker`. Export `LOCAL_UID` and `LOCAL_GID` before invoking the script
 if you need container file ownership to match your host user.
-```
 
 ## Localization (flask-pybabel, Transifex)
 
@@ -349,6 +351,43 @@ Code style on this project is linted using [pre-commit](https://pre-commit.com/)
 in our `pyproject.toml` file, so if you have the applications requirements installed it should be available. pre-commit
 is run automatically on each push and PR by our [CI System](#continuous-integration).
 
+If you don't have it installed:
+
+### 1. venv - Virtual environment
+
+The codes uses Python 3.10 and 3.11. We mostly use 3.11, but install both versions (3.10 in case you want to run
+tests against it):
+
+```sh
+brew install python@3.11
+```
+
+Create a virtual environment that uses Python 3.11 and activate it:
+
+```sh
+python3.11 -m venv venv
+source venv/bin/activate
+```
+
+### 2. Poetry
+
+This project uses [poetry](https://python-poetry.org/) for dependency management.
+
+Poetry can be installed using the command `curl -sSL https://install.python-poetry.org | python3 -` but at the moment,
+Poetry version 1.8.3 works without problems. Install it:
+
+```sh
+brew install poetry@1.8.5
+```
+
+Run `poetry debug info` to check that Python 3.11 is used in Poetry and the envirnoment.
+
+Then install dependencies:
+
+```sh
+poetry install
+```
+
 Run it manually on all files before pushing to the repository:
 
 ```sh
@@ -359,12 +398,12 @@ You can also set it up, so that it runs automatically for you on each commit. Ru
 will install the pre-commit script in your local repositories git hooks folder, so that pre-commit is run automatically
 on each commit.
 
-### 1. Pre-Commit Configuration
+### 3. Pre-Commit Configuration
 
 The pre-commit configuration file is named [`.pre-commit-config.yaml`](.pre-commit-config.yaml). This file configures
 the different lints that pre-commit runs.
 
-### 2. Linters
+### 4. Linters
 
 #### Built in
 
@@ -396,9 +435,9 @@ isort configuration is stored in our [tox.ini](tox.ini) which isort automaticall
 We lint using [autoflake](https://pypi.org/project/autoflake/) to flag and remove any unused import statement. If an
 unused import is needed for some reason it can be ignored with a `#noqa` comment in the code.
 
-### 3. Mypy
+### 5. Mypy
 
-You can run `mypy` to check static types. You'll need to have an active `venv` to run it, see `docs/local_setup.md` on how to activate and add depenedencies.
+You can run `mypy` to check static types.
 
 ## PyInstrument
 
