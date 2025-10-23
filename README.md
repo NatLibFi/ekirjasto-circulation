@@ -253,13 +253,11 @@ These can be found at `/admin/web/config/SitewideSettings` in the admin interfac
 This setting is a toggle that may be used to turn on or off the ability for the the system
 to send the Loan and Hold reminders to the mobile applications.
 
-## Scheduled Jobs
+### 9. Scheduled Jobs
 
 All jobs are scheduled via `cron`, as specified in the `docker/services/cron/cron.d/circulation` file.
 This includes all the import and reaper jobs, as well as other necessary background tasks, such as maintaining
 the search index and feed caches.
-
-### Notifications
 
 #### hold_notifications
 
@@ -273,7 +271,24 @@ Requires one of [the Firebase Cloud Messaging credentials environment variables 
 to be present and non-empty.
 In addition, the site-wide `PUSH_NOTIFICATIONS_STATUS` setting must be either `unset` or `true`.
 
-### 3. Testing
+### 10. Informational scripts
+
+There are some useful scripts in `bin/informational` you can run in the `scripts` container:
+
+- `explain`: Details of a book including bibliographical details, licenses, loans, holds, genres, etc.
+
+```sh
+../core/bin/run informational/explain --identifier-type="ISBN" 9780008621506
+```
+
+- `license_report`: License pool and license details with checkouts, loans, holds queue, etc. Helps to identify issues
+with failing loans.
+
+```sh
+../core/bin/run informational/license_report
+```
+
+## Testing
 
 The Github Actions CI service runs the unit tests against Python 3.10, and 3.11 automatically using
 [tox](https://tox.readthedocs.io/en/latest/).
@@ -282,81 +297,11 @@ Tox has an environment for each python version, the module being tested, and an 
 automatically use docker to deploy service containers used for the tests. You can select the environment you would like
 to test with the tox `-e` flag.
 
-#### Running tox inside Docker
-
-Use the `scripts/tox-docker.sh` helper to run tox in the container defined in `docker-compose-tox.yml`. The tests are
-run using `Python 3.11`. Docker Desktop (macOS/Windows) or a running Docker Engine (Linux) is required.
-
-Build the image (only needed after dependency or Dockerfile changes):
-
-```sh
-./scripts/tox-docker.sh build
-```
-
-#### Run the API or core suites
-
-```sh
-./scripts/tox-docker.sh api
-./scripts/tox-docker.sh core
-```
-
-Run both suites in one go:
-
-```sh
-./scripts/tox-docker.sh all
-```
-
-#### Run an individual file or test
-
-When you skip the `api`/`core` subcommand the script infers the environment from the test paths and forwards any
-pytest options after an optional `--`:
-
-```sh
-./scripts/tox-docker.sh tests/api/test_odl2.py -k test_import
-./scripts/tox-docker.sh tests/core/test_circulation_data.py::TestCirculationData
-```
-
-The script wraps `docker compose -f docker-compose-tox.yml run --rm tox` so the repository mounts into `/workspace` and
-the host Docker daemon remains available for `tox-docker`. Export `LOCAL_UID` and `LOCAL_GID` before invoking the script
-if you need container file ownership to match your host user.
-
-## Localization (flask-pybabel, Transifex)
-
-When adding new translations (with `gettext()` or alias `_()`), make sure to
-update the translation files with:
-
-```bash
-bin/util/collect_translations
-```
-
-Here's what the script does:
-
-1) Collects and generates translations from source files with a custom script.
-2) Creates new translation templates (`*.pot`) with `pybabel extract`
-3) Updates existing translation files (`*.po`) with `pybabel update`
-
-Check the generated `.po` files and make the following changes if you see any:
-- In the English file, if `msgstr` is empty, replace it with the same string as the `msgid` string.
-- In the Finnish and Swedish files, if the `msgstr` is empty, replace with a placeholder string, e.g. "TRANSLATE".
-- Remove any `fuzzy` attributes or they won't show up in Transifex.
-
-Make PR, and when it's merged to main, the translations will be uploaded to Transifex.
-
-Once all strings have been translated and reviewed in Transifex, Transifex will automatically create a PR in Github and
-commit the updated files.
-
-## Code Style
-
-Code style on this project is linted using [pre-commit](https://pre-commit.com/). This python application is included
-in our `pyproject.toml` file, so if you have the applications requirements installed it should be available. pre-commit
-is run automatically on each push and PR by our [CI System](#continuous-integration).
-
-If you don't have it installed:
+for running the tests locally, you'll need a `venv`.
 
 ### 1. venv - Virtual environment
 
-The codes uses Python 3.10 and 3.11. We mostly use 3.11, but install both versions (3.10 in case you want to run
-tests against it):
+The codes uses Python 3.10 and 3.11. We mostly use 3.11.
 
 ```sh
 brew install python@3.11
@@ -387,6 +332,82 @@ Then install dependencies:
 ```sh
 poetry install
 ```
+
+### 3. Running tox inside Docker
+
+Use the `scripts/tox-docker.sh` helper to run tox in the container defined in `docker-compose-tox.yml`. The tests are
+run using `Python 3.11`. Docker Desktop (macOS/Windows) or a running Docker Engine (Linux) is required.
+
+Build the image (only needed after dependency or Dockerfile changes):
+
+```sh
+./scripts/tox-docker.sh build
+```
+
+### 4. Run the API or core suites
+
+```sh
+./scripts/tox-docker.sh api
+./scripts/tox-docker.sh core
+```
+
+Run both suites in one go:
+
+```sh
+./scripts/tox-docker.sh all
+```
+
+### 5. Run an individual file or test
+
+When you skip the `api`/`core` subcommand the script infers the environment from the test paths and forwards any
+pytest options after an optional `--`:
+
+```sh
+./scripts/tox-docker.sh tests/api/test_odl2.py -k test_import
+./scripts/tox-docker.sh tests/core/test_circulation_data.py::TestCirculationData
+```
+
+The script wraps `docker compose -f docker-compose-tox.yml run --rm tox` so the repository mounts into `/workspace` and
+the host Docker daemon remains available for `tox-docker`. Export `LOCAL_UID` and `LOCAL_GID` before invoking the script
+if you need container file ownership to match your host user.
+
+## Localization (flask-pybabel, Transifex)
+
+When adding new translations (with `gettext()` or alias `_()`), the new strings are added by a script. For the script to
+work, the backend should be running, and you need to export the following environment variables:
+
+```bash
+export SIMPLIFIED_PRODUCTION_DATABASE="postgresql://palace:test@localhost:5432/circ"
+export PALACE_SEARCH_URL="http://opensearch:9200" 
+```
+
+Then run the script:
+
+```bash
+bin/util/collect_translations
+```
+
+Here's what the script does:
+
+1) Collects and generates translations from source files with a custom script.
+2) Creates new translation templates (`*.pot`) with `pybabel extract`
+3) Updates existing translation files (`*.po`) with `pybabel update`
+
+Check the generated `.po` files and make the following changes if you see any:
+- In the English file, if `msgstr` is empty, replace it with the same string as the `msgid` string.
+- In the Finnish and Swedish files, if the `msgstr` is empty, replace with a placeholder string, e.g. "TRANSLATE".
+- Remove any `fuzzy` attributes or they won't show up in Transifex.
+
+Make PR, and when it's merged to main, the translations will be uploaded to Transifex.
+
+Once all strings have been translated and reviewed in Transifex, Transifex will automatically create a PR in Github and
+commit the updated files.
+
+## Code Style
+
+Code style on this project is linted using [pre-commit](https://pre-commit.com/). This python application is included
+in our `pyproject.toml` file, so if you have the applications requirements installed it should be available. pre-commit
+is run automatically on each push and PR by our [CI System](#continuous-integration).
 
 Run it manually on all files before pushing to the repository:
 
@@ -437,15 +458,19 @@ unused import is needed for some reason it can be ignored with a `#noqa` comment
 
 ### 5. Mypy
 
-You can run `mypy` to check static types.
+Mypy is also is run automatically on each push and PR so be sure to run it locally for checking any static typing
+issues.
+
+```sh
+mypy
+```
 
 ## PyInstrument
 
 This profiler uses [PyInstrument](https://pyinstrument.readthedocs.io/en/latest/) to profile the code.
+(Currently not enabled in E-kirjasto.)
 
 ### Profiling tests suite
-
-(Currently not supported in E-kirjasto)
 
 PyInstrument can also be used to profile the test suite. This can be useful to identify slow tests, or to identify
 performance regressions.
