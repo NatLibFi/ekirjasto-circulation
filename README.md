@@ -55,25 +55,25 @@ poetry install --only ci
     - [6. Patron authentication](#6-patron-authentication)
     - [7. Troubleshooting](#7-troubleshooting)
     - [8. Sitewide Settings](#8-sitewide-settings)
-- [Scheduled Jobs](#scheduled-jobs)
-    - [1. Job Requirements](#job-requirements)
+    - [9. Scheduled Jobs](#9-scheduled-jobs)
         - [hold_notifications](#hold_notifications)
         - [loan_notifications](#loan_notifications)
-- [Testing](#3-testing)
-    - [1. Tox-Docker](#Running-tox-inside-Docker)
-    - [2. Running Tests](#Run-the-API-or-core-suites)
-    - [3. Run an individual file or test](#Run-an-individual-file-or-test)
-- [Localization (i18n, l10n, flask-pybabel, managing translations)](#localization-i18n-l10n-flask-pybabel-managing-translations)
-- [Code Style](#code-style)
+    - [10. Informational scrits](#10-informational-scripts)
+- [Testing](#testing)
     - [1. venv - Virtual environment](#1-venv---Virtual-environment)
     - [2. Poetry](#2-Poetry)
-    - [3. Pre-Commit Configuration](#3-pre-commit-configuration)
-    - [4. Linters](#4-linters)
+    - [3. Tox-Docker](#3-Running-tox-inside-Docker)
+    - [4. Running Tests](#4-Run-the-API-or-core-suites)
+    - [5. Run an individual file or test](#5-Run-an-individual-file-or-test)
+- [Localization (flask-pybabel, Transifex)](#localization-flask-pybabel-transifex)
+- [Code Style](#code-style)
+    - [1. Pre-Commit Configuration](#3-pre-commit-configuration)
+    - [2. Linters](#4-linters)
         - [Built in](#built-in)
         - [Black](#black)
         - [isort](#isort)
         - [autoflake](#autoflake)
-    - [5. Mypy](#5-Mypy)
+    - [3. Mypy](#5-Mypy)
 - [PyInstrument](#pyinstrument)
     - [Profiling tests suite](#profiling-tests-suite)
     - [Environment Variables](#environment-variables-1)
@@ -378,7 +378,7 @@ work, the backend should be running, and you need to export the following enviro
 
 ```bash
 export SIMPLIFIED_PRODUCTION_DATABASE="postgresql://palace:test@localhost:5432/circ"
-export PALACE_SEARCH_URL="http://opensearch:9200" 
+export PALACE_SEARCH_URL="http://opensearch:9200"
 ```
 
 Then run the script:
@@ -419,12 +419,12 @@ You can also set it up, so that it runs automatically for you on each commit. Ru
 will install the pre-commit script in your local repositories git hooks folder, so that pre-commit is run automatically
 on each commit.
 
-### 3. Pre-Commit Configuration
+### 1. Pre-Commit Configuration
 
 The pre-commit configuration file is named [`.pre-commit-config.yaml`](.pre-commit-config.yaml). This file configures
 the different lints that pre-commit runs.
 
-### 4. Linters
+### 2. Linters
 
 #### Built in
 
@@ -456,7 +456,7 @@ isort configuration is stored in our [tox.ini](tox.ini) which isort automaticall
 We lint using [autoflake](https://pypi.org/project/autoflake/) to flag and remove any unused import statement. If an
 unused import is needed for some reason it can be ignored with a `#noqa` comment in the code.
 
-### 5. Mypy
+### 3. Mypy
 
 Mypy is also is run automatically on each push and PR so be sure to run it locally for checking any static typing
 issues.
