@@ -360,7 +360,7 @@ class ConformsTo(str, Enum):
     """
 
     epub_1_0_wcag_2_0_level_a = (
-        "http://www.idpf.org/epub/a11y/accessibility-20170105.html#wcag-a"
+        "http://www.idpf.org/epub/a11y/accessibility-20170105.html#wcag-a",
     )
     epub_1_0_wcag_2_0_level_aa = (
         "http://www.idpf.org/epub/a11y/accessibility-20170105.html#wcag-aa"
@@ -377,6 +377,19 @@ class ConformsTo(str, Enum):
     epub_1_1_wcag_2_2_level_a = "https://www.w3.org/TR/epub-a11y-11#wcag-2.2-a"
     epub_1_1_wcag_2_2_level_aa = "https://www.w3.org/TR/epub-a11y-11#wcag-2.2-aa"
     epub_1_1_wcag_2_2_level_aaa = "https://www.w3.org/TR/epub-a11y-11#wcag-2.2-aaa"
+
+    epub_1_0_wcag_2_0_level_a_text = "EPUB Accessibility 1.0 - WCAG 2.0 Level A"
+    epub_1_0_wcag_2_0_level_aa_text = "EPUB Accessibility 1.0 - WCAG 2.0 Level AA"
+    epub_1_0_wcag_2_0_level_aaa_text = "EPUB Accessibility 1.0 - WCAG 2.0 Level AAA"
+    epub_1_1_wcag_2_0_level_a_text = "EPUB Accessibility 1.1 - WCAG 2.0 Level A"
+    epub_1_1_wcag_2_0_level_aa_text = "EPUB Accessibility 1.1 - WCAG 2.0 Level AA"
+    epub_1_1_wcag_2_0_level_aaa_text = "EPUB Accessibility 1.1 - WCAG 2.0 Level AAA"
+    epub_1_1_wcag_2_1_level_a_text = "EPUB Accessibility 1.1 - WCAG 2.1 Level A"
+    epub_1_1_wcag_2_1_level_aa_text = "EPUB Accessibility 1.1 - WCAG 2.1 Level AA"
+    epub_1_1_wcag_2_1_level_aaa_text = "EPUB Accessibility 1.1 - WCAG 2.1 Level AAA"
+    epub_1_1_wcag_2_2_level_a_text = "EPUB Accessibility 1.1 - WCAG 2.2 Level A"
+    epub_1_1_wcag_2_2_level_aa_text = "EPUB Accessibility 1.1 - WCAG 2.2 Level AA"
+    epub_1_1_wcag_2_2_level_aaa_text = "EPUB Accessibility 1.1 - WCAG 2.2 Level AAA"
 
 
 class Exemption(str, Enum):

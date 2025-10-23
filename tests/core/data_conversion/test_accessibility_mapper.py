@@ -47,19 +47,29 @@ class TestAccessibilityDataMapper:
         "conformance, expected_output",
         [
             pytest.param(
+                ["EPUB Accessibility 1.0 - WCAG 2.0 Level A"],
+                [W3CDisplayTexts.a],
+                id="wcag-a-text",
+            ),
+            pytest.param(
+                ["EPUB Accessibility 1.1 - WCAG 2.1 Level AAA"],
+                [W3CDisplayTexts.aaa],
+                id="wcag-aaa-text",
+            ),
+            pytest.param(
                 ["http://www.idpf.org/epub/a11y/accessibility-20170105.html#wcag-a"],
                 [W3CDisplayTexts.a],
-                id="wcag-a",
+                id="wcag-a-link",
             ),
             pytest.param(
                 ["https://www.w3.org/TR/epub-a11y-11#wcag-2.0-aa"],
                 [W3CDisplayTexts.aa],
-                id="wcag-aa",
+                id="wcag-aa-link",
             ),
             pytest.param(
                 ["https://www.w3.org/TR/epub-a11y-11#wcag-2.2-aaa"],
                 [W3CDisplayTexts.aaa],
-                id="wcag-aaa",
+                id="wcag-aaa-link",
             ),
             pytest.param(None, None, id="no data"),
         ],
