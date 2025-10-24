@@ -338,12 +338,10 @@ class TestLicense:
         pool = licenses.pool
         license = licenses.perpetual
         patron = licenses.db.patron()
-        patron.last_loan_activity_sync = utc_now()
         loan, is_new = license.loan_to(patron)
         assert license == loan.license
         assert pool == loan.license_pool
         assert True == is_new
-        assert None == patron.last_loan_activity_sync
 
         loan2, is_new = license.loan_to(patron)
         assert loan == loan2
@@ -1163,7 +1161,6 @@ class TestLicensePool:
         pool = db.licensepool(None)
         patron = db.patron()
         now = utc_now()
-        patron.last_loan_activity_sync = now
 
         yesterday = now - datetime.timedelta(days=1)
         tomorrow = now + datetime.timedelta(days=1)
@@ -1187,16 +1184,8 @@ class TestLicensePool:
         assert fulfillment == loan.fulfillment
         assert external_identifier == loan.external_identifier
 
-        # Issuing a loan locally created uncertainty about a patron's
-        # loans, since we don't know how the external vendor dealt
-        # with the request. The last_loan_activity_sync has been
-        # cleared out so we know to check back with the source of
-        # truth.
-        assert None == patron.last_loan_activity_sync
-
         # 'Creating' a loan that already exists does not create any
         # uncertainty.
-        patron.last_loan_activity_sync = now
         loan2, is_new = pool.loan_to(
             patron,
             start=yesterday,
@@ -1206,7 +1195,6 @@ class TestLicensePool:
         )
         assert False == is_new
         assert loan == loan2
-        assert now == patron.last_loan_activity_sync
 
     def test_on_hold_to_patron(self, db: DatabaseTransactionFixture):
         # Test our ability to put a Patron in the holds queue for a LicensePool.
@@ -1217,7 +1205,6 @@ class TestLicensePool:
         pool = db.licensepool(None)
         patron = db.patron()
         now = utc_now()
-        patron.last_loan_activity_sync = now
 
         yesterday = now - datetime.timedelta(days=1)
         tomorrow = now + datetime.timedelta(days=1)
@@ -1242,16 +1229,8 @@ class TestLicensePool:
         assert position == hold.position
         assert external_identifier == hold.external_identifier
 
-        # Issuing a hold locally created uncertainty about a patron's
-        # loans, since we don't know how the external vendor dealt
-        # with the request. The last_loan_activity_sync has been
-        # cleared out so we know to check back with the source of
-        # truth.
-        assert None == patron.last_loan_activity_sync
-
         # 'Creating' a hold that already exists does not create any
         # uncertainty.
-        patron.last_loan_activity_sync = now
         hold2, is_new = pool.on_hold_to(
             patron,
             start=yesterday,
@@ -1261,8 +1240,6 @@ class TestLicensePool:
         )
         assert False == is_new
         assert hold == hold2
-        assert now == patron.last_loan_activity_sync
-
 
 class TestLicensePoolDeliveryMechanism:
     def test_lpdm_change_may_change_open_access_status(

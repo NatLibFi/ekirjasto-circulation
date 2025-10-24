@@ -491,33 +491,6 @@ class TestPatron:
         assert db.session.query(Annotation).all() == []
         assert db.session.query(Credential).all() == []
 
-    def test_loan_activity_max_age(self, db: DatabaseTransactionFixture):
-        # Currently, patron.loan_activity_max_age is a constant
-        # and cannot be changed.
-        assert 15 * 60 == db.patron().loan_activity_max_age
-
-    def test_last_loan_activity_sync(self, db: DatabaseTransactionFixture):
-        # Verify that last_loan_activity_sync is cleared out
-        # beyond a certain point.
-        patron = db.patron()
-        now = utc_now()
-        max_age = patron.loan_activity_max_age
-        recently = now - datetime.timedelta(seconds=max_age / 2)
-        long_ago = now - datetime.timedelta(seconds=max_age * 2)
-
-        # So long as last_loan_activity_sync is relatively recent,
-        # it's treated as a normal piece of data.
-        patron.last_loan_activity_sync = recently
-        assert recently == patron._last_loan_activity_sync
-        assert recently == patron.last_loan_activity_sync
-
-        # If it's _not_ relatively recent, attempting to access it
-        # doesn't clear it out, but accessor returns None
-        patron.last_loan_activity_sync = long_ago
-        assert long_ago == patron._last_loan_activity_sync
-        assert None == patron.last_loan_activity_sync
-        assert long_ago == patron._last_loan_activity_sync
-
     def test_root_lane(self, db: DatabaseTransactionFixture):
         root_1 = db.lane()
         root_2 = db.lane()

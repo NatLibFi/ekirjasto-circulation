@@ -1621,7 +1621,6 @@ class CirculationAPI:
             __transaction = self._db.begin_nested()
             self.log.info(f"In revoke_loan(), deleting loan #{loan.id}")
             self._db.delete(loan)
-            patron.last_loan_activity_sync = None
             __transaction.commit()
             # Send out an analytics event to record the fact that
             # a loan was revoked through the circulation
@@ -1805,26 +1804,9 @@ class CirculationAPI:
         local_loans = self.local_loans(patron)
         local_holds = self.local_holds(patron)
 
-        if patron and patron.last_loan_activity_sync and not force:
-            # Our local data is considered fresh, so we can return it
-            # without calling out to the vendor APIs.
-            return local_loans, local_holds
-
-        # Assuming everything goes well, we will set
-        # Patron.last_loan_activity_sync to this value -- the moment
-        # just before we started contacting the vendor APIs.
-        last_loan_activity_sync: datetime.datetime | None = utc_now()
-
         # Update the external view of the patron's current state.
         remote_loans, remote_holds, complete = self.patron_activity(patron, pin)
         __transaction = self._db.begin_nested()
-
-        if not complete:
-            # We were not able to get a complete picture of the
-            # patron's loan activity. Until we are able to do that, we
-            # should never assume that our internal model of the
-            # patron's loans is good enough to cache.
-            last_loan_activity_sync = None
 
         now = utc_now()
         local_loans_by_identifier = {}
@@ -1894,14 +1876,8 @@ class CirculationAPI:
             if key in local_holds_by_identifier:
                 del local_holds_by_identifier[key]
 
-        # Now that we're in sync (or not), set last_loan_activity_sync
-        # to the conservative value obtained earlier.
-        if patron:
-            patron.last_loan_activity_sync = last_loan_activity_sync
-
         __transaction.commit()
         self.log.info(
             f"Patron id {patron.id}: active loans {len(active_loans)}, "
-            f"active holds {len(active_holds)} [synced: {patron.last_loan_activity_sync}]"
         )
         return active_loans, active_holds

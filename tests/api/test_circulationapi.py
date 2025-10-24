@@ -950,16 +950,12 @@ class TestCirculationAPI:
     def test_revoke_loan(self, circulation_api: CirculationAPIFixture, open_access):
         circulation_api.pool.open_access = open_access
 
-        circulation_api.patron.last_loan_activity_sync = utc_now()
         circulation_api.pool.loan_to(circulation_api.patron)
         circulation_api.remote.queue_checkin(True)
         result = circulation_api.circulation.revoke_loan(
             circulation_api.patron, "1234", circulation_api.pool
         )
         assert True == result
-
-        # The patron's loan activity is now out of sync.
-        assert None == circulation_api.patron.last_loan_activity_sync
 
         # An analytics event was created.
         assert 1 == circulation_api.analytics.count
@@ -969,7 +965,6 @@ class TestCirculationAPI:
     def test_release_hold(self, circulation_api: CirculationAPIFixture, open_access):
         circulation_api.pool.open_access = open_access
 
-        circulation_api.patron.last_loan_activity_sync = utc_now()
         circulation_api.pool.on_hold_to(circulation_api.patron)
         circulation_api.remote.queue_release_hold(True)
 
@@ -977,9 +972,6 @@ class TestCirculationAPI:
             circulation_api.patron, "1234", circulation_api.pool
         )
         assert True == result
-
-        # The patron's loan activity is now out of sync.
-        assert None == circulation_api.patron.last_loan_activity_sync
 
         # An analytics event was created.
         assert 1 == circulation_api.analytics.count
