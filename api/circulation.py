@@ -952,23 +952,6 @@ class BaseCirculationAPI(
 
 CirculationApiType = BaseCirculationAPI[BaseCirculationApiSettings, BaseSettings]
 
-
-class PatronActivityCirculationAPI(
-    BaseCirculationAPI[SettingsType, LibrarySettingsType], ABC
-):
-    """
-    A CirculationAPI that can return a patron's current checkouts and holds, that
-    were made outside the Palace platform.
-    """
-
-    @abstractmethod
-    def patron_activity(
-        self, patron: Patron, pin: str
-    ) -> Iterable[LoanInfo | HoldInfo]:
-        """Return a patron's current checkouts and holds."""
-        ...
-
-
 class CirculationAPI:
     """Implement basic circulation logic and abstract away the details
     between different circulation APIs behind generic operations like
@@ -1033,8 +1016,7 @@ class CirculationAPI:
                     self.initialization_exceptions[collection.id] = exception
                 if api:
                     self.api_for_collection[collection.id] = api
-                    if isinstance(api, PatronActivityCirculationAPI):
-                        self.collection_ids_for_sync.append(collection.id)
+                    self.collection_ids_for_sync.append(collection.id)
 
     @property
     def library(self) -> Library | None:
@@ -1677,99 +1659,7 @@ class CirculationAPI:
 
         return True
 
-    def patron_activity(
-        self, patron: Patron, pin: str
-    ) -> tuple[list[LoanInfo], list[HoldInfo], bool]:
-        """Return a record of the patron's current activity
-        vis-a-vis all relevant external loan sources.
-
-        We check each source in a separate thread for speed.
-
-        :return: A 2-tuple (loans, holds) containing `HoldInfo` and
-            `LoanInfo` objects.
         """
-        log = self.log
-
-        class PatronActivityThread(Thread):
-            def __init__(
-                self,
-                api: PatronActivityCirculationAPI[
-                    BaseCirculationApiSettings, BaseSettings
-                ],
-                patron: Patron,
-                pin: str,
-            ) -> None:
-                self.api = api
-                self.patron = patron
-                self.pin = pin
-                self.activity: Iterable[LoanInfo | HoldInfo] | None = None
-                self.exception: Exception | None = None
-                self.trace: tuple[
-                    type[BaseException], BaseException, TracebackType
-                ] | tuple[None, None, None] | None = None
-                super().__init__()
-
-            def run(self) -> None:
-                before = time.time()
-                try:
-                    self.activity = self.api.patron_activity(self.patron, self.pin)
-                except Exception as e:
-                    self.exception = e
-                    self.trace = sys.exc_info()
-                after = time.time()
-                log.debug(
-                    "Synced %s in %.2f sec", self.api.__class__.__name__, after - before
-                )
-
-                # While testing we are in a Session scope
-                # we need to only close this if api._db is a flask_scoped_session.
-                if getattr(self.api, "_db", None) and type(self.api._db) != Session:
-                    # Since we are in a Thread using a flask_scoped_session
-                    # we can assume a new Session was opened due to the thread activity.
-                    # We must close this session to avoid connection pool leaks
-                    self.api._db.close()
-
-        threads = []
-        before = time.time()
-        for api in list(self.api_for_collection.values()):
-            if isinstance(api, PatronActivityCirculationAPI):
-                thread = PatronActivityThread(api, patron, pin)
-                threads.append(thread)
-        for thread in threads:
-            thread.start()
-        for thread in threads:
-            thread.join()
-        loans: list[LoanInfo] = []
-        holds: list[HoldInfo] = []
-        complete = True
-        for thread in threads:
-            if thread.exception:
-                # Something went wrong, so we don't have a complete
-                # picture of the patron's loans.
-                complete = False
-                self.log.error(
-                    "%s errored out: %s",
-                    thread.api.__class__.__name__,
-                    thread.exception,
-                    exc_info=thread.trace,
-                )
-            if thread.activity:
-                for i in thread.activity:
-                    if not isinstance(i, (LoanInfo, HoldInfo)):
-                        self.log.warning(  # type: ignore[unreachable]
-                            "value %r from patron_activity is neither a loan nor a hold.",
-                            i,
-                        )
-                        continue
-
-                    if isinstance(i, LoanInfo):
-                        loans.append(i)
-                    elif isinstance(i, HoldInfo):
-                        holds.append(i)
-
-        after = time.time()
-        self.log.debug("Full sync took %.2f sec", after - before)
-        return loans, holds, complete
 
     def local_loans(self, patron: Patron) -> Query[Loan]:
         return (

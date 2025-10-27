@@ -8,134 +8,17 @@ from api.circulation import (
     CirculationAPI,
     HoldInfo,
     LoanInfo,
-    PatronActivityCirculationAPI,
 )
 from api.circulation_manager import CirculationManager
 from core.integration.settings import BaseSettings
 from core.model import DataSource, Hold, Loan
 from core.service.container import Services
 
-
-class MockPatronActivityCirculationAPI(PatronActivityCirculationAPI, ABC):
-    @classmethod
-    def label(cls) -> str:
-        return ""
-
-    @classmethod
-    def description(cls) -> str:
-        return ""
-
-    @classmethod
-    def settings_class(cls) -> type[BaseSettings]:
-        return BaseSettings
-
-    @classmethod
-    def library_settings_class(cls) -> type[BaseSettings]:
-        return BaseSettings
-
-
-class MockRemoteAPI(MockPatronActivityCirculationAPI):
-    def __init__(
-        self,
-        _db: Session,
-        set_delivery_mechanism_at=True,
-        can_revoke_hold_when_reserved=True,
-    ):
-        self.SET_DELIVERY_MECHANISM_AT = set_delivery_mechanism_at
-        self.CAN_REVOKE_HOLD_WHEN_RESERVED = can_revoke_hold_when_reserved
-        self.responses = defaultdict(list)  # type: ignore[var-annotated]
-        self.availability_updated_for: list = []
-
-    def checkout(self, patron_obj, patron_password, licensepool, delivery_mechanism):
-        # Should be a LoanInfo.
-        return self._return_or_raise("checkout")
-
-    def update_availability(self, licensepool):
-        """Simply record the fact that update_availability was called."""
-        self.availability_updated_for.append(licensepool)
-
-    def place_hold(self, patron, pin, licensepool, hold_notification_email=None):
-        # Should be a HoldInfo.
-        return self._return_or_raise("hold")
-
-    def fulfill(
-        self,
-        patron,
-        pin,
-        licensepool,
-        delivery_mechanism,
-    ):
-        # Should be a FulfillmentInfo.
-        return self._return_or_raise("fulfill")
-
-    def checkin(self, patron, pin, licensepool):
-        # Return value is not checked.
-        return self._return_or_raise("checkin")
-
-    def patron_activity(self, patron, pin):
-        return self._return_or_raise("patron_activity")
-
-    def release_hold(self, patron, pin, licensepool):
-        # Return value is not checked.
-        return self._return_or_raise("release_hold")
-
-    def internal_format(self, delivery_mechanism):
-        return delivery_mechanism
-
-    # Only called TestODLNotificationController
-    def delete_expired_loan(self, loan):
-        self.availability_updated_for.append(loan.license_pool)
-
-    def queue_checkout(self, response):
-        self._queue("checkout", response)
-
-    def queue_hold(self, response):
-        self._queue("hold", response)
-
-    def queue_fulfill(self, response):
-        self._queue("fulfill", response)
-
-    def queue_checkin(self, response):
-        self._queue("checkin", response)
-
-    def queue_release_hold(self, response):
-        self._queue("release_hold", response)
-
-    def _queue(self, k, v):
-        self.responses[k].append(v)
-
-    def _return_or_raise(self, k):
-        self.log.debug(k)
-        l = self.responses[k]
-        v = l.pop()
-        if isinstance(v, Exception):
-            raise v
-        return v
-
-
 class MockCirculationAPI(CirculationAPI):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.responses = defaultdict(list)
-        self.remote_loans = []
-        self.remote_holds = []
         self.remotes = {}
-
-    def local_loans(self, patron):
-        return self._db.query(Loan).filter(Loan.patron == patron)
-
-    def local_holds(self, patron):
-        return self._db.query(Hold).filter(Hold.patron == patron)
-
-    def add_remote_loan(self, loan_info: LoanInfo, *args, **kwargs):
-        self.remote_loans.append(loan_info)
-
-    def add_remote_hold(self, hold_info: HoldInfo, *args, **kwargs):
-        self.remote_holds.append(hold_info)
-
-    def patron_activity(self, patron, pin):
-        """Return a 3-tuple (loans, holds, completeness)."""
-        return self.remote_loans, self.remote_holds, True
 
     def queue_checkout(self, licensepool, response):
         self._queue("checkout", licensepool, response)

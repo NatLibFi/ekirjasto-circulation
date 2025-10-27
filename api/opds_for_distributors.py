@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 import feedparser
 from flask_babel import lazy_gettext as _
 
-from api.circulation import FulfillmentInfo, LoanInfo, PatronActivityCirculationAPI
+from api.circulation import FulfillmentInfo, LoanInfo, BaseCirculationAPI
 from api.circulation_exceptions import (
     CannotFulfill,
     DeliveryMechanismError,
@@ -67,7 +67,7 @@ class OPDSForDistributorsLibrarySettings(BaseSettings):
 
 
 class OPDSForDistributorsAPI(
-    PatronActivityCirculationAPI[
+    BaseCirculationAPI[
         OPDSForDistributorsSettings, OPDSForDistributorsLibrarySettings
     ],
     HasCollectionSelfTests,

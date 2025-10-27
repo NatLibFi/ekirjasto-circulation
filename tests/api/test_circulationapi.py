@@ -1142,44 +1142,6 @@ class TestCirculationAPI:
         assert self.IN_TWO_WEEKS == hold.end
         assert 0 == hold.position
 
-    def test_sync_bookshelf_respects_last_loan_activity_sync(
-        self, circulation_api: CirculationAPIFixture
-    ):
-        # We believe we have up-to-date loan activity for this patron.
-        now = utc_now()
-        circulation_api.patron.last_loan_activity_sync = now
-
-        # Syncing our loans with the remote won't actually do anything.
-        circulation_api.circulation.sync_bookshelf(circulation_api.patron, "1234")
-        assert [] == circulation_api.patron.loans
-
-        # But eventually, our local knowledge will grow stale.
-        long_ago = now - timedelta(
-            seconds=circulation_api.patron.loan_activity_max_age * 2
-        )
-        circulation_api.patron.last_loan_activity_sync = long_ago
-
-        # At that point, sync_bookshelf _will_ go out to the remote.
-        now = utc_now()
-        circulation_api.circulation.sync_bookshelf(circulation_api.patron, "1234")
-        # Still no loans
-        assert 0 == len(circulation_api.patron.loans)
-
-        # Once that happens, patron.last_loan_activity_sync is updated to
-        # the current time.
-        updated = circulation_api.patron.last_loan_activity_sync
-        assert (updated - now).total_seconds() < 2
-
-        # It's also possible to force a sync even when one wouldn't
-        # normally happen, by passing force=True into sync_bookshelf.
-        circulation_api.circulation.remote_loans = []
-
-        circulation_api.circulation.sync_bookshelf(
-            circulation_api.patron, "1234", force=True
-        )
-        assert [] == circulation_api.patron.loans
-        assert circulation_api.patron.last_loan_activity_sync > updated
-
     def test_can_fulfill_without_loan(self, circulation_api: CirculationAPIFixture):
         """Can a title can be fulfilled without an active loan?  It depends on
         the BaseCirculationAPI implementation for that title's colelction.

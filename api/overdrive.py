@@ -32,7 +32,6 @@ from api.circulation import (
     FulfillmentInfo,
     HoldInfo,
     LoanInfo,
-    PatronActivityCirculationAPI,
 )
 from api.circulation_exceptions import *
 from api.circulation_exceptions import CannotFulfill
@@ -199,7 +198,7 @@ class OverdriveChildSettings(BaseSettings):
 
 
 class OverdriveAPI(
-    PatronActivityCirculationAPI[OverdriveSettings, OverdriveLibrarySettings],
+    BaseCirculationAPI[OverdriveSettings, OverdriveLibrarySettings],
     CirculationInternalFormatsMixin,
     HasCollectionSelfTests,
     HasChildIntegrationConfiguration[OverdriveSettings, OverdriveChildSettings],

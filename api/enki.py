@@ -18,7 +18,6 @@ from api.circulation import (
     FulfillmentInfo,
     HoldInfo,
     LoanInfo,
-    PatronActivityCirculationAPI,
 )
 from api.circulation_exceptions import *
 from api.selftest import HasCollectionSelfTests, SelfTestResult
@@ -98,7 +97,7 @@ class EnkiLibrarySettings(BaseSettings):
 
 
 class EnkiAPI(
-    PatronActivityCirculationAPI[EnkiSettings, EnkiLibrarySettings],
+    BaseCirculationAPI[EnkiSettings, EnkiLibrarySettings],
     HasCollectionSelfTests,
     EnkiConstants,
 ):

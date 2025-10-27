@@ -170,7 +170,7 @@ LibrarySettingsType = TypeVar(
 
 
 class BaseODLAPI(
-    PatronActivityCirculationAPI[SettingsType, LibrarySettingsType], LoggerMixin, ABC
+    BaseCirculationAPI[SettingsType, LibrarySettingsType], LoggerMixin, ABC
 ):
     """ODL (Open Distribution to Libraries) is a specification that allows
     libraries to manage their own loans and holds. It offers a deeper level
@@ -778,58 +778,6 @@ class BaseODLAPI(
         # The hold itself will be deleted by the caller CirculationAPI,
         # so we just need to update the license pool to reflect the released hold.
         self.update_licensepool_and_hold_queue(licensepool, ignored_holds={hold})
-
-    def patron_activity(self, patron: Patron, pin: str) -> list[LoanInfo | HoldInfo]:
-        """Look up non-expired loans for this collection in the database and update holds."""
-        _db = Session.object_session(patron)
-        loans = (
-            _db.query(Loan)
-            .join(Loan.license_pool)
-            .filter(LicensePool.collection_id == self.collection_id)
-            .filter(Loan.patron == patron)
-            .filter(
-                or_(
-                    Loan.end >= utc_now(),
-                    Loan.end == None,
-                )
-            )
-        )
-        # Get the patron's holds. If there are any expired holds, delete them.
-        # Update the end date and position for the remaining holds.
-        holds = (
-            _db.query(Hold)
-            .join(Hold.license_pool)
-            .filter(LicensePool.collection_id == self.collection_id)
-            .filter(Hold.patron == patron)
-        )
-        remaining_holds = []
-        for hold in holds:
-            licensepool = hold.license_pool
-            # Delete expired holds and update the pool and queue to reflect the change.
-            if hold.end and hold.end < utc_now():
-                _db.delete(hold)
-                self._recalculate_holds_in_license_pool(licensepool)
-            else:
-                # Check to see if the position has changed in the queue or maybe the hold is ready for checkout.
-                self._recalculate_holds_in_license_pool(licensepool)
-                remaining_holds.append(hold)
-        return [
-            LoanInfo.from_license_pool(
-                loan.license_pool,
-                start_date=loan.start,
-                end_date=loan.end,
-                external_identifier=loan.external_identifier,
-            )
-            for loan in loans
-        ] + [
-            HoldInfo.from_license_pool(
-                hold.license_pool,
-                start_date=hold.start,
-                end_date=hold.end,
-                hold_position=hold.position,
-            )
-            for hold in remaining_holds
-        ]
 
     def update_availability(self, licensepool: LicensePool) -> None:
         licensepool.update_availability_from_licenses()
