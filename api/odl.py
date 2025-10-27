@@ -25,7 +25,6 @@ from api.circulation import (
     Fulfillment,
     HoldInfo,
     LoanInfo,
-    PatronActivityCirculationAPI,
     RedirectFulfillment,
     UrlFulfillment,
 )
@@ -478,7 +477,7 @@ class BaseODLAPI(
                 # The license should be available at most by the default loan period in E-Kirjasto.
                 hold.end = utc_now() + datetime.timedelta(days=default_loan_period)
                 # Update the pool's queue and raise a specific error message.
-                self._recalculate_holds_in_license_pool(licensepool)
+                self.recalculate_holds_in_license_pool(licensepool)
                 raise NoAvailableCopiesWhenReserved()
             raise NoAvailableCopies()
 
@@ -682,7 +681,7 @@ class BaseODLAPI(
         else:
             return self._license_fulfill(loan, delivery_mechanism)
 
-    def _recalculate_holds_in_license_pool(self, licensepool: LicensePool) -> None:
+    def recalculate_holds_in_license_pool(self, licensepool: LicensePool) -> None:
         """Set any holds ready for checkout and update the position for all other holds in the queue."""
         holds = licensepool.holds_by_start_date()
         ready_for_checkout = holds[: licensepool.licenses_reserved]
@@ -716,7 +715,7 @@ class BaseODLAPI(
         licensepool.update_availability_from_licenses(
             as_of=utc_now(), ignored_holds=ignored_holds
         )
-        self._recalculate_holds_in_license_pool(licensepool)
+        self.recalculate_holds_in_license_pool(licensepool)
 
     def place_hold(
         self,
