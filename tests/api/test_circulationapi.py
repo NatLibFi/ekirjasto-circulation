@@ -3,7 +3,7 @@
 import datetime
 from datetime import timedelta
 from typing import cast
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, create_autospec
 
 import flask
 import pytest
@@ -35,11 +35,7 @@ from core.model import (
 )
 from core.util.datetime_helpers import utc_now
 from tests.api.mockapi.bibliotheca import MockBibliothecaAPI
-from tests.api.mockapi.circulation import (
-    MockCirculationAPI,
-    MockPatronActivityCirculationAPI,
-    MockRemoteAPI,
-)
+from tests.api.mockapi.circulation import MockBaseCirculationAPI, MockCirculationAPI
 from tests.fixtures.database import DatabaseTransactionFixture
 from tests.fixtures.library import LibraryFixture
 
@@ -96,9 +92,11 @@ class TestCirculationAPI:
 
     @staticmethod
     def sync_bookshelf(circulation_api: CirculationAPIFixture):
-        return circulation_api.circulation.sync_bookshelf(
-            circulation_api.patron, "1234"
-        )
+        return circulation_api.circulation.sync_bookshelf(circulation_api.patron)
+
+    @staticmethod
+    def delete_expired_holds(circulation_api: CirculationAPIFixture):
+        return circulation_api.circulation.delete_expired_holds(circulation_api.patron)
 
     def test_circulationinfo_collection_id(
         self, circulation_api: CirculationAPIFixture
@@ -529,7 +527,7 @@ class TestCirculationAPI:
         # is to call enforce_limits() before trying to check out the
         # book.
 
-        mock_api = MagicMock(spec=MockPatronActivityCirculationAPI)
+        mock_api = create_autospec(BaseCirculationAPI)
         mock_api.checkout.side_effect = NotImplementedError()
 
         mock_circulation = CirculationAPI(
@@ -1073,7 +1071,52 @@ class TestCirculationAPI:
         api.analytics = None
         api._collect_event(p1, None, "event")
 
-    def test_sync_bookshelf_ignores_local_loan_with_no_identifier(
+    def test_delete_expired_holds(self, circulation_api: CirculationAPIFixture):
+        # Verify that expired holds are deleted and only active ones are returned.
+
+        # We have a patron that has a holds in two license pools.
+        expired_hold, ignore = circulation_api.pool.on_hold_to(circulation_api.patron)
+        expired_hold.end = self.YESTERDAY
+        pool2 = circulation_api.db.licensepool(None)
+        active_hold, ignore = pool2.on_hold_to(circulation_api.patron)
+        active_hold.end = self.IN_TWO_WEEKS
+
+        assert circulation_api.db.session.query(Hold).count() == 2
+
+        remaining_holds = self.delete_expired_holds(circulation_api)
+
+        assert len(remaining_holds) == 1  # Only the active hold should remain
+        assert (
+            remaining_holds[0].end == self.IN_TWO_WEEKS
+        )  # Verify that the remaining hold is the active one
+
+        # Verify that the expired hold is no longer in the database
+        assert circulation_api.db.session.query(Hold).count() == 1
+
+    def test_sync_bookshelf_returns_loans_and_holds(
+        self, circulation_api: CirculationAPIFixture
+    ):
+        # We have a patron that has a holds in two license pools.
+        expired_hold, ignore = circulation_api.pool.on_hold_to(circulation_api.patron)
+        expired_hold.end = self.YESTERDAY
+        pool2 = circulation_api.db.licensepool(None)
+        active_hold, ignore = pool2.on_hold_to(circulation_api.patron)
+        active_hold.end = self.IN_TWO_WEEKS
+
+        # And the patron has a loan.
+        loan, ignore = circulation_api.pool.loan_to(circulation_api.patron)
+        loan.start = self.YESTERDAY
+
+        loans, holds = self.sync_bookshelf(circulation_api)
+
+        # Both the loan and hold are returned.
+        assert len(loans) == 1
+        assert len(holds) == 1
+        # ... and still in te database.
+        assert circulation_api.db.session.query(Hold).count() == 1
+        assert circulation_api.db.session.query(Loan).count() == 1
+
+    def test_sync_bookshelf_ignores_loan_with_no_identifier(
         self, circulation_api: CirculationAPIFixture
     ):
         loan, ignore = circulation_api.pool.loan_to(circulation_api.patron)
@@ -1093,7 +1136,7 @@ class TestCirculationAPI:
         # But we can still sync without crashing.
         self.sync_bookshelf(circulation_api)
 
-    def test_sync_bookshelf_ignores_local_hold_with_no_identifier(
+    def test_sync_bookshelf_ignores_hold_with_no_identifier(
         self, circulation_api: CirculationAPIFixture
     ):
         hold, ignore = circulation_api.pool.on_hold_to(circulation_api.patron)
@@ -1112,65 +1155,37 @@ class TestCirculationAPI:
         # But we can still sync without crashing.
         self.sync_bookshelf(circulation_api)
 
-    def test_sync_bookshelf_updates_hold_with_modified_timestamps(
-        self, circulation_api: CirculationAPIFixture
-    ):
-        edition, pool2 = circulation_api.db.edition(
-            data_source_name=DataSource.BIBLIOTHECA,
-            identifier_type=Identifier.BIBLIOTHECA_ID,
-            with_license_pool=True,
-            collection=circulation_api.collection,
-        )
-        # Don't really see this happening but let's say we have a local hold...
-        hold, ignore = pool2.on_hold_to(circulation_api.patron)
-        hold.start = self.YESTERDAY
-        hold.end = self.TOMORROW
-        hold.position = 10
-        # Let's pretend that for some weird reason the "remote" hold (ODL holds are local) data differs from the local hold
-        circulation_api.circulation.add_remote_hold(
-            HoldInfo.from_license_pool(
-                pool2,
-                start_date=self.TODAY,
-                end_date=self.IN_TWO_WEEKS,
-                hold_position=0,
-            )
-        )
-
-        circulation_api.circulation.sync_bookshelf(circulation_api.patron, "1234")
-
-        assert self.TODAY == hold.start
-        assert self.IN_TWO_WEEKS == hold.end
-        assert 0 == hold.position
-
     def test_can_fulfill_without_loan(self, circulation_api: CirculationAPIFixture):
         """Can a title can be fulfilled without an active loan?  It depends on
         the BaseCirculationAPI implementation for that title's colelction.
         """
 
-        class Mock(MockPatronActivityCirculationAPI):
-            def can_fulfill_without_loan(self, patron, pool, lpdm):
-                return "yep"
+        # By default, a title cannot be fulfilled unless there is an active
+        # loan for the title (tested above, in test_fulfill).
+        fulfillment = circulation_api.pool.delivery_mechanisms[0]
+        fulfillment.content = "Fulfilled."
+        fulfillment.content_link = None
+        circulation_api.remote.queue_fulfill(fulfillment)
 
-        pool = circulation_api.db.licensepool(None)
-        circulation = CirculationAPI(
-            circulation_api.db.session, circulation_api.db.default_library()
-        )
-        mock = MagicMock(spec=MockPatronActivityCirculationAPI)
-        mock.can_fulfill_without_loan = MagicMock(return_value="yep")
-        circulation.api_for_collection[pool.collection.id] = mock
-        assert "yep" == circulation.can_fulfill_without_loan(None, pool, MagicMock())
+        def try_to_fulfill():
+            # Note that we're passing None for `patron`.
+            return circulation_api.circulation.fulfill(
+                None,
+                "1234",
+                circulation_api.pool,
+                circulation_api.pool.delivery_mechanisms[0],
+            )
 
-        # If format data is missing or the BaseCirculationAPI cannot
-        # be found, we assume the title cannot be fulfilled.
-        assert False == circulation.can_fulfill_without_loan(None, pool, None)
-        assert False == circulation.can_fulfill_without_loan(None, None, MagicMock())
+        pytest.raises(NoActiveLoan, try_to_fulfill)
 
-        circulation.api_for_collection = {}
-        assert False == circulation.can_fulfill_without_loan(None, pool, None)
+        # However, if CirculationAPI.can_fulfill_without_loan() says it's
+        # okay, the title will be fulfilled anyway.
+        def yes_we_can(*args, **kwargs):
+            return True
 
-        # An open access pool can be fulfilled even without the BaseCirculationAPI.
-        pool.open_access = True
-        assert True == circulation.can_fulfill_without_loan(None, pool, MagicMock())
+        circulation_api.circulation.can_fulfill_without_loan = yes_we_can
+        result = try_to_fulfill()
+        assert fulfillment == result
 
 
 class TestBaseCirculationAPI:
@@ -1193,7 +1208,7 @@ class TestBaseCirculationAPI:
         """By default, there is a blanket prohibition on fulfilling a title
         when there is no active loan.
         """
-        api = MockRemoteAPI(db.session, db.default_collection())
+        api = MockBaseCirculationAPI(db.session, db.default_collection())
         assert False == api.can_fulfill_without_loan(
             MagicMock(), MagicMock(), MagicMock()
         )

@@ -1241,6 +1241,7 @@ class TestLicensePool:
         assert False == is_new
         assert hold == hold2
 
+
 class TestLicensePoolDeliveryMechanism:
     def test_lpdm_change_may_change_open_access_status(
         self, db: DatabaseTransactionFixture

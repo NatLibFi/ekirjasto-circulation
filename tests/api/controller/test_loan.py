@@ -1153,124 +1153,26 @@ class TestLoanController:
             assert CHECKOUT_FAILED.uri == response.uri
             assert 502 == response.status_code
 
-    def test_active_loans(self, loan_fixture: LoanFixture):
-        # First, verify that this controller supports conditional HTTP
-        # GET by calling handle_conditional_request and propagating
-        # any Response it returns.
-        response_304 = Response(status=304)
-
-        def handle_conditional_request(last_modified=None):
-            return response_304
-
-        original_handle_conditional_request = (
-            loan_fixture.controller.handle_conditional_request
-        )
-        loan_fixture.manager.loans.handle_conditional_request = (
-            handle_conditional_request
-        )
-
-        # Before making any requests, set the patron's last_loan_activity_sync
-        # to a known value.
-        patron = None
-        with loan_fixture.request_context_with_library("/"):
-            patron = loan_fixture.controller.authenticated_patron(
-                loan_fixture.valid_credentials
-            )
-        now = utc_now()
-        patron.last_loan_activity_sync = now
-
-        # Make a request -- it doesn't have If-Modified-Since, but our
-        # mocked handle_conditional_request will treat it as a
-        # successful conditional request.
-        with loan_fixture.request_context_with_library(
-            "/", headers=dict(Authorization=loan_fixture.valid_auth)
-        ):
-            patron = loan_fixture.manager.loans.authenticated_patron_from_request()
-            response = loan_fixture.manager.loans.sync()
-            assert response is response_304
-
-        # Since the conditional request succeeded, we did not call out
-        # to the vendor APIs, and patron.last_loan_activity_sync was
-        # not updated.
-        assert now == patron.last_loan_activity_sync
-
-        # Leaving patron.last_loan_activity_sync alone will stop the
-        # circulation manager from calling out to the external APIs,
-        # since it was set to a recent time. We test this explicitly
-        # later, but for now, clear it out.
-        patron.last_loan_activity_sync = None
-
-        # Un-mock handle_conditional_request. It will be called over
-        # the course of this test, but it will not notice any more
-        # conditional requests -- the detailed behavior of
-        # handle_conditional_request is tested elsewhere.
-        loan_fixture.manager.loans.handle_conditional_request = (
-            original_handle_conditional_request
-        )
-
-        # If the request is not conditional, an OPDS feed is returned.
+    def test_sync_active_loans(self, loan_fixture: LoanFixture):
         # This feed is empty because the patron has no loans.
         with loan_fixture.request_context_with_library(
             "/", headers=dict(Authorization=loan_fixture.valid_auth)
         ):
             patron = loan_fixture.manager.loans.authenticated_patron_from_request()
             response = loan_fixture.manager.loans.sync()
-            assert not "<entry>" in response.get_data(as_text=True)
+            assert not "<entry" in response.get_data(as_text=True)
             assert response.headers["Cache-Control"].startswith("private,")
 
-            # patron.last_loan_activity_sync was set to the moment the
-            # LoanController started calling out to the remote APIs.
-            new_sync_time = patron.last_loan_activity_sync
-            assert new_sync_time > now
-
-        # Set up a bunch of loans on the remote APIs.
-        overdrive_edition, overdrive_pool = loan_fixture.db.edition(
-            with_open_access_download=False,
-            data_source_name=DataSource.OVERDRIVE,
-            identifier_type=Identifier.OVERDRIVE_ID,
-            with_license_pool=True,
-        )
-        overdrive_book = loan_fixture.db.work(
-            presentation_edition=overdrive_edition,
-        )
-        overdrive_pool.open_access = False
-
-        bibliotheca_edition, bibliotheca_pool = loan_fixture.db.edition(
-            with_open_access_download=False,
-            data_source_name=DataSource.BIBLIOTHECA,
-            identifier_type=Identifier.BIBLIOTHECA_ID,
-            with_license_pool=True,
-        )
-        bibliotheca_book = loan_fixture.db.work(
-            presentation_edition=bibliotheca_edition,
-        )
-        bibliotheca_pool.licenses_available = 0
-        bibliotheca_pool.open_access = False
-
-        loan_fixture.manager.d_circulation.add_remote_hold(
-            bibliotheca_pool.collection,
-            bibliotheca_pool.data_source,
-            bibliotheca_pool.identifier.type,
-            bibliotheca_pool.identifier.identifier,
-            utc_now(),
-            utc_now() + datetime.timedelta(seconds=3600),
-            0,
-        )
-
-        # Making a new request so soon after the last one means the
-        # circulation manager won't actually call out to the vendor
-        # APIs. The resulting feed won't reflect what we know to be
-        # the reality.
+        # This feed is not empty because the patron has a loan.
         with loan_fixture.request_context_with_library(
             "/", headers=dict(Authorization=loan_fixture.valid_auth)
         ):
             patron = loan_fixture.manager.loans.authenticated_patron_from_request()
+            # When there's a loan, we retrieve it.
+            loan = loan_fixture.pool.loan_to(patron)
             response = loan_fixture.manager.loans.sync()
-            assert "<entry>" not in response.get_data(as_text=True)
-
-        # patron.last_loan_activity_sync was not changed as the result
-        # of this request, since we didn't go to the vendor APIs.
-        assert patron.last_loan_activity_sync == new_sync_time
+            assert "<entry" in response.get_data(as_text=True)
+            assert response.headers["Cache-Control"].startswith("private,")
 
     @pytest.mark.parametrize(
         "target_loan_duration, "
