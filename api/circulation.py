@@ -4,12 +4,7 @@ import dataclasses
 import datetime
 import logging
 import math
-import sys
-import time
 from abc import ABC, abstractmethod
-from collections.abc import Iterable
-from threading import Thread
-from types import TracebackType
 from typing import Any, Literal, TypeVar
 
 import flask
@@ -19,8 +14,6 @@ from flask_babel import lazy_gettext as _
 from pydantic import PositiveInt
 from sqlalchemy import select
 from sqlalchemy.orm import Query, Session
-from sqlalchemy.sql.expression import or_
-
 from typing_extensions import Self
 
 from api.circulation_exceptions import *
@@ -954,6 +947,7 @@ class BaseCirculationAPI(
 
 CirculationApiType = BaseCirculationAPI[BaseCirculationApiSettings, BaseSettings]
 
+
 class CirculationAPI:
     """Implement basic circulation logic and abstract away the details
     between different circulation APIs behind generic operations like
@@ -1657,15 +1651,11 @@ class CirculationAPI:
     def delete_expired_holds(self, patron: Patron) -> list[Hold]:
         """
         Look up expired holds for this patron in the database and delete them.
-        
+
         :return: List of remianing active holds.
         """
         _db = Session.object_session(patron)
-        holds = (
-            _db.query(Hold)
-            .join(Hold.license_pool)
-            .filter(Hold.patron == patron)
-        )
+        holds = _db.query(Hold).join(Hold.license_pool).filter(Hold.patron == patron)
         remaining_holds = []
         for hold in holds:
             licensepool = hold.license_pool
@@ -1674,19 +1664,17 @@ class CirculationAPI:
             if hold.end and hold.end < utc_now():
                 self.log.info(f"Deleting expired hold {hold}")
                 _db.delete(hold)
-                api.recalculate_holds_in_license_pool(licensepool)
+                api.recalculate_holds_in_license_pool(licensepool) # type: ignore
             else:
                 # Check to see if the position has changed in the queue or maybe the hold is ready for checkout.
-                api.recalculate_holds_in_license_pool(licensepool)
+                api.recalculate_holds_in_license_pool(licensepool) # type: ignore
                 remaining_holds.append(hold)
         self.log.info(f"{patron} has {len(remaining_holds)} holds")
         return remaining_holds
 
-    def active_loans(self, patron: Patron) -> Query[Loan]:
+    def active_loans(self, patron: Patron) -> list[Loan]:
         return (
-            self._db.query(Loan)
-            .join(Loan.license_pool)
-            .filter(Loan.patron == patron)
+            self._db.query(Loan).join(Loan.license_pool).filter(Loan.patron == patron)
         ).all()
 
     def sync_bookshelf(

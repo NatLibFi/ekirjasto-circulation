@@ -15,7 +15,6 @@ from flask_babel import lazy_gettext as _
 from lxml.etree import Element
 from pydantic import PositiveInt, TypeAdapter, ValidationError
 from requests import Response
-from sqlalchemy.sql.expression import or_
 from uritemplate import URITemplate
 
 from api.circulation import (
