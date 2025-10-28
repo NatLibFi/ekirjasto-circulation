@@ -1664,10 +1664,10 @@ class CirculationAPI:
             if hold.end and hold.end < utc_now():
                 self.log.info(f"Deleting expired hold {hold}")
                 _db.delete(hold)
-                api.recalculate_holds_in_license_pool(licensepool) # type: ignore
+                api.recalculate_holds_in_license_pool(licensepool)  # type: ignore
             else:
                 # Check to see if the position has changed in the queue or maybe the hold is ready for checkout.
-                api.recalculate_holds_in_license_pool(licensepool) # type: ignore
+                api.recalculate_holds_in_license_pool(licensepool)  # type: ignore
                 remaining_holds.append(hold)
         self.log.info(f"{patron} has {len(remaining_holds)} holds")
         return remaining_holds
