@@ -29,8 +29,7 @@ from core.util.problem_detail import BaseProblemDetailException, ProblemDetail
 
 class LoanController(CirculationManagerController):
     def sync(self) -> Response:
-        """Sync the authenticated patron's loans and holds with all third-party
-        providers.
+        """Sync the authenticated patron's loans and holds.
 
         :return: A Response containing an OPDS feed with up-to-date information.
         """
