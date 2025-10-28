@@ -997,12 +997,6 @@ class CirculationAPI:
         # associated with an API object.
         self.api_for_collection = {}
 
-        # When we get our view of a patron's loans and holds, we need
-        # to include loans whose license pools are in one of the
-        # Collections we manage. We don't need to care about loans
-        # from any other Collections.
-        self.collection_ids_for_sync = []
-
         self.log = logging.getLogger("Circulation API")
         for collection in library.collections:
             if collection.protocol in self.registry:
@@ -1018,7 +1012,6 @@ class CirculationAPI:
                     self.initialization_exceptions[collection.id] = exception
                 if api:
                     self.api_for_collection[collection.id] = api
-                    self.collection_ids_for_sync.append(collection.id)
 
     @property
     def library(self) -> Library | None:
