@@ -29,19 +29,11 @@ from core.util.problem_detail import BaseProblemDetailException, ProblemDetail
 
 class LoanController(CirculationManagerController):
     def sync(self) -> Response:
-        """Sync the authenticated patron's loans and holds with all third-party
-        providers.
+        """Sync the authenticated patron's loans and holds.
 
         :return: A Response containing an OPDS feed with up-to-date information.
         """
         patron = flask.request.patron  # type: ignore
-
-        # Save some time if we don't believe the patron's loans or holds have
-        # changed since the last time the client requested this feed.
-        response = self.handle_conditional_request(patron.last_loan_activity_sync)
-        if isinstance(response, Response):
-            return response
-
         # TODO: SimplyE used to make a HEAD request to the bookshelf feed
         # as a quick way of checking authentication. Does this still happen?
         # It shouldn't -- the patron profile feed should be used instead.
@@ -49,19 +41,15 @@ class LoanController(CirculationManagerController):
         if flask.request.method == "HEAD":
             return Response()
 
-        # First synchronize our local list of loans and holds with all
-        # third-party loan providers.
-        if patron.authorization_identifier:
-            header = self.authorization_header()
-            credential = self.manager.auth.get_credential_from_header(header)
-            try:
-                self.circulation.sync_bookshelf(patron, credential)
-            except Exception as e:
-                # If anything goes wrong, omit the sync step and just
-                # display the current active loans, as we understand them.
-                self.manager.log.error(
-                    "ERROR DURING SYNC for %s: %r", patron.id, e, exc_info=e
-                )
+        # Fetch ainformation about the patron's list of active loans and holds.
+        try:
+            self.circulation.sync_bookshelf(patron)
+        except Exception as e:
+            # If anything goes wrong, omit the sync step and just
+            # display the current active loans, as we understand them.
+            self.manager.log.error(
+                "ERROR DURING SYNC for %s: %r", patron.id, e, exc_info=e
+            )
 
         # Then make the feed.
         feed = OPDSAcquisitionFeed.active_loans_for(self.circulation, patron)
@@ -71,9 +59,6 @@ class LoanController(CirculationManagerController):
             mime_types=flask.request.accept_mimetypes,
         )
 
-        last_modified = patron.last_loan_activity_sync
-        if last_modified:
-            response.last_modified = last_modified
         return response
 
     def borrow(

@@ -1079,12 +1079,6 @@ class LicensePool(Base):
             license_pool=self,
             create_method_kwargs=kwargs,
         )
-        if is_new:
-            # This action creates uncertainty about what the patron's
-            # loan activity actually is. We'll need to sync with the
-            # vendor APIs.
-            patron.last_loan_activity_sync = None
-
         if fulfillment:
             loan.fulfillment = fulfillment
         if external_identifier:
@@ -1111,8 +1105,6 @@ class LicensePool(Base):
         # This action creates uncertainty about what the patron's
         # loan activity actually is. We'll need to sync with the
         # vendor APIs.
-        if new:
-            patron.last_loan_activity_sync = None
         hold.update(start, end, position)
         if external_identifier:
             hold.external_identifier = external_identifier

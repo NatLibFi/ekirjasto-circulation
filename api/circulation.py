@@ -4,12 +4,7 @@ import dataclasses
 import datetime
 import logging
 import math
-import sys
-import time
 from abc import ABC, abstractmethod
-from collections.abc import Iterable
-from threading import Thread
-from types import TracebackType
 from typing import Any, Literal, TypeVar
 
 import flask
@@ -953,22 +948,6 @@ class BaseCirculationAPI(
 CirculationApiType = BaseCirculationAPI[BaseCirculationApiSettings, BaseSettings]
 
 
-class PatronActivityCirculationAPI(
-    BaseCirculationAPI[SettingsType, LibrarySettingsType], ABC
-):
-    """
-    A CirculationAPI that can return a patron's current checkouts and holds, that
-    were made outside the Palace platform.
-    """
-
-    @abstractmethod
-    def patron_activity(
-        self, patron: Patron, pin: str
-    ) -> Iterable[LoanInfo | HoldInfo]:
-        """Return a patron's current checkouts and holds."""
-        ...
-
-
 class CirculationAPI:
     """Implement basic circulation logic and abstract away the details
     between different circulation APIs behind generic operations like
@@ -1012,12 +991,6 @@ class CirculationAPI:
         # associated with an API object.
         self.api_for_collection = {}
 
-        # When we get our view of a patron's loans and holds, we need
-        # to include loans whose license pools are in one of the
-        # Collections we manage. We don't need to care about loans
-        # from any other Collections.
-        self.collection_ids_for_sync = []
-
         self.log = logging.getLogger("Circulation API")
         for collection in library.collections:
             if collection.protocol in self.registry:
@@ -1033,8 +1006,6 @@ class CirculationAPI:
                     self.initialization_exceptions[collection.id] = exception
                 if api:
                     self.api_for_collection[collection.id] = api
-                    if isinstance(api, PatronActivityCirculationAPI):
-                        self.collection_ids_for_sync.append(collection.id)
 
     @property
     def library(self) -> Library | None:
@@ -1621,7 +1592,6 @@ class CirculationAPI:
             __transaction = self._db.begin_nested()
             self.log.info(f"In revoke_loan(), deleting loan #{loan.id}")
             self._db.delete(loan)
-            patron.last_loan_activity_sync = None
             __transaction.commit()
             # Send out an analytics event to record the fact that
             # a loan was revoked through the circulation
@@ -1678,230 +1648,69 @@ class CirculationAPI:
 
         return True
 
-    def patron_activity(
-        self, patron: Patron, pin: str
-    ) -> tuple[list[LoanInfo], list[HoldInfo], bool]:
-        """Return a record of the patron's current activity
-        vis-a-vis all relevant external loan sources.
-
-        We check each source in a separate thread for speed.
-
-        :return: A 2-tuple (loans, holds) containing `HoldInfo` and
-            `LoanInfo` objects.
+    def delete_expired_holds(self, patron: Patron) -> list[Hold]:
         """
-        log = self.log
+        Look up expired holds for this patron in the database and delete them.
 
-        class PatronActivityThread(Thread):
-            def __init__(
-                self,
-                api: PatronActivityCirculationAPI[
-                    BaseCirculationApiSettings, BaseSettings
-                ],
-                patron: Patron,
-                pin: str,
-            ) -> None:
-                self.api = api
-                self.patron = patron
-                self.pin = pin
-                self.activity: Iterable[LoanInfo | HoldInfo] | None = None
-                self.exception: Exception | None = None
-                self.trace: tuple[
-                    type[BaseException], BaseException, TracebackType
-                ] | tuple[None, None, None] | None = None
-                super().__init__()
+        :return: List of remianing active holds.
+        """
+        _db = Session.object_session(patron)
+        holds = _db.query(Hold).join(Hold.license_pool).filter(Hold.patron == patron)
+        remaining_holds = []
+        for hold in holds:
+            licensepool = hold.license_pool
+            api = self.api_for_license_pool(licensepool)
+            # Delete expired holds and update the pool and queue to reflect the change.
+            if hold.end and hold.end < utc_now():
+                self.log.info(f"Deleting expired hold {hold}")
+                _db.delete(hold)
+                api.recalculate_holds_in_license_pool(licensepool)  # type: ignore
+            else:
+                # Check to see if the position has changed in the queue or maybe the hold is ready for checkout.
+                api.recalculate_holds_in_license_pool(licensepool)  # type: ignore
+                remaining_holds.append(hold)
+        self.log.info(f"{patron} has {len(remaining_holds)} holds")
+        return remaining_holds
 
-            def run(self) -> None:
-                before = time.time()
-                try:
-                    self.activity = self.api.patron_activity(self.patron, self.pin)
-                except Exception as e:
-                    self.exception = e
-                    self.trace = sys.exc_info()
-                after = time.time()
-                log.debug(
-                    "Synced %s in %.2f sec", self.api.__class__.__name__, after - before
-                )
-
-                # While testing we are in a Session scope
-                # we need to only close this if api._db is a flask_scoped_session.
-                if getattr(self.api, "_db", None) and type(self.api._db) != Session:
-                    # Since we are in a Thread using a flask_scoped_session
-                    # we can assume a new Session was opened due to the thread activity.
-                    # We must close this session to avoid connection pool leaks
-                    self.api._db.close()
-
-        threads = []
-        before = time.time()
-        for api in list(self.api_for_collection.values()):
-            if isinstance(api, PatronActivityCirculationAPI):
-                thread = PatronActivityThread(api, patron, pin)
-                threads.append(thread)
-        for thread in threads:
-            thread.start()
-        for thread in threads:
-            thread.join()
-        loans: list[LoanInfo] = []
-        holds: list[HoldInfo] = []
-        complete = True
-        for thread in threads:
-            if thread.exception:
-                # Something went wrong, so we don't have a complete
-                # picture of the patron's loans.
-                complete = False
-                self.log.error(
-                    "%s errored out: %s",
-                    thread.api.__class__.__name__,
-                    thread.exception,
-                    exc_info=thread.trace,
-                )
-            if thread.activity:
-                for i in thread.activity:
-                    if not isinstance(i, (LoanInfo, HoldInfo)):
-                        self.log.warning(  # type: ignore[unreachable]
-                            "value %r from patron_activity is neither a loan nor a hold.",
-                            i,
-                        )
-                        continue
-
-                    if isinstance(i, LoanInfo):
-                        loans.append(i)
-                    elif isinstance(i, HoldInfo):
-                        holds.append(i)
-
-        after = time.time()
-        self.log.debug("Full sync took %.2f sec", after - before)
-        return loans, holds, complete
-
-    def local_loans(self, patron: Patron) -> Query[Loan]:
+    def active_loans(self, patron: Patron) -> list[Loan]:
         return (
-            self._db.query(Loan)
-            .join(Loan.license_pool)
-            .filter(LicensePool.collection_id.in_(self.collection_ids_for_sync))
-            .filter(Loan.patron == patron)
-        )
-
-    def local_holds(self, patron: Patron) -> Query[Hold]:
-        return (
-            self._db.query(Hold)
-            .join(Hold.license_pool)
-            .filter(LicensePool.collection_id.in_(self.collection_ids_for_sync))
-            .filter(Hold.patron == patron)
-        )
+            self._db.query(Loan).join(Loan.license_pool).filter(Loan.patron == patron)
+        ).all()
 
     def sync_bookshelf(
-        self, patron: Patron, pin: str, force: bool = False
+        self, patron: Patron
     ) -> tuple[list[Loan] | Query[Loan], list[Hold] | Query[Hold]]:
-        """Sync our internal model of a patron's bookshelf with any external
-        vendors that provide books to the patron's library.
+        """Sync our internal model of a patron's bookshelf.
 
         :param patron: A Patron.
-        :param pin: The password authenticating the patron; used by some vendors
-           that perform a cross-check against the library ILS.
-        :param force: If this is True, the method will call out to external
-           vendors even if it looks like the system has up-to-date information
-           about the patron.
         """
-        # Get our internal view of the patron's current state.
-        local_loans = self.local_loans(patron)
-        local_holds = self.local_holds(patron)
+        active_loans = self.active_loans(patron)
+        active_holds = self.delete_expired_holds(patron)
 
-        if patron and patron.last_loan_activity_sync and not force:
-            # Our local data is considered fresh, so we can return it
-            # without calling out to the vendor APIs.
-            return local_loans, local_holds
-
-        # Assuming everything goes well, we will set
-        # Patron.last_loan_activity_sync to this value -- the moment
-        # just before we started contacting the vendor APIs.
-        last_loan_activity_sync: datetime.datetime | None = utc_now()
-
-        # Update the external view of the patron's current state.
-        remote_loans, remote_holds, complete = self.patron_activity(patron, pin)
-        __transaction = self._db.begin_nested()
-
-        if not complete:
-            # We were not able to get a complete picture of the
-            # patron's loan activity. Until we are able to do that, we
-            # should never assume that our internal model of the
-            # patron's loans is good enough to cache.
-            last_loan_activity_sync = None
-
-        now = utc_now()
-        local_loans_by_identifier = {}
-        local_holds_by_identifier = {}
-        for l in local_loans:
+        # Log information about missing information of the patron's holds and loans that could cause problems. At the
+        # moment, we don't do anything about it.
+        for l in active_loans:
             if not l.license_pool:
                 self.log.error("Active loan with no license pool!")
                 continue
-            i = l.license_pool.identifier
-            if not i:
+            if not l.license_pool.identifier:
                 self.log.error(
                     "Active loan on license pool %s, which has no identifier!",
                     l.license_pool,
                 )
                 continue
-            key = (i.type, i.identifier)
-            local_loans_by_identifier[key] = l
-        for h in local_holds:
+        for h in active_holds:
             if not h.license_pool:
                 self.log.error("Active hold with no license pool!")
                 continue
-            i = h.license_pool.identifier
-            if not i:
+            if not h.license_pool.identifier:
                 self.log.error(
                     "Active hold on license pool %r, which has no identifier!",
                     h.license_pool,
                 )
                 continue
-            key = (i.type, i.identifier)
-            local_holds_by_identifier[key] = h
 
-        active_loans = []
-        active_holds = []
-        start: datetime.datetime | None
-        end: datetime.datetime | None
-        for loan in remote_loans:
-            # This is a remote loan. Find or create the corresponding
-            # local loan.
-            key = (loan.identifier_type, loan.identifier)
-            if key in local_loans_by_identifier:
-                local_loan = local_loans_by_identifier[key]
-            active_loans.append(local_loan)
-
-            # Check the local loan off the list we're keeping so we
-            # don't delete it later.
-            key = (loan.identifier_type, loan.identifier)
-            if key in local_loans_by_identifier:
-                del local_loans_by_identifier[key]
-
-        for hold in remote_holds:
-            start = hold.start_date
-            end = hold.end_date
-            position = hold.hold_position
-            key = (hold.identifier_type, hold.identifier)
-            if key in local_holds_by_identifier:
-                # We already have the Hold object, we don't need to look
-                # it up again.
-                local_hold = local_holds_by_identifier[key]
-
-                # But maybe the remote's opinions as to the hold's
-                # start or end date have changed.
-                local_hold.update(start, end, position)
-            active_holds.append(local_hold)
-
-            # Check the local hold off the list we're keeping so that
-            # we don't delete it later.
-            if key in local_holds_by_identifier:
-                del local_holds_by_identifier[key]
-
-        # Now that we're in sync (or not), set last_loan_activity_sync
-        # to the conservative value obtained earlier.
-        if patron:
-            patron.last_loan_activity_sync = last_loan_activity_sync
-
-        __transaction.commit()
         self.log.info(
-            f"Patron id {patron.id}: active loans {len(active_loans)}, "
-            f"active holds {len(active_holds)} [synced: {patron.last_loan_activity_sync}]"
+            f"Patron id {patron.id} synced. Loans: {len(active_loans)}, Holds: {len(active_holds)}"
         )
         return active_loans, active_holds

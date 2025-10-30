@@ -15,7 +15,6 @@ from flask_babel import lazy_gettext as _
 from lxml.etree import Element
 from pydantic import PositiveInt, TypeAdapter, ValidationError
 from requests import Response
-from sqlalchemy.sql.expression import or_
 from uritemplate import URITemplate
 
 from api.circulation import (
@@ -25,7 +24,6 @@ from api.circulation import (
     Fulfillment,
     HoldInfo,
     LoanInfo,
-    PatronActivityCirculationAPI,
     RedirectFulfillment,
     UrlFulfillment,
 )
@@ -170,7 +168,7 @@ LibrarySettingsType = TypeVar(
 
 
 class BaseODLAPI(
-    PatronActivityCirculationAPI[SettingsType, LibrarySettingsType], LoggerMixin, ABC
+    BaseCirculationAPI[SettingsType, LibrarySettingsType], LoggerMixin, ABC
 ):
     """ODL (Open Distribution to Libraries) is a specification that allows
     libraries to manage their own loans and holds. It offers a deeper level
@@ -478,7 +476,7 @@ class BaseODLAPI(
                 # The license should be available at most by the default loan period in E-Kirjasto.
                 hold.end = utc_now() + datetime.timedelta(days=default_loan_period)
                 # Update the pool's queue and raise a specific error message.
-                self._recalculate_holds_in_license_pool(licensepool)
+                self.recalculate_holds_in_license_pool(licensepool)
                 raise NoAvailableCopiesWhenReserved()
             raise NoAvailableCopies()
 
@@ -682,7 +680,7 @@ class BaseODLAPI(
         else:
             return self._license_fulfill(loan, delivery_mechanism)
 
-    def _recalculate_holds_in_license_pool(self, licensepool: LicensePool) -> None:
+    def recalculate_holds_in_license_pool(self, licensepool: LicensePool) -> None:
         """Set any holds ready for checkout and update the position for all other holds in the queue."""
         holds = licensepool.holds_by_start_date()
         ready_for_checkout = holds[: licensepool.licenses_reserved]
@@ -716,7 +714,7 @@ class BaseODLAPI(
         licensepool.update_availability_from_licenses(
             as_of=utc_now(), ignored_holds=ignored_holds
         )
-        self._recalculate_holds_in_license_pool(licensepool)
+        self.recalculate_holds_in_license_pool(licensepool)
 
     def place_hold(
         self,
@@ -778,58 +776,6 @@ class BaseODLAPI(
         # The hold itself will be deleted by the caller CirculationAPI,
         # so we just need to update the license pool to reflect the released hold.
         self.update_licensepool_and_hold_queue(licensepool, ignored_holds={hold})
-
-    def patron_activity(self, patron: Patron, pin: str) -> list[LoanInfo | HoldInfo]:
-        """Look up non-expired loans for this collection in the database and update holds."""
-        _db = Session.object_session(patron)
-        loans = (
-            _db.query(Loan)
-            .join(Loan.license_pool)
-            .filter(LicensePool.collection_id == self.collection_id)
-            .filter(Loan.patron == patron)
-            .filter(
-                or_(
-                    Loan.end >= utc_now(),
-                    Loan.end == None,
-                )
-            )
-        )
-        # Get the patron's holds. If there are any expired holds, delete them.
-        # Update the end date and position for the remaining holds.
-        holds = (
-            _db.query(Hold)
-            .join(Hold.license_pool)
-            .filter(LicensePool.collection_id == self.collection_id)
-            .filter(Hold.patron == patron)
-        )
-        remaining_holds = []
-        for hold in holds:
-            licensepool = hold.license_pool
-            # Delete expired holds and update the pool and queue to reflect the change.
-            if hold.end and hold.end < utc_now():
-                _db.delete(hold)
-                self._recalculate_holds_in_license_pool(licensepool)
-            else:
-                # Check to see if the position has changed in the queue or maybe the hold is ready for checkout.
-                self._recalculate_holds_in_license_pool(licensepool)
-                remaining_holds.append(hold)
-        return [
-            LoanInfo.from_license_pool(
-                loan.license_pool,
-                start_date=loan.start,
-                end_date=loan.end,
-                external_identifier=loan.external_identifier,
-            )
-            for loan in loans
-        ] + [
-            HoldInfo.from_license_pool(
-                hold.license_pool,
-                start_date=hold.start,
-                end_date=hold.end,
-                hold_position=hold.position,
-            )
-            for hold in remaining_holds
-        ]
 
     def update_availability(self, licensepool: LicensePool) -> None:
         licensepool.update_availability_from_licenses()

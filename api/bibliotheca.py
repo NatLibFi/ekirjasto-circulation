@@ -28,7 +28,6 @@ from api.circulation import (
     FulfillmentInfo,
     HoldInfo,
     LoanInfo,
-    PatronActivityCirculationAPI,
 )
 from api.circulation_exceptions import *
 from api.selftest import HasCollectionSelfTests, SelfTestResult
@@ -122,7 +121,7 @@ class BibliothecaLibrarySettings(BaseCirculationLoanSettings):
 
 
 class BibliothecaAPI(
-    PatronActivityCirculationAPI[BibliothecaSettings, BibliothecaLibrarySettings],
+    BaseCirculationAPI[BibliothecaSettings, BibliothecaLibrarySettings],
     HasCollectionSelfTests,
 ):
     AUTH_TIME_FORMAT = "%a, %d %b %Y %H:%M:%S GMT"
