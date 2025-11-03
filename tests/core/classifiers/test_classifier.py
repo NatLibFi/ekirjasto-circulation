@@ -432,12 +432,12 @@ class TestWorkClassifier:
         i = data.identifier
         source = DataSource.lookup(session, DataSource.OVERDRIVE)
         for subject in ("Nonfiction", "Science Fiction", "History"):
-            c = i.classify(source, Subject.OVERDRIVE, subject, weight=1000)
+            c = i.identifier_to_subject(source, Subject.OVERDRIVE, subject, weight=1000)
             data.classifier.add(c)
 
         # There's a little bit of evidence that it's a children's book,
         # but not enough to outweight the distributor's silence.
-        c2 = data.identifier.classify(source, Subject.TAG, "Children's books", weight=1)
+        c2 = data.identifier.identifier_to_subject(source, Subject.TAG, "Children's books", weight=1)
         data.classifier.add(c2)
         data.classifier.prepare_to_classify()
         # Overdrive classifications are regarded as 50 times more reliable
@@ -455,7 +455,7 @@ class TestWorkClassifier:
         i = data.identifier
         source = DataSource.lookup(session, DataSource.OVERDRIVE)
         for subject in ("Erotic Literature", "Science Fiction", "History"):
-            c = i.classify(source, Subject.OVERDRIVE, subject, weight=1)
+            c = i.identifier_to_subject(source, Subject.OVERDRIVE, subject, weight=1)
             data.classifier.add(c)
 
         data.classifier.prepare_to_classify()
@@ -490,7 +490,7 @@ class TestWorkClassifier:
         # that implies the book is for children, so no conclusions are
         # drawn in the prepare_to_classify() step.
         source = DataSource.lookup(session, DataSource.OVERDRIVE)
-        c = data.identifier.classify(
+        c = data.identifier.identifier_to_subject(
             source, Subject.OVERDRIVE, "Picture Books", weight=1000
         )
         data.classifier.prepare_to_classify()
@@ -509,12 +509,12 @@ class TestWorkClassifier:
         #
         i = data.identifier
         source = DataSource.lookup(session, DataSource.OCLC)
-        c = i.classify(source, Subject.LCC, "PZ", weight=100)
+        c = i.identifier_to_subject(source, Subject.LCC, "PZ", weight=100)
         data.classifier.add(c)
 
         # (This classification has no bearing on audience and its
         # weight will be ignored.)
-        c2 = i.classify(source, Subject.TAG, "Pets", weight=1000)
+        c2 = i.identifier_to_subject(source, Subject.TAG, "Pets", weight=1000)
         data.classifier.add(c2)
         data.classifier.prepare_to_classify
         genres, fiction, audience, target_age = data.classifier.classify()
@@ -673,7 +673,7 @@ class TestWorkClassifier:
         # This book will be classified as a comic book, because
         # the "comic books" classification comes from its license source.
         source = data.work.license_pools[0].data_source
-        data.identifier.classify(source, Subject.TAG, "Comic Books", weight=100)
+        data.identifier.identifier_to_subject(source, Subject.TAG, "Comic Books", weight=100)
         data.classifier.add(data.identifier.classifications[0])
         genres, fiction = data.classifier.genres(fiction=True)
         assert [(classifier.Comics_Graphic_Novels, 100)] == list(genres.items())
@@ -688,7 +688,7 @@ class TestWorkClassifier:
         # license source.
         source = data.work.license_pools[0].data_source
         oclc = DataSource.lookup(session, DataSource.OCLC)
-        data.identifier.classify(oclc, Subject.TAG, "Comic Books", weight=100)
+        data.identifier.identifier_to_subject(oclc, Subject.TAG, "Comic Books", weight=100)
         data.classifier.add(data.identifier.classifications[0])
         genres, fiction = data.classifier.genres(fiction=True)
         assert [] == list(genres.items())
@@ -733,7 +733,7 @@ class TestWorkClassifier:
         # Target age data can't override an independently determined
         # audience.
         overdrive = DataSource.lookup(session, DataSource.OVERDRIVE)
-        c1 = data.identifier.classify(
+        c1 = data.identifier.identifier_to_subject(
             overdrive, Subject.OVERDRIVE, "Picture Books", weight=10000
         )
         data.classifier.add(c1)
@@ -749,7 +749,7 @@ class TestWorkClassifier:
         # We have a weak but reliable signal that this is a book for
         # ages 5 to 7.
         overdrive = DataSource.lookup(session, DataSource.OVERDRIVE)
-        c1 = data.identifier.classify(
+        c1 = data.identifier.identifier_to_subject(
             overdrive, Subject.OVERDRIVE, "Beginning Readers", weight=2
         )
         data.classifier.add(c1)
@@ -757,7 +757,7 @@ class TestWorkClassifier:
         # We have a louder but less reliable signal that this is a
         # book for eleven-year-olds.
         oclc = DataSource.lookup(session, DataSource.OCLC)
-        c2 = data.identifier.classify(oclc, Subject.TAG, "Grade 6", weight=3)
+        c2 = data.identifier.identifier_to_subject(oclc, Subject.TAG, "Grade 6", weight=3)
         data.classifier.add(c2)
 
         # Both signals make it into the dataset, but they are weighted
@@ -780,8 +780,8 @@ class TestWorkClassifier:
         session = data.transaction.session
         i = data.transaction.identifier()
         source = DataSource.lookup(session, DataSource.OVERDRIVE)
-        c1 = i.classify(source, Subject.AGE_RANGE, "8-9", weight=1)
-        c2 = i.classify(source, Subject.AGE_RANGE, "6-7", weight=1)
+        c1 = i.identifier_to_subject(source, Subject.AGE_RANGE, "8-9", weight=1)
+        c2 = i.identifier_to_subject(source, Subject.AGE_RANGE, "6-7", weight=1)
 
         overdrive_edition, lp = data.transaction.edition(
             data_source_name=source.name,
@@ -873,7 +873,7 @@ class TestWorkClassifier:
         # target age range of 9-12.
         i = data.identifier
         source = DataSource.lookup(session, DataSource.OVERDRIVE)
-        c = i.classify(source, Subject.OVERDRIVE, "Juvenile Fiction", weight=1)
+        c = i.identifier_to_subject(source, Subject.OVERDRIVE, "Juvenile Fiction", weight=1)
         data.classifier.add(c)
         data.classifier.prepare_to_classify()
         assert [9] == list(data.classifier.target_age_lower_weights.keys())
@@ -891,7 +891,7 @@ class TestWorkClassifier:
         i = data.identifier
         source = DataSource.lookup(session, DataSource.OVERDRIVE)
         for subject in ("Juvenile Fiction", "Picture Books"):
-            c = i.classify(source, Subject.OVERDRIVE, subject, weight=1)
+            c = i.identifier_to_subject(source, Subject.OVERDRIVE, subject, weight=1)
         data.classifier.add(c)
         data.classifier.prepare_to_classify()
         assert [0] == list(data.classifier.target_age_lower_weights.keys())
@@ -1001,9 +1001,9 @@ class TestWorkClassifier:
         )
         i = data.identifier
         source = DataSource.lookup(session, DataSource.OVERDRIVE)
-        c1 = i.classify(source, Subject.OVERDRIVE, "History", weight=10)
-        c2 = i.classify(source, Subject.OVERDRIVE, "Science Fiction", weight=100)
-        c3 = i.classify(source, Subject.OVERDRIVE, "Young Adult Nonfiction", weight=100)
+        c1 = i.identifier_to_subject(source, Subject.OVERDRIVE, "History", weight=10)
+        c2 = i.identifier_to_subject(source, Subject.OVERDRIVE, "Science Fiction", weight=100)
+        c3 = i.identifier_to_subject(source, Subject.OVERDRIVE, "Young Adult Nonfiction", weight=100)
         for classification in i.classifications:
             data.classifier.add(classification)
         data.classifier.prepare_to_classify()
@@ -1042,13 +1042,13 @@ class TestWorkClassifier:
         history = self._genre(session, classifier.History)
         i = data.identifier
         source = DataSource.lookup(session, DataSource.AMAZON)
-        c1 = i.classify(source, Subject.TAG, "History", weight=1)
+        c1 = i.identifier_to_subject(source, Subject.TAG, "History", weight=1)
         assert [] == data.classifier.classifications
 
         data.classifier.add(c1)
         old_weight = data.classifier.genre_weights[history]
 
-        c2 = i.classify(source, Subject.TAG, "History", weight=100)
+        c2 = i.identifier_to_subject(source, Subject.TAG, "History", weight=100)
         data.classifier.add(c2)
         # No effect -- the weights are the same as before.
         assert old_weight == data.classifier.genre_weights[history]
@@ -1056,7 +1056,7 @@ class TestWorkClassifier:
         # The same classification can come in from another data source and
         # it will be taken into consideration.
         source2 = DataSource.lookup(session, DataSource.OCLC_LINKED_DATA)
-        c3 = i.classify(source2, Subject.TAG, "History", weight=1)
+        c3 = i.identifier_to_subject(source2, Subject.TAG, "History", weight=1)
         data.classifier.add(c3)
         assert data.classifier.genre_weights[history] > old_weight
 

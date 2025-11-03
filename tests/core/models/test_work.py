@@ -1047,22 +1047,22 @@ class TestWork:
         # Add some classifications.
 
         # This classification has no subject name, so the search document will use the subject identifier.
-        edition.primary_identifier.classify(
+        edition.primary_identifier.identifier_to_subject(
             data_source, Subject.BISAC, "FICTION/Science Fiction/Time Travel", None, 6
         )
 
         # This one has the same subject type and identifier, so their weights will be combined.
-        identifier1.classify(
+        identifier1.identifier_to_subject(
             data_source, Subject.BISAC, "FICTION/Science Fiction/Time Travel", None, 1
         )
 
         # Here's another classification with a different subject type.
-        edition.primary_identifier.classify(
+        edition.primary_identifier.identifier_to_subject(
             data_source, Subject.OVERDRIVE, "Romance", None, 2
         )
 
         # This classification has a subject name, so the search document will use that instead of the identifier.
-        identifier1.classify(
+        identifier1.identifier_to_subject(
             data_source,
             Subject.FAST,
             db.fresh_str(),
@@ -1071,11 +1071,11 @@ class TestWork:
         )
 
         # This classification will be left out because its subject type isn't useful for search.
-        identifier1.classify(data_source, Subject.DDC, db.fresh_str(), None)
+        identifier1.identifier_to_subject(data_source, Subject.DDC, db.fresh_str(), None)
 
         # These classifications will be left out because their identifiers aren't sufficiently equivalent to the edition's.
-        identifier2.classify(data_source, Subject.FAST, db.fresh_str(), None)
-        identifier3.classify(data_source, Subject.FAST, db.fresh_str(), None)
+        identifier2.identifier_to_subject(data_source, Subject.FAST, db.fresh_str(), None)
+        identifier3.identifier_to_subject(data_source, Subject.FAST, db.fresh_str(), None)
 
         # Add some genres.
         genre1, ignore = Genre.lookup(db.session, "Science Fiction")
@@ -1621,8 +1621,8 @@ class TestWork:
         # These Subjects haven't been checked, so the Work associated with
         # them shows up.
         ds = DataSource.lookup(db.session, DataSource.OVERDRIVE)
-        classification = identifier.classify(ds, Subject.TAG, "some tag")
-        classification2 = identifier.classify(ds, Subject.TAG, "another tag")
+        classification = identifier.identifier_to_subject(ds, Subject.TAG, "some tag")
+        classification2 = identifier.identifier_to_subject(ds, Subject.TAG, "another tag")
         assert [w1] == qu.all()
 
         # If one of them is checked, the Work still shows up.

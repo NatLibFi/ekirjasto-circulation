@@ -1630,7 +1630,7 @@ class Metadata:
         # Apply all new subjects to the identifier.
         for subject in list(new_subjects.values()):
             try:
-                identifier.classify(
+                identifier.identifier_to_subject(
                     data_source,
                     subject.type,
                     subject.identifier,

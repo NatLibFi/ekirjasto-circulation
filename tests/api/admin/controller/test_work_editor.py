@@ -438,15 +438,15 @@ class TestWorkController:
         work.audience = "Adult"
         work.fiction = True
         axis_360 = DataSource.lookup(work_fixture.ctrl.db.session, DataSource.AXIS_360)
-        classification1 = primary_identifier.classify(
+        classification1 = primary_identifier.identifier_to_subject(
             data_source=axis_360,
-            subject_type=Subject.BISAC,
+            subject_scheme=Subject.BISAC,
             subject_identifier="FICTION / Horror",
             weight=1,
         )
-        classification2 = primary_identifier.classify(
+        classification2 = primary_identifier.identifier_to_subject(
             data_source=axis_360,
-            subject_type=Subject.BISAC,
+            subject_scheme=Subject.BISAC,
             subject_identifier="FICTION / Science Fiction / Time Travel",
             weight=1,
         )

@@ -57,7 +57,7 @@ class TestAnnotators:
         ]
 
         for source, subject_type, subject, name, weight in subjects:
-            identifier.classify(source, subject_type, subject, name, weight=weight)
+            identifier.identifier_to_subject(source, subject_type, subject, name, weight=weight)
 
         # Mock Work.all_identifier_ids (called by VerboseAnnotator.categories)
         # so we can track the value that was passed in for `cutoff`.

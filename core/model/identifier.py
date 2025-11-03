@@ -866,12 +866,12 @@ class Identifier(Base, IdentifierConstants):
             is_most_recent=True,
         )[0]
 
-    def classify(
-        self, data_source, subject_type, subject_identifier, subject_name=None, weight=1
+    def identifier_to_subject(
+        self, data_source, subject_scheme, subject_identifier, subject_name=None, weight=1
     ):
-        """Classify this Identifier under a Subject.
+        """Associate this Identifier under a Subject.
 
-        :param type: Classification scheme; one of the constants from Subject.
+        :param subject_scheme: Classification scheme; one of the constants from Subject.
         :param subject_identifier: Internal ID of the subject according to that classification scheme.
         :param value: Human-readable description of the subject, if different
             from the ID.
@@ -882,15 +882,14 @@ class Identifier(Base, IdentifierConstants):
         """
         _db = Session.object_session(self)
         # Turn the subject type and identifier into a Subject.
-        classifications = []
         subject, is_new = Subject.lookup(
             _db,
-            subject_type,
+            subject_scheme,
             subject_identifier,
             subject_name,
         )
 
-        logging.debug(
+        logging.info(
             "CLASSIFICATION: %s on %s/%s: %s %s/%s (wt=%d)",
             data_source.name,
             self.type,
@@ -911,6 +910,8 @@ class Identifier(Base, IdentifierConstants):
                 subject=subject,
                 data_source=data_source,
             )
+            classification.name = subject.name
+
         except MultipleResultsFound as e:
             # TODO: This is a hack.
             all_classifications = _db.query(Classification).filter(
