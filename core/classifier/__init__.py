@@ -134,7 +134,7 @@ class Classifier(ClassifierConstants):
         return None
 
     @classmethod
-    def classify(cls, subject):
+    def classify_subject(cls, subject):
         """Try to determine genre, audience, target age, and fiction status
         for the given Subject.
         """
@@ -157,7 +157,7 @@ class Classifier(ClassifierConstants):
 
     @classmethod
     def scrub_identifier_and_name(cls, identifier, name):
-        """Prepare identifier and name from within a call to classify()."""
+        """Prepare identifier and name from within a call to classify_subject()."""
         identifier = cls.scrub_identifier(identifier)
         if isinstance(identifier, tuple):
             # scrub_identifier returned a canonical value for name as
@@ -171,7 +171,7 @@ class Classifier(ClassifierConstants):
 
     @classmethod
     def scrub_identifier(cls, identifier):
-        """Prepare an identifier from within a call to classify().
+        """Prepare an identifier from within a call to classify_subject().
 
         This may involve data normalization, conversion to lowercase,
         etc.

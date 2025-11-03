@@ -131,7 +131,7 @@ class TestBISACClassifier:
             subject.audience,
             subject.target_age,
             subject.fiction,
-        ) = BISACClassifier.classify(subject)
+        ) = BISACClassifier.classify_subject(subject)
         return subject
 
     def genre_is(self, name, expect):

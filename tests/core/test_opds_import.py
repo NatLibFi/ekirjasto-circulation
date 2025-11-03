@@ -884,7 +884,7 @@ class TestOPDSImporter:
         from core.classifier import Classifier
 
         classifier = Classifier.classifiers.get(seven.subject.type, None)
-        classifier.classify(seven.subject)
+        classifier.classify_subject(seven.subject)
 
         [crow_pool, mouse_pool] = sorted(
             pools, key=lambda x: x.presentation_edition.title

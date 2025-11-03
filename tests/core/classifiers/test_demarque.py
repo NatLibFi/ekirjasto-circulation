@@ -15,7 +15,7 @@ class TestDeMarqueClassifier:
             subject.audience,
             subject.target_age,
             subject.fiction,
-        ) = DeMarqueClassifier.classify(subject)
+        ) = DeMarqueClassifier.classify_subject(subject)
         return subject
 
     def test_scrub_identifier(self):
