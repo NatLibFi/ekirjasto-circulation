@@ -239,9 +239,10 @@ class Subject(Base):
         else:
             subject = get_one(_db, Subject, type=type, **find_with)
             new = False
-        if name and not subject.name:
+
+        if name and not subject.name or name and subject.name != name:
             # We just discovered the name of a subject that previously
-            # had only an ID.
+            # had only an ID OR the name we had has changed. Let's go with the new name.
             subject.name = name
         return subject, new
 
