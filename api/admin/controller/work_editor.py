@@ -492,13 +492,13 @@ class WorkController(CirculationManagerController, AdminPermissionsControllerMix
         if new_audience != work.audience:
             # Delete all previous staff audience classifications
             for c in old_classifications:
-                if c.subject.type == Subject.FREEFORM_AUDIENCE:
+                if c.subject.type == Subject.SCHEMA_AUDIENCE:
                     self._db.delete(c)
 
             # Create a new classification with a high weight
             primary_identifier.identifier_to_subject(
                 data_source=staff_data_source,
-                subject_scheme=Subject.FREEFORM_AUDIENCE,
+                subject_scheme=Subject.SCHEMA_AUDIENCE,
                 subject_identifier=new_audience,
                 weight=WorkController.STAFF_WEIGHT,
             )
@@ -529,7 +529,7 @@ class WorkController(CirculationManagerController, AdminPermissionsControllerMix
         ):
             # Delete all previous staff target age classifications
             for c in old_classifications:
-                if c.subject.type == Subject.AGE_RANGE:
+                if c.subject.type == Subject.SCHEMA_AGE_RANGE:
                     self._db.delete(c)
 
             # Create a new classification with a high weight - higher than audience
@@ -540,7 +540,7 @@ class WorkController(CirculationManagerController, AdminPermissionsControllerMix
                 )
                 primary_identifier.identifier_to_subject(
                     data_source=staff_data_source,
-                    subject_scheme=Subject.AGE_RANGE,
+                    subject_scheme=Subject.SCHEMA_AGE_RANGE,
                     subject_identifier=age_range_identifier,
                     weight=WorkController.STAFF_WEIGHT * 100,
                 )

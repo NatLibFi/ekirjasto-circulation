@@ -138,7 +138,7 @@ def bibliographic_data() -> Metadata:
         ],
         subjects=[
             SubjectData(type=Subject.TOPIC, identifier="Action & Adventure"),
-            SubjectData(type=Subject.FREEFORM_AUDIENCE, identifier="Young Adult"),
+            SubjectData(type=Subject.SCHEMA_AUDIENCE, identifier="Young Adult"),
             SubjectData(type=Subject.PLACE, identifier="Africa"),
         ],
     )

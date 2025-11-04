@@ -248,7 +248,7 @@ class AgeClassifier(SubjectClassifier):
         return (target_age, age_words)
 
 
-SubjectClassifier.classifiers[SubjectClassifier.AGE_RANGE] = AgeClassifier
+SubjectClassifier.classifiers[SubjectClassifier.SCHEMA_AGE_RANGE] = AgeClassifier
 SubjectClassifier.classifiers[SubjectClassifier.GRADE_LEVEL] = GradeLevelClassifier
 SubjectClassifier.classifiers[
     SubjectClassifier.INTEREST_LEVEL

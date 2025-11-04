@@ -116,7 +116,7 @@ class TestAnnotators:
                 label="Nonfiction",
             )
         ]
-        assert categories[Subject.uri_lookup[Subject.AGE_RANGE]] == [
+        assert categories[Subject.uri_lookup[Subject.SCHEMA_AGE_RANGE]] == [
             dict(term=work.target_age_string, label=work.target_age_string)
         ]
 

@@ -1959,9 +1959,9 @@ class CSVMetadataImporter:
     # them as though they came from a trusted distributor.
     DEFAULT_SUBJECT_FIELD_NAMES = {
         "tags": (Subject.TAG, Classification.TRUSTED_DISTRIBUTOR_WEIGHT),
-        "age": (Subject.AGE_RANGE, Classification.TRUSTED_DISTRIBUTOR_WEIGHT),
+        "age": (Subject.SCHEMA_AGE_RANGE, Classification.TRUSTED_DISTRIBUTOR_WEIGHT),
         "audience": (
-            Subject.FREEFORM_AUDIENCE,
+            Subject.SCHEMA_AUDIENCE,
             Classification.TRUSTED_DISTRIBUTOR_WEIGHT,
         ),
     }

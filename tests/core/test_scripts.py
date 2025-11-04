@@ -852,7 +852,7 @@ class TestAddClassificationScript:
             "--identifier-type",
             identifier.type,
             "--subject-type",
-            SubjectClassifier.FREEFORM_AUDIENCE,
+            SubjectClassifier.SCHEMA_AUDIENCE,
             "--subject-identifier",
             SubjectClassifier.AUDIENCE_CHILDREN,
             "--weight",
@@ -866,7 +866,7 @@ class TestAddClassificationScript:
         [classification] = identifier.classifications
         assert 42 == classification.weight
         subject = classification.subject
-        assert SubjectClassifier.FREEFORM_AUDIENCE == subject.type
+        assert SubjectClassifier.SCHEMA_AUDIENCE == subject.type
         assert SubjectClassifier.AUDIENCE_CHILDREN == subject.identifier
 
         # The work has been reclassified and is now known as a

@@ -7,9 +7,9 @@ from psycopg2.extras import NumericRange
 
 from core import classifier
 from core.classifier import (
-    FreeformAudienceClassifier,
     GenreData,
     Lowercased,
+    SchemaAudienceClassifier,
     SubjectClassifier,
     WorkClassifier,
     fiction_genres,
@@ -172,7 +172,9 @@ class TestClassifierLookup:
         assert GradeLevelClassifier == SubjectClassifier.lookup(
             SubjectClassifier.GRADE_LEVEL
         )
-        assert AgeClassifier == SubjectClassifier.lookup(SubjectClassifier.AGE_RANGE)
+        assert AgeClassifier == SubjectClassifier.lookup(
+            SubjectClassifier.SCHEMA_AGE_RANGE
+        )
         assert InterestLevelClassifier == SubjectClassifier.lookup(
             SubjectClassifier.INTEREST_LEVEL
         )
@@ -267,11 +269,11 @@ class TestConsolidateWeights:
         assert 1 == w2[classifier.Middle_East_History]
 
 
-class TestFreeformAudienceClassifier:
+class TestSchemaAudienceClassifier:
     def test_audience(self):
         def audience(aud):
             # The second param, `name`, is not used in the audience method
-            return FreeformAudienceClassifier.audience(aud, None)
+            return SchemaAudienceClassifier.audience(aud, None)
 
         for val in ["children", "pre-adolescent", "beginning reader"]:
             assert SubjectClassifier.AUDIENCE_CHILDREN == audience(val)
@@ -294,7 +296,7 @@ class TestFreeformAudienceClassifier:
 
     def test_target_age(self):
         def target_age(age):
-            return FreeformAudienceClassifier.target_age(age, None)
+            return SchemaAudienceClassifier.target_age(age, None)
 
         assert target_age("beginning reader") == (5, 8)
         assert target_age("pre-adolescent") == (9, 12)
@@ -819,8 +821,8 @@ class TestWorkClassifier:
         session = data.transaction.session
         i = data.transaction.identifier()
         source = DataSource.lookup(session, DataSource.OVERDRIVE)
-        c1 = i.identifier_to_subject(source, Subject.AGE_RANGE, "8-9", weight=1)
-        c2 = i.identifier_to_subject(source, Subject.AGE_RANGE, "6-7", weight=1)
+        c1 = i.identifier_to_subject(source, Subject.SCHEMA_AGE_RANGE, "8-9", weight=1)
+        c2 = i.identifier_to_subject(source, Subject.SCHEMA_AGE_RANGE, "6-7", weight=1)
 
         overdrive_edition, lp = data.transaction.edition(
             data_source_name=source.name,
@@ -1204,7 +1206,7 @@ class TestWorkClassifier:
         subject2 = data.transaction.subject(type="type2", identifier="subject2")
         subject2.audience = "Adult"
         subject3 = data.transaction.subject(
-            type=Subject.FREEFORM_AUDIENCE, identifier="Children"
+            type=Subject.SCHEMA_AUDIENCE, identifier="Children"
         )
         classification1 = data.transaction.classification(
             identifier=pool.identifier,
@@ -1243,7 +1245,9 @@ class TestWorkClassifier:
         subject2 = data.transaction.subject(type="type2", identifier="subject2")
         subject2.target_age = NumericRange(6, 8, "[)")
         subject2.weight_as_indicator_of_target_age = 1
-        subject3 = data.transaction.subject(type=Subject.AGE_RANGE, identifier="10-13")
+        subject3 = data.transaction.subject(
+            type=Subject.SCHEMA_AGE_RANGE, identifier="10-13"
+        )
         classification1 = data.transaction.classification(
             identifier=data.identifier, subject=subject1, data_source=source, weight=10
         )
@@ -1268,7 +1272,9 @@ class TestWorkClassifier:
         data = work_classifier_fixture
         session = data.transaction.session
         staff_source = DataSource.lookup(session, DataSource.LIBRARY_STAFF)
-        subject = data.transaction.subject(type=Subject.AGE_RANGE, identifier="10-12")
+        subject = data.transaction.subject(
+            type=Subject.SCHEMA_AGE_RANGE, identifier="10-12"
+        )
         subject.target_age = NumericRange(9, 13, "()")
         classification = data.transaction.classification(
             identifier=data.identifier,

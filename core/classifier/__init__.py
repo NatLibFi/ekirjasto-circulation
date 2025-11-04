@@ -48,14 +48,14 @@ class ClassifierConstants:
     NYPL_APPEAL = "NYPL Appeal"
 
     GRADE_LEVEL = "Grade level"  # "1-2", "Grade 4", "Kindergarten", etc.
-    AGE_RANGE = "schema:typicalAgeRange"  # "0-2", etc.
+    SCHEMA_AGE_RANGE = "schema:typicalAgeRange"  # "0-2", etc.
     AXIS_360_AUDIENCE = "Axis 360 Audience"
     DEMARQUE_AUDIENCE = "schema:Audience"
 
     # We know this says something about the audience but we're not sure what.
     # Could be any of the values from GRADE_LEVEL or AGE_RANGE, plus
     # "YA", "Adult", etc.
-    FREEFORM_AUDIENCE = "schema:audience"
+    SCHEMA_AUDIENCE = "schema:audience"
 
     GUTENBERG_BOOKSHELF = "gutenberg:bookshelf"
     TOPIC = "schema:Topic"
@@ -963,7 +963,7 @@ class AgeOrGradeClassifier(SubjectClassifier):
         return age
 
 
-class FreeformAudienceClassifier(AgeOrGradeClassifier):
+class SchemaAudienceClassifier(AgeOrGradeClassifier):
     # NOTE: In practice, subjects like "books for all ages" tend to be
     # more like advertising slogans than reliable indicators of an
     # ALL_AGES audience. So the only subject of this type we handle is
@@ -1169,7 +1169,7 @@ class WorkClassifier:
 
         # if staff classification is about audience, ignore all other audience classifications
         if not self.using_staff_audience:
-            if from_staff and subject.type == Subject.FREEFORM_AUDIENCE:
+            if from_staff and subject.type == Subject.SCHEMA_AUDIENCE:
                 self.using_staff_audience = True
                 self.audience_weights = Counter()
                 self.audience_weights[subject.audience] += weight
@@ -1202,7 +1202,7 @@ class WorkClassifier:
                     self.audience_weights[subject.audience] += weight
 
         if not self.using_staff_target_age:
-            if from_staff and subject.type == Subject.AGE_RANGE:
+            if from_staff and subject.type == Subject.SCHEMA_AGE_RANGE:
                 self.using_staff_target_age = True
                 self.target_age_lower_weights = Counter()
                 self.target_age_upper_weights = Counter()
@@ -1664,8 +1664,8 @@ class WorkClassifier:
 # Make a dictionary of classification schemes to classifiers.
 
 SubjectClassifier.classifiers[
-    SubjectClassifier.FREEFORM_AUDIENCE
-] = FreeformAudienceClassifier
+    SubjectClassifier.SCHEMA_AUDIENCE
+] = SchemaAudienceClassifier
 SubjectClassifier.classifiers[
     SubjectClassifier.AXIS_360_AUDIENCE
 ] = AgeOrGradeClassifier

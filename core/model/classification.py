@@ -57,7 +57,7 @@ class Subject(Base):
     BISAC = SubjectClassifier.BISAC
     BIC = SubjectClassifier.BIC  # BIC Subject Categories
     TAG: str = SubjectClassifier.TAG  # Folksonomic tags.
-    FREEFORM_AUDIENCE: str = SubjectClassifier.FREEFORM_AUDIENCE
+    SCHEMA_AUDIENCE: str = SubjectClassifier.SCHEMA_AUDIENCE
     NYPL_APPEAL = SubjectClassifier.NYPL_APPEAL
     DEMARQUE = SubjectClassifier.DEMARQUE
 
@@ -66,7 +66,7 @@ class Subject(Base):
 
     AXIS_360_AUDIENCE = SubjectClassifier.AXIS_360_AUDIENCE
     GRADE_LEVEL = SubjectClassifier.GRADE_LEVEL
-    AGE_RANGE: str = SubjectClassifier.AGE_RANGE
+    SCHEMA_AGE_RANGE: str = SubjectClassifier.SCHEMA_AGE_RANGE
     LEXILE_SCORE = SubjectClassifier.LEXILE_SCORE
     ATOS_SCORE = SubjectClassifier.ATOS_SCORE
     INTEREST_LEVEL = SubjectClassifier.INTEREST_LEVEL
@@ -88,8 +88,8 @@ class Subject(Base):
         "http://purl.org/dc/terms/LCC": LCC,
         "http://purl.org/dc/terms/LCSH": LCSH,
         "http://purl.org/dc/terms/DDC": DDC,
-        "http://schema.org/typicalAgeRange": AGE_RANGE,
-        "http://schema.org/audience": FREEFORM_AUDIENCE,
+        "http://schema.org/typicalAgeRange": SCHEMA_AGE_RANGE,
+        "http://schema.org/audience": SCHEMA_AUDIENCE,
         "http://www.bisg.org/standards/bisac_subject/": BISAC,
         # Feedbooks uses a modified BISAC which we know how to handle.
         "http://www.feedbooks.com/categories": BISAC,
@@ -402,18 +402,18 @@ class Classification(Base):
         # much we trust different data sources can become important.
         DataSourceConstants.MANUAL: 1.0,
         DataSourceConstants.LIBRARY_STAFF: 1.0,
-        (DataSourceConstants.METADATA_WRANGLER, Subject.AGE_RANGE): 1.0,
+        (DataSourceConstants.METADATA_WRANGLER, Subject.SCHEMA_AGE_RANGE): 1.0,
         Subject.AXIS_360_AUDIENCE: 0.9,
         (DataSourceConstants.OVERDRIVE, Subject.INTEREST_LEVEL): 0.9,
         (DataSourceConstants.OVERDRIVE, Subject.OVERDRIVE): 0.9,  # But see below
-        (DataSourceConstants.AMAZON, Subject.AGE_RANGE): 0.85,
+        (DataSourceConstants.AMAZON, Subject.SCHEMA_AGE_RANGE): 0.85,
         (DataSourceConstants.AMAZON, Subject.GRADE_LEVEL): 0.85,
         # Although Overdrive usually reserves Fiction and Nonfiction
         # for books for adults, it's not as reliable an indicator as
         # other Overdrive classifications.
         (DataSourceConstants.OVERDRIVE, Subject.OVERDRIVE, "Fiction"): 0.7,
         (DataSourceConstants.OVERDRIVE, Subject.OVERDRIVE, "Nonfiction"): 0.7,
-        Subject.AGE_RANGE: 0.6,
+        Subject.SCHEMA_AGE_RANGE: 0.6,
         Subject.GRADE_LEVEL: 0.6,
         # There's no real way to know what this measures, since it
         # could be anything. If a tag mentions a target age or a grade

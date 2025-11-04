@@ -880,7 +880,7 @@ class TestOPDSImporter:
 
         assert "7" == seven.subject.identifier
         assert 100 == seven.weight
-        assert Subject.AGE_RANGE == seven.subject.type
+        assert Subject.SCHEMA_AGE_RANGE == seven.subject.type
         from core.classifier import SubjectClassifier
 
         classifier = SubjectClassifier.classifiers.get(seven.subject.type, None)
