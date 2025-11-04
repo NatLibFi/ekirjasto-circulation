@@ -66,6 +66,7 @@ poetry install --only ci
     - [4. Running Tests](#4-Run-the-API-or-core-suites)
     - [5. Run an individual file or test](#5-Run-an-individual-file-or-test)
 - [Localization (flask-pybabel, Transifex)](#localization-flask-pybabel-transifex)
+- [Technology overview](#technology-overview)
 - [Code Style](#code-style)
     - [1. Pre-Commit Configuration](#3-pre-commit-configuration)
     - [2. Linters](#4-linters)
@@ -402,6 +403,14 @@ Make PR, and when it's merged to main, the translations will be uploaded to Tran
 
 Once all strings have been translated and reviewed in Transifex, Transifex will automatically create a PR in Github and
 commit the updated files.
+
+## Technology overview
+
+E-kirjasto backend - though gone through many changes since being forked from the Palace project - is based on the
+following technologies:
+
+- [Data model](https://lyrasis.notion.site/Data-Model-6bc7de7799c543388d3cb206b72a8dad)
+- [Search](https://lyrasis.notion.site/Search-6f24d9ffe0af45cc8e4e1726d535060b)
 
 ## Code Style
 
