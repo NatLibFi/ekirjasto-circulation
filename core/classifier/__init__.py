@@ -1015,7 +1015,7 @@ class FreeformAudienceClassifier(AgeOrGradeClassifier):
 
 
 class WorkClassifier:
-    """Boil down a bunch of Classification objects into a few values."""
+    """Boil down a bunch of Subject objects into a few values."""
 
     # TODO: This needs a lot of additions.
     genre_publishers = {

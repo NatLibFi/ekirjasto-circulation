@@ -295,7 +295,7 @@ class Subject(Base):
         if not classifier:
             return
         self.checked = True
-        log = logging.getLogger("Subject-genre assignment")
+        log = logging.getLogger(f"Subject-genre assignment: {self.type} / {classifier}")
 
         genredata, audience, target_age, fiction = classifier.classify_subject(self)
         # If the genre is erotica, the audience will always be ADULTS_ONLY,

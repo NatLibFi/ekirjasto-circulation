@@ -1627,7 +1627,8 @@ class Metadata:
                     surviving_classifications.append(classification)
             identifier.classifications = surviving_classifications
 
-        # Apply all new subjects to the identifier.
+        # Apply all new subjects to the identifier. This isn't expected to happen often. The
+        # actual genre assignment will be done by running script work_classication.
         for subject in list(new_subjects.values()):
             try:
                 identifier.identifier_to_subject(
