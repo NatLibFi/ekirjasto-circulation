@@ -205,14 +205,16 @@ them manually:
 
 Neither of the commands will produce any output if the operations succeed.
 
-Navigating to `http://localhost:6500/` should now show an OPDS feed containing various books:
-
-![Feed](.github/readme/feed.png)
-
 ### 6. Patron authentication
 
 For patrons to access the service, configure authentication: `System Configuration → Patron Authentication`. In our case,
 select _E-kirjasto API environment: Development_ and attach the newly created library to the service.
+
+Navigating to `http://localhost:6500/` should now show an OPDS feed containing various books:
+
+![Feed](.github/readme/feed.png)
+
+If not, see [7. Troubleshooting](#7-troubleshooting).
 
 ### 7. Troubleshooting
 
