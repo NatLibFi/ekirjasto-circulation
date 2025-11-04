@@ -14,8 +14,8 @@ class TestBIC:
         assert False == fic("HB")
 
     def test_audience(self):
-        young_adult = Classifier.AUDIENCE_YOUNG_ADULT
-        adult = Classifier.AUDIENCE_ADULT
+        young_adult = SubjectClassifier.AUDIENCE_YOUNG_ADULT
+        adult = SubjectClassifier.AUDIENCE_ADULT
 
         def aud(bic):
             return BIC.audience(BIC.scrub_identifier(bic), None)

@@ -1,7 +1,7 @@
 from core.classifier import *
 
 
-class GutenbergBookshelfClassifier(Classifier):
+class GutenbergBookshelfClassifier(SubjectClassifier):
     # Any classification that includes the string "Fiction" will be
     # counted as fiction. This is just the leftovers.
     FICTION = {
@@ -262,4 +262,6 @@ class GutenbergBookshelfClassifier(Classifier):
         return None
 
 
-Classifier.classifiers[Classifier.GUTENBERG_BOOKSHELF] = GutenbergBookshelfClassifier
+SubjectClassifier.classifiers[
+    SubjectClassifier.GUTENBERG_BOOKSHELF
+] = GutenbergBookshelfClassifier

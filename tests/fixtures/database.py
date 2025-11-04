@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 import core.lane
 from api.discovery.opds_registration import OpdsRegistrationService
 from api.integration.registry.discovery import DiscoveryRegistry
-from core.classifier import Classifier
+from core.classifier import SubjectClassifier
 from core.config import Configuration
 from core.configuration.library import LibrarySettings
 from core.integration.goals import Goals
@@ -346,8 +346,8 @@ class DatabaseTransactionFixture:
             with_license_pool = True
         language = language or "eng"
         title = str(title or self.fresh_str())
-        audience = audience or Classifier.AUDIENCE_ADULT
-        if audience == Classifier.AUDIENCE_CHILDREN and not data_source_name:
+        audience = audience or SubjectClassifier.AUDIENCE_ADULT
+        if audience == SubjectClassifier.AUDIENCE_CHILDREN and not data_source_name:
             # TODO: This is necessary because Gutenberg's childrens books
             # get filtered out at the moment.
             data_source_name = DataSource.OVERDRIVE

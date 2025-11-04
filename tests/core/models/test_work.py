@@ -5,7 +5,7 @@ import pytest
 import pytz
 from psycopg2.extras import NumericRange
 
-from core.classifier import Classifier, Fantasy, Romance, Science_Fiction
+from core.classifier import Fantasy, Romance, Science_Fiction, SubjectClassifier
 from core.equivalents_coverage import EquivalentIdentifiersCoverageProvider
 from core.model import get_one_or_create, tuple_to_numericrange
 from core.model.classification import Genre, Subject
@@ -380,7 +380,7 @@ class TestWork:
     def test_calculate_presentation_uses_default_audience_set_as_collection_setting(
         self, db
     ):
-        default_audience = Classifier.AUDIENCE_ADULT
+        default_audience = SubjectClassifier.AUDIENCE_ADULT
         collection = db.default_collection()
         collection.default_audience = default_audience
         edition, pool = db.edition(
@@ -1071,11 +1071,17 @@ class TestWork:
         )
 
         # This classification will be left out because its subject type isn't useful for search.
-        identifier1.identifier_to_subject(data_source, Subject.DDC, db.fresh_str(), None)
+        identifier1.identifier_to_subject(
+            data_source, Subject.DDC, db.fresh_str(), None
+        )
 
         # These classifications will be left out because their identifiers aren't sufficiently equivalent to the edition's.
-        identifier2.identifier_to_subject(data_source, Subject.FAST, db.fresh_str(), None)
-        identifier3.identifier_to_subject(data_source, Subject.FAST, db.fresh_str(), None)
+        identifier2.identifier_to_subject(
+            data_source, Subject.FAST, db.fresh_str(), None
+        )
+        identifier3.identifier_to_subject(
+            data_source, Subject.FAST, db.fresh_str(), None
+        )
 
         # Add some genres.
         genre1, ignore = Genre.lookup(db.session, "Science Fiction")
@@ -1110,7 +1116,7 @@ class TestWork:
         edition.publisher = db.fresh_str()
         edition.imprint = db.fresh_str()
         work.fiction = False
-        work.audience = Classifier.AUDIENCE_YOUNG_ADULT
+        work.audience = SubjectClassifier.AUDIENCE_YOUNG_ADULT
         work.summary_text = db.fresh_str()
         work.rating = 5
         work.popularity = 4
@@ -1354,7 +1360,7 @@ class TestWork:
 
     def test_age_appropriate_for_patron(self, db: DatabaseTransactionFixture):
         work = db.work()
-        work.audience = Classifier.AUDIENCE_YOUNG_ADULT
+        work.audience = SubjectClassifier.AUDIENCE_YOUNG_ADULT
         work.target_age = tuple_to_numericrange((12, 15))
         patron = db.patron()
 
@@ -1393,12 +1399,15 @@ class TestWork:
 
         # NOTE: setting target_age sets .audiences to appropriate values,
         # so setting .audiences here is purely demonstrative.
-        lane.audiences = [Classifier.AUDIENCE_CHILDREN, Classifier.AUDIENCE_YOUNG_ADULT]
+        lane.audiences = [
+            SubjectClassifier.AUDIENCE_CHILDREN,
+            SubjectClassifier.AUDIENCE_YOUNG_ADULT,
+        ]
         lane.target_age = (9, 14)
 
         # This work is a YA title within the age range.
         work = db.work()
-        work.audience = Classifier.AUDIENCE_YOUNG_ADULT
+        work.audience = SubjectClassifier.AUDIENCE_YOUNG_ADULT
         work.target_age = tuple_to_numericrange((12, 15))
         assert True == work.age_appropriate_for_patron(patron)
 
@@ -1413,7 +1422,7 @@ class TestWork:
 
         # Change the audience to AUDIENCE_ADULT, and the work stops being
         # age-appropriate.
-        work.audience = Classifier.AUDIENCE_ADULT
+        work.audience = SubjectClassifier.AUDIENCE_ADULT
         assert False == work.age_appropriate_for_patron(patron)
 
     def test_unlimited_access_books_are_available_by_default(
@@ -1622,7 +1631,9 @@ class TestWork:
         # them shows up.
         ds = DataSource.lookup(db.session, DataSource.OVERDRIVE)
         classification = identifier.identifier_to_subject(ds, Subject.TAG, "some tag")
-        classification2 = identifier.identifier_to_subject(ds, Subject.TAG, "another tag")
+        classification2 = identifier.identifier_to_subject(
+            ds, Subject.TAG, "another tag"
+        )
         assert [w1] == qu.all()
 
         # If one of them is checked, the Work still shows up.

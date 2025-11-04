@@ -28,9 +28,9 @@ from spellchecker import SpellChecker
 
 from core.classifier import (
     AgeClassifier,
-    Classifier,
     GradeLevelClassifier,
     KeywordBasedClassifier,
+    SubjectClassifier,
 )
 from core.facets import FacetConstants
 from core.lane import Pagination
@@ -1790,9 +1790,9 @@ class Filter(SearchBase):
         # At this point we know we have a specific list of audiences.
         # We're either going to return that list as-is, or we'll
         # return that list plus ALL_AGES.
-        with_all_ages = list(as_is) + [Classifier.AUDIENCE_ALL_AGES]
+        with_all_ages = list(as_is) + [SubjectClassifier.AUDIENCE_ALL_AGES]
 
-        if Classifier.AUDIENCE_ALL_AGES in as_is:
+        if SubjectClassifier.AUDIENCE_ALL_AGES in as_is:
             # ALL_AGES is explicitly included.
             return as_is
 
@@ -1800,14 +1800,17 @@ class Filter(SearchBase):
         # always going to be an additional audience.
         if any(
             x in as_is
-            for x in [Classifier.AUDIENCE_YOUNG_ADULT, Classifier.AUDIENCE_ADULT]
+            for x in [
+                SubjectClassifier.AUDIENCE_YOUNG_ADULT,
+                SubjectClassifier.AUDIENCE_ADULT,
+            ]
         ):
             return with_all_ages
 
         # At this point, if CHILDREN is _not_ included, we know that
         # ALL_AGES is not included. Specifically, ALL_AGES content
         # does _not_ belong in ADULTS_ONLY or RESEARCH.
-        if Classifier.AUDIENCE_CHILDREN not in as_is:
+        if SubjectClassifier.AUDIENCE_CHILDREN not in as_is:
             return as_is
 
         # Now we know that CHILDREN is an audience. It's going to come
@@ -1815,7 +1818,7 @@ class Filter(SearchBase):
         if (
             self.target_age
             and self.target_age[1] is not None
-            and self.target_age[1] < Classifier.ALL_AGES_AGE_CUTOFF
+            and self.target_age[1] < SubjectClassifier.ALL_AGES_AGE_CUTOFF
         ):
             # The audience for this query does not include any kids
             # who are expected to have the reading fluency necessary
@@ -1909,7 +1912,7 @@ class Filter(SearchBase):
         if self.audiences:
             f = chain(f, Terms(audience=scrub_list(self.audiences)))
         else:
-            research = self._scrub(Classifier.AUDIENCE_RESEARCH)
+            research = self._scrub(SubjectClassifier.AUDIENCE_RESEARCH)
             f = chain(f, Bool(must_not=[Term(audience=research)]))
 
         target_age_filter = self.target_age_filter
@@ -2292,7 +2295,7 @@ class Filter(SearchBase):
         if (
             self.lane_building
             and self.audiences
-            and Classifier.AUDIENCE_CHILDREN in self.audiences
+            and SubjectClassifier.AUDIENCE_CHILDREN in self.audiences
             and both_limits
         ):
             # If children is audience we want only works with defined age range that matches lane's range

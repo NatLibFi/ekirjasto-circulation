@@ -867,7 +867,12 @@ class Identifier(Base, IdentifierConstants):
         )[0]
 
     def identifier_to_subject(
-        self, data_source, subject_scheme, subject_identifier, subject_name=None, weight=1
+        self,
+        data_source,
+        subject_scheme,
+        subject_identifier,
+        subject_name=None,
+        weight=1,
     ):
         """Associate this Identifier under a Subject.
 

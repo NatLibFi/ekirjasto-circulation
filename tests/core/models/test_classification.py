@@ -2,7 +2,7 @@ import pytest
 from psycopg2.extras import NumericRange
 from sqlalchemy.exc import IntegrityError
 
-from core.classifier import Classifier
+from core.classifier import SubjectClassifier
 from core.model import create
 from core.model.classification import Genre, Subject
 from tests.fixtures.database import DatabaseTransactionFixture
@@ -63,7 +63,7 @@ class TestSubject:
         )
 
         # The genre and audience data for this Subject is totally wrong.
-        subject.audience = Classifier.AUDIENCE_ADULT
+        subject.audience = SubjectClassifier.AUDIENCE_ADULT
         subject.target_age = NumericRange(1, 10)
         subject.fiction = False
         sf, ignore = Genre.lookup(db.session, "Science Fiction")
@@ -71,7 +71,7 @@ class TestSubject:
 
         # But calling assign_to_genre() will fix it.
         subject.assign_to_genre()
-        assert Classifier.AUDIENCE_CHILDREN == subject.audience
+        assert SubjectClassifier.AUDIENCE_CHILDREN == subject.audience
         assert NumericRange(None, None, "[]") == subject.target_age
         assert None == subject.genre
         assert None == subject.fiction

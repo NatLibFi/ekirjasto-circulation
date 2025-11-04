@@ -24,7 +24,7 @@ from opensearch_dsl.query import Range, Term, Terms
 from psycopg2.extras import NumericRange
 from sqlalchemy.sql import Delete as sqlaDelete
 
-from core.classifier import Classifier
+from core.classifier import SubjectClassifier
 from core.config import Configuration
 from core.external_search import (
     ExternalSearchIndex,
@@ -75,7 +75,7 @@ from tests.fixtures.search import (
 )
 from tests.mocks.search import SearchServiceFailureMode
 
-RESEARCH = Term(audience=Classifier.AUDIENCE_RESEARCH.lower())
+RESEARCH = Term(audience=SubjectClassifier.AUDIENCE_RESEARCH.lower())
 
 
 class TestExternalSearch:
@@ -289,29 +289,29 @@ class TestExternalSearchWithWorks:
         )
 
         result.children_work = _work(
-            title="Alice in Wonderland", audience=Classifier.AUDIENCE_CHILDREN
+            title="Alice in Wonderland", audience=SubjectClassifier.AUDIENCE_CHILDREN
         )
 
         result.all_ages_work = _work(
-            title="The Annotated Alice", audience=Classifier.AUDIENCE_ALL_AGES
+            title="The Annotated Alice", audience=SubjectClassifier.AUDIENCE_ALL_AGES
         )
 
         result.ya_work = _work(
-            title="Go Ask Alice", audience=Classifier.AUDIENCE_YOUNG_ADULT
+            title="Go Ask Alice", audience=SubjectClassifier.AUDIENCE_YOUNG_ADULT
         )
 
         result.adult_work = _work(
-            title="Still Alice", audience=Classifier.AUDIENCE_ADULT
+            title="Still Alice", audience=SubjectClassifier.AUDIENCE_ADULT
         )
 
         result.research_work = _work(
             title="Curiouser and Curiouser: Surrealism and Repression in 'Alice in Wonderland'",
-            audience=Classifier.AUDIENCE_RESEARCH,
+            audience=SubjectClassifier.AUDIENCE_RESEARCH,
         )
 
         result.ya_romance = _work(
             title="Gumby In Love",
-            audience=Classifier.AUDIENCE_YOUNG_ADULT,
+            audience=SubjectClassifier.AUDIENCE_YOUNG_ADULT,
             genre="Romance",
         )
         result.ya_romance.presentation_edition.subtitle = (
@@ -661,13 +661,16 @@ class TestExternalSearchWithWorks:
         expect(data.moby_dick, "moby", classics)
 
         # Filters on audience
-        adult = Filter(audiences=Classifier.AUDIENCE_ADULT)
-        ya = Filter(audiences=Classifier.AUDIENCE_YOUNG_ADULT)
-        children = Filter(audiences=Classifier.AUDIENCE_CHILDREN)
+        adult = Filter(audiences=SubjectClassifier.AUDIENCE_ADULT)
+        ya = Filter(audiences=SubjectClassifier.AUDIENCE_YOUNG_ADULT)
+        children = Filter(audiences=SubjectClassifier.AUDIENCE_CHILDREN)
         ya_and_children = Filter(
-            audiences=[Classifier.AUDIENCE_CHILDREN, Classifier.AUDIENCE_YOUNG_ADULT]
+            audiences=[
+                SubjectClassifier.AUDIENCE_CHILDREN,
+                SubjectClassifier.AUDIENCE_YOUNG_ADULT,
+            ]
         )
-        research = Filter(audiences=[Classifier.AUDIENCE_RESEARCH])
+        research = Filter(audiences=[SubjectClassifier.AUDIENCE_RESEARCH])
 
         def expect_alice(expect_works, filter):
             return expect(expect_works, "alice", filter, ordered=False)
@@ -687,13 +690,13 @@ class TestExternalSearchWithWorks:
         # The 'all ages' work appears except when the audience would make
         # that inappropriate...
         expect_alice([data.research_work], research)
-        expect_alice([], Filter(audiences=Classifier.AUDIENCE_ADULTS_ONLY))
+        expect_alice([], Filter(audiences=SubjectClassifier.AUDIENCE_ADULTS_ONLY))
 
         # ...or when the target age does not include children expected
         # to have the necessary reading fluency.
         expect_alice(
             [data.children_work],
-            Filter(audiences=Classifier.AUDIENCE_CHILDREN, target_age=(2, 3)),
+            Filter(audiences=SubjectClassifier.AUDIENCE_CHILDREN, target_age=(2, 3)),
         )
 
         # If there is no filter, the research work is excluded by
@@ -1759,7 +1762,7 @@ class TestExactMatches:
         result.ya_romance = _work(
             title="Gumby In Love",
             authors="Pokey",
-            audience=Classifier.AUDIENCE_YOUNG_ADULT,
+            audience=SubjectClassifier.AUDIENCE_YOUNG_ADULT,
             genre="Romance",
         )
         result.ya_romance.presentation_edition.subtitle = (
@@ -3508,7 +3511,7 @@ class TestFilter:
         parent.media = Edition.AUDIO_MEDIUM
         parent.languages = ["eng", "fra"]
         parent.fiction = True
-        parent.audiences = {Classifier.AUDIENCE_CHILDREN}
+        parent.audiences = {SubjectClassifier.AUDIENCE_CHILDREN}
         parent.target_age = NumericRange(10, 11, "[]")
         parent.genres = [data.horror, data.fantasy]
         parent.customlists = [data.best_sellers]
@@ -3533,7 +3536,9 @@ class TestFilter:
         assert parent.media == filter.media
         assert parent.languages == filter.languages
         assert parent.fiction == filter.fiction
-        assert parent.audiences + [Classifier.AUDIENCE_ALL_AGES] == filter.audiences
+        assert (
+            parent.audiences + [SubjectClassifier.AUDIENCE_ALL_AGES] == filter.audiences
+        )
         assert [parent.license_datasource_id] == filter.license_datasources
         assert (parent.target_age.lower, parent.target_age.upper) == filter.target_age
         assert True == filter.allow_holds
@@ -3667,53 +3672,59 @@ class TestFilter:
         assert filter.audiences == None
 
         # The output is a list whether audiences is a string...
-        filter = Filter(audiences=Classifier.AUDIENCE_ALL_AGES)
-        assert filter.audiences == [Classifier.AUDIENCE_ALL_AGES]
+        filter = Filter(audiences=SubjectClassifier.AUDIENCE_ALL_AGES)
+        assert filter.audiences == [SubjectClassifier.AUDIENCE_ALL_AGES]
         # ...or a list.
-        filter = Filter(audiences=[Classifier.AUDIENCE_ALL_AGES])
-        assert filter.audiences == [Classifier.AUDIENCE_ALL_AGES]
+        filter = Filter(audiences=[SubjectClassifier.AUDIENCE_ALL_AGES])
+        assert filter.audiences == [SubjectClassifier.AUDIENCE_ALL_AGES]
 
         # "all ages" should always be an audience if the audience is
         # young adult or adult.
-        filter = Filter(audiences=Classifier.AUDIENCE_YOUNG_ADULT)
+        filter = Filter(audiences=SubjectClassifier.AUDIENCE_YOUNG_ADULT)
         assert filter.audiences == [
-            Classifier.AUDIENCE_YOUNG_ADULT,
-            Classifier.AUDIENCE_ALL_AGES,
+            SubjectClassifier.AUDIENCE_YOUNG_ADULT,
+            SubjectClassifier.AUDIENCE_ALL_AGES,
         ]
-        filter = Filter(audiences=Classifier.AUDIENCE_ADULT)
+        filter = Filter(audiences=SubjectClassifier.AUDIENCE_ADULT)
         assert filter.audiences == [
-            Classifier.AUDIENCE_ADULT,
-            Classifier.AUDIENCE_ALL_AGES,
+            SubjectClassifier.AUDIENCE_ADULT,
+            SubjectClassifier.AUDIENCE_ALL_AGES,
         ]
         filter = Filter(
-            audiences=[Classifier.AUDIENCE_ADULT, Classifier.AUDIENCE_YOUNG_ADULT]
+            audiences=[
+                SubjectClassifier.AUDIENCE_ADULT,
+                SubjectClassifier.AUDIENCE_YOUNG_ADULT,
+            ]
         )
         assert filter.audiences == [
-            Classifier.AUDIENCE_ADULT,
-            Classifier.AUDIENCE_YOUNG_ADULT,
-            Classifier.AUDIENCE_ALL_AGES,
+            SubjectClassifier.AUDIENCE_ADULT,
+            SubjectClassifier.AUDIENCE_YOUNG_ADULT,
+            SubjectClassifier.AUDIENCE_ALL_AGES,
         ]
 
         # If the audience is meant for adults, then "all ages" should not
         # be included
-        for audience in (Classifier.AUDIENCE_ADULTS_ONLY, Classifier.AUDIENCE_RESEARCH):
+        for audience in (
+            SubjectClassifier.AUDIENCE_ADULTS_ONLY,
+            SubjectClassifier.AUDIENCE_RESEARCH,
+        ):
             filter = Filter(audiences=audience)
-            assert Classifier.AUDIENCE_ALL_AGES not in filter.audiences
+            assert SubjectClassifier.AUDIENCE_ALL_AGES not in filter.audiences
 
         # If the audience and target age is meant for children, then the
         # audience should only be for children
-        filter = Filter(audiences=Classifier.AUDIENCE_CHILDREN, target_age=5)
-        assert filter.audiences == [Classifier.AUDIENCE_CHILDREN]
+        filter = Filter(audiences=SubjectClassifier.AUDIENCE_CHILDREN, target_age=5)
+        assert filter.audiences == [SubjectClassifier.AUDIENCE_CHILDREN]
 
         # If the children's target age includes children older than
         # ALL_AGES_AGE_CUTOFF, or there is no target age, the
         # audiences includes "all ages".
-        all_children = Filter(audiences=Classifier.AUDIENCE_CHILDREN)
-        nine_years = Filter(audiences=Classifier.AUDIENCE_CHILDREN, target_age=9)
+        all_children = Filter(audiences=SubjectClassifier.AUDIENCE_CHILDREN)
+        nine_years = Filter(audiences=SubjectClassifier.AUDIENCE_CHILDREN, target_age=9)
         for filter in (all_children, nine_years):
             assert filter.audiences == [
-                Classifier.AUDIENCE_CHILDREN,
-                Classifier.AUDIENCE_ALL_AGES,
+                SubjectClassifier.AUDIENCE_CHILDREN,
+                SubjectClassifier.AUDIENCE_ALL_AGES,
             ]
 
     def test_build(self, filter_fixture: FilterFixture):
@@ -4301,7 +4312,7 @@ class TestFilter:
         # Test that children lanes include only works with defined target age range
         children_lane = transaction.lane("Children lane")
         children_lane.target_age = (0, 3)
-        assert Classifier.AUDIENCE_CHILDREN in children_lane.audiences
+        assert SubjectClassifier.AUDIENCE_CHILDREN in children_lane.audiences
 
         children_filter = Filter.from_worklist(session, children_lane, None)
 

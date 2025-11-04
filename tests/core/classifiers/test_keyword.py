@@ -24,7 +24,7 @@ class TestLCSH:
         assert True == fic("Poetry")  # Finland
 
     def test_audience(self):
-        child = Classifier.AUDIENCE_CHILDREN
+        child = SubjectClassifier.AUDIENCE_CHILDREN
 
         def aud(lcsh):
             return LCSH.audience(None, LCSH.scrub_name(lcsh))
@@ -53,11 +53,13 @@ class TestKeyword:
         assert classifier.Romance == self.genre("Regency romances")
 
     def test_audience(self):
-        assert Classifier.AUDIENCE_YOUNG_ADULT == Keyword.audience(
+        assert SubjectClassifier.AUDIENCE_YOUNG_ADULT == Keyword.audience(
             None, "Teens / Fiction"
         )
 
-        assert Classifier.AUDIENCE_YOUNG_ADULT == Keyword.audience(None, "teen books")
+        assert SubjectClassifier.AUDIENCE_YOUNG_ADULT == Keyword.audience(
+            None, "teen books"
+        )
 
     def test_subgenre_wins_over_genre(self):
         # Asian_History wins over History, even though they both
@@ -74,22 +76,22 @@ class TestKeyword:
         assert None == self.genre("Children's Books")
 
     def test_young_adult_wins_over_children(self):
-        assert Classifier.AUDIENCE_YOUNG_ADULT == Keyword.audience(
+        assert SubjectClassifier.AUDIENCE_YOUNG_ADULT == Keyword.audience(
             None, "children's books - young adult fiction"
         )
 
     def test_juvenile_romance_means_young_adult(self):
-        assert Classifier.AUDIENCE_YOUNG_ADULT == Keyword.audience(
+        assert SubjectClassifier.AUDIENCE_YOUNG_ADULT == Keyword.audience(
             None, "juvenile fiction / love & romance"
         )
 
-        assert Classifier.AUDIENCE_YOUNG_ADULT == Keyword.audience(
+        assert SubjectClassifier.AUDIENCE_YOUNG_ADULT == Keyword.audience(
             None, "teenage romance"
         )
 
     def test_audience_match(self):
         (audience, match) = Keyword.audience_match("teen books")
-        assert Classifier.AUDIENCE_YOUNG_ADULT == audience
+        assert SubjectClassifier.AUDIENCE_YOUNG_ADULT == audience
         assert "teen books" == match
 
         # This is a search for a specific example so it doesn't match

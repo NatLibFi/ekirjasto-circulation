@@ -1,9 +1,9 @@
 import re
 
-from core.classifier import Classifier
+from core.classifier import SubjectClassifier
 
 
-class GradeLevelClassifier(Classifier):
+class GradeLevelClassifier(SubjectClassifier):
     # How old a kid is when they start grade N in the US.
     american_grade_to_age = {
         # Preschool: 3-4 years
@@ -142,7 +142,7 @@ class GradeLevelClassifier(Classifier):
         return (target_age, grade_words)
 
 
-class InterestLevelClassifier(Classifier):
+class InterestLevelClassifier(SubjectClassifier):
     @classmethod
     def audience(cls, identifier, name):
         if identifier in ("lg", "mg+", "mg"):
@@ -163,7 +163,7 @@ class InterestLevelClassifier(Classifier):
         return None
 
 
-class AgeClassifier(Classifier):
+class AgeClassifier(SubjectClassifier):
     # Regular expressions that match common ways of expressing ages.
     age_res = [
         re.compile(x, re.I)
@@ -248,6 +248,8 @@ class AgeClassifier(Classifier):
         return (target_age, age_words)
 
 
-Classifier.classifiers[Classifier.AGE_RANGE] = AgeClassifier
-Classifier.classifiers[Classifier.GRADE_LEVEL] = GradeLevelClassifier
-Classifier.classifiers[Classifier.INTEREST_LEVEL] = InterestLevelClassifier
+SubjectClassifier.classifiers[SubjectClassifier.AGE_RANGE] = AgeClassifier
+SubjectClassifier.classifiers[SubjectClassifier.GRADE_LEVEL] = GradeLevelClassifier
+SubjectClassifier.classifiers[
+    SubjectClassifier.INTEREST_LEVEL
+] = InterestLevelClassifier

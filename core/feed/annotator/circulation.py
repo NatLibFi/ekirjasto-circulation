@@ -22,7 +22,7 @@ from api.config import Configuration
 from api.lanes import DynamicLane
 from api.metadata.novelist import NoveListAPI
 from core.analytics import Analytics
-from core.classifier import Classifier
+from core.classifier import SubjectClassifier
 from core.classifier.localized_names import genres as localized_genre_names
 from core.config import CannotLoadConfiguration
 from core.entrypoint import EverythingEntryPoint
@@ -988,16 +988,19 @@ class LibraryAnnotator(CirculationManagerAnnotator):
         language_key = work.language
 
         audiences = None
-        if work.audience == Classifier.AUDIENCE_CHILDREN:
-            audiences = [Classifier.AUDIENCE_CHILDREN]
-        elif work.audience == Classifier.AUDIENCE_YOUNG_ADULT:
-            audiences = Classifier.AUDIENCES_JUVENILE
-        elif work.audience == Classifier.AUDIENCE_ALL_AGES:
-            audiences = [Classifier.AUDIENCE_CHILDREN, Classifier.AUDIENCE_ALL_AGES]
-        elif work.audience in Classifier.AUDIENCES_ADULT:
-            audiences = list(Classifier.AUDIENCES_NO_RESEARCH)
-        elif work.audience == Classifier.AUDIENCE_RESEARCH:
-            audiences = list(Classifier.AUDIENCES)
+        if work.audience == SubjectClassifier.AUDIENCE_CHILDREN:
+            audiences = [SubjectClassifier.AUDIENCE_CHILDREN]
+        elif work.audience == SubjectClassifier.AUDIENCE_YOUNG_ADULT:
+            audiences = SubjectClassifier.AUDIENCES_JUVENILE
+        elif work.audience == SubjectClassifier.AUDIENCE_ALL_AGES:
+            audiences = [
+                SubjectClassifier.AUDIENCE_CHILDREN,
+                SubjectClassifier.AUDIENCE_ALL_AGES,
+            ]
+        elif work.audience in SubjectClassifier.AUDIENCES_ADULT:
+            audiences = list(SubjectClassifier.AUDIENCES_NO_RESEARCH)
+        elif work.audience == SubjectClassifier.AUDIENCE_RESEARCH:
+            audiences = list(SubjectClassifier.AUDIENCES)
         else:
             audiences = []
 

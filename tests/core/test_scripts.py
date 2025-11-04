@@ -12,7 +12,7 @@ from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm import Session
 
 from api.lanes import create_default_lanes
-from core.classifier import Classifier
+from core.classifier import SubjectClassifier
 from core.config import Configuration, ConfigurationConstants
 from core.external_search import ExternalSearchIndex, Filter
 from core.lane import Lane, WorkList
@@ -846,15 +846,15 @@ class TestAddClassificationScript:
         work = db.work(with_license_pool=True)
         identifier = work.license_pools[0].identifier
         stdin = MockStdin(identifier.identifier)
-        assert Classifier.AUDIENCE_ADULT == work.audience
+        assert SubjectClassifier.AUDIENCE_ADULT == work.audience
 
         cmd_args = [
             "--identifier-type",
             identifier.type,
             "--subject-type",
-            Classifier.FREEFORM_AUDIENCE,
+            SubjectClassifier.FREEFORM_AUDIENCE,
             "--subject-identifier",
-            Classifier.AUDIENCE_CHILDREN,
+            SubjectClassifier.AUDIENCE_CHILDREN,
             "--weight",
             "42",
             "--create-subject",
@@ -866,24 +866,24 @@ class TestAddClassificationScript:
         [classification] = identifier.classifications
         assert 42 == classification.weight
         subject = classification.subject
-        assert Classifier.FREEFORM_AUDIENCE == subject.type
-        assert Classifier.AUDIENCE_CHILDREN == subject.identifier
+        assert SubjectClassifier.FREEFORM_AUDIENCE == subject.type
+        assert SubjectClassifier.AUDIENCE_CHILDREN == subject.identifier
 
         # The work has been reclassified and is now known as a
         # children's book.
-        assert Classifier.AUDIENCE_CHILDREN == work.audience
+        assert SubjectClassifier.AUDIENCE_CHILDREN == work.audience
 
     def test_autocreate(self, db: DatabaseTransactionFixture):
         work = db.work(with_license_pool=True)
         identifier = work.license_pools[0].identifier
         stdin = MockStdin(identifier.identifier)
-        assert Classifier.AUDIENCE_ADULT == work.audience
+        assert SubjectClassifier.AUDIENCE_ADULT == work.audience
 
         cmd_args = [
             "--identifier-type",
             identifier.type,
             "--subject-type",
-            Classifier.TAG,
+            SubjectClassifier.TAG,
             "--subject-identifier",
             "some random tag",
         ]

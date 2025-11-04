@@ -1,6 +1,6 @@
 import pytest
 
-from core.classifier import BISACClassifier, Classifier
+from core.classifier import BISACClassifier, SubjectClassifier
 from core.classifier.bisac import (
     RE,
     MatchingRule,
@@ -1197,10 +1197,10 @@ class TestBISACClassifier:
             subject = self._subject("", name)
             assert expect == subject.audience
 
-        adult = Classifier.AUDIENCE_ADULT
-        adults_only = Classifier.AUDIENCE_ADULTS_ONLY
-        ya = Classifier.AUDIENCE_YOUNG_ADULT
-        children = Classifier.AUDIENCE_CHILDREN
+        adult = SubjectClassifier.AUDIENCE_ADULT
+        adults_only = SubjectClassifier.AUDIENCE_ADULTS_ONLY
+        ya = SubjectClassifier.AUDIENCE_YOUNG_ADULT
+        children = SubjectClassifier.AUDIENCE_CHILDREN
 
         audience_is("Fiction / Science Fiction", adult)
         audience_is("Fiction / Science Fiction / Erotica", adults_only)

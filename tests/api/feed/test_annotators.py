@@ -3,7 +3,7 @@ from datetime import timedelta
 import feedparser
 import pytest
 
-from core.classifier import Classifier
+from core.classifier import SubjectClassifier
 from core.external_search import WorkSearchResult
 from core.feed.acquisition import OPDSAcquisitionFeed
 from core.feed.annotator.base import Annotator
@@ -57,7 +57,9 @@ class TestAnnotators:
         ]
 
         for source, subject_type, subject, name, weight in subjects:
-            identifier.identifier_to_subject(source, subject_type, subject, name, weight=weight)
+            identifier.identifier_to_subject(
+                source, subject_type, subject, name, weight=weight
+            )
 
         # Mock Work.all_identifier_ids (called by VerboseAnnotator.categories)
         # so we can track the value that was passed in for `cutoff`.
@@ -105,7 +107,7 @@ class TestAnnotators:
         ] == category_tags[genre_uri]
 
         # Age range assertions
-        work = db.work(fiction=False, audience=Classifier.AUDIENCE_CHILDREN)
+        work = db.work(fiction=False, audience=SubjectClassifier.AUDIENCE_CHILDREN)
         work.target_age = tuple_to_numericrange((8, 12))
         categories = Annotator.categories(work)
         assert categories[Subject.SIMPLIFIED_FICTION_STATUS] == [

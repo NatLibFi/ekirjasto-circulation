@@ -1,7 +1,7 @@
 from core.classifier import *
 
 
-class BICClassifier(Classifier):
+class BICClassifier(SubjectClassifier):
     # These prefixes came from from http://editeur.dyndns.org/bic_categories
 
     LEVEL_1_PREFIXES = {
@@ -140,4 +140,4 @@ class BICClassifier(Classifier):
         return None
 
 
-Classifier.classifiers[Classifier.BIC] = BICClassifier
+SubjectClassifier.classifiers[SubjectClassifier.BIC] = BICClassifier

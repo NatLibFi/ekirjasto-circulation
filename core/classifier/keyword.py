@@ -1269,6 +1269,6 @@ class TAGClassifier(KeywordBasedClassifier):
     pass
 
 
-Classifier.classifiers[Classifier.FAST] = FASTClassifier
-Classifier.classifiers[Classifier.LCSH] = LCSHClassifier
-Classifier.classifiers[Classifier.TAG] = TAGClassifier
+SubjectClassifier.classifiers[SubjectClassifier.FAST] = FASTClassifier
+SubjectClassifier.classifiers[SubjectClassifier.LCSH] = LCSHClassifier
+SubjectClassifier.classifiers[SubjectClassifier.TAG] = TAGClassifier

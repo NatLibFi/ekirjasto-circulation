@@ -3,7 +3,7 @@ from urllib.parse import unquote
 from core.classifier import *
 
 
-class SimplifiedGenreClassifier(Classifier):
+class SimplifiedGenreClassifier(SubjectClassifier):
     NONE = NO_VALUE
 
     @classmethod
@@ -44,7 +44,7 @@ class SimplifiedGenreClassifier(Classifier):
         return None
 
 
-class SimplifiedFictionClassifier(Classifier):
+class SimplifiedFictionClassifier(SubjectClassifier):
     @classmethod
     def scrub_identifier(cls, identifier):
         # If the identifier is a URI identifying a Simplified genre,
@@ -66,7 +66,9 @@ class SimplifiedFictionClassifier(Classifier):
             return None
 
 
-Classifier.classifiers[Classifier.SIMPLIFIED_GENRE] = SimplifiedGenreClassifier
-Classifier.classifiers[
-    Classifier.SIMPLIFIED_FICTION_STATUS
+SubjectClassifier.classifiers[
+    SubjectClassifier.SIMPLIFIED_GENRE
+] = SimplifiedGenreClassifier
+SubjectClassifier.classifiers[
+    SubjectClassifier.SIMPLIFIED_FICTION_STATUS
 ] = SimplifiedFictionClassifier

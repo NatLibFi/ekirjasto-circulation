@@ -1,7 +1,7 @@
 from core.classifier import *
 
 
-class OverdriveClassifier(Classifier):
+class OverdriveClassifier(SubjectClassifier):
     # These genres are only used to describe video titles.
     VIDEO_GENRES = [
         "Action",
@@ -230,4 +230,4 @@ class OverdriveClassifier(Classifier):
         return None
 
 
-Classifier.classifiers[Classifier.OVERDRIVE] = OverdriveClassifier
+SubjectClassifier.classifiers[SubjectClassifier.OVERDRIVE] = OverdriveClassifier

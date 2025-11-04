@@ -14,8 +14,8 @@ from api.integration.registry.metadata import MetadataRegistry
 from api.lanes import ContributorLane
 from api.metadata.novelist import NoveListAPI, NoveListApiSettings
 from core.classifier import (  # type: ignore[attr-defined]
-    Classifier,
     Fantasy,
+    SubjectClassifier,
     Urban_Fantasy,
 )
 from core.entrypoint import AudiobooksEntryPoint, EbooksEntryPoint, EverythingEntryPoint
@@ -757,35 +757,37 @@ class TestLibraryAnnotator:
         self, annotator_fixture: LibraryAnnotatorFixture
     ):
         work = annotator_fixture.db.work(
-            language="eng", audience=Classifier.AUDIENCE_CHILDREN
+            language="eng", audience=SubjectClassifier.AUDIENCE_CHILDREN
         )
         result = annotator_fixture.annotator.language_and_audience_key_from_work(work)
         assert ("eng", "Children") == result
 
         work = annotator_fixture.db.work(
-            language="fre", audience=Classifier.AUDIENCE_YOUNG_ADULT
+            language="fre", audience=SubjectClassifier.AUDIENCE_YOUNG_ADULT
         )
         result = annotator_fixture.annotator.language_and_audience_key_from_work(work)
         assert ("fre", "All+Ages,Children,Young+Adult") == result
 
         work = annotator_fixture.db.work(
-            language="spa", audience=Classifier.AUDIENCE_ADULT
+            language="spa", audience=SubjectClassifier.AUDIENCE_ADULT
         )
         result = annotator_fixture.annotator.language_and_audience_key_from_work(work)
         assert ("spa", "Adult,Adults+Only,All+Ages,Children,Young+Adult") == result
 
-        work = annotator_fixture.db.work(audience=Classifier.AUDIENCE_ADULTS_ONLY)
+        work = annotator_fixture.db.work(
+            audience=SubjectClassifier.AUDIENCE_ADULTS_ONLY
+        )
         result = annotator_fixture.annotator.language_and_audience_key_from_work(work)
         assert ("eng", "Adult,Adults+Only,All+Ages,Children,Young+Adult") == result
 
-        work = annotator_fixture.db.work(audience=Classifier.AUDIENCE_RESEARCH)
+        work = annotator_fixture.db.work(audience=SubjectClassifier.AUDIENCE_RESEARCH)
         result = annotator_fixture.annotator.language_and_audience_key_from_work(work)
         assert (
             "eng",
             "Adult,Adults+Only,All+Ages,Children,Research,Young+Adult",
         ) == result
 
-        work = annotator_fixture.db.work(audience=Classifier.AUDIENCE_ALL_AGES)
+        work = annotator_fixture.db.work(audience=SubjectClassifier.AUDIENCE_ALL_AGES)
         result = annotator_fixture.annotator.language_and_audience_key_from_work(work)
         assert ("eng", "All+Ages,Children") == result
 

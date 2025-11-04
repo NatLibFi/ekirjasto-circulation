@@ -5,7 +5,12 @@ from api.config import CannotLoadConfiguration, Configuration
 from api.metadata.novelist import NoveListAPI
 from api.metadata.nyt import NYTBestSellerAPI
 from core import classifier
-from core.classifier import Classifier, GenreData, fiction_genres, nonfiction_genres
+from core.classifier import (
+    GenreData,
+    SubjectClassifier,
+    fiction_genres,
+    nonfiction_genres,
+)
 from core.lane import (
     DatabaseBackedWorkList,
     DefaultSortOrderFacets,
@@ -151,7 +156,7 @@ def lane_from_genres(
 
     genre_lane_instructions = {
         "Dystopian SF": dict(display_name="Dystopian"),
-        "Erotica": dict(audiences=[Classifier.AUDIENCE_ADULTS_ONLY]),
+        "Erotica": dict(audiences=[SubjectClassifier.AUDIENCE_ADULTS_ONLY]),
         "Humorous Fiction": dict(display_name="Humor"),
         "Media Tie-in SF": dict(display_name="Movie and TV Novelizations"),
         "Suspense/Thriller": dict(display_name="Thriller"),
@@ -265,9 +270,9 @@ def create_lanes_for_large_collection(_db, library, languages, priority=0):
     if isinstance(languages, str):
         languages = [languages]
 
-    ADULT = Classifier.AUDIENCES_ADULT
-    YA = [Classifier.AUDIENCE_YOUNG_ADULT]
-    CHILDREN = [Classifier.AUDIENCE_CHILDREN]
+    ADULT = SubjectClassifier.AUDIENCES_ADULT
+    YA = [SubjectClassifier.AUDIENCE_YOUNG_ADULT]
+    CHILDREN = [SubjectClassifier.AUDIENCE_CHILDREN]
 
     common_args = dict(languages=languages, media=None)
     adult_common_args = dict(common_args)
@@ -583,8 +588,8 @@ def create_lanes_for_large_collection(_db, library, languages, priority=0):
     ya_nonfiction_priority += 1
 
     children_common_args = dict(common_args)
-    children_common_args["target_age"] = Classifier.range_tuple(
-        0, Classifier.YOUNG_ADULT_AGE_CUTOFF - 1
+    children_common_args["target_age"] = SubjectClassifier.range_tuple(
+        0, SubjectClassifier.YOUNG_ADULT_AGE_CUTOFF - 1
     )
 
     children, ignore = create(
@@ -832,8 +837,11 @@ def create_lane_for_small_collection(_db, library, parent, languages, priority=0
     if isinstance(languages, str):
         languages = [languages]
 
-    ADULT = Classifier.AUDIENCES_ADULT
-    YA_CHILDREN = [Classifier.AUDIENCE_YOUNG_ADULT, Classifier.AUDIENCE_CHILDREN]
+    ADULT = SubjectClassifier.AUDIENCES_ADULT
+    YA_CHILDREN = [
+        SubjectClassifier.AUDIENCE_YOUNG_ADULT,
+        SubjectClassifier.AUDIENCE_CHILDREN,
+    ]
 
     common_args = dict(
         languages=languages,
@@ -991,13 +999,13 @@ class WorkBasedLane(DynamicLane):
     def audiences_list_from_source(self):
         if (
             not self.source_audience
-            or self.source_audience in Classifier.AUDIENCES_ADULT
+            or self.source_audience in SubjectClassifier.AUDIENCES_ADULT
         ):
-            return Classifier.AUDIENCES
-        if self.source_audience == Classifier.AUDIENCE_YOUNG_ADULT:
-            return Classifier.AUDIENCES_JUVENILE
+            return SubjectClassifier.AUDIENCES
+        if self.source_audience == SubjectClassifier.AUDIENCE_YOUNG_ADULT:
+            return SubjectClassifier.AUDIENCES_JUVENILE
         else:
-            return [Classifier.AUDIENCE_CHILDREN]
+            return [SubjectClassifier.AUDIENCE_CHILDREN]
 
     def append_child(self, worklist):
         """Add another Worklist as a child of this one and change its

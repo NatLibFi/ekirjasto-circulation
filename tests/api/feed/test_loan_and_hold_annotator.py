@@ -2,11 +2,7 @@ from unittest.mock import MagicMock, patch
 
 from api.app import app
 from api.problem_details import NOT_FOUND_ON_REMOTE
-from core.classifier import (  # type: ignore[attr-defined]
-    Classifier,
-    Fantasy,
-    Urban_Fantasy,
-)
+from core.classifier import Fantasy, Urban_Fantasy  # type: ignore[attr-defined]
 from core.feed.acquisition import OPDSAcquisitionFeed
 from core.feed.annotator.loan_and_hold import LibraryLoanAndHoldAnnotator
 from core.feed.types import WorkEntry, WorkEntryData
