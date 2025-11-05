@@ -179,8 +179,12 @@ class TestClassifierLookup:
         assert InterestLevelClassifier == SubjectClassifier.lookup(
             SubjectClassifier.INTEREST_LEVEL
         )
-        assert SchemaAudienceClassifier == SubjectClassifier.lookup(SubjectClassifier.SCHEMA_AUDIENCE)
-        assert DeMarqueClassifier == SubjectClassifier.lookup(SubjectClassifier.DEMARQUE)
+        assert SchemaAudienceClassifier == SubjectClassifier.lookup(
+            SubjectClassifier.SCHEMA_AUDIENCE
+        )
+        assert DeMarqueClassifier == SubjectClassifier.lookup(
+            SubjectClassifier.DEMARQUE
+        )
         assert None == SubjectClassifier.lookup("no-such-key")
 
 
