@@ -7,6 +7,7 @@ from psycopg2.extras import NumericRange
 
 from core import classifier
 from core.classifier import (
+    DeMarqueClassifier,
     GenreData,
     Lowercased,
     SchemaAudienceClassifier,
@@ -178,6 +179,8 @@ class TestClassifierLookup:
         assert InterestLevelClassifier == SubjectClassifier.lookup(
             SubjectClassifier.INTEREST_LEVEL
         )
+        assert SchemaAudienceClassifier == SubjectClassifier.lookup(SubjectClassifier.SCHEMA_AUDIENCE)
+        assert DeMarqueClassifier == SubjectClassifier.lookup(SubjectClassifier.DEMARQUE)
         assert None == SubjectClassifier.lookup("no-such-key")
 
 
