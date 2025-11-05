@@ -869,14 +869,14 @@ class Identifier(Base, IdentifierConstants):
     def identifier_to_subject(
         self,
         data_source,
-        subject_scheme,
+        subject_type,
         subject_identifier,
         subject_name=None,
         weight=1,
     ):
         """Associate this Identifier under a Subject.
 
-        :param subject_scheme: Classification scheme; one of the constants from Subject.
+        :param subject_type: Classification scheme; one of the constants from Subject.
         :param subject_identifier: Internal ID of the subject according to that classification scheme.
         :param value: Human-readable description of the subject, if different
             from the ID.
@@ -889,7 +889,7 @@ class Identifier(Base, IdentifierConstants):
         # Turn the subject type and identifier into a Subject.
         subject, is_new = Subject.lookup(
             _db,
-            subject_scheme,
+            subject_type,
             subject_identifier,
             subject_name,
         )

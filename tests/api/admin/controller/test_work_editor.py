@@ -440,13 +440,13 @@ class TestWorkController:
         axis_360 = DataSource.lookup(work_fixture.ctrl.db.session, DataSource.AXIS_360)
         classification1 = primary_identifier.identifier_to_subject(
             data_source=axis_360,
-            subject_scheme=Subject.BISAC,
+            subject_type=Subject.BISAC,
             subject_identifier="FICTION / Horror",
             weight=1,
         )
         classification2 = primary_identifier.identifier_to_subject(
             data_source=axis_360,
-            subject_scheme=Subject.BISAC,
+            subject_type=Subject.BISAC,
             subject_identifier="FICTION / Science Fiction / Time Travel",
             weight=1,
         )

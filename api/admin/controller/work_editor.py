@@ -498,7 +498,7 @@ class WorkController(CirculationManagerController, AdminPermissionsControllerMix
             # Create a new classification with a high weight
             primary_identifier.identifier_to_subject(
                 data_source=staff_data_source,
-                subject_scheme=Subject.SCHEMA_AUDIENCE,
+                subject_type=Subject.SCHEMA_AUDIENCE,
                 subject_identifier=new_audience,
                 weight=WorkController.STAFF_WEIGHT,
             )
@@ -540,7 +540,7 @@ class WorkController(CirculationManagerController, AdminPermissionsControllerMix
                 )
                 primary_identifier.identifier_to_subject(
                     data_source=staff_data_source,
-                    subject_scheme=Subject.SCHEMA_AGE_RANGE,
+                    subject_type=Subject.SCHEMA_AGE_RANGE,
                     subject_identifier=age_range_identifier,
                     weight=WorkController.STAFF_WEIGHT * 100,
                 )
@@ -559,7 +559,7 @@ class WorkController(CirculationManagerController, AdminPermissionsControllerMix
             fiction_term = "Fiction" if new_fiction else "Nonfiction"
             classification = primary_identifier.identifier_to_subject(
                 data_source=staff_data_source,
-                subject_scheme=Subject.SIMPLIFIED_FICTION_STATUS,
+                subject_type=Subject.SIMPLIFIED_FICTION_STATUS,
                 subject_identifier=fiction_term,
                 weight=WorkController.STAFF_WEIGHT,
             )
@@ -590,7 +590,7 @@ class WorkController(CirculationManagerController, AdminPermissionsControllerMix
                 if genre not in old_staff_genres:
                     classification = primary_identifier.identifier_to_subject(
                         data_source=staff_data_source,
-                        subject_scheme=Subject.SIMPLIFIED_GENRE,
+                        subject_type=Subject.SIMPLIFIED_GENRE,
                         subject_identifier=genre,
                         weight=WorkController.STAFF_WEIGHT,
                     )
@@ -599,7 +599,7 @@ class WorkController(CirculationManagerController, AdminPermissionsControllerMix
             if len(new_genres) == 0:
                 primary_identifier.identifier_to_subject(
                     data_source=staff_data_source,
-                    subject_scheme=Subject.SIMPLIFIED_GENRE,
+                    subject_type=Subject.SIMPLIFIED_GENRE,
                     subject_identifier=SimplifiedGenreClassifier.NONE,
                     weight=WorkController.STAFF_WEIGHT,
                 )
