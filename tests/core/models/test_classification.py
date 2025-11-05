@@ -56,6 +56,15 @@ class TestSubject:
         assert subject in [s1, s2]
         assert False == is_new
 
+    def test_lookup_name_has_changed(self, db: DatabaseTransactionFixture):
+        """Check that when a subject's name has changed, we update the name."""
+        s1 = db.subject(Subject.TAG, "id_1")
+        s1.name = "A name"
+        assert (s1, False) == Subject.lookup(
+            db.session, Subject.TAG, "id_1", "A new name"
+        )
+        assert s1.name == "A new name"
+
     def test_assign_to_genre_can_remove_genre(self, db: DatabaseTransactionFixture):
         # Here's a Subject that identifies children's books.
         subject, was_new = Subject.lookup(
