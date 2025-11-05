@@ -126,6 +126,7 @@ class SubjectClassifier(ClassifierConstants):
     @classmethod
     def lookup(cls, scheme):
         """Look up a classifier for a classification scheme."""
+        print(scheme)
         return cls.classifiers.get(scheme, None)
 
     @classmethod
@@ -972,7 +973,14 @@ class SchemaAudienceClassifier(AgeOrGradeClassifier):
 
     @classmethod
     def audience(cls, identifier, name):
-        if identifier in ("children", "pre-adolescent", "beginning reader"):
+        if identifier in (
+            "children",
+            "juvenile",
+            "juvenile-fiction",
+            "juvenile-nonfiction",
+            "pre-adolescent",
+            "beginning reader",
+        ):
             return cls.AUDIENCE_CHILDREN
         elif identifier in (
             "young adult",
