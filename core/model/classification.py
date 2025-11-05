@@ -289,6 +289,7 @@ class Subject(Base):
                 _db.commit()
         _db.commit()
 
+    # Called by WorkClassifier
     def assign_to_genre(self):
         """Assign this subject to a genre."""
         classifier = SubjectClassifier.classifiers.get(self.type, None)
