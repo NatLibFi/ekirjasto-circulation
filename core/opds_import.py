@@ -31,7 +31,7 @@ from api.circulation import (
 )
 from api.circulation_exceptions import CurrentlyAvailable, FormatNotAvailable, NotOnHold
 from api.saml.credential import SAMLCredentialManager
-from core.classifier import Classifier
+from core.classifier import SubjectClassifier
 from core.connection_config import ConnectionSetting
 from core.coverage import CoverageFailure
 from core.integration.base import integration_settings_load
@@ -134,7 +134,10 @@ class OPDSImporterSettings(
             type=ConfigurationFormItemType.SELECT,
             options={
                 **{None: _("No default audience")},
-                **{audience: audience for audience in sorted(Classifier.AUDIENCES)},
+                **{
+                    audience: audience
+                    for audience in sorted(SubjectClassifier.AUDIENCES)
+                },
             },
             required=False,
         ),

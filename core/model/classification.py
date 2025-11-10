@@ -22,9 +22,9 @@ from sqlalchemy.sql.functions import func
 from core import classifier
 from core.classifier import (  # type: ignore[attr-defined]
     COMICS_AND_GRAPHIC_NOVELS,
-    Classifier,
     Erotica,
     GenreData,
+    SubjectClassifier,
 )
 from core.model import (
     Base,
@@ -49,35 +49,35 @@ class Subject(Base):
     """A subject under which books might be classified."""
 
     # Types of subjects.
-    LCC = Classifier.LCC  # Library of Congress Classification
-    LCSH = Classifier.LCSH  # Library of Congress Subject Headings
-    FAST = Classifier.FAST
-    DDC = Classifier.DDC  # Dewey Decimal Classification
-    OVERDRIVE = Classifier.OVERDRIVE  # Overdrive's classification system
-    BISAC = Classifier.BISAC
-    BIC = Classifier.BIC  # BIC Subject Categories
-    TAG: str = Classifier.TAG  # Folksonomic tags.
-    FREEFORM_AUDIENCE: str = Classifier.FREEFORM_AUDIENCE
-    NYPL_APPEAL = Classifier.NYPL_APPEAL
-    DEMARQUE = Classifier.DEMARQUE
+    LCC = SubjectClassifier.LCC  # Library of Congress Classification
+    LCSH = SubjectClassifier.LCSH  # Library of Congress Subject Headings
+    FAST = SubjectClassifier.FAST
+    DDC = SubjectClassifier.DDC  # Dewey Decimal Classification
+    OVERDRIVE = SubjectClassifier.OVERDRIVE  # Overdrive's classification system
+    BISAC = SubjectClassifier.BISAC
+    BIC = SubjectClassifier.BIC  # BIC Subject Categories
+    TAG: str = SubjectClassifier.TAG  # Folksonomic tags.
+    SCHEMA_AUDIENCE: str = SubjectClassifier.SCHEMA_AUDIENCE
+    NYPL_APPEAL = SubjectClassifier.NYPL_APPEAL
+    DEMARQUE = SubjectClassifier.DEMARQUE
 
     # Types with terms that are suitable for search.
     TYPES_FOR_SEARCH = [FAST, OVERDRIVE, BISAC, TAG]
 
-    AXIS_360_AUDIENCE = Classifier.AXIS_360_AUDIENCE
-    GRADE_LEVEL = Classifier.GRADE_LEVEL
-    AGE_RANGE: str = Classifier.AGE_RANGE
-    LEXILE_SCORE = Classifier.LEXILE_SCORE
-    ATOS_SCORE = Classifier.ATOS_SCORE
-    INTEREST_LEVEL = Classifier.INTEREST_LEVEL
+    AXIS_360_AUDIENCE = SubjectClassifier.AXIS_360_AUDIENCE
+    GRADE_LEVEL = SubjectClassifier.GRADE_LEVEL
+    SCHEMA_AGE_RANGE: str = SubjectClassifier.SCHEMA_AGE_RANGE
+    LEXILE_SCORE = SubjectClassifier.LEXILE_SCORE
+    ATOS_SCORE = SubjectClassifier.ATOS_SCORE
+    INTEREST_LEVEL = SubjectClassifier.INTEREST_LEVEL
 
-    GUTENBERG_BOOKSHELF = Classifier.GUTENBERG_BOOKSHELF
-    TOPIC = Classifier.TOPIC
-    PLACE = Classifier.PLACE
-    PERSON = Classifier.PERSON
-    ORGANIZATION = Classifier.ORGANIZATION
-    SIMPLIFIED_GENRE = Classifier.SIMPLIFIED_GENRE
-    SIMPLIFIED_FICTION_STATUS = Classifier.SIMPLIFIED_FICTION_STATUS
+    GUTENBERG_BOOKSHELF = SubjectClassifier.GUTENBERG_BOOKSHELF
+    TOPIC = SubjectClassifier.TOPIC
+    PLACE = SubjectClassifier.PLACE
+    PERSON = SubjectClassifier.PERSON
+    ORGANIZATION = SubjectClassifier.ORGANIZATION
+    SIMPLIFIED_GENRE = SubjectClassifier.SIMPLIFIED_GENRE
+    SIMPLIFIED_FICTION_STATUS = SubjectClassifier.SIMPLIFIED_FICTION_STATUS
 
     by_uri = {
         SIMPLIFIED_GENRE: SIMPLIFIED_GENRE,
@@ -88,8 +88,8 @@ class Subject(Base):
         "http://purl.org/dc/terms/LCC": LCC,
         "http://purl.org/dc/terms/LCSH": LCSH,
         "http://purl.org/dc/terms/DDC": DDC,
-        "http://schema.org/typicalAgeRange": AGE_RANGE,
-        "http://schema.org/audience": FREEFORM_AUDIENCE,
+        "http://schema.org/typicalAgeRange": SCHEMA_AGE_RANGE,
+        "http://schema.org/audience": SCHEMA_AUDIENCE,
         "http://www.bisg.org/standards/bisac_subject/": BISAC,
         # Feedbooks uses a modified BISAC which we know how to handle.
         "http://www.feedbooks.com/categories": BISAC,
@@ -211,7 +211,7 @@ class Subject(Base):
     @classmethod
     def lookup(cls, _db, type, identifier, name, autocreate=True):
         """Turn a subject type and identifier into a Subject."""
-        classifier = Classifier.lookup(type)
+        classifier = SubjectClassifier.lookup(type)
         if not type:
             raise ValueError("Cannot look up Subject with no type.")
         if not identifier and not name:
@@ -239,9 +239,10 @@ class Subject(Base):
         else:
             subject = get_one(_db, Subject, type=type, **find_with)
             new = False
-        if name and not subject.name:
+
+        if name and not subject.name or name and subject.name != name:
             # We just discovered the name of a subject that previously
-            # had only an ID.
+            # had only an ID OR the name we had has changed. Let's go with the new name.
             subject.name = name
         return subject, new
 
@@ -288,26 +289,27 @@ class Subject(Base):
                 _db.commit()
         _db.commit()
 
+    # Called by WorkClassifier
     def assign_to_genre(self):
         """Assign this subject to a genre."""
-        classifier = Classifier.classifiers.get(self.type, None)
+        classifier = SubjectClassifier.classifiers.get(self.type, None)
         if not classifier:
             return
         self.checked = True
-        log = logging.getLogger("Subject-genre assignment")
+        log = logging.getLogger(f"Subject-genre assignment: {self.type} / {classifier}")
 
-        genredata, audience, target_age, fiction = classifier.classify(self)
+        genredata, audience, target_age, fiction = classifier.classify_subject(self)
         # If the genre is erotica, the audience will always be ADULTS_ONLY,
         # no matter what the classifier says.
         if genredata == Erotica:
-            audience = Classifier.AUDIENCE_ADULTS_ONLY
+            audience = SubjectClassifier.AUDIENCE_ADULTS_ONLY
 
-        if audience in Classifier.AUDIENCES_ADULT:
-            target_age = Classifier.default_target_age_for_audience(audience)
+        if audience in SubjectClassifier.AUDIENCES_ADULT:
+            target_age = SubjectClassifier.default_target_age_for_audience(audience)
         if not audience:
             # We have no audience but some target age information.
             # Try to determine an audience based on that.
-            audience = Classifier.default_audience_for_target_age(target_age)
+            audience = SubjectClassifier.default_audience_for_target_age(target_age)
 
         if genredata:
             _db = Session.object_session(self)
@@ -401,18 +403,18 @@ class Classification(Base):
         # much we trust different data sources can become important.
         DataSourceConstants.MANUAL: 1.0,
         DataSourceConstants.LIBRARY_STAFF: 1.0,
-        (DataSourceConstants.METADATA_WRANGLER, Subject.AGE_RANGE): 1.0,
+        (DataSourceConstants.METADATA_WRANGLER, Subject.SCHEMA_AGE_RANGE): 1.0,
         Subject.AXIS_360_AUDIENCE: 0.9,
         (DataSourceConstants.OVERDRIVE, Subject.INTEREST_LEVEL): 0.9,
         (DataSourceConstants.OVERDRIVE, Subject.OVERDRIVE): 0.9,  # But see below
-        (DataSourceConstants.AMAZON, Subject.AGE_RANGE): 0.85,
+        (DataSourceConstants.AMAZON, Subject.SCHEMA_AGE_RANGE): 0.85,
         (DataSourceConstants.AMAZON, Subject.GRADE_LEVEL): 0.85,
         # Although Overdrive usually reserves Fiction and Nonfiction
         # for books for adults, it's not as reliable an indicator as
         # other Overdrive classifications.
         (DataSourceConstants.OVERDRIVE, Subject.OVERDRIVE, "Fiction"): 0.7,
         (DataSourceConstants.OVERDRIVE, Subject.OVERDRIVE, "Nonfiction"): 0.7,
-        Subject.AGE_RANGE: 0.6,
+        Subject.SCHEMA_AGE_RANGE: 0.6,
         Subject.GRADE_LEVEL: 0.6,
         # There's no real way to know what this measures, since it
         # could be anything. If a tag mentions a target age or a grade
@@ -437,7 +439,7 @@ class Classification(Base):
         but is actually a generic 'Juvenile' classification?
         """
         return (
-            self.subject.audience in Classifier.AUDIENCES_JUVENILE
+            self.subject.audience in SubjectClassifier.AUDIENCES_JUVENILE
             and self.subject.type in self._juvenile_subject_types
         )
 

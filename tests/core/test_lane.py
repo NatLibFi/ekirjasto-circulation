@@ -8,7 +8,7 @@ import pytest
 from opensearchpy.exceptions import OpenSearchException
 from sqlalchemy import and_, text
 
-from core.classifier import Classifier
+from core.classifier import SubjectClassifier
 from core.config import Configuration
 from core.entrypoint import (
     AudiobooksEntryPoint,
@@ -2010,11 +2010,14 @@ class TestWorkList:
         assert "" == wl.audience_key
 
         # All audiences.
-        wl.audiences = Classifier.AUDIENCES
+        wl.audiences = SubjectClassifier.AUDIENCES
         assert "" == wl.audience_key
 
         # Specific audiences.
-        wl.audiences = [Classifier.AUDIENCE_CHILDREN, Classifier.AUDIENCE_YOUNG_ADULT]
+        wl.audiences = [
+            SubjectClassifier.AUDIENCE_CHILDREN,
+            SubjectClassifier.AUDIENCE_YOUNG_ADULT,
+        ]
         assert "Children,Young+Adult" == wl.audience_key
 
     def test_parent(self):
@@ -2155,7 +2158,10 @@ class TestWorkList:
         assert True == m(patron)
 
         # Give it some audience restrictions.
-        wl.audiences = [Classifier.AUDIENCE_ADULT, Classifier.AUDIENCE_CHILDREN]
+        wl.audiences = [
+            SubjectClassifier.AUDIENCE_ADULT,
+            SubjectClassifier.AUDIENCE_CHILDREN,
+        ]
         wl.target_age = tuple_to_numericrange((4, 5))
 
         # Now it depends on the return value of Patron.work_is_age_appropriate.
@@ -2524,7 +2530,9 @@ class TestWorkList:
                 return "A bunch of Works"
 
         wl = MockWorkList()
-        wl.initialize(db.default_library(), audiences=[Classifier.AUDIENCE_CHILDREN])
+        wl.initialize(
+            db.default_library(), audiences=[SubjectClassifier.AUDIENCE_CHILDREN]
+        )
         query = "a query"
 
         class MockSearchClient:
@@ -2558,8 +2566,8 @@ class TestWorkList:
         # A Filter object was created to match only works that belong
         # in the MockWorkList.
         assert [
-            Classifier.AUDIENCE_CHILDREN,
-            Classifier.AUDIENCE_ALL_AGES,
+            SubjectClassifier.AUDIENCE_CHILDREN,
+            SubjectClassifier.AUDIENCE_ALL_AGES,
         ] == filter.audiences
 
         # A default Pagination object was created.
@@ -2580,8 +2588,8 @@ class TestWorkList:
         # The Filter incorporates restrictions imposed by both the
         # MockWorkList and the Facets.
         assert [
-            Classifier.AUDIENCE_CHILDREN,
-            Classifier.AUDIENCE_ALL_AGES,
+            SubjectClassifier.AUDIENCE_CHILDREN,
+            SubjectClassifier.AUDIENCE_ALL_AGES,
         ] == filter.audiences
         assert ["chi"] == filter.languages
 
@@ -3139,13 +3147,13 @@ class TestDatabaseBackedWorkList:
             title="English SF",
             language="eng",
             with_license_pool=True,
-            audience=Classifier.AUDIENCE_YOUNG_ADULT,
+            audience=SubjectClassifier.AUDIENCE_YOUNG_ADULT,
         )
         italian_sf = db.work(
             title="Italian SF",
             language="ita",
             with_license_pool=True,
-            audience=Classifier.AUDIENCE_YOUNG_ADULT,
+            audience=SubjectClassifier.AUDIENCE_YOUNG_ADULT,
         )
         english_sf.target_age = tuple_to_numericrange((12, 14))
         gutenberg = english_sf.license_pools[0].data_source
@@ -3175,7 +3183,7 @@ class TestDatabaseBackedWorkList:
             media=[Edition.BOOK_MEDIUM],
             fiction=True,
             license_datasource=gutenberg,
-            audiences=[Classifier.AUDIENCE_YOUNG_ADULT],
+            audiences=[SubjectClassifier.AUDIENCE_YOUNG_ADULT],
             target_age=tuple_to_numericrange((13, 13)),
         )
 
@@ -3280,13 +3288,13 @@ class TestDatabaseBackedWorkList:
 
         adult = db.work(
             title="For adults",
-            audience=Classifier.AUDIENCE_ADULT,
+            audience=SubjectClassifier.AUDIENCE_ADULT,
             with_license_pool=True,
         )
         assert None == adult.target_age
         fourteen_or_fifteen = db.work(
             title="For teens",
-            audience=Classifier.AUDIENCE_YOUNG_ADULT,
+            audience=SubjectClassifier.AUDIENCE_YOUNG_ADULT,
             with_license_pool=True,
         )
         fourteen_or_fifteen.target_age = tuple_to_numericrange((14, 15))
@@ -3297,7 +3305,7 @@ class TestDatabaseBackedWorkList:
 
         worklist_has_books(
             [adult, fourteen_or_fifteen],
-            audiences=[Classifier.AUDIENCE_ADULT],
+            audiences=[SubjectClassifier.AUDIENCE_ADULT],
             target_age=(12, 14),
         )
 
@@ -3320,14 +3328,14 @@ class TestDatabaseBackedWorkList:
             title="Diseases of the Horse",
             with_license_pool=True,
             with_open_access_download=True,
-            audience=Classifier.AUDIENCE_ADULT,
+            audience=SubjectClassifier.AUDIENCE_ADULT,
         )
 
         children = db.work(
             title="Wholesome Nursery Rhymes For All Children",
             with_license_pool=True,
             with_open_access_download=True,
-            audience=Classifier.AUDIENCE_CHILDREN,
+            audience=SubjectClassifier.AUDIENCE_CHILDREN,
         )
 
         def for_audiences(*audiences):
@@ -3342,8 +3350,8 @@ class TestDatabaseBackedWorkList:
                 qu = qu.filter(and_(*clauses))
             return qu.all()
 
-        assert [adult] == for_audiences(Classifier.AUDIENCE_ADULT)
-        assert [children] == for_audiences(Classifier.AUDIENCE_CHILDREN)
+        assert [adult] == for_audiences(SubjectClassifier.AUDIENCE_ADULT)
+        assert [children] == for_audiences(SubjectClassifier.AUDIENCE_CHILDREN)
 
         # If no particular audiences are specified, no books are filtered.
         assert {adult, children} == set(for_audiences())
@@ -3575,8 +3583,8 @@ class TestLane:
         auto-convert it into a list containing one value.
         """
         lane = db.lane()
-        lane.audiences = Classifier.AUDIENCE_ADULT
-        assert [Classifier.AUDIENCE_ADULT] == lane.audiences
+        lane.audiences = SubjectClassifier.AUDIENCE_ADULT
+        assert [SubjectClassifier.AUDIENCE_ADULT] == lane.audiences
 
     def test_update_size(
         self, db: DatabaseTransactionFixture, library_fixture: LibraryFixture
@@ -3816,19 +3824,19 @@ class TestLane:
         lane = db.lane()
         lane.target_age = (16, 18)
         assert sorted(
-            [Classifier.AUDIENCE_YOUNG_ADULT, Classifier.AUDIENCE_ADULT]
+            [SubjectClassifier.AUDIENCE_YOUNG_ADULT, SubjectClassifier.AUDIENCE_ADULT]
         ) == sorted(lane.audiences)
         lane.target_age = (0, 2)
-        assert [Classifier.AUDIENCE_CHILDREN] == lane.audiences
+        assert [SubjectClassifier.AUDIENCE_CHILDREN] == lane.audiences
         lane.target_age = 14
-        assert [Classifier.AUDIENCE_YOUNG_ADULT] == lane.audiences
+        assert [SubjectClassifier.AUDIENCE_YOUNG_ADULT] == lane.audiences
 
         # It's not possible to modify .audiences to a value that's
         # incompatible with .target_age.
         lane.audiences = lane.audiences
 
         def doomed():
-            lane.audiences = [Classifier.AUDIENCE_CHILDREN]
+            lane.audiences = [SubjectClassifier.AUDIENCE_CHILDREN]
 
         with pytest.raises(ValueError) as excinfo:
             doomed()
@@ -3838,10 +3846,10 @@ class TestLane:
 
         # Setting target_age to None leaves preexisting .audiences in place.
         lane.target_age = None
-        assert [Classifier.AUDIENCE_YOUNG_ADULT] == lane.audiences
+        assert [SubjectClassifier.AUDIENCE_YOUNG_ADULT] == lane.audiences
 
         # But now you can modify .audiences.
-        lane.audiences = [Classifier.AUDIENCE_CHILDREN]
+        lane.audiences = [SubjectClassifier.AUDIENCE_CHILDREN]
 
     def test_target_age_treats_all_adults_equally(self, db: DatabaseTransactionFixture):
         """We don't distinguish between different age groups for adults."""
@@ -4020,37 +4028,40 @@ class TestLane:
 
         # Audiences are only used in search if one of the
         # audiences is young adult or children.
-        lane.audiences = [Classifier.AUDIENCE_ADULTS_ONLY]
+        lane.audiences = [SubjectClassifier.AUDIENCE_ADULTS_ONLY]
         target = lane.search_target
         assert "English" == target.display_name
         assert ["eng"] == target.languages
         assert None == target.audiences
         assert [Edition.BOOK_MEDIUM] == target.media
 
-        lane.audiences = [Classifier.AUDIENCE_ADULT, Classifier.AUDIENCE_YOUNG_ADULT]
+        lane.audiences = [
+            SubjectClassifier.AUDIENCE_ADULT,
+            SubjectClassifier.AUDIENCE_YOUNG_ADULT,
+        ]
         target = lane.search_target
         assert "English Adult and Young Adult" == target.display_name
         assert ["eng"] == target.languages
         assert [
-            Classifier.AUDIENCE_ADULT,
-            Classifier.AUDIENCE_YOUNG_ADULT,
+            SubjectClassifier.AUDIENCE_ADULT,
+            SubjectClassifier.AUDIENCE_YOUNG_ADULT,
         ] == target.audiences
         assert [Edition.BOOK_MEDIUM] == target.media
 
         # If there are too many audiences, they're left
         # out of the display name.
         lane.audiences = [
-            Classifier.AUDIENCE_ADULT,
-            Classifier.AUDIENCE_YOUNG_ADULT,
-            Classifier.AUDIENCE_CHILDREN,
+            SubjectClassifier.AUDIENCE_ADULT,
+            SubjectClassifier.AUDIENCE_YOUNG_ADULT,
+            SubjectClassifier.AUDIENCE_CHILDREN,
         ]
         target = lane.search_target
         assert "English" == target.display_name
         assert ["eng"] == target.languages
         assert [
-            Classifier.AUDIENCE_ADULT,
-            Classifier.AUDIENCE_YOUNG_ADULT,
-            Classifier.AUDIENCE_CHILDREN,
+            SubjectClassifier.AUDIENCE_ADULT,
+            SubjectClassifier.AUDIENCE_YOUNG_ADULT,
+            SubjectClassifier.AUDIENCE_CHILDREN,
         ] == target.audiences
         assert [Edition.BOOK_MEDIUM] == target.media
 
@@ -4223,13 +4234,13 @@ class TestWorkListGroupsEndToEnd:
         # Create children works.
         result.children_with_age = _w(
             title="Children work with target age",
-            audience=Classifier.AUDIENCE_CHILDREN,
+            audience=SubjectClassifier.AUDIENCE_CHILDREN,
         )
         result.children_with_age.target_age = tuple_to_numericrange((0, 3))
 
         result.children_without_age = _w(
             title="Children work with out target age",
-            audience=Classifier.AUDIENCE_CHILDREN,
+            audience=SubjectClassifier.AUDIENCE_CHILDREN,
         )
 
         # Add a lot of irrelevant genres to one of the works. This
@@ -4312,7 +4323,7 @@ class TestWorkListGroupsEndToEnd:
 
         # "Children", which will contain one book, the one with audience children and defined target age.
         children = db.lane("Children")
-        children.audiences = Classifier.AUDIENCE_CHILDREN
+        children.audiences = SubjectClassifier.AUDIENCE_CHILDREN
         children.target_age = (0, 4)
 
         # Since we have a bunch of lanes and works, plus an

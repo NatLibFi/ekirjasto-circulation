@@ -10,7 +10,7 @@ from api.circulation_exceptions import RemoteInitiatedServerError
 from api.config import Configuration
 from api.problem_details import *
 from core import model
-from core.classifier import Classifier
+from core.classifier import SubjectClassifier
 from core.lane import Lane
 from core.model import (
     ConfigurationSetting,
@@ -513,19 +513,19 @@ class TestBaseController:
         # Set up lanes for different patron types.
         children_lane = circulation_fixture.db.lane()
         children_lane.audiences = [
-            Classifier.AUDIENCE_CHILDREN,
-            Classifier.AUDIENCE_YOUNG_ADULT,
+            SubjectClassifier.AUDIENCE_CHILDREN,
+            SubjectClassifier.AUDIENCE_YOUNG_ADULT,
         ]
         children_lane.target_age = tuple_to_numericrange((9, 12))
         children_lane.root_for_patron_type = ["child"]
 
         adults_lane = circulation_fixture.db.lane()
-        adults_lane.audiences = [Classifier.AUDIENCE_ADULT]
+        adults_lane.audiences = [SubjectClassifier.AUDIENCE_ADULT]
         adults_lane.root_for_patron_type = ["adult"]
 
         # This book is age-appropriate for anyone 13 years old or older.
         work = circulation_fixture.db.work(with_license_pool=True)
-        work.audience = Classifier.AUDIENCE_CHILDREN
+        work.audience = SubjectClassifier.AUDIENCE_CHILDREN
         work.target_age = tuple_to_numericrange((13, 15))
         [pool] = work.license_pools
 

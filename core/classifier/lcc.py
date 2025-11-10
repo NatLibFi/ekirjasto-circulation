@@ -1,7 +1,7 @@
 from core.classifier import *
 
 
-class LCCClassifier(Classifier):
+class LCCClassifier(SubjectClassifier):
     TOP_LEVEL = re.compile("^([A-Z]{1,2})")
     FICTION = {"PN", "PQ", "PR", "PS", "PT", "PZ"}
     JUVENILE = {"PZ"}
@@ -155,4 +155,4 @@ class LCCClassifier(Classifier):
         return None
 
 
-Classifier.classifiers[Classifier.LCC] = LCCClassifier
+SubjectClassifier.classifiers[SubjectClassifier.LCC] = LCCClassifier

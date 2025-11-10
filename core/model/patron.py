@@ -22,7 +22,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, relationship
 from sqlalchemy.orm.session import Session
 
-from core.classifier import Classifier
+from core.classifier import SubjectClassifier
 from core.model import Base, get_one_or_create, numericrange_to_tuple
 from core.model.constants import LinkRelations
 from core.model.credential import Credential
@@ -390,11 +390,11 @@ class Patron(Base):
             % (work_audience, work_target_age, reader_audience, reader_age)
         )
 
-        if reader_audience not in Classifier.AUDIENCES_JUVENILE:
+        if reader_audience not in SubjectClassifier.AUDIENCES_JUVENILE:
             log.debug("A non-juvenile patron can see everything.")
             return True
 
-        if work_audience == Classifier.AUDIENCE_ALL_AGES:
+        if work_audience == SubjectClassifier.AUDIENCE_ALL_AGES:
             log.debug("An all-ages book is always age appropriate.")
             return True
 
@@ -421,11 +421,11 @@ class Patron(Base):
         # A YA reader is treated as an adult (with no reading
         # restrictions) if they have no associated age range, or their
         # age range includes ADULT_AGE_CUTOFF.
-        if reader_audience == Classifier.AUDIENCE_YOUNG_ADULT and (
+        if reader_audience == SubjectClassifier.AUDIENCE_YOUNG_ADULT and (
             reader_age is None
             or (
                 isinstance(reader_age, int)
-                and reader_age >= Classifier.ADULT_AGE_CUTOFF
+                and reader_age >= SubjectClassifier.ADULT_AGE_CUTOFF
             )
         ):
             log.debug("YA reader to be treated as an adult.")
@@ -433,22 +433,23 @@ class Patron(Base):
 
         # There are no other situations where a juvenile reader can access
         # non-juvenile titles.
-        if work_audience not in Classifier.AUDIENCES_JUVENILE:
+        if work_audience not in SubjectClassifier.AUDIENCES_JUVENILE:
             log.debug("Juvenile reader cannot access non-juvenile title.")
             return False
 
         # At this point we know we have a juvenile reader and a
         # juvenile book.
 
-        if reader_audience == Classifier.AUDIENCE_YOUNG_ADULT and work_audience in (
-            Classifier.AUDIENCES_YOUNG_CHILDREN
+        if (
+            reader_audience == SubjectClassifier.AUDIENCE_YOUNG_ADULT
+            and work_audience in (SubjectClassifier.AUDIENCES_YOUNG_CHILDREN)
         ):
             log.debug("YA reader can access any children's title.")
             return True
 
         if (
-            reader_audience in (Classifier.AUDIENCES_YOUNG_CHILDREN)
-            and work_audience == Classifier.AUDIENCE_YOUNG_ADULT
+            reader_audience in (SubjectClassifier.AUDIENCES_YOUNG_CHILDREN)
+            and work_audience == SubjectClassifier.AUDIENCE_YOUNG_ADULT
         ):
             log.debug("Child reader cannot access any YA title.")
             return False

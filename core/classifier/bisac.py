@@ -230,7 +230,7 @@ def m(result, *ruleset):
     return MatchingRule(result, *ruleset)
 
 
-class BISACClassifier(Classifier):
+class BISACClassifier(SubjectClassifier):
     """Handle real, genuine, according-to-Hoyle BISAC classifications.
 
     Subclasses of this method can use the same basic classification logic
@@ -280,13 +280,13 @@ class BISACClassifier(Classifier):
     # spaces. Nearly everything outside that space can be presumed to
     # have AUDIENCE_ADULT.
     AUDIENCE = [
-        m(Classifier.AUDIENCE_CHILDREN, "Bibles", anything, "Children"),
-        m(Classifier.AUDIENCE_CHILDREN, juvenile, anything),
-        m(Classifier.AUDIENCE_YOUNG_ADULT, ya, anything),
-        m(Classifier.AUDIENCE_YOUNG_ADULT, "Bibles", anything, "Youth & Teen"),
-        m(Classifier.AUDIENCE_ADULTS_ONLY, anything, "Erotica"),
-        m(Classifier.AUDIENCE_ADULTS_ONLY, "Humor", "Topic", "Adult"),
-        m(Classifier.AUDIENCE_ADULT, anything),
+        m(SubjectClassifier.AUDIENCE_CHILDREN, "Bibles", anything, "Children"),
+        m(SubjectClassifier.AUDIENCE_CHILDREN, juvenile, anything),
+        m(SubjectClassifier.AUDIENCE_YOUNG_ADULT, ya, anything),
+        m(SubjectClassifier.AUDIENCE_YOUNG_ADULT, "Bibles", anything, "Youth & Teen"),
+        m(SubjectClassifier.AUDIENCE_ADULTS_ONLY, anything, "Erotica"),
+        m(SubjectClassifier.AUDIENCE_ADULTS_ONLY, "Humor", "Topic", "Adult"),
+        m(SubjectClassifier.AUDIENCE_ADULT, anything),
     ]
 
     TARGET_AGE = [
@@ -780,4 +780,4 @@ class BISACClassifier(Classifier):
         return parts
 
 
-Classifier.classifiers[Classifier.BISAC] = BISACClassifier
+SubjectClassifier.classifiers[SubjectClassifier.BISAC] = BISACClassifier

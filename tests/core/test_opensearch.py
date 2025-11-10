@@ -1,4 +1,4 @@
-from core.classifier import Classifier
+from core.classifier import SubjectClassifier
 from core.model import Genre
 from core.opensearch import OpenSearchDocument
 from tests.fixtures.database import DatabaseTransactionFixture
@@ -11,7 +11,7 @@ class TestOpenSearchDocument:
         lane = db.lane()
         lane.display_name = "Fiction"
         lane.languages = ["eng", "ger"]
-        lane.audiences = [Classifier.AUDIENCE_YOUNG_ADULT]
+        lane.audiences = [SubjectClassifier.AUDIENCE_YOUNG_ADULT]
         lane.fiction = True
 
         info = OpenSearchDocument.search_info(lane)

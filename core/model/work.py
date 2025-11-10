@@ -30,7 +30,7 @@ from sqlalchemy.orm.session import Session
 from sqlalchemy.sql.expression import and_, case, join, literal_column, or_, select
 from sqlalchemy.sql.functions import func
 
-from core.classifier import Classifier, WorkClassifier
+from core.classifier import SubjectClassifier, WorkClassifier
 from core.model import (
     Base,
     PresentationCalculationPolicy,
@@ -1294,7 +1294,7 @@ class Work(Base):
         self,
         identifier_ids,
         default_fiction=False,
-        default_audience=Classifier.AUDIENCE_ADULT,
+        default_audience=SubjectClassifier.AUDIENCE_ADULT,
     ):
         """Set classification information for this work based on the
         subquery to get equivalent identifiers.
@@ -1314,7 +1314,12 @@ class Work(Base):
         for classification in classifications:
             classifier.add(classification)
 
-        (genre_weights, self.fiction, self.audience, target_age) = classifier.classify(
+        (
+            genre_weights,
+            self.fiction,
+            self.audience,
+            target_age,
+        ) = classifier.classify_work(
             default_fiction=default_fiction, default_audience=default_audience
         )
         self.target_age = tuple_to_numericrange(target_age)

@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, call
 
 import pytest
 
-from core.classifier import Classifier
+from core.classifier import SubjectClassifier
 from core.model import create, tuple_to_numericrange
 from core.model.constants import LinkRelations
 from core.model.credential import Credential
@@ -535,7 +535,10 @@ class TestPatron:
         # The target audience and age of a patron's root lane controls
         # whether a given book is 'age-appropriate' for them.
         lane = db.lane()
-        lane.audiences = [Classifier.AUDIENCE_CHILDREN, Classifier.AUDIENCE_YOUNG_ADULT]
+        lane.audiences = [
+            SubjectClassifier.AUDIENCE_CHILDREN,
+            SubjectClassifier.AUDIENCE_YOUNG_ADULT,
+        ]
         lane.target_age = (9, 14)
         lane.root_for_patron_type = ["1"]
         db.session.flush()
@@ -575,13 +578,13 @@ class TestPatron:
                 call(
                     work_audience,
                     work_target_age,
-                    Classifier.AUDIENCE_CHILDREN,
+                    SubjectClassifier.AUDIENCE_CHILDREN,
                     lane.target_age,
                 ),
                 call(
                     work_audience,
                     work_target_age,
-                    Classifier.AUDIENCE_YOUNG_ADULT,
+                    SubjectClassifier.AUDIENCE_YOUNG_ADULT,
                     lane.target_age,
                 ),
             ]
@@ -593,13 +596,13 @@ class TestPatron:
         # Simulate this by telling our mock age_appropriate_match() to
         # return True only when passed a specific reader audience. Our
         # Mock lane has two audiences, and at most one can match.
-        self.return_true_for = Classifier.AUDIENCE_CHILDREN
+        self.return_true_for = SubjectClassifier.AUDIENCE_CHILDREN
         assert True == m(work_audience, work_target_age)
 
-        self.return_true_for = Classifier.AUDIENCE_YOUNG_ADULT
+        self.return_true_for = SubjectClassifier.AUDIENCE_YOUNG_ADULT
         assert True == m(work_audience, work_target_age)
 
-        self.return_true_for = Classifier.AUDIENCE_ADULT
+        self.return_true_for = SubjectClassifier.AUDIENCE_ADULT
         assert False == m(work_audience, work_target_age)
 
     def test_age_appropriate_match(self):
@@ -607,24 +610,24 @@ class TestPatron:
         # and a reader's age.
         m = Patron.age_appropriate_match
 
-        ya = Classifier.AUDIENCE_YOUNG_ADULT
-        children = Classifier.AUDIENCE_CHILDREN
-        adult = Classifier.AUDIENCE_ADULT
-        all_ages = Classifier.AUDIENCE_ALL_AGES
+        ya = SubjectClassifier.AUDIENCE_YOUNG_ADULT
+        children = SubjectClassifier.AUDIENCE_CHILDREN
+        adult = SubjectClassifier.AUDIENCE_ADULT
+        all_ages = SubjectClassifier.AUDIENCE_ALL_AGES
 
         # A reader with no particular audience can see everything.
         assert True == m(object(), object(), None, object())
 
         # A reader associated with a non-juvenile audience, such as
         # AUDIENCE_ADULT, can see everything.
-        for reader_audience in Classifier.AUDIENCES:
-            if reader_audience in Classifier.AUDIENCES_JUVENILE:
+        for reader_audience in SubjectClassifier.AUDIENCES:
+            if reader_audience in SubjectClassifier.AUDIENCES_JUVENILE:
                 # Tested later.
                 continue
             assert True == m(object(), object(), reader_audience, object())
 
         # Everyone can see 'all-ages' books.
-        for reader_audience in Classifier.AUDIENCES:
+        for reader_audience in SubjectClassifier.AUDIENCES:
             assert True == m(all_ages, object(), reader_audience, object())
 
         # Children cannot see YA or adult books.
@@ -653,7 +656,7 @@ class TestPatron:
         # Now let's consider the most complicated cases. First, a
         # child who wants to read a children's book.
         work_audience = children
-        for reader_audience in Classifier.AUDIENCES_YOUNG_CHILDREN:
+        for reader_audience in SubjectClassifier.AUDIENCES_YOUNG_CHILDREN:
             # If the work has no target age, it's fine (or at least
             # we don't have the information necessary to say it's not
             # fine).

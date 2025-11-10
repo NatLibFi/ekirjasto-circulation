@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, create_autospec
 import pytest
 
 from api.s3_analytics_provider import S3AnalyticsProvider
-from core.classifier import Classifier
+from core.classifier import SubjectClassifier
 from core.config import CannotLoadConfiguration
 from core.model import CirculationEvent, DataSource, MediaTypes
 from core.service.storage.s3 import S3Service
@@ -105,7 +105,7 @@ class TestS3AnalyticsProvider:
             authors=("Test Author 1", "Test Author 2"),
             genre="Test Genre",
             language="eng",
-            audience=Classifier.AUDIENCE_ADULT,
+            audience=SubjectClassifier.AUDIENCE_ADULT,
             with_license_pool=True,
         )
         license_pool = work.license_pools[0]

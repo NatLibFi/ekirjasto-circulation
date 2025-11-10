@@ -74,9 +74,9 @@ class TestMembershipManager:
         e2 = db.edition()
         e3 = db.edition()
         source = e1.data_source
-        e1.primary_identifier.classify(source, Subject.TAG, "GOOD FOOD")
-        e2.primary_identifier.classify(source, Subject.TAG, "barflies")
-        e3.primary_identifier.classify(source, Subject.TAG, "irrelevant")
+        e1.primary_identifier.identifier_to_subject(source, Subject.TAG, "GOOD FOOD")
+        e2.primary_identifier.identifier_to_subject(source, Subject.TAG, "barflies")
+        e3.primary_identifier.identifier_to_subject(source, Subject.TAG, "irrelevant")
 
         custom_list, ignore = db.customlist()
         fragments = ["foo", "bar"]

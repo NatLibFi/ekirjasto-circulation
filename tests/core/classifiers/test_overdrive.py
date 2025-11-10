@@ -4,7 +4,7 @@ from core.classifier.overdrive import OverdriveClassifier as Overdrive
 
 class TestOverdriveClassifier:
     def test_lookup(self):
-        assert Overdrive == Classifier.lookup(Classifier.OVERDRIVE)
+        assert Overdrive == SubjectClassifier.lookup(SubjectClassifier.OVERDRIVE)
 
     def test_scrub_identifier(self):
         scrub = Overdrive.scrub_identifier
@@ -25,15 +25,15 @@ class TestOverdriveClassifier:
         def a(identifier):
             return Overdrive.audience(identifier, None)
 
-        assert Classifier.AUDIENCE_CHILDREN == a("Picture Books")
-        assert Classifier.AUDIENCE_CHILDREN == a("Beginning Reader")
-        assert Classifier.AUDIENCE_CHILDREN == a("Children's Video")
-        assert Classifier.AUDIENCE_CHILDREN == a("Juvenile Nonfiction")
-        assert Classifier.AUDIENCE_YOUNG_ADULT == a("Young Adult Nonfiction")
-        assert Classifier.AUDIENCE_YOUNG_ADULT == a("Young Adult Video")
-        assert Classifier.AUDIENCE_ADULTS_ONLY == a("Erotic Literature")
-        assert Classifier.AUDIENCE_ADULT == a("Fiction")
-        assert Classifier.AUDIENCE_ADULT == a("Nonfiction")
+        assert SubjectClassifier.AUDIENCE_CHILDREN == a("Picture Books")
+        assert SubjectClassifier.AUDIENCE_CHILDREN == a("Beginning Reader")
+        assert SubjectClassifier.AUDIENCE_CHILDREN == a("Children's Video")
+        assert SubjectClassifier.AUDIENCE_CHILDREN == a("Juvenile Nonfiction")
+        assert SubjectClassifier.AUDIENCE_YOUNG_ADULT == a("Young Adult Nonfiction")
+        assert SubjectClassifier.AUDIENCE_YOUNG_ADULT == a("Young Adult Video")
+        assert SubjectClassifier.AUDIENCE_ADULTS_ONLY == a("Erotic Literature")
+        assert SubjectClassifier.AUDIENCE_ADULT == a("Fiction")
+        assert SubjectClassifier.AUDIENCE_ADULT == a("Nonfiction")
         assert None == a("Antiques")
 
     def test_is_fiction(self):

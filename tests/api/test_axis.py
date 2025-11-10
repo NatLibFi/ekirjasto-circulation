@@ -96,7 +96,7 @@ class Axis360Fixture:
             SubjectData(
                 type=Subject.BISAC, identifier="BIOGRAPHY & AUTOBIOGRAPHY / Political"
             ),
-            SubjectData(type=Subject.FREEFORM_AUDIENCE, identifier="Adult"),
+            SubjectData(type=Subject.SCHEMA_AUDIENCE, identifier="Adult"),
         ],
     )
 
@@ -791,7 +791,7 @@ class TestCirculationMonitor:
         )
         assert [
             (Subject.BISAC, "BIOGRAPHY & AUTOBIOGRAPHY / Political"),
-            (Subject.FREEFORM_AUDIENCE, "Adult"),
+            (Subject.SCHEMA_AUDIENCE, "Adult"),
         ] == subs
 
         assert 9 == license_pool.licenses_owned

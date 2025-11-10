@@ -1627,10 +1627,11 @@ class Metadata:
                     surviving_classifications.append(classification)
             identifier.classifications = surviving_classifications
 
-        # Apply all new subjects to the identifier.
+        # Apply all new subjects to the identifier. This isn't expected to happen often. The
+        # actual genre assignment will be done by running script work_classication.
         for subject in list(new_subjects.values()):
             try:
-                identifier.classify(
+                identifier.identifier_to_subject(
                     data_source,
                     subject.type,
                     subject.identifier,
@@ -1958,9 +1959,9 @@ class CSVMetadataImporter:
     # them as though they came from a trusted distributor.
     DEFAULT_SUBJECT_FIELD_NAMES = {
         "tags": (Subject.TAG, Classification.TRUSTED_DISTRIBUTOR_WEIGHT),
-        "age": (Subject.AGE_RANGE, Classification.TRUSTED_DISTRIBUTOR_WEIGHT),
+        "age": (Subject.SCHEMA_AGE_RANGE, Classification.TRUSTED_DISTRIBUTOR_WEIGHT),
         "audience": (
-            Subject.FREEFORM_AUDIENCE,
+            Subject.SCHEMA_AUDIENCE,
             Classification.TRUSTED_DISTRIBUTOR_WEIGHT,
         ),
     }

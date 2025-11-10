@@ -14,9 +14,9 @@ class TestDewey:
         assert None == DDC.name_for("Fic")
 
     def test_audience(self):
-        child = Classifier.AUDIENCE_CHILDREN
-        adult = Classifier.AUDIENCE_ADULT
-        young_adult = Classifier.AUDIENCE_YOUNG_ADULT
+        child = SubjectClassifier.AUDIENCE_CHILDREN
+        adult = SubjectClassifier.AUDIENCE_ADULT
+        young_adult = SubjectClassifier.AUDIENCE_YOUNG_ADULT
 
         def aud(identifier):
             return DDC.audience(*DDC.scrub_identifier(identifier))

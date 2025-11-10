@@ -880,11 +880,11 @@ class TestOPDSImporter:
 
         assert "7" == seven.subject.identifier
         assert 100 == seven.weight
-        assert Subject.AGE_RANGE == seven.subject.type
-        from core.classifier import Classifier
+        assert Subject.SCHEMA_AGE_RANGE == seven.subject.type
+        from core.classifier import SubjectClassifier
 
-        classifier = Classifier.classifiers.get(seven.subject.type, None)
-        classifier.classify(seven.subject)
+        classifier = SubjectClassifier.classifiers.get(seven.subject.type, None)
+        classifier.classify_subject(seven.subject)
 
         [crow_pool, mouse_pool] = sorted(
             pools, key=lambda x: x.presentation_edition.title
@@ -898,7 +898,7 @@ class TestOPDSImporter:
         work = mouse_pool.work
         work.calculate_presentation()
         assert 0.4142 == round(work.quality, 4)
-        assert Classifier.AUDIENCE_CHILDREN == work.audience
+        assert SubjectClassifier.AUDIENCE_CHILDREN == work.audience
         assert NumericRange(7, 7, "[]") == work.target_age
 
         # Bonus: make sure that delivery mechanisms are set appropriately.

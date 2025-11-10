@@ -399,7 +399,7 @@ class NoveListAPI(
         audience_level = book_info.get("audience_level")
         if audience_level:
             metadata.subjects.append(
-                SubjectData(Subject.FREEFORM_AUDIENCE, audience_level)
+                SubjectData(Subject.SCHEMA_AUDIENCE, audience_level)
             )
 
         novelist_rating = book_info.get("rating")

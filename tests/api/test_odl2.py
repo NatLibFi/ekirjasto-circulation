@@ -207,6 +207,11 @@ class TestODL2Importer:
         assert 1 == len(moby_dick_work.license_pools)
         assert moby_dick_license_pool == moby_dick_work.license_pools[0]
 
+        # The entry didn't contain any subject that maps to a genre
+        assert 0 == len(moby_dick_work.genres)
+        assert "Children" == moby_dick_work.audience
+        assert True == moby_dick_work.fiction
+
         # 4. Make sure that the failure is covered
         assert 1 == len(failures)
         huck_finn_failures = failures["9781234567897"]

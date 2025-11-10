@@ -37,7 +37,7 @@ from sqlalchemy.orm import (
 from sqlalchemy.orm.session import Session
 from sqlalchemy.sql import select
 
-from core.classifier import Classifier
+from core.classifier import SubjectClassifier
 from core.config import Configuration
 from core.entrypoint import EntryPoint, EverythingEntryPoint
 from core.facets import FacetConstants
@@ -1714,7 +1714,7 @@ class WorkList:
     def audience_key(self):
         """Translates audiences list into url-safe string"""
         key = ""
-        if self.audiences and Classifier.AUDIENCES.difference(self.audiences):
+        if self.audiences and SubjectClassifier.AUDIENCES.difference(self.audiences):
             # There are audiences and they're not the default
             # "any audience", so add them to the URL.
             audiences = [quote_plus(a) for a in sorted(self.audiences)]
@@ -2538,7 +2538,10 @@ class DatabaseBackedWorkList(WorkList):
             target_age = tuple_to_numericrange(target_age)
 
         audiences = self.audiences or []
-        adult_audiences = [Classifier.AUDIENCE_ADULT, Classifier.AUDIENCE_ADULTS_ONLY]
+        adult_audiences = [
+            SubjectClassifier.AUDIENCE_ADULT,
+            SubjectClassifier.AUDIENCE_ADULTS_ONLY,
+        ]
         if target_age.upper >= 18 or (any(x in audiences for x in adult_audiences)):
             # Books for adults don't have target ages. If we're
             # including books for adults, either due to the audience
@@ -2893,20 +2896,24 @@ class Lane(Base, DatabaseBackedWorkList, HierarchyWorkList):
             value = (value, value)
         if isinstance(value, tuple):
             value = tuple_to_numericrange(value)
-        if value.lower >= Classifier.ADULT_AGE_CUTOFF:
+        if value.lower >= SubjectClassifier.ADULT_AGE_CUTOFF:
             # Adults are adults and there's no point in tracking
             # precise age gradations for them.
-            value = tuple_to_numericrange((Classifier.ADULT_AGE_CUTOFF, value.upper))
-        if value.upper >= Classifier.ADULT_AGE_CUTOFF:
-            value = tuple_to_numericrange((value.lower, Classifier.ADULT_AGE_CUTOFF))
+            value = tuple_to_numericrange(
+                (SubjectClassifier.ADULT_AGE_CUTOFF, value.upper)
+            )
+        if value.upper >= SubjectClassifier.ADULT_AGE_CUTOFF:
+            value = tuple_to_numericrange(
+                (value.lower, SubjectClassifier.ADULT_AGE_CUTOFF)
+            )
         self._target_age = value
 
-        if value.upper >= Classifier.ADULT_AGE_CUTOFF:
-            audiences.append(Classifier.AUDIENCE_ADULT)
-        if value.lower < Classifier.YOUNG_ADULT_AGE_CUTOFF:
-            audiences.append(Classifier.AUDIENCE_CHILDREN)
-        if value.upper >= Classifier.YOUNG_ADULT_AGE_CUTOFF:
-            audiences.append(Classifier.AUDIENCE_YOUNG_ADULT)
+        if value.upper >= SubjectClassifier.ADULT_AGE_CUTOFF:
+            audiences.append(SubjectClassifier.AUDIENCE_ADULT)
+        if value.lower < SubjectClassifier.YOUNG_ADULT_AGE_CUTOFF:
+            audiences.append(SubjectClassifier.AUDIENCE_CHILDREN)
+        if value.upper >= SubjectClassifier.YOUNG_ADULT_AGE_CUTOFF:
+            audiences.append(SubjectClassifier.AUDIENCE_YOUNG_ADULT)
         self._audiences = audiences
 
     @hybrid_property
@@ -3115,8 +3122,8 @@ class Lane(Base, DatabaseBackedWorkList, HierarchyWorkList):
         media = self.media
         audiences = None
         if (
-            Classifier.AUDIENCE_YOUNG_ADULT in self.audiences
-            or Classifier.AUDIENCE_CHILDREN in self.audiences
+            SubjectClassifier.AUDIENCE_YOUNG_ADULT in self.audiences
+            or SubjectClassifier.AUDIENCE_CHILDREN in self.audiences
         ):
             audiences = self.audiences
 

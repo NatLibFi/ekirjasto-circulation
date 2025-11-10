@@ -21,7 +21,7 @@ from api.lanes import (
 )
 from api.metadata.novelist import NoveListAPI
 from api.problem_details import NO_SUCH_LANE, NOT_FOUND_ON_REMOTE
-from core.classifier import Classifier
+from core.classifier import SubjectClassifier
 from core.entrypoint import AudiobooksEntryPoint
 from core.external_search import SortKeyPagination
 from core.facets import FacetConstants
@@ -254,7 +254,7 @@ class TestWorkController:
         patron = work_fixture.default_patron
         patron.external_type = "child"
         children_lane = work_fixture.db.lane()
-        children_lane.audiences = [Classifier.AUDIENCE_CHILDREN]
+        children_lane.audiences = [SubjectClassifier.AUDIENCE_CHILDREN]
         children_lane.target_age = tuple_to_numericrange((4, 5))
         children_lane.root_for_patron_type = ["child"]
 
@@ -266,7 +266,7 @@ class TestWorkController:
             # patron's root lane would make any adult books
             # age-inappropriate.
             audiences = ",".join(
-                [Classifier.AUDIENCE_ADULT, Classifier.AUDIENCE_CHILDREN]
+                [SubjectClassifier.AUDIENCE_ADULT, SubjectClassifier.AUDIENCE_CHILDREN]
             )
             response = m(contributor.sort_name, "eng", audiences)
             assert isinstance(response, ProblemDetail)
@@ -274,7 +274,9 @@ class TestWorkController:
 
             # If we only ask for children's books by the same author,
             # we're fine.
-            response = m(contributor.sort_name, "eng", Classifier.AUDIENCE_CHILDREN)
+            response = m(
+                contributor.sort_name, "eng", SubjectClassifier.AUDIENCE_CHILDREN
+            )
             assert 200 == response.status_code
 
         # We're also fine if we don't authenticate the request at all.

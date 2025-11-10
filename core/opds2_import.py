@@ -256,6 +256,7 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
 
             scheme = subject.scheme
 
+            # This will determine later which classifier is used.
             subject_type = Subject.by_uri.get(scheme) if scheme is not None else None
             if not subject_type:
                 # We can't represent this subject because we don't

@@ -3,7 +3,7 @@
 from core.classifier import *
 
 
-class DeMarqueClassifier(Classifier):
+class DeMarqueClassifier(SubjectClassifier):
     @classmethod
     def scrub_identifier(cls, identifier):
         """
@@ -59,4 +59,4 @@ class DeMarqueClassifier(Classifier):
             return (17, None)
 
 
-Classifier.classifiers[Classifier.DEMARQUE] = DeMarqueClassifier
+SubjectClassifier.classifiers[SubjectClassifier.DEMARQUE] = DeMarqueClassifier

@@ -48,14 +48,14 @@ class ClassifierConstants:
     NYPL_APPEAL = "NYPL Appeal"
 
     GRADE_LEVEL = "Grade level"  # "1-2", "Grade 4", "Kindergarten", etc.
-    AGE_RANGE = "schema:typicalAgeRange"  # "0-2", etc.
+    SCHEMA_AGE_RANGE = "schema:typicalAgeRange"  # "0-2", etc.
     AXIS_360_AUDIENCE = "Axis 360 Audience"
     DEMARQUE_AUDIENCE = "schema:Audience"
 
     # We know this says something about the audience but we're not sure what.
     # Could be any of the values from GRADE_LEVEL or AGE_RANGE, plus
     # "YA", "Adult", etc.
-    FREEFORM_AUDIENCE = "schema:audience"
+    SCHEMA_AUDIENCE = "schema:audience"
 
     GUTENBERG_BOOKSHELF = "gutenberg:bookshelf"
     TOPIC = "schema:Topic"
@@ -98,7 +98,7 @@ class ClassifierConstants:
     SIMPLIFIED_FICTION_STATUS = "http://librarysimplified.org/terms/fiction/"
 
 
-class Classifier(ClassifierConstants):
+class SubjectClassifier(ClassifierConstants):
     """Turn an external classification into an internal genre, an
     audience, an age level, and a fiction status.
     """
@@ -126,6 +126,7 @@ class Classifier(ClassifierConstants):
     @classmethod
     def lookup(cls, scheme):
         """Look up a classifier for a classification scheme."""
+        print(scheme)
         return cls.classifiers.get(scheme, None)
 
     @classmethod
@@ -134,7 +135,7 @@ class Classifier(ClassifierConstants):
         return None
 
     @classmethod
-    def classify(cls, subject):
+    def classify_subject(cls, subject):
         """Try to determine genre, audience, target age, and fiction status
         for the given Subject.
         """
@@ -157,7 +158,7 @@ class Classifier(ClassifierConstants):
 
     @classmethod
     def scrub_identifier_and_name(cls, identifier, name):
-        """Prepare identifier and name from within a call to classify()."""
+        """Prepare identifier and name from within a call to classify_subject()."""
         identifier = cls.scrub_identifier(identifier)
         if isinstance(identifier, tuple):
             # scrub_identifier returned a canonical value for name as
@@ -171,7 +172,7 @@ class Classifier(ClassifierConstants):
 
     @classmethod
     def scrub_identifier(cls, identifier):
-        """Prepare an identifier from within a call to classify().
+        """Prepare an identifier from within a call to classify_subject().
 
         This may involve data normalization, conversion to lowercase,
         etc.
@@ -242,9 +243,12 @@ class Classifier(ClassifierConstants):
         'Adult' book it's pretty clear, and for an 'Adults Only' book
         it's very clear.
         """
-        if audience == Classifier.AUDIENCE_YOUNG_ADULT:
+        if audience == SubjectClassifier.AUDIENCE_YOUNG_ADULT:
             return cls.range_tuple(14, 17)
-        elif audience in (Classifier.AUDIENCE_ADULT, Classifier.AUDIENCE_ADULTS_ONLY):
+        elif audience in (
+            SubjectClassifier.AUDIENCE_ADULT,
+            SubjectClassifier.AUDIENCE_ADULTS_ONLY,
+        ):
             return cls.range_tuple(18, None)
         return cls.range_tuple(None, None)
 
@@ -324,7 +328,7 @@ class Classifier(ClassifierConstants):
         return old
 
 
-class GradeLevelClassifier(Classifier):
+class GradeLevelClassifier(SubjectClassifier):
     # How old a kid is when they start grade N in the US.
     american_grade_to_age = {
         # Preschool: 3-4 years
@@ -457,7 +461,7 @@ class GradeLevelClassifier(Classifier):
         return (target_age, grade_words)
 
 
-class InterestLevelClassifier(Classifier):
+class InterestLevelClassifier(SubjectClassifier):
     @classmethod
     def audience(cls, identifier, name):
         if identifier in ("lg", "mg+", "mg"):
@@ -478,7 +482,7 @@ class InterestLevelClassifier(Classifier):
         return None
 
 
-class AgeClassifier(Classifier):
+class AgeClassifier(SubjectClassifier):
     # Regular expressions that match common ways of expressing ages.
     age_res = [
         re.compile(x, re.I)
@@ -580,7 +584,7 @@ fiction_genres = [
     "Classics",
     COMICS_AND_GRAPHIC_NOVELS,
     "Drama",
-    dict(name="Erotica", audiences=Classifier.AUDIENCE_ADULTS_ONLY),
+    dict(name="Erotica", audiences=SubjectClassifier.AUDIENCE_ADULTS_ONLY),
     dict(
         name="Fantasy",
         subgenres=[
@@ -938,7 +942,7 @@ class Lowercased(str):
             return identifier
 
 
-class AgeOrGradeClassifier(Classifier):
+class AgeOrGradeClassifier(SubjectClassifier):
     @classmethod
     def audience(cls, identifier, name):
         audience = AgeClassifier.audience(identifier, name)
@@ -960,7 +964,7 @@ class AgeOrGradeClassifier(Classifier):
         return age
 
 
-class FreeformAudienceClassifier(AgeOrGradeClassifier):
+class SchemaAudienceClassifier(AgeOrGradeClassifier):
     # NOTE: In practice, subjects like "books for all ages" tend to be
     # more like advertising slogans than reliable indicators of an
     # ALL_AGES audience. So the only subject of this type we handle is
@@ -969,7 +973,14 @@ class FreeformAudienceClassifier(AgeOrGradeClassifier):
 
     @classmethod
     def audience(cls, identifier, name):
-        if identifier in ("children", "pre-adolescent", "beginning reader"):
+        if identifier in (
+            "children",
+            "juvenile",
+            "juvenile-fiction",
+            "juvenile-nonfiction",
+            "pre-adolescent",
+            "beginning reader",
+        ):
             return cls.AUDIENCE_CHILDREN
         elif identifier in (
             "young adult",
@@ -1012,7 +1023,7 @@ class FreeformAudienceClassifier(AgeOrGradeClassifier):
 
 
 class WorkClassifier:
-    """Boil down a bunch of Classification objects into a few values."""
+    """Boil down a bunch of Subject objects into a few values."""
 
     # TODO: This needs a lot of additions.
     genre_publishers = {
@@ -1033,10 +1044,10 @@ class WorkClassifier:
     }
 
     audience_imprints = {
-        "Harlequin Teen": Classifier.AUDIENCE_YOUNG_ADULT,
-        "HarperTeen": Classifier.AUDIENCE_YOUNG_ADULT,
-        "Open Road Media Teen & Tween": Classifier.AUDIENCE_YOUNG_ADULT,
-        "Rosen Young Adult": Classifier.AUDIENCE_YOUNG_ADULT,
+        "Harlequin Teen": SubjectClassifier.AUDIENCE_YOUNG_ADULT,
+        "HarperTeen": SubjectClassifier.AUDIENCE_YOUNG_ADULT,
+        "Open Road Media Teen & Tween": SubjectClassifier.AUDIENCE_YOUNG_ADULT,
+        "Rosen Young Adult": SubjectClassifier.AUDIENCE_YOUNG_ADULT,
     }
 
     not_adult_publishers = {
@@ -1166,7 +1177,7 @@ class WorkClassifier:
 
         # if staff classification is about audience, ignore all other audience classifications
         if not self.using_staff_audience:
-            if from_staff and subject.type == Subject.FREEFORM_AUDIENCE:
+            if from_staff and subject.type == Subject.SCHEMA_AUDIENCE:
                 self.using_staff_audience = True
                 self.audience_weights = Counter()
                 self.audience_weights[subject.audience] += weight
@@ -1183,12 +1194,14 @@ class WorkClassifier:
                     # weight this way, we're also going to treat this
                     # classification as evidence _against_ an 'adult'
                     # classification.
-                    self.audience_weights[Classifier.AUDIENCE_YOUNG_ADULT] += (
+                    self.audience_weights[SubjectClassifier.AUDIENCE_YOUNG_ADULT] += (
                         weight * 0.6
                     )
-                    self.audience_weights[Classifier.AUDIENCE_CHILDREN] += weight * 0.4
-                    for audience in Classifier.AUDIENCES_ADULT:
-                        if audience != Classifier.AUDIENCE_ALL_AGES:
+                    self.audience_weights[SubjectClassifier.AUDIENCE_CHILDREN] += (
+                        weight * 0.4
+                    )
+                    for audience in SubjectClassifier.AUDIENCES_ADULT:
+                        if audience != SubjectClassifier.AUDIENCE_ALL_AGES:
                             # 'All Ages' is considered an adult audience,
                             # but a generic 'juvenile' classification
                             # is not evidence against it.
@@ -1197,7 +1210,7 @@ class WorkClassifier:
                     self.audience_weights[subject.audience] += weight
 
         if not self.using_staff_target_age:
-            if from_staff and subject.type == Subject.AGE_RANGE:
+            if from_staff and subject.type == Subject.SCHEMA_AGE_RANGE:
                 self.using_staff_target_age = True
                 self.target_age_lower_weights = Counter()
                 self.target_age_upper_weights = Counter()
@@ -1219,7 +1232,7 @@ class WorkClassifier:
         if not self.using_staff_audience and not self.using_staff_target_age:
             if (
                 subject.type == "Overdrive"
-                and subject.audience == Classifier.AUDIENCE_CHILDREN
+                and subject.audience == SubjectClassifier.AUDIENCE_CHILDREN
             ):
                 if subject.target_age and (
                     subject.target_age.lower or subject.target_age.upper
@@ -1235,8 +1248,8 @@ class WorkClassifier:
         # E-kirjasto: Since De Marque classifications have target ages for children's and YA books, we want to weigh
         # them more heavily by setting their weights to 1.0. This ensures that those books are classified accordingly.
         if subject.type == "De Marque" and (
-            subject.audience == Classifier.AUDIENCE_CHILDREN
-            or subject.audience == Classifier.AUDIENCE_YOUNG_ADULT
+            subject.audience == SubjectClassifier.AUDIENCE_CHILDREN
+            or subject.audience == SubjectClassifier.AUDIENCE_YOUNG_ADULT
         ):
             if subject.target_age:
                 # Set the weight to 1.0 for any target age.
@@ -1253,7 +1266,7 @@ class WorkClassifier:
         # weight to 1.0 for any adult audience books.
         if (
             subject.type == "De Marque"
-            and subject.audience == Classifier.AUDIENCE_ADULT
+            and subject.audience == SubjectClassifier.AUDIENCE_ADULT
         ):
             self.audience_weights = Counter()
             self.audience_weights[subject.audience] += weight * 1.0
@@ -1294,8 +1307,8 @@ class WorkClassifier:
             publisher in self.not_adult_publishers or imprint in self.not_adult_imprints
         ):
             for audience in [
-                Classifier.AUDIENCE_ADULT,
-                Classifier.AUDIENCE_ADULTS_ONLY,
+                SubjectClassifier.AUDIENCE_ADULT,
+                SubjectClassifier.AUDIENCE_ADULTS_ONLY,
             ]:
                 self.audience_weights[audience] -= 100
 
@@ -1306,9 +1319,9 @@ class WorkClassifier:
         self.weigh_metadata()
 
         explicitly_indicated_audiences = (
-            Classifier.AUDIENCE_CHILDREN,
-            Classifier.AUDIENCE_YOUNG_ADULT,
-            Classifier.AUDIENCE_ADULTS_ONLY,
+            SubjectClassifier.AUDIENCE_CHILDREN,
+            SubjectClassifier.AUDIENCE_YOUNG_ADULT,
+            SubjectClassifier.AUDIENCE_ADULTS_ONLY,
         )
         audiences_from_license_source = {
             classification.subject.audience
@@ -1332,7 +1345,7 @@ class WorkClassifier:
             # books and YA books, but books for adults can be
             # distinguished by their _lack_ of childrens/YA
             # classifications.
-            self.audience_weights[Classifier.AUDIENCE_ADULT] += 500
+            self.audience_weights[SubjectClassifier.AUDIENCE_ADULT] += 500
 
         if (
             self.overdrive_juvenile_generic
@@ -1349,7 +1362,7 @@ class WorkClassifier:
 
         self.prepared = True
 
-    def classify(self, default_fiction=None, default_audience=None):
+    def classify_work(self, default_fiction=None, default_audience=None):
         # Do a little prep work.
         if not self.prepared:
             self.prepare_to_classify()
@@ -1404,7 +1417,7 @@ class WorkClassifier:
         # audience will always be 'Adults Only', even if the audience
         # weights would indicate something else.
         if Erotica in genres:
-            return Classifier.AUDIENCE_ADULTS_ONLY
+            return SubjectClassifier.AUDIENCE_ADULTS_ONLY
 
         w = self.audience_weights
         if not self.audience_weights:
@@ -1412,12 +1425,12 @@ class WorkClassifier:
             # irresponsible to guess.
             return default_audience
 
-        children_weight = w.get(Classifier.AUDIENCE_CHILDREN, 0)
-        ya_weight = w.get(Classifier.AUDIENCE_YOUNG_ADULT, 0)
-        adult_weight = w.get(Classifier.AUDIENCE_ADULT, 0)
-        adults_only_weight = w.get(Classifier.AUDIENCE_ADULTS_ONLY, 0)
-        all_ages_weight = w.get(Classifier.AUDIENCE_ALL_AGES, 0)
-        research_weight = w.get(Classifier.AUDIENCE_RESEARCH, 0)
+        children_weight = w.get(SubjectClassifier.AUDIENCE_CHILDREN, 0)
+        ya_weight = w.get(SubjectClassifier.AUDIENCE_YOUNG_ADULT, 0)
+        adult_weight = w.get(SubjectClassifier.AUDIENCE_ADULT, 0)
+        adults_only_weight = w.get(SubjectClassifier.AUDIENCE_ADULTS_ONLY, 0)
+        all_ages_weight = w.get(SubjectClassifier.AUDIENCE_ALL_AGES, 0)
+        research_weight = w.get(SubjectClassifier.AUDIENCE_RESEARCH, 0)
 
         total_adult_weight = adult_weight + adults_only_weight
         total_weight = sum(w.values())
@@ -1441,33 +1454,33 @@ class WorkClassifier:
             and research_weight > (total_juvenile_weight + all_ages_weight)
             and research_weight > threshold
         ):
-            audience = Classifier.AUDIENCE_RESEARCH
+            audience = SubjectClassifier.AUDIENCE_RESEARCH
         elif (
             all_ages_weight > total_adult_weight
             and all_ages_weight > total_juvenile_weight
         ):
-            audience = Classifier.AUDIENCE_ALL_AGES
+            audience = SubjectClassifier.AUDIENCE_ALL_AGES
         elif children_weight > threshold and children_weight > ya_weight:
-            audience = Classifier.AUDIENCE_CHILDREN
+            audience = SubjectClassifier.AUDIENCE_CHILDREN
         elif ya_weight > threshold:
-            audience = Classifier.AUDIENCE_YOUNG_ADULT
+            audience = SubjectClassifier.AUDIENCE_YOUNG_ADULT
         elif total_juvenile_weight > threshold:
             # Neither weight passes the threshold on its own, but
             # combined they do pass the threshold. Go with
             # 'Young Adult' to be safe.
-            audience = Classifier.AUDIENCE_YOUNG_ADULT
+            audience = SubjectClassifier.AUDIENCE_YOUNG_ADULT
         elif total_adult_weight > 0:
-            audience = Classifier.AUDIENCE_ADULT
+            audience = SubjectClassifier.AUDIENCE_ADULT
 
         # If the 'adults only' weight is more than 1/4 of the total adult
         # weight, classify as 'adults only' to be safe.
         #
         # TODO: This has not been calibrated.
         if (
-            audience == Classifier.AUDIENCE_ADULT
+            audience == SubjectClassifier.AUDIENCE_ADULT
             and adults_only_weight > total_adult_weight / 4
         ):
-            audience = Classifier.AUDIENCE_ADULTS_ONLY
+            audience = SubjectClassifier.AUDIENCE_ADULTS_ONLY
 
         return audience
 
@@ -1492,12 +1505,12 @@ class WorkClassifier:
     def target_age(self, audience):
         """Derive a target age from the gathered data."""
         if audience not in (
-            Classifier.AUDIENCE_CHILDREN,
-            Classifier.AUDIENCE_YOUNG_ADULT,
+            SubjectClassifier.AUDIENCE_CHILDREN,
+            SubjectClassifier.AUDIENCE_YOUNG_ADULT,
         ):
             # This is not a children's or YA book. Assertions about
             # target age are irrelevant and the default value rules.
-            return Classifier.default_target_age_for_audience(audience)
+            return SubjectClassifier.default_target_age_for_audience(audience)
 
         # Only consider the most reliable classifications.
 
@@ -1527,7 +1540,7 @@ class WorkClassifier:
 
         if not target_age_min and not target_age_max:
             # We found no opinions about target age. Use the default.
-            return Classifier.default_target_age_for_audience(audience)
+            return SubjectClassifier.default_target_age_for_audience(audience)
 
         if target_age_min is None:
             target_age_min = target_age_max
@@ -1536,7 +1549,7 @@ class WorkClassifier:
         if target_age_min and target_age_max and target_age_min > target_age_max:
             target_age_max = target_age_min
 
-        return Classifier.range_tuple(target_age_min, target_age_max)
+        return SubjectClassifier.range_tuple(target_age_min, target_age_max)
 
     def genres(self, fiction, cutoff=0.15):
         """
@@ -1658,8 +1671,12 @@ class WorkClassifier:
 
 # Make a dictionary of classification schemes to classifiers.
 
-Classifier.classifiers[Classifier.FREEFORM_AUDIENCE] = FreeformAudienceClassifier
-Classifier.classifiers[Classifier.AXIS_360_AUDIENCE] = AgeOrGradeClassifier
+SubjectClassifier.classifiers[
+    SubjectClassifier.SCHEMA_AUDIENCE
+] = SchemaAudienceClassifier
+SubjectClassifier.classifiers[
+    SubjectClassifier.AXIS_360_AUDIENCE
+] = AgeOrGradeClassifier
 
 # Finally, import classifiers described in submodules.
 from core.classifier.age import (

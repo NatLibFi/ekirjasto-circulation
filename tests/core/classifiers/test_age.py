@@ -1,5 +1,6 @@
-from core.classifier import AgeOrGradeClassifier, Classifier
+from core.classifier import AgeOrGradeClassifier
 from core.classifier import LCSHClassifier as LCSH
+from core.classifier import SubjectClassifier
 from core.classifier.age import (
     AgeClassifier,
     GradeLevelClassifier,
@@ -17,18 +18,18 @@ class TestTargetAge:
         but if it does happen, range_tuple() will stop it from causing
         downstream problems.
         """
-        range1 = Classifier.range_tuple(5, 6)
-        range2 = Classifier.range_tuple(6, 5)
+        range1 = SubjectClassifier.range_tuple(5, 6)
+        range2 = SubjectClassifier.range_tuple(6, 5)
         assert range2 == range1
         assert 5 == range2[0]
         assert 6 == range2[1]
 
         # If one of the target ages is None, it's left alone.
-        r = Classifier.range_tuple(None, 6)
+        r = SubjectClassifier.range_tuple(None, 6)
         assert None == r[0]
         assert 6 == r[1]
 
-        r = Classifier.range_tuple(18, None)
+        r = SubjectClassifier.range_tuple(18, None)
         assert 18 == r[0]
         assert None == r[1]
 
@@ -36,7 +37,7 @@ class TestTargetAge:
         def f(t):
             return GradeLevelClassifier.target_age(t, None)
 
-        assert Classifier.range_tuple(5, 6) == GradeLevelClassifier.target_age(
+        assert SubjectClassifier.range_tuple(5, 6) == GradeLevelClassifier.target_age(
             None, "grades 0-1"
         )
         assert (4, 7) == f("pk - 2")
@@ -136,20 +137,22 @@ class TestTargetAge:
         def f(t):
             return AgeClassifier.audience(t, None)
 
-        assert Classifier.AUDIENCE_CHILDREN == f("Age 5")
-        assert Classifier.AUDIENCE_ADULT == f("Age 18+")
+        assert SubjectClassifier.AUDIENCE_CHILDREN == f("Age 5")
+        assert SubjectClassifier.AUDIENCE_ADULT == f("Age 18+")
         assert None == f("Ages Of Man")
         assert None == f("Age -12")
-        assert Classifier.AUDIENCE_YOUNG_ADULT == f("up to age 16")
-        assert Classifier.AUDIENCE_YOUNG_ADULT == f("Age 12-14")
-        assert Classifier.AUDIENCE_YOUNG_ADULT == f("Ages 13 and up")
-        assert Classifier.AUDIENCE_CHILDREN == f("Age 12-13")
+        assert SubjectClassifier.AUDIENCE_YOUNG_ADULT == f("up to age 16")
+        assert SubjectClassifier.AUDIENCE_YOUNG_ADULT == f("Age 12-14")
+        assert SubjectClassifier.AUDIENCE_YOUNG_ADULT == f("Ages 13 and up")
+        assert SubjectClassifier.AUDIENCE_CHILDREN == f("Age 12-13")
 
     def test_audience_from_age_or_grade_classifier(self):
         def f(t):
             return AgeOrGradeClassifier.audience(t, None)
 
-        assert Classifier.AUDIENCE_CHILDREN == f("Children's - Kindergarten, Age 5-6")
+        assert SubjectClassifier.AUDIENCE_CHILDREN == f(
+            "Children's - Kindergarten, Age 5-6"
+        )
 
     def test_age_from_age_or_grade_classifier(self):
         def f(t):
@@ -166,10 +169,10 @@ class TestInterestLevelClassifier:
         def f(t):
             return InterestLevelClassifier.audience(t, None)
 
-        assert Classifier.AUDIENCE_CHILDREN == f("lg")
-        assert Classifier.AUDIENCE_CHILDREN == f("mg")
-        assert Classifier.AUDIENCE_CHILDREN == f("mg+")
-        assert Classifier.AUDIENCE_YOUNG_ADULT == f("ug")
+        assert SubjectClassifier.AUDIENCE_CHILDREN == f("lg")
+        assert SubjectClassifier.AUDIENCE_CHILDREN == f("mg")
+        assert SubjectClassifier.AUDIENCE_CHILDREN == f("mg+")
+        assert SubjectClassifier.AUDIENCE_YOUNG_ADULT == f("ug")
 
     def test_target_age(self):
         def f(t):

@@ -66,6 +66,7 @@ poetry install --only ci
     - [4. Running Tests](#4-Run-the-API-or-core-suites)
     - [5. Run an individual file or test](#5-Run-an-individual-file-or-test)
 - [Localization (flask-pybabel, Transifex)](#localization-flask-pybabel-transifex)
+- [Technology overview](#technology-overview)
 - [Code Style](#code-style)
     - [1. Pre-Commit Configuration](#3-pre-commit-configuration)
     - [2. Linters](#4-linters)
@@ -204,14 +205,16 @@ them manually:
 
 Neither of the commands will produce any output if the operations succeed.
 
-Navigating to `http://localhost:6500/` should now show an OPDS feed containing various books:
-
-![Feed](.github/readme/feed.png)
-
 ### 6. Patron authentication
 
 For patrons to access the service, configure authentication: `System Configuration → Patron Authentication`. In our case,
 select _E-kirjasto API environment: Development_ and attach the newly created library to the service.
+
+Navigating to `http://localhost:6500/` should now show an OPDS feed containing various books:
+
+![Feed](.github/readme/feed.png)
+
+If not, see [7. Troubleshooting](#7-troubleshooting).
 
 ### 7. Troubleshooting
 
@@ -402,6 +405,14 @@ Make PR, and when it's merged to main, the translations will be uploaded to Tran
 
 Once all strings have been translated and reviewed in Transifex, Transifex will automatically create a PR in Github and
 commit the updated files.
+
+## Technology overview
+
+E-kirjasto backend - though gone through many changes since being forked from the Palace project - is based on the
+following technologies:
+
+- [Data model](https://lyrasis.notion.site/Data-Model-6bc7de7799c543388d3cb206b72a8dad)
+- [Search](https://lyrasis.notion.site/Search-6f24d9ffe0af45cc8e4e1726d535060b)
 
 ## Code Style
 

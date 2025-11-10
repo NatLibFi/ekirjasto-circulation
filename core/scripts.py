@@ -1564,7 +1564,7 @@ class AddClassificationScript(IdentifierInputScript):
         )
         if self.subject:
             for identifier in self.identifiers:
-                identifier.classify(
+                identifier.identifier_to_subject(
                     self.data_source,
                     self.subject.type,
                     self.subject.identifier,

@@ -14,7 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.engine import ScalarResult
 from sqlalchemy.orm.session import Session
 
-from core.classifier import Classifier
+from core.classifier import SubjectClassifier
 from core.integration.base import HasLibraryIntegrationConfiguration
 from core.integration.settings import (
     BaseSettings,
@@ -47,10 +47,10 @@ class Annotator(LoggerMixin):
 
     # From https://www.loc.gov/standards/valuelist/marctarget.html
     AUDIENCE_TERMS: Mapping[str, str] = {
-        Classifier.AUDIENCE_CHILDREN: "Juvenile",
-        Classifier.AUDIENCE_YOUNG_ADULT: "Adolescent",
-        Classifier.AUDIENCE_ADULTS_ONLY: "Adult",
-        Classifier.AUDIENCE_ADULT: "General",
+        SubjectClassifier.AUDIENCE_CHILDREN: "Juvenile",
+        SubjectClassifier.AUDIENCE_YOUNG_ADULT: "Adolescent",
+        SubjectClassifier.AUDIENCE_ADULTS_ONLY: "Adult",
+        SubjectClassifier.AUDIENCE_ADULT: "General",
     }
 
     # TODO: Add remaining formats. Maybe there's a better place to
@@ -459,7 +459,7 @@ class Annotator(LoggerMixin):
 
     @classmethod
     def add_audience(cls, record: Record, work: Work) -> None:
-        work_audience = work.audience or Classifier.AUDIENCE_ADULT
+        work_audience = work.audience or SubjectClassifier.AUDIENCE_ADULT
         audience = cls.AUDIENCE_TERMS.get(work_audience, "General")
         record.add_field(
             Field(

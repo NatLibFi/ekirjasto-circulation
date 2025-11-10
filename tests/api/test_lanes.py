@@ -28,7 +28,7 @@ from api.lanes import (
 )
 from api.metadata.novelist import NoveListAPI
 from api.metadata.nyt import NYTBestSellerAPI
-from core.classifier import Classifier
+from core.classifier import SubjectClassifier
 from core.entrypoint import AudiobooksEntryPoint
 from core.external_search import Filter
 from core.integration.goals import Goals
@@ -302,7 +302,7 @@ class TestLaneCreation:
         # and that the audience is set to children
         audiences = children_and_middle_grade_lane.audiences
         assert 1 == len(audiences)
-        assert Classifier.AUDIENCE_CHILDREN == audiences[0]
+        assert SubjectClassifier.AUDIENCE_CHILDREN == audiences[0]
 
     def test_create_default_when_more_than_one_large_language_is_configured(
         self, db: DatabaseTransactionFixture, library_fixture: LibraryFixture
@@ -390,21 +390,21 @@ class TestWorkBasedLane:
     ):
         work = db.work(with_license_pool=True)
 
-        work.audience = Classifier.AUDIENCE_CHILDREN
+        work.audience = SubjectClassifier.AUDIENCE_CHILDREN
         children_lane = WorkBasedLane(db.default_library(), work, "")
-        assert [Classifier.AUDIENCE_CHILDREN] == children_lane.audiences
+        assert [SubjectClassifier.AUDIENCE_CHILDREN] == children_lane.audiences
 
-        work.audience = Classifier.AUDIENCE_YOUNG_ADULT
+        work.audience = SubjectClassifier.AUDIENCE_YOUNG_ADULT
         ya_lane = WorkBasedLane(db.default_library(), work, "")
-        assert sorted(Classifier.AUDIENCES_JUVENILE) == sorted(ya_lane.audiences)
+        assert sorted(SubjectClassifier.AUDIENCES_JUVENILE) == sorted(ya_lane.audiences)
 
-        work.audience = Classifier.AUDIENCE_ADULT
+        work.audience = SubjectClassifier.AUDIENCE_ADULT
         adult_lane = WorkBasedLane(db.default_library(), work, "")
-        assert sorted(Classifier.AUDIENCES) == sorted(adult_lane.audiences)
+        assert sorted(SubjectClassifier.AUDIENCES) == sorted(adult_lane.audiences)
 
-        work.audience = Classifier.AUDIENCE_ADULTS_ONLY
+        work.audience = SubjectClassifier.AUDIENCE_ADULTS_ONLY
         adults_only_lane = WorkBasedLane(db.default_library(), work, "")
-        assert sorted(Classifier.AUDIENCES) == sorted(adults_only_lane.audiences)
+        assert sorted(SubjectClassifier.AUDIENCES) == sorted(adults_only_lane.audiences)
 
     def test_append_child(self, db: DatabaseTransactionFixture):
         """When a WorkBasedLane gets a child, its language and audience
@@ -412,7 +412,7 @@ class TestWorkBasedLane:
         """
         work = db.work(
             with_license_pool=True,
-            audience=Classifier.AUDIENCE_CHILDREN,
+            audience=SubjectClassifier.AUDIENCE_CHILDREN,
             language="spa",
         )
 
@@ -425,7 +425,7 @@ class TestWorkBasedLane:
                 db.default_library(),
                 "sublane",
                 languages=["eng"],
-                audiences=[Classifier.AUDIENCE_ADULT],
+                audiences=[SubjectClassifier.AUDIENCE_ADULT],
             )
             return child
 
@@ -438,13 +438,13 @@ class TestWorkBasedLane:
         )
 
         assert ["spa"] == child1.languages
-        assert [Classifier.AUDIENCE_CHILDREN] == child1.audiences
+        assert [SubjectClassifier.AUDIENCE_CHILDREN] == child1.audiences
 
         # It also happens when .append_child is called after the
         # constructor.
         lane.append_child(child2)
         assert ["spa"] == child2.languages
-        assert [Classifier.AUDIENCE_CHILDREN] == child2.audiences
+        assert [SubjectClassifier.AUDIENCE_CHILDREN] == child2.audiences
 
     def test_default_children_list_not_reused(self, db: DatabaseTransactionFixture):
         work = db.work()
@@ -497,7 +497,7 @@ class RelatedBooksFixture:
     def __init__(self, db: DatabaseTransactionFixture):
         self.db = db
         self.work = db.work(
-            with_license_pool=True, audience=Classifier.AUDIENCE_YOUNG_ADULT
+            with_license_pool=True, audience=SubjectClassifier.AUDIENCE_YOUNG_ADULT
         )
         [self.lp] = self.work.license_pools
         self.edition = self.work.presentation_edition
@@ -650,10 +650,10 @@ class LaneFixture:
         """Create a work for each audience-type."""
         works = list()
         audiences = [
-            Classifier.AUDIENCE_CHILDREN,
-            Classifier.AUDIENCE_YOUNG_ADULT,
-            Classifier.AUDIENCE_ADULT,
-            Classifier.AUDIENCE_ADULTS_ONLY,
+            SubjectClassifier.AUDIENCE_CHILDREN,
+            SubjectClassifier.AUDIENCE_YOUNG_ADULT,
+            SubjectClassifier.AUDIENCE_ADULT,
+            SubjectClassifier.AUDIENCE_ADULTS_ONLY,
         ]
 
         for audience in audiences:
@@ -756,7 +756,7 @@ class TestSeriesLane:
         pytest.raises(ValueError, SeriesLane, lane_fixture.db.default_library(), None)
 
         work = lane_fixture.db.work(
-            language="spa", audience=[Classifier.AUDIENCE_CHILDREN]
+            language="spa", audience=[SubjectClassifier.AUDIENCE_CHILDREN]
         )
         work_based_lane = WorkBasedLane(lane_fixture.db.default_library(), work)
         child = SeriesLane(

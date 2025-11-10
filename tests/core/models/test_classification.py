@@ -2,7 +2,7 @@ import pytest
 from psycopg2.extras import NumericRange
 from sqlalchemy.exc import IntegrityError
 
-from core.classifier import Classifier
+from core.classifier import SubjectClassifier
 from core.model import create
 from core.model.classification import Genre, Subject
 from tests.fixtures.database import DatabaseTransactionFixture
@@ -56,6 +56,15 @@ class TestSubject:
         assert subject in [s1, s2]
         assert False == is_new
 
+    def test_lookup_name_has_changed(self, db: DatabaseTransactionFixture):
+        """Check that when a subject's name has changed, we update the name."""
+        s1 = db.subject(Subject.TAG, "id_1")
+        s1.name = "A name"
+        assert (s1, False) == Subject.lookup(
+            db.session, Subject.TAG, "id_1", "A new name"
+        )
+        assert s1.name == "A new name"
+
     def test_assign_to_genre_can_remove_genre(self, db: DatabaseTransactionFixture):
         # Here's a Subject that identifies children's books.
         subject, was_new = Subject.lookup(
@@ -63,7 +72,7 @@ class TestSubject:
         )
 
         # The genre and audience data for this Subject is totally wrong.
-        subject.audience = Classifier.AUDIENCE_ADULT
+        subject.audience = SubjectClassifier.AUDIENCE_ADULT
         subject.target_age = NumericRange(1, 10)
         subject.fiction = False
         sf, ignore = Genre.lookup(db.session, "Science Fiction")
@@ -71,7 +80,7 @@ class TestSubject:
 
         # But calling assign_to_genre() will fix it.
         subject.assign_to_genre()
-        assert Classifier.AUDIENCE_CHILDREN == subject.audience
+        assert SubjectClassifier.AUDIENCE_CHILDREN == subject.audience
         assert NumericRange(None, None, "[]") == subject.target_age
         assert None == subject.genre
         assert None == subject.fiction

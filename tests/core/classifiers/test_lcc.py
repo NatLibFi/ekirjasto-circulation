@@ -4,8 +4,8 @@ from core.classifier.lcc import LCCClassifier as LCC
 
 class TestLCC:
     def test_name_for(self):
-        child = Classifier.AUDIENCE_CHILDREN
-        adult = Classifier.AUDIENCE_ADULT
+        child = SubjectClassifier.AUDIENCE_CHILDREN
+        adult = SubjectClassifier.AUDIENCE_ADULT
 
         assert "LANGUAGE AND LITERATURE" == LCC.name_for("P")
         assert "English literature" == LCC.name_for("PR")
@@ -15,9 +15,9 @@ class TestLCC:
         assert None == LCC.name_for("no-such-key")
 
     def test_audience(self):
-        child = Classifier.AUDIENCE_CHILDREN
-        adult = Classifier.AUDIENCE_ADULT
-        young_adult = Classifier.AUDIENCE_YOUNG_ADULT
+        child = SubjectClassifier.AUDIENCE_CHILDREN
+        adult = SubjectClassifier.AUDIENCE_ADULT
+        young_adult = SubjectClassifier.AUDIENCE_YOUNG_ADULT
 
         def aud(identifier):
             return LCC.audience(LCC.scrub_identifier(identifier), None)

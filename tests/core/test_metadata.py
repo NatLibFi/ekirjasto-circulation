@@ -105,8 +105,8 @@ class TestMetadataImporter:
         source2 = DataSource.lookup(db.session, DataSource.METADATA_WRANGLER)
         edition = db.edition()
         identifier = edition.primary_identifier
-        c1 = identifier.classify(source1, Subject.TAG, "i will persist")
-        c2 = identifier.classify(source2, Subject.TAG, "i will perish")
+        c1 = identifier.identifier_to_subject(source1, Subject.TAG, "i will persist")
+        c2 = identifier.identifier_to_subject(source2, Subject.TAG, "i will perish")
 
         # Now we get some new metadata from source #2.
         subjects = [SubjectData(type=Subject.TAG, identifier="i will conquer")]
