@@ -34,38 +34,17 @@ NO_NUMBER = -1
 
 
 class ClassifierConstants:
-    DDC = "DDC"
-    LCC = "LCC"
-    LCSH = "LCSH"
-    FAST = "FAST"
-    OVERDRIVE = "Overdrive"
+
+    # Subject related constants
     BISAC = "BISAC"
-    BIC = "BIC"
     TAG = "tag"  # Folksonomic tags.
     DEMARQUE = "De Marque"
-
-    # Appeal controlled vocabulary developed by NYPL
-    NYPL_APPEAL = "NYPL Appeal"
-
-    GRADE_LEVEL = "Grade level"  # "1-2", "Grade 4", "Kindergarten", etc.
     SCHEMA_AGE_RANGE = "schema:typicalAgeRange"  # "0-2", etc.
-    AXIS_360_AUDIENCE = "Axis 360 Audience"
-    DEMARQUE_AUDIENCE = "schema:Audience"
-
-    # We know this says something about the audience but we're not sure what.
-    # Could be any of the values from GRADE_LEVEL or AGE_RANGE, plus
-    # "YA", "Adult", etc.
     SCHEMA_AUDIENCE = "schema:audience"
 
-    GUTENBERG_BOOKSHELF = "gutenberg:bookshelf"
-    TOPIC = "schema:Topic"
-    PLACE = "schema:Place"
-    PERSON = "schema:Person"
-    ORGANIZATION = "schema:Organization"
-    LEXILE_SCORE = "Lexile"
-    ATOS_SCORE = "ATOS"
-    INTEREST_LEVEL = "Interest Level"
+    GRADE_LEVEL = "Grade level"  # "1-2", "Grade 4", "Kindergarten", etc.
 
+    # Audience related constants
     AUDIENCE_ADULT = "Adult"
     AUDIENCE_ADULTS_ONLY = "Adults Only"
     AUDIENCE_YOUNG_ADULT = "Young Adult"
@@ -91,9 +70,9 @@ class ClassifierConstants:
         AUDIENCE_YOUNG_ADULT,
         AUDIENCE_CHILDREN,
         AUDIENCE_ALL_AGES,
-        AUDIENCE_RESEARCH,
     }
-
+    
+    # Subjects used when changed in the admin UI and what goes into our OPDS feed.
     SIMPLIFIED_GENRE = "http://librarysimplified.org/terms/genres/Simplified/"
     SIMPLIFIED_FICTION_STATUS = "http://librarysimplified.org/terms/fiction/"
 
@@ -1020,8 +999,6 @@ class SchemaAudienceClassifier(AgeOrGradeClassifier):
             return cls.AUDIENCE_ADULTS_ONLY
         elif identifier == "all ages":
             return cls.AUDIENCE_ALL_AGES
-        elif identifier == "research":
-            return cls.AUDIENCE_RESEARCH
         return AgeOrGradeClassifier.audience(identifier, name)
 
     @classmethod

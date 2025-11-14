@@ -49,45 +49,22 @@ class Subject(Base):
     """A subject under which books might be classified."""
 
     # Types of subjects.
-    LCC = SubjectClassifier.LCC  # Library of Congress Classification
-    LCSH = SubjectClassifier.LCSH  # Library of Congress Subject Headings
-    FAST = SubjectClassifier.FAST
-    DDC = SubjectClassifier.DDC  # Dewey Decimal Classification
-    OVERDRIVE = SubjectClassifier.OVERDRIVE  # Overdrive's classification system
     BISAC = SubjectClassifier.BISAC
-    BIC = SubjectClassifier.BIC  # BIC Subject Categories
     TAG: str = SubjectClassifier.TAG  # Folksonomic tags.
     SCHEMA_AUDIENCE: str = SubjectClassifier.SCHEMA_AUDIENCE
-    NYPL_APPEAL = SubjectClassifier.NYPL_APPEAL
     DEMARQUE = SubjectClassifier.DEMARQUE
+    SCHEMA_AGE_RANGE: str = SubjectClassifier.SCHEMA_AGE_RANGE
 
     # Types with terms that are suitable for search.
-    TYPES_FOR_SEARCH = [FAST, OVERDRIVE, BISAC, TAG]
+    TYPES_FOR_SEARCH = [BISAC]
 
-    AXIS_360_AUDIENCE = SubjectClassifier.AXIS_360_AUDIENCE
-    GRADE_LEVEL = SubjectClassifier.GRADE_LEVEL
-    SCHEMA_AGE_RANGE: str = SubjectClassifier.SCHEMA_AGE_RANGE
-    LEXILE_SCORE = SubjectClassifier.LEXILE_SCORE
-    ATOS_SCORE = SubjectClassifier.ATOS_SCORE
-    INTEREST_LEVEL = SubjectClassifier.INTEREST_LEVEL
-
-    GUTENBERG_BOOKSHELF = SubjectClassifier.GUTENBERG_BOOKSHELF
-    TOPIC = SubjectClassifier.TOPIC
-    PLACE = SubjectClassifier.PLACE
-    PERSON = SubjectClassifier.PERSON
-    ORGANIZATION = SubjectClassifier.ORGANIZATION
     SIMPLIFIED_GENRE = SubjectClassifier.SIMPLIFIED_GENRE
     SIMPLIFIED_FICTION_STATUS = SubjectClassifier.SIMPLIFIED_FICTION_STATUS
 
+    # SUbject schemes that define which classifier is used to classify the subject.
     by_uri = {
         SIMPLIFIED_GENRE: SIMPLIFIED_GENRE,
         SIMPLIFIED_FICTION_STATUS: SIMPLIFIED_FICTION_STATUS,
-        "http://librarysimplified.org/terms/genres/Overdrive/": OVERDRIVE,
-        "http://librarysimplified.org/terms/genres/3M/": BISAC,
-        "http://id.worldcat.org/fast/": FAST,  # I don't think this is official.
-        "http://purl.org/dc/terms/LCC": LCC,
-        "http://purl.org/dc/terms/LCSH": LCSH,
-        "http://purl.org/dc/terms/DDC": DDC,
         "http://schema.org/typicalAgeRange": SCHEMA_AGE_RANGE,
         "http://schema.org/audience": SCHEMA_AUDIENCE,
         "http://www.bisg.org/standards/bisac_subject/": BISAC,
