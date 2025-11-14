@@ -1363,26 +1363,16 @@ class WorkClassifier:
 
         return audience
 
-    @classmethod
-    def top_tier_values(self, counter):
-        """Given a Counter mapping values to their frequency of occurance,
-        return all values that are as common as the most common value.
+    def _target_age(self, audience):
         """
-        top_frequency = None
-        top_tier = set()
-        for age, freq in counter.most_common():
-            if not top_frequency:
-                top_frequency = freq
-            if freq != top_frequency:
-                # We've run out of candidates
-                break
-            else:
-                # This candidate occurs with the maximum frequency.
-                top_tier.add(age)
-        return top_tier
+        Derive a target age from the gathered data.
 
-    def target_age(self, audience):
-        """Derive a target age from the gathered data."""
+        Args:
+            audience: Any of the audience constants in ClassifierConstants.
+        Returns:
+            Tuple: Indicating the age range.
+
+        """
         if audience not in (
             SubjectClassifier.AUDIENCE_CHILDREN,
             SubjectClassifier.AUDIENCE_YOUNG_ADULT,
@@ -1391,44 +1381,13 @@ class WorkClassifier:
             # target age are irrelevant and the default value rules.
             return SubjectClassifier.default_target_age_for_audience(audience)
 
-        # Only consider the most reliable classifications.
-
-        # Try to reach consensus on the lower and upper bounds of the
-        # age range.
-        if self.debug:
-            if self.target_age_lower_weights:
-                self.log.debug("Possible target age minima:")
-                for k, v in self.target_age_lower_weights.most_common():
-                    self.log.debug(" %s: %s", v, k)
-            if self.target_age_upper_weights:
-                self.log.debug("Possible target age maxima:")
-                for k, v in self.target_age_upper_weights.most_common():
-                    self.log.debug(" %s: %s", v, k)
-
-        target_age_min = None
-        target_age_max = None
-        if self.target_age_lower_weights:
-            # Find the youngest age in the top tier of values.
-            candidates = self.top_tier_values(self.target_age_lower_weights)
-            target_age_min = min(candidates)
-
-        if self.target_age_upper_weights:
-            # Find the oldest age in the top tier of values.
-            candidates = self.top_tier_values(self.target_age_upper_weights)
-            target_age_max = max(candidates)
-
-        if not target_age_min and not target_age_max:
-            # We found no opinions about target age. Use the default.
+        # There was no schema target age or READ target age.
+        if not self.target_age_lower and not self.target_age_upper:
             return SubjectClassifier.default_target_age_for_audience(audience)
 
-        if target_age_min is None:
-            target_age_min = target_age_max
-
-        # Err on the side of setting the minimum age too high but first ensure we have values to compare.
-        if target_age_min and target_age_max and target_age_min > target_age_max:
-            target_age_max = target_age_min
-
-        return SubjectClassifier.range_tuple(target_age_min, target_age_max)
+        return SubjectClassifier.range_tuple(
+            self.target_age_lower, self.target_age_upper
+        )
 
     def _genres(self, fiction):
         """
