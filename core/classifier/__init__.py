@@ -1308,84 +1308,58 @@ class WorkClassifier:
 
         return is_fiction
 
-    def audience(self, genres=[], default_audience=None):
-        """What's the most likely audience for this book?
-        :param default_audience: To avoid embarassing situations we will
-        classify works as being intended for adults absent convincing
-        evidence to the contrary. In some situations (like the metadata
-        wrangler), it's better to state that we have no information, so
-        default_audience can be set to None.
+    def _audience(self, genres=[], default_audience=None):
         """
+        What's the most likely audience for this book?
+        Since we get reliable schema audience information from our feeds,
+        we should always know exactly who the book is targeted to. If not,
+        we can use audience information collected from BISACs.
 
+        Args:
+            default_audience: It's better to state that we have no information, so
+            default_audience can be set to None.
+        Returns:
+            audience: Any of the audience constants in ClassifierConstants indicating
+            the target audience.
+        """
         # If we determined that Erotica was a significant enough
         # component of the classification to count as a genre, the
         # audience will always be 'Adults Only', even if the audience
-        # weights would indicate something else.
-        if Erotica in genres:
+        # counts would indicate something else.
+        is_erotica = [genre.name for genre in genres if genre.name == "Erotica"]
+        if is_erotica:
             return SubjectClassifier.AUDIENCE_ADULTS_ONLY
 
-        w = self.audience_weights
-        if not self.audience_weights:
-            # We have absolutely no idea, and it would be
-            # irresponsible to guess.
+        counts = self.audience_counts
+        if not counts:
             return default_audience
 
-        children_weight = w.get(SubjectClassifier.AUDIENCE_CHILDREN, 0)
-        ya_weight = w.get(SubjectClassifier.AUDIENCE_YOUNG_ADULT, 0)
-        adult_weight = w.get(SubjectClassifier.AUDIENCE_ADULT, 0)
-        adults_only_weight = w.get(SubjectClassifier.AUDIENCE_ADULTS_ONLY, 0)
-        all_ages_weight = w.get(SubjectClassifier.AUDIENCE_ALL_AGES, 0)
-        research_weight = w.get(SubjectClassifier.AUDIENCE_RESEARCH, 0)
+        self.log.info(f"Audience counts: {counts}")
 
-        total_adult_weight = adult_weight + adults_only_weight
-        total_weight = sum(w.values())
+        children_counts = counts.get(SubjectClassifier.AUDIENCE_CHILDREN, 0)
+        ya_counts = counts.get(SubjectClassifier.AUDIENCE_YOUNG_ADULT, 0)
+        adult_counts = counts.get(SubjectClassifier.AUDIENCE_ADULT, 0)
+        if children_counts == 0 and ya_counts == 0 and adult_counts == 0:
+            # We saved BISAC audience information in case the prefered schema audience info is missing.
+            children_counts = counts.get("BISAC Children", 0)
+            ya_counts = counts.get("BISAC ya", 0)
+            adult_counts = counts.get("BISAC Adult", 0)
 
         audience = default_audience
 
-        # A book will be classified as a young adult or childrens'
-        # book when the weight of that audience is more than twice the
-        # combined weight of the 'adult' and 'adults only' audiences.
-        # If that combined weight is zero, then any amount of evidence
-        # is sufficient.
-        threshold = total_adult_weight * 2
-
-        # If both the 'children' weight and the 'YA' weight pass the
-        # threshold, we go with the one that weighs more.
-        # If the 'children' weight passes the threshold on its own
-        # we go with 'children'.
-        total_juvenile_weight = children_weight + ya_weight
-        if (
-            research_weight > (total_adult_weight + all_ages_weight)
-            and research_weight > (total_juvenile_weight + all_ages_weight)
-            and research_weight > threshold
-        ):
-            audience = SubjectClassifier.AUDIENCE_RESEARCH
-        elif (
-            all_ages_weight > total_adult_weight
-            and all_ages_weight > total_juvenile_weight
-        ):
+        # There were subjects (most likely BISACs) from all audience categories.
+        if children_counts > 0 and ya_counts > 0 and adult_counts > 0:
             audience = SubjectClassifier.AUDIENCE_ALL_AGES
-        elif children_weight > threshold and children_weight > ya_weight:
+        # For now, if there were both ya and children's BISACs, make the audience YA
+        # until we create a new audience that suits both.
+        elif ya_counts >= children_counts and ya_counts > adult_counts:
+            audience = SubjectClassifier.AUDIENCE_YOUNG_ADULT
+        # It's a children's book if there's more indication towards that than YA. And again,
+        # we don't case about adult counts.
+        elif children_counts > ya_counts:
             audience = SubjectClassifier.AUDIENCE_CHILDREN
-        elif ya_weight > threshold:
-            audience = SubjectClassifier.AUDIENCE_YOUNG_ADULT
-        elif total_juvenile_weight > threshold:
-            # Neither weight passes the threshold on its own, but
-            # combined they do pass the threshold. Go with
-            # 'Young Adult' to be safe.
-            audience = SubjectClassifier.AUDIENCE_YOUNG_ADULT
-        elif total_adult_weight > 0:
+        else:
             audience = SubjectClassifier.AUDIENCE_ADULT
-
-        # If the 'adults only' weight is more than 1/4 of the total adult
-        # weight, classify as 'adults only' to be safe.
-        #
-        # TODO: This has not been calibrated.
-        if (
-            audience == SubjectClassifier.AUDIENCE_ADULT
-            and adults_only_weight > total_adult_weight / 4
-        ):
-            audience = SubjectClassifier.AUDIENCE_ADULTS_ONLY
 
         return audience
 
