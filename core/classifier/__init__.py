@@ -99,8 +99,12 @@ class ClassifierConstants:
 
 
 class SubjectClassifier(ClassifierConstants):
-    """Turn an external classification into an internal genre, an
+    """
+    Turn an external classification into an internal genre, an
     audience, an age level, and a fiction status.
+
+    The appropriate classifier is based on the subject's type which
+    is mapped to one of the Subject scheme constants.
     """
 
     AUDIENCES_NO_RESEARCH = [
@@ -113,7 +117,8 @@ class SubjectClassifier(ClassifierConstants):
 
     @classmethod
     def range_tuple(cls, lower, upper):
-        """Turn a pair of ages into a tuple that represents an age range.
+        """
+        Turn a pair of ages into a tuple that represents an age range.
         This may be turned into an inclusive postgres NumericRange later,
         but this code should not depend on postgres.
         """
@@ -125,18 +130,22 @@ class SubjectClassifier(ClassifierConstants):
 
     @classmethod
     def lookup(cls, scheme):
-        """Look up a classifier for a classification scheme."""
-        print(scheme)
+        """
+        Look up a classifier for a classification scheme.
+        """
         return cls.classifiers.get(scheme, None)
 
     @classmethod
     def name_for(cls, identifier):
-        """Look up a human-readable name for the given identifier."""
+        """
+        Look up a human-readable name for the given identifier.
+        """
         return None
 
     @classmethod
     def classify_subject(cls, subject):
-        """Try to determine genre, audience, target age, and fiction status
+        """
+        Try to determine genre, audience, target age, and fiction status
         for the given Subject.
         """
         identifier, name = cls.scrub_identifier_and_name(
@@ -158,7 +167,9 @@ class SubjectClassifier(ClassifierConstants):
 
     @classmethod
     def scrub_identifier_and_name(cls, identifier, name):
-        """Prepare identifier and name from within a call to classify_subject()."""
+        """
+        Prepare identifier and name from within a call to classify_subject().
+        """
         identifier = cls.scrub_identifier(identifier)
         if isinstance(identifier, tuple):
             # scrub_identifier returned a canonical value for name as
@@ -172,7 +183,8 @@ class SubjectClassifier(ClassifierConstants):
 
     @classmethod
     def scrub_identifier(cls, identifier):
-        """Prepare an identifier from within a call to classify_subject().
+        """
+        Prepare an identifier from within a call to classify_subject().
 
         This may involve data normalization, conversion to lowercase,
         etc.
@@ -183,25 +195,32 @@ class SubjectClassifier(ClassifierConstants):
 
     @classmethod
     def scrub_name(cls, name):
-        """Prepare a name from within a call to classify()."""
+        """
+        Prepare a name from within a call to classify().
+        """
         if name is None:
             return None
         return Lowercased(name)
 
     @classmethod
     def genre(cls, identifier, name, fiction=None, audience=None):
-        """Is this identifier associated with a particular Genre?"""
+        """
+        Is this identifier associated with a particular Genre?
+        """
         return None
 
     @classmethod
     def genre_match(cls, query):
-        """Does this query string match a particular Genre, and which part
-        of the query matches?"""
+        """
+        Does this query string match a particular Genre, and which part
+        of the query matches?
+        """
         return None, None
 
     @classmethod
     def is_fiction(cls, identifier, name):
-        """Is this identifier+name particularly indicative of fiction?
+        """
+        Is this identifier+name particularly indicative of fiction?
         How about nonfiction?
         """
         if "nonfiction" in name:
@@ -212,7 +231,8 @@ class SubjectClassifier(ClassifierConstants):
 
     @classmethod
     def audience(cls, identifier, name):
-        """What does this identifier+name say about the audience for
+        """
+        What does this identifier+name say about the audience for
         this book?
         """
         if "juvenile" in name:
@@ -229,27 +249,26 @@ class SubjectClassifier(ClassifierConstants):
 
     @classmethod
     def target_age(cls, identifier, name):
-        """For children's books, what does this identifier+name say
+        """
+        For children's books, what does this identifier+name say
         about the target age for this book?
         """
         return cls.range_tuple(None, None)
 
     @classmethod
     def default_target_age_for_audience(cls, audience):
-        """The default target age for a given audience.
-
-        We don't know what age range a children's book is appropriate
-        for, but we can make a decent guess for a YA book, for an
-        'Adult' book it's pretty clear, and for an 'Adults Only' book
-        it's very clear.
+        """
+        The default target age for a given audience.
         """
         if audience == SubjectClassifier.AUDIENCE_YOUNG_ADULT:
-            return cls.range_tuple(14, 17)
+            return cls.range_tuple(13, 17)
         elif audience in (
             SubjectClassifier.AUDIENCE_ADULT,
             SubjectClassifier.AUDIENCE_ADULTS_ONLY,
         ):
             return cls.range_tuple(18, None)
+        elif audience == SubjectClassifier.AUDIENCE_CHILDREN:
+            return cls.range_tuple(0, 12)
         return cls.range_tuple(None, None)
 
     @classmethod
@@ -301,7 +320,8 @@ class SubjectClassifier(ClassifierConstants):
 
     @classmethod
     def and_up(cls, young, keyword):
-        """Encapsulates the logic of what "[x] and up" actually means.
+        """
+        Encapsulates the logic of what "[x] and up" actually means.
 
         Given the lower end of an age range, tries to determine the
         upper end of the range.
@@ -842,7 +862,8 @@ class GenreData:
 
     @classmethod
     def populate(cls, namespace, genres, fiction_source, nonfiction_source):
-        """Create a GenreData object for every genre and subgenre in the given
+        """
+        Create a GenreData object for every genre and subgenre in the given
         list of fiction and nonfiction genres.
         """
         for source, default_fiction in (
@@ -874,7 +895,9 @@ class GenreData:
     def add_genre(
         cls, namespace, genres, name, subgenres, fiction, parent, audience_restriction
     ):
-        """Create a GenreData object. Add it to a dictionary and a namespace."""
+        """
+        Create a GenreData object. Add it to a dictionary and a namespace.
+        """
         if isinstance(name, tuple):
             name, default_fiction = name
         default_fiction = None
@@ -921,7 +944,9 @@ GenreData.populate(globals(), genres, fiction_genres, nonfiction_genres)
 
 
 class Lowercased(str):
-    """A lowercased string that remembers its original value."""
+    """
+    A lowercased string that remembers its original value.
+    """
 
     def __new__(cls, value):
         if isinstance(value, Lowercased):
@@ -952,7 +977,8 @@ class AgeOrGradeClassifier(SubjectClassifier):
 
     @classmethod
     def target_age(cls, identifier, name):
-        """This tag might contain a grade level, an age in years, or nothing.
+        """
+        This tag might contain a grade level, an age in years, or nothing.
         We will try both a grade level and an age in years, but we
         will require that the tag indicate what's being measured. A
         tag like "9-12" will not match anything because we don't know if it's
@@ -965,16 +991,14 @@ class AgeOrGradeClassifier(SubjectClassifier):
 
 
 class SchemaAudienceClassifier(AgeOrGradeClassifier):
-    # NOTE: In practice, subjects like "books for all ages" tend to be
-    # more like advertising slogans than reliable indicators of an
-    # ALL_AGES audience. So the only subject of this type we handle is
-    # the literal string "all ages", as it would appear, e.g., in the
-    # output of the metadata wrangler.
+    """
+    E-kirjasto gets its audience information from schema:audience.
+    """
 
     @classmethod
     def audience(cls, identifier, name):
         if identifier in (
-            "children",
+            "children",  # This is the only children's identifier we actually get
             "juvenile",
             "juvenile-fiction",
             "juvenile-nonfiction",
@@ -983,14 +1007,14 @@ class SchemaAudienceClassifier(AgeOrGradeClassifier):
         ):
             return cls.AUDIENCE_CHILDREN
         elif identifier in (
-            "young adult",
+            "young adult",  # This is the only YA identifier we actually get
             "ya",
             "teenagers",
             "adolescent",
             "early adolescents",
         ):
             return cls.AUDIENCE_YOUNG_ADULT
-        elif identifier == "adult":
+        elif identifier == "adult":  # This is the only adult identifier we actually get
             return cls.AUDIENCE_ADULT
         elif identifier == "adults only":
             return cls.AUDIENCE_ADULTS_ONLY
