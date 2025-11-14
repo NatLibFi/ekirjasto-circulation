@@ -956,7 +956,7 @@ class Work(Base):
             direct_identifier_ids = all_identifier_ids = []
 
         if policy.classify:
-            classification_changed = self.assign_genres(
+            classification_changed = self.assign_classification(
                 all_identifier_ids,
                 default_fiction=default_fiction,
                 default_audience=default_audience,
@@ -1290,7 +1290,7 @@ class Work(Base):
         )
         WorkCoverageRecord.add_for(self, operation=WorkCoverageRecord.QUALITY_OPERATION)
 
-    def assign_genres(
+    def assign_classification(
         self,
         identifier_ids,
         default_fiction=False,
@@ -1300,6 +1300,13 @@ class Work(Base):
         subquery to get equivalent identifiers.
         :return: A boolean explaining whether or not any data actually
         changed.
+
+        Args:
+            identifier_ids: A list of identifiers of subjects.
+            default_fiction: Boolean or None
+            default_audience: "Adult"
+        Returns:
+            classification_changed: Boolean to indicate classification chnages.
         """
         classifier = WorkClassifier(self)
 
@@ -1323,8 +1330,7 @@ class Work(Base):
             default_fiction=default_fiction, default_audience=default_audience
         )
         self.target_age = tuple_to_numericrange(target_age)
-
-        workgenres, workgenres_changed = self.assign_genres_from_weights(genre_weights)
+        workgenres, workgenres_changed = self.update_genres(genres)
 
         classification_changed = (
             workgenres_changed
