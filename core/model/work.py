@@ -1318,8 +1318,9 @@ class Work(Base):
         classifications = Identifier.classifications_for_identifier_ids(
             _db, identifier_ids
         )
+
         for classification in classifications:
-            classifier.add(classification)
+            classifier.prepare_classification(classification)
 
         (
             genres,
