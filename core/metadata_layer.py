@@ -1636,7 +1636,6 @@ class Metadata:
                     subject.type,
                     subject.identifier,
                     subject.name,
-                    weight=subject.weight,
                 )
                 work_requires_full_recalculation = True
             except ValueError as e:

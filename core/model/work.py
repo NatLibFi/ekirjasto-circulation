@@ -1315,7 +1315,7 @@ class Work(Base):
             classifier.add(classification)
 
         (
-            genre_weights,
+            genres,
             self.fiction,
             self.audience,
             target_age,
@@ -1335,16 +1335,16 @@ class Work(Base):
 
         return classification_changed
 
-    def assign_genres_from_weights(self, genre_weights):
+    def update_genres(self, genres):
         """
-        Assigns genres to a work based on existing genre associations.
-
         This method updates the work's genres by removing any genres that are no longer
         associated with the work and adding any new genres that are not already
         associated.
 
+        Args:
+            genres: List of Genre objects from the WorkClassifier.
         Returns:
-            tuple: A tuple containing the updated list of genres and a boolean
+            tuple: A tuple containing the updated list of WorkGenres and a boolean
                 indicating whether any changes were made.
         """
         # TO DO: E-kirjasto: Tear down the need for passing in weights because we won't
@@ -1358,15 +1358,15 @@ class Work(Base):
         by_genre = dict()
         for wg in current_workgenres:
             by_genre[wg.genre] = wg
-        for g, score in list(genre_weights.items()):
-            if not isinstance(g, Genre):
-                g, ignore = Genre.lookup(_db, g.name)
-            if g in by_genre:
-                wg = by_genre[g]
+        for genre in genres:
+            if not isinstance(genre, Genre):
+                genre, ignore = Genre.lookup(_db, genre.name)
+            if genre in by_genre:
+                wg = by_genre[genre]
                 is_new = False
-                del by_genre[g]
+                del by_genre[genre]
             else:
-                wg, is_new = get_one_or_create(_db, WorkGenre, work=self, genre=g)
+                wg, is_new = get_one_or_create(_db, WorkGenre, work=self, genre=genre)
             if is_new:
                 changed = True
             workgenres.append(wg)

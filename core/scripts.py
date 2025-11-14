@@ -1569,7 +1569,6 @@ class AddClassificationScript(IdentifierInputScript):
                     self.subject.type,
                     self.subject.identifier,
                     self.subject.name,
-                    self.weight,
                 )
                 work = identifier.work
                 if work:
