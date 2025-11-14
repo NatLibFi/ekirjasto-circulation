@@ -1045,261 +1045,213 @@ class WorkClassifier:
         self.using_staff_target_age = False
         self.seen_classifications = set()
 
-        # Keep track of whether we've seen one of Overdrive's generic
-    def add(self, classification):
-        """Prepare a single Classification for consideration."""
+    def prepare_classification(self, classification):
+        """
+        Prepare and process the classification information for a given subject.
+
+        This method extracts and categorizes genre, fiction/nonfiction, audience,
+        and target age information based on the subject type of the provided
+        classification (~subject). We know our subjects to be reliable so we only need
+        to keep count of the most relevant information.
+
+        - If the subject type is BISAC, it appends the genre to the genre list
+        and increments the fiction count.
+        - If the subject type is De Marque, it increments audience counts based
+        on the audience type and extracts target age range information.
+        - If the subject type is Schema Audience, it similarly increments audience
+        counts.
+        - If the subject type is Schema Age Range, it extracts the target age
+        range.
+        Args:
+            classification: Classification: An instance of a Classification object containing
+                            subject information.
+        Returns:
+            None
+        """
         try:
             from core.model import DataSource, Subject
         except ValueError:
             from model import DataSource, Subject
 
-        # We only consider a given classification once from a given
-        # data source.
+        # We only need to classify a subject once per work.
         key = (classification.subject, classification.data_source)
         if key in self.seen_classifications:
             return
         self.seen_classifications.add(key)
-        if self.debug:
-            self.classifications.append(classification)
 
-        # E-kirjasto: Commenting out the below check but leaving
-        # it in case we want to use it later. We want to force classification
-        # for all subjects so that they are up to date.
-        # if not classification.subject.checked  # or self.debug
-        classification.subject.assign_to_genre()
-
-        if classification.comes_from_license_source:
-            self.direct_from_license_source.add(classification)
-        else:
-            if classification.subject.describes_format:
-                # TODO: This is a bit of a hack.
-                #
-                # Only accept a classification having to do with
-                # format (e.g. 'comic books') if that classification
-                # comes direct from the license source. Otherwise it's
-                # really easy for a graphic adaptation of a novel to
-                # get mixed up with the original novel, whereupon the
-                # original book is classified as a graphic novel.
-                return
-
-        # Put the weight of the classification behind various
-        # considerations.
-        weight = classification.scaled_weight
         subject = classification.subject
+
+        # Prepare the subject by extracting its data.
+        subject.extract_subject_data()
+
+        # Changed in admin UI by someone.
         from_staff = classification.data_source.name == DataSource.LIBRARY_STAFF
 
-        # if classification is genre or NONE from staff, ignore all non-staff genres
         is_genre = subject.genre != None
+        # The genre has been deleted by someone manually. In work_editor, a manually
+        # defined genre is type SIMPLIFIED_GENRE and id NONE.
         is_none = (
             from_staff
             and subject.type == Subject.SIMPLIFIED_GENRE
             and subject.identifier == SimplifiedGenreClassifier.NONE
         )
+
+        # Collect information about genre.
         if is_genre or is_none:
-            if not from_staff and self.using_staff_genres:
-                return
-            if from_staff and not self.using_staff_genres:
-                # first encounter with staff genre, so throw out existing genre weights
-                self.using_staff_genres = True
-                self.genre_weights = Counter()
-            if is_genre:
-                self.weigh_genre(subject.genre, weight)
+            self._add_genres(from_staff, is_genre, subject)
 
-        # if staff classification is fiction or nonfiction, ignore all other fictions
+        # Collect information about fiction.
         if not self.using_staff_fiction_status:
-            if from_staff and subject.type == Subject.SIMPLIFIED_FICTION_STATUS:
-                # encountering first staff fiction status,
-                # so throw out existing fiction weights
-                self.using_staff_fiction_status = True
-                self.fiction_weights = Counter()
-            self.fiction_weights[subject.fiction] += weight
+            self._add_fiction_count(from_staff, subject)
 
-        # if staff classification is about audience, ignore all other audience classifications
+        # Collect information about audience.
         if not self.using_staff_audience:
-            if from_staff and subject.type == Subject.SCHEMA_AUDIENCE:
-                self.using_staff_audience = True
-                self.audience_weights = Counter()
-                self.audience_weights[subject.audience] += weight
-            else:
-                if classification.generic_juvenile_audience:
-                    # We have a generic 'juvenile' classification. The
-                    # audience might say 'Children' or it might say 'Young
-                    # Adult' but we don't actually know which it is.
-                    #
-                    # We're going to split the difference, with a slight
-                    # preference for YA, to bias against showing
-                    # age-inappropriate material to children. To
-                    # counterbalance the fact that we're splitting up the
-                    # weight this way, we're also going to treat this
-                    # classification as evidence _against_ an 'adult'
-                    # classification.
-                    self.audience_weights[SubjectClassifier.AUDIENCE_YOUNG_ADULT] += (
-                        weight * 0.6
-                    )
-                    self.audience_weights[SubjectClassifier.AUDIENCE_CHILDREN] += (
-                        weight * 0.4
-                    )
-                    for audience in SubjectClassifier.AUDIENCES_ADULT:
-                        if audience != SubjectClassifier.AUDIENCE_ALL_AGES:
-                            # 'All Ages' is considered an adult audience,
-                            # but a generic 'juvenile' classification
-                            # is not evidence against it.
-                            self.audience_weights[audience] -= weight * 0.5
-                else:
-                    self.audience_weights[subject.audience] += weight
+            self._add_audience_count(from_staff, subject)
 
+        # Collect information about target age.
         if not self.using_staff_target_age:
-            if from_staff and subject.type == Subject.SCHEMA_AGE_RANGE:
-                self.using_staff_target_age = True
-                self.target_age_lower_weights = Counter()
-                self.target_age_upper_weights = Counter()
-            if subject.target_age:
-                # Figure out how reliable this classification really is as
-                # an indicator of a target age.
-                scaled_weight = classification.weight_as_indicator_of_target_age
-                target_min = subject.target_age.lower
-                target_max = subject.target_age.upper
-                if target_min is not None:
-                    if not subject.target_age.lower_inc:
-                        target_min += 1
-                    self.target_age_lower_weights[target_min] += scaled_weight
-                if target_max is not None:
-                    if not subject.target_age.upper_inc:
-                        target_max -= 1
-                    self.target_age_upper_weights[target_max] += scaled_weight
+            self._add_target_age_count(from_staff, subject)
 
-        if not self.using_staff_audience and not self.using_staff_target_age:
+    def _add_genres(self, from_staff, is_genre, subject):
+        """
+        Append a genre to the classifier's genres if it's BISAC or from staff.
+        Args:
+            from_staff: Boolean: Indicates if the classification has been modified in
+            the admin UI.
+        Returns:
+            None
+        """
+        try:
+            from core.model import Genre, Subject
+        except ValueError:
+            from model import Genre, Subject
+
+        if not from_staff and self.using_staff_genres:
+            return
+        if from_staff and not self.using_staff_genres:
+            self.using_staff_genres = True
+            # first encounter with staff genre, so throw out existing genres
+            self.genre_list = []
+        if is_genre:
+            # De Marque has some of its own subjects that we don't want to use for any
+            # classifications at the moment.
             if (
-                subject.type == "Overdrive"
-                and subject.audience == SubjectClassifier.AUDIENCE_CHILDREN
+                subject.type == SubjectClassifier.BISAC
+                or subject.type == Subject.SIMPLIFIED_GENRE
             ):
-                if subject.target_age and (
-                    subject.target_age.lower or subject.target_age.upper
-                ):
-                    # This is a juvenile classification like "Picture
-                    # Books" which implies a target age.
-                    self.overdrive_juvenile_with_target_age = classification
+                # Ensure it's a Genre, not GenreData object.
+                genre, ignore = Genre.lookup(self._db, subject.genre.name)
+                self.genre_list.append(genre)
+
+    def _add_fiction_count(self, from_staff, subject):
+        """
+        Increment the classifier's fiction count if it's BISAC or from staff.
+        Args:
+            from_staff: Boolean: Indicates if the classification has been modified in
+            the admin UI.
+        Returns:
+            None
+        """
+
+        try:
+            from core.model import Subject
+        except ValueError:
+            from model import Subject
+
+        # A manually defined fiction status in work_editor is type SIMPLIFIED_FICTION_STATUS.
+        if from_staff and subject.type == Subject.SIMPLIFIED_FICTION_STATUS:
+            self.using_staff_fiction_status = True
+            # first encounter with staff fiction, so throw out existing fiction status
+            self.fiction_counts = Counter()
+        # De Marque has some of its own subjects that we don't want to use for any
+        # classifications at the moment.
+        if (
+            subject.type == SubjectClassifier.BISAC
+            or subject.type == Subject.SIMPLIFIED_FICTION_STATUS
+        ):
+            self.fiction_counts[subject.fiction] += 1
+
+    def _add_audience_count(self, from_staff, subject):
+        """
+        Increment the classifier's approppriate audience count if it's schema, BISAC
+        or from staff.
+        Args:
+            from_staff: Boolean: Indicates if the classification has been modified in
+            the admin UI.
+        Returns:
+            None
+        """
+        try:
+            from core.model import Subject
+        except ValueError:
+            from model import Subject
+
+        # A manually defined audience in work_editor is type SCHEMA_AUDIENCE.
+        if from_staff and subject.type == Subject.SCHEMA_AUDIENCE:
+            self.using_staff_audience = True
+            # first encounter with staff audience, so throw out existing audience counts
+            self.audience_counts = Counter()
+            self.audience_counts[subject.audience] += 1
+        else:
+            # De Marque READ.
+            if subject.type == SubjectClassifier.DEMARQUE:
+                if subject.audience == SubjectClassifier.AUDIENCE_CHILDREN:
+                    self.audience_counts[subject.audience] += 1
+                elif subject.audience == SubjectClassifier.AUDIENCE_YOUNG_ADULT:
+                    self.audience_counts[subject.audience] += 1
                 else:
-                    # This is a generic juvenile classification like
-                    # "Juvenile Fiction".
-                    self.overdrive_juvenile_generic = classification
+                    self.audience_counts[subject.audience] += 1
 
-        # E-kirjasto: Since De Marque classifications have target ages for children's and YA books, we want to weigh
-        # them more heavily by setting their weights to 1.0. This ensures that those books are classified accordingly.
-        if subject.type == "De Marque" and (
-            subject.audience == SubjectClassifier.AUDIENCE_CHILDREN
-            or subject.audience == SubjectClassifier.AUDIENCE_YOUNG_ADULT
-        ):
-            if subject.target_age:
-                # Set the weight to 1.0 for any target age.
-                self.audience_weights = Counter()
-                self.audience_weights[subject.audience] += weight * 1.0
-                scaled_weight = classification.weight_as_indicator_of_target_age
-                target_min = subject.target_age.lower
-                target_max = subject.target_age.upper
-                if target_min is not None:
-                    self.target_age_lower_weights[target_min] = 1.0
-                if target_max is not None:
-                    self.target_age_upper_weights[target_max] = 1.0
-        # E-kirjasto: Some De Marque adult books were incorrectly classified as children's books. Let's set the
-        # weight to 1.0 for any adult audience books.
-        if (
-            subject.type == "De Marque"
-            and subject.audience == SubjectClassifier.AUDIENCE_ADULT
-        ):
-            self.audience_weights = Counter()
-            self.audience_weights[subject.audience] += weight * 1.0
+            # Ellibs schema:audience.
+            elif subject.type == SubjectClassifier.SCHEMA_AUDIENCE:
+                if subject.audience == SubjectClassifier.AUDIENCE_CHILDREN:
+                    self.audience_counts[subject.audience] += 1
+                elif subject.audience == SubjectClassifier.AUDIENCE_YOUNG_ADULT:
+                    self.audience_counts[subject.audience] += 1
+                else:
+                    self.audience_counts[subject.audience] += 1
 
-    def weigh_metadata(self):
-        """Modify the weights according to the given Work's metadata.
+            elif subject.type == SubjectClassifier.BISAC:
+                # Though audience information, in most cases, is provided to us by schema,
+                # it's found to be missing in some cases. Save audience information from BISAC
+                # just in case.
+                if subject.audience == SubjectClassifier.AUDIENCE_CHILDREN:
+                    self.audience_counts["BISAC Children"] += 1
+                elif subject.audience == SubjectClassifier.AUDIENCE_YOUNG_ADULT:
+                    self.audience_counts["BISAC ya"] += 1
+                else:
+                    self.audience_counts["BISAC Adult"] += 1
 
-        Use work metadata to simulate classifications.
-
-        This is basic stuff, like: Harlequin tends to publish
-        romances.
+    def _add_target_age_count(self, from_staff, subject):
         """
-        if self.work.title and (
-            "Star Trek:" in self.work.title
-            or "Star Wars:" in self.work.title
-            or ("Jedi" in self.work.title and self.work.imprint == "Del Rey")
-        ):
-            self.weigh_genre(Media_Tie_in_SF, 100)
-
-        publisher = self.work.publisher
-        imprint = self.work.imprint
-        if (
-            imprint in self.nonfiction_imprints
-            or publisher in self.nonfiction_publishers
-        ):
-            self.fiction_weights[False] = 100
-        elif imprint in self.fiction_imprints or publisher in self.fiction_publishers:
-            self.fiction_weights[True] = 100
-
-        if imprint in self.genre_imprints:
-            self.weigh_genre(self.genre_imprints[imprint], 100)
-        elif publisher in self.genre_publishers:
-            self.weigh_genre(self.genre_publishers[publisher], 100)
-
-        if imprint in self.audience_imprints:
-            self.audience_weights[self.audience_imprints[imprint]] += 100
-        elif (
-            publisher in self.not_adult_publishers or imprint in self.not_adult_imprints
-        ):
-            for audience in [
-                SubjectClassifier.AUDIENCE_ADULT,
-                SubjectClassifier.AUDIENCE_ADULTS_ONLY,
-            ]:
-                self.audience_weights[audience] -= 100
-
-    def prepare_to_classify(self):
-        """Called the first time classify() is called. Does miscellaneous
-        one-time prep work that requires all data to be in place.
+        Modify the classifier's target age if it's schema or from staff.
+        Args:
+            from_staff: Boolean: Indicates if the classification has been modified in
+            the admin UI.
+        Returns:
+            None
         """
-        self.weigh_metadata()
 
-        explicitly_indicated_audiences = (
-            SubjectClassifier.AUDIENCE_CHILDREN,
-            SubjectClassifier.AUDIENCE_YOUNG_ADULT,
-            SubjectClassifier.AUDIENCE_ADULTS_ONLY,
-        )
-        audiences_from_license_source = {
-            classification.subject.audience
-            for classification in self.direct_from_license_source
-        }
-        if (
-            self.direct_from_license_source
-            and not self.using_staff_audience
-            and not any(
-                audience in explicitly_indicated_audiences
-                for audience in audiences_from_license_source
-            )
-        ):
-            # If this was erotica, or a book for children or young
-            # adults, the distributor would have given some indication
-            # of that fact. In the absense of any such indication, we
-            # can assume very strongly that this is a regular old book
-            # for adults.
-            #
-            # 3M is terrible at distinguishing between childrens'
-            # books and YA books, but books for adults can be
-            # distinguished by their _lack_ of childrens/YA
-            # classifications.
-            self.audience_weights[SubjectClassifier.AUDIENCE_ADULT] += 500
+        try:
+            from core.model import Subject
+        except ValueError:
+            from model import Subject
 
-        if (
-            self.overdrive_juvenile_generic
-            and not self.overdrive_juvenile_with_target_age
-        ):
-            # This book is classified under 'Juvenile Fiction' but not
-            # under 'Picture Books' or 'Beginning Readers'. The
-            # implicit target age here is 9-12 (the portion of
-            # Overdrive's 'juvenile' age range not covered by 'Picture
-            # Books' or 'Beginning Readers'.
-            weight = self.overdrive_juvenile_generic.weight_as_indicator_of_target_age
-            self.target_age_lower_weights[9] += weight
-            self.target_age_upper_weights[12] += weight
-
-        self.prepared = True
+        # A manually defined audience in work_editor is type AGE_RANGE.
+        if from_staff and subject.type == Subject.SCHEMA_AGE_RANGE:
+            self.using_staff_target_age = True
+            # first encounter with staff target age, so set those
+            self.target_age_lower = subject.target_age.lower
+            self.target_age_upper = subject.target_age.upper
+        else:
+            # Ellibs schema:audience.
+            if subject.type == SubjectClassifier.SCHEMA_AGE_RANGE:
+                self.target_age_lower = subject.target_age.lower
+                self.target_age_upper = subject.target_age.upper
+            # De Marque READ.
+            elif subject.type == SubjectClassifier.DEMARQUE:
+                self.target_age_lower = subject.target_age.lower
+                self.target_age_upper = subject.target_age.upper
 
     def classify_work(self, default_fiction=None, default_audience=None):
         # Do a little prep work.
