@@ -1430,122 +1430,43 @@ class WorkClassifier:
 
         return SubjectClassifier.range_tuple(target_age_min, target_age_max)
 
-    def genres(self, fiction, cutoff=0.15):
+    def _genres(self, fiction):
         """
-        Consolidate genres and apply a low-pass filter.
         The function compares all current genres to the fiction status and
         removes any if they differ from it. If there's only one genre and it
-        conflicts with the fiction status, the fiction status will will change
+        conflicts with the fiction status, the fiction status will change
         to the genre's fiction status.
 
         Args:
             fiction (Boolean): A derived fiction status of a work.
-            cutoff (Float): A cutoff value. TO DO: Remove it later because
-            E-kirjasto does not need it.
-
         Returns:
-            dictionary: Dictionary of genres and their weights.
+            list: List of genres.
             boolean: Fiction status.
-
         """
-        # Remove any genres whose fiction status is inconsistent with the
-        # (independently determined) fiction status of the book.
-        #
-        # It doesn't matter if a book is classified as 'science
-        # fiction' 100 times; if we know it's nonfiction, it can't be
-        # science fiction. (It's probably a history of science fiction
-        # or something.)
-        genres = dict(self.genre_weights)
+        genres = self.genre_list
+
         if not genres:
             # We have absolutely no idea, and it would be
             # irresponsible to guess.
-            return {}, fiction
+            return [], fiction
 
-        for genre in list(genres.keys()):
+        self.log.info(f"Collected genres: {genres} Initial fiction: {fiction}")
+
+        # copy the list because the original might have genres removed
+        for genre in list(genres):
             # If we have a fiction determination, that lets us eliminate
             # possible genres that conflict with that determination.
             if fiction is not None and (genre.default_fiction != fiction):
-                if len(list(genres.keys())) > 1:
-                    del genres[genre]
+                if len(genres) > 1:
+                    genres.remove(genre)
                 # If there's only one genre, we don't want to lose it or its
                 # fiction status.
                 else:
                     fiction = genre.default_fiction
 
-        # Consolidate parent genres into their heaviest subgenre.
-        # E-kirjasto: Leaving this for now as it's still somewhat useful.
-        genres = self.consolidate_genre_weights(genres)
+        self.log.info(f"Final genres: {genres} Final fiction: {fiction}")
+
         return genres, fiction
-
-    def weigh_genre(self, genre_data, weight):
-        """A helper method that ensure we always use database Genre
-        objects, not GenreData objects, when weighting genres.
-        """
-        # TO DO: E-kirjasto: This function is mostly used to weigh
-        # a genre based on its publisher. Could be teared down.
-        try:
-            from core.model import Genre
-        except ValueError:
-            from model import Genre
-        genre, ignore = Genre.lookup(self._db, genre_data.name)
-        self.genre_weights[genre] += weight
-
-    @classmethod
-    def consolidate_genre_weights(cls, weights, subgenre_swallows_parent_at=0.03):
-        """If a genre and its subgenres both show up, examine the subgenre
-        with the highest weight. If its weight exceeds a certain
-        proportion of the weight of the parent genre, assign the
-        parent's weight to the subgenre and remove the parent.
-        """
-        # print("Before consolidation:")
-        # for genre, weight in weights.items():
-        #    print("", genre, weight)
-
-        # Convert Genre objects to GenreData.
-        consolidated = Counter()
-        for genre, weight in list(weights.items()):
-            if not isinstance(genre, GenreData):
-                genre = genres[genre.name]
-            consolidated[genre] += weight
-
-        heaviest_child = dict()
-        for genre, weight in list(consolidated.items()):
-            for parent in genre.parents:
-                if parent in consolidated:
-                    if (not parent in heaviest_child) or weight > heaviest_child[
-                        parent
-                    ][1]:
-                        heaviest_child[parent] = (genre, weight)
-        # print("Heaviest child:")
-        # for parent, (genre, weight) in heaviest_child.items():
-        #    print("", parent, genre, weight)
-        made_it = False
-        while not made_it:
-            for parent, (child, weight) in sorted(
-                heaviest_child.items(), key=lambda genre: genre[1][1], reverse=True
-            ):
-                parent_weight = consolidated.get(parent, 0)
-                if weight > (subgenre_swallows_parent_at * parent_weight):
-                    consolidated[child] += parent_weight
-                    del consolidated[parent]
-                    changed = False
-                    for parent in parent.parents:
-                        if parent in heaviest_child:
-                            heaviest_child[parent] = (child, consolidated[child])
-                            changed = True
-                    if changed:
-                        # We changed the dict, so we need to restart
-                        # the iteration.
-                        break
-            # We made it all the way through the dict without changing it.
-            made_it = True
-        # print("Final heaviest child:")
-        # for parent, (genre, weight) in heaviest_child.items():
-        #    print("", parent, genre, weight)
-        # print("After consolidation:")
-        # for genre, weight in consolidated.items():
-        #    print("", genre, weight)
-        return consolidated
 
 
 # Make a dictionary of classification schemes to classifiers.
