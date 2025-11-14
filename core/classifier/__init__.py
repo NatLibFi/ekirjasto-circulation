@@ -1278,17 +1278,34 @@ class WorkClassifier:
         )
         return genres, fiction, audience, target_age
 
-    def fiction(self, default_fiction=None):
-        """Is it more likely this is a fiction or nonfiction book?"""
-        if not self.fiction_weights:
+    def _fiction(self, default_fiction=None):
+        """
+        Is it more likely this is a fiction or nonfiction book?
+
+        In E-kirjasto, a fiction book can have nonfiction BISACs (~genres) that
+        expand the book's related subjects so we classify the book as fiction rather
+        than nonfiction. If, some time in the future, the tendency to get incorrect
+        nonfiction BISACs change, we'll need to adjust this classification.
+        Args:
+            default_fiction: Boolean| None: A default fiction status.
+        Returns:
+            is_fiction: Boolean or None
+        """
+        if not self.fiction_counts:
             # We have absolutely no idea one way or the other, and it
             # would be irresponsible to guess.
             return default_fiction
         is_fiction = default_fiction
-        if self.fiction_weights[True] > self.fiction_weights[False]:
+
+        self.log.info(f"Fiction counts: {self.fiction_counts}")
+
+        if self.fiction_counts[True] > 0:
             is_fiction = True
-        elif self.fiction_weights[False] > 0:
+        else:
             is_fiction = False
+
+        self.log.info(f"Fiction: {is_fiction}")
+
         return is_fiction
 
     def audience(self, genres=[], default_audience=None):
