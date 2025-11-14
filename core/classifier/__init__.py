@@ -1254,31 +1254,28 @@ class WorkClassifier:
                 self.target_age_upper = subject.target_age.upper
 
     def classify_work(self, default_fiction=None, default_audience=None):
-        # Do a little prep work.
-        if not self.prepared:
-            self.prepare_to_classify()
+        """
+        Determine the audience, target age, fiction status and genres of a work.
 
-        if self.debug:
-            for c in self.classifications:
-                self.log.debug(
-                    "%d %r (via %s)", c.weight, c.subject, c.data_source.name
-                )
+        Args:
+            default_fiction: Boolean| None: A default fiction status.
+            default_audience: Any of the audience constants in ClassifierConstants
+            or None.
+        Returns:
+            genres: List: A list of Genre objects.
+            fiction: Boolean: A boolean indicating fictions status.
+            audience: Any of the audience constants in ClassifierConstants indicating
+            the target audience.
+            target_age: Tuple: A tuple indicating a target age range.
 
-        # Actually figure out the classifications
-        fiction = self.fiction(default_fiction=default_fiction)
-        genres, fiction = self.genres(fiction)
-        audience = self.audience(genres, default_audience=default_audience)
-        target_age = self.target_age(audience)
-        if self.debug:
-            self.log.debug("Fiction weights:")
-            for k, v in self.fiction_weights.most_common():
-                self.log.debug(" %s: %s", v, k)
-            self.log.debug("Genre weights:")
-            for k, v in self.genre_weights.most_common():
-                self.log.debug(" %s: %s", v, k)
-            self.log.debug("Audience weights:")
-            for k, v in self.audience_weights.most_common():
-                self.log.debug(" %s: %s", v, k)
+        """
+        fiction = self._fiction(default_fiction=default_fiction)
+        genres, fiction = self._genres(fiction)
+        audience = self._audience(genres, default_audience=default_audience)
+        target_age = self._target_age(audience)
+        self.log.info(
+            f"Work {self.work} classified: Fiction: {fiction}, Genres: {genres}, Audience: {audience}, Target age: {target_age}"
+        )
         return genres, fiction, audience, target_age
 
     def fiction(self, default_fiction=None):
