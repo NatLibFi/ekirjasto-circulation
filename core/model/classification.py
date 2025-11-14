@@ -283,15 +283,18 @@ class Subject(Base):
 
         counter = 0
         for subject in q:
-            subject.assign_to_genre()
+            subject.extract_subject_data()
             counter += 1
             if not counter % batch_size:
                 _db.commit()
         _db.commit()
 
     # Called by WorkClassifier
-    def assign_to_genre(self):
-        """Assign this subject to a genre."""
+    def extract_subject_data(self):
+        """
+        Maps the subject with a genre but also defines a fiction status, audience
+        and target age when possible.
+        """
         classifier = SubjectClassifier.classifiers.get(self.type, None)
         if not classifier:
             return
