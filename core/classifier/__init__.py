@@ -1023,90 +1023,29 @@ class SchemaAudienceClassifier(AgeOrGradeClassifier):
 
 
 class WorkClassifier:
-    """Boil down a bunch of Subject objects into a few values."""
-
-    # TODO: This needs a lot of additions.
-    genre_publishers = {
-        "Harlequin": Romance,
-        "Pocket Books/Star Trek": Media_Tie_in_SF,
-        "Kensington": Urban_Fiction,
-        "Fodor's Travel Publications": Travel,
-        "Marvel Entertainment, LLC": Comics_Graphic_Novels,
-    }
-
-    genre_imprints = {
-        "Harlequin Intrigue": Romantic_Suspense,
-        "Love Inspired Suspense": Romantic_Suspense,
-        "Harlequin Historical": Historical_Romance,
-        "Harlequin Historical Undone": Historical_Romance,
-        "Frommers": Travel,
-        "LucasBooks": Media_Tie_in_SF,
-    }
-
-    audience_imprints = {
-        "Harlequin Teen": SubjectClassifier.AUDIENCE_YOUNG_ADULT,
-        "HarperTeen": SubjectClassifier.AUDIENCE_YOUNG_ADULT,
-        "Open Road Media Teen & Tween": SubjectClassifier.AUDIENCE_YOUNG_ADULT,
-        "Rosen Young Adult": SubjectClassifier.AUDIENCE_YOUNG_ADULT,
-    }
-
-    not_adult_publishers = {
-        "Scholastic Inc.",
-        "Random House Children's Books",
-        "Little, Brown Books for Young Readers",
-        "Penguin Young Readers Group",
-        "Hachette Children's Books",
-        "Nickelodeon Publishing",
-    }
-
-    not_adult_imprints = {
-        "Scholastic",
-        "Scholastic Paperbacks",
-        "Random House Books for Young Readers",
-        "HMH Books for Young Readers",
-        "Knopf Books for Young Readers",
-        "Delacorte Books for Young Readers",
-        "Open Road Media Young Readers",
-        "Macmillan Young Listeners",
-        "Bloomsbury Childrens",
-        "NYR Children's Collection",
-        "Bloomsbury USA Childrens",
-        "National Geographic Children's Books",
-    }
-
-    fiction_imprints = {"Del Rey"}
-    nonfiction_imprints = {"Harlequin Nonfiction"}
-
-    nonfiction_publishers = {"Wiley"}
-    fiction_publishers = set()
+    """
+    Boil down a bunch of Subject objects into a few values.
+    """
 
     def __init__(self, work, test_session=None, debug=False):
         self._db = Session.object_session(work)
         if test_session:
             self._db = test_session
         self.work = work
-        self.fiction_weights = Counter()
-        self.audience_weights = Counter()
-        self.target_age_lower_weights = Counter()
-        self.target_age_upper_weights = Counter()
-        self.genre_weights = Counter()
-        self.direct_from_license_source = set()
-        self.prepared = False
-        self.debug = debug
-        self.classifications = []
-        self.seen_classifications = set()
+        self.fiction_counts = Counter()
+        self.genre_list = list()
+        self.audience_counts = Counter()
+        self.target_age_lower = None
+        self.target_age_upper = None
         self.log = logging.getLogger("Classifier (workid=%d)" % self.work.id)
+        # For tracking whether classifications have been changed manually
         self.using_staff_genres = False
         self.using_staff_fiction_status = False
         self.using_staff_audience = False
         self.using_staff_target_age = False
+        self.seen_classifications = set()
 
         # Keep track of whether we've seen one of Overdrive's generic
-        # "Juvenile" classifications, as well as its more specific
-        # subsets like "Picture Books" and "Beginning Readers"
-        self.overdrive_juvenile_generic = False
-        self.overdrive_juvenile_with_target_age = False
-
     def add(self, classification):
         """Prepare a single Classification for consideration."""
         try:
