@@ -442,13 +442,11 @@ class TestWorkController:
             data_source=axis_360,
             subject_type=Subject.BISAC,
             subject_identifier="FICTION / Horror",
-            weight=1,
         )
         classification2 = primary_identifier.identifier_to_subject(
             data_source=axis_360,
             subject_type=Subject.BISAC,
             subject_identifier="FICTION / Science Fiction / Time Travel",
-            weight=1,
         )
         genre1, ignore = Genre.lookup(work_fixture.ctrl.db.session, "Horror")
         genre2, ignore = Genre.lookup(work_fixture.ctrl.db.session, "Science Fiction")
@@ -843,14 +841,29 @@ class TestWorkController:
             assert response["book"]["identifier"] == lp.identifier.identifier
 
             expected_results = [classification2, classification3, classification1]
+
+            # First, check if the lengths match
             assert len(response["classifications"]) == len(expected_results)
-            for i, classification in enumerate(expected_results):
-                subject = classification.subject
-                source = classification.data_source
-                assert response["classifications"][i]["name"] == subject.identifier
-                assert response["classifications"][i]["type"] == subject.type
-                assert response["classifications"][i]["source"] == source.name
-                assert response["classifications"][i]["weight"] == classification.weight
+
+            # Create a set of tuples for expected results because weights are same
+            expected_set = {
+                (
+                    classification.subject.identifier,
+                    classification.subject.type,
+                    classification.data_source.name,
+                    classification.weight,
+                )
+                for classification in expected_results
+            }
+
+            # Create a set of tuples for the response because weights are same
+            response_set = {
+                (item["name"], item["type"], item["source"], item["weight"])
+                for item in response["classifications"]
+            }
+
+            # Assert that both sets are equal
+            assert expected_set == response_set
 
         work_fixture.admin.remove_role(
             AdminRole.LIBRARIAN, work_fixture.ctrl.db.default_library()

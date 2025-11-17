@@ -34,7 +34,6 @@ from core.model import (
     numericrange_to_tuple,
     tuple_to_numericrange,
 )
-from core.model.constants import DataSourceConstants
 from core.model.hassessioncache import HasSessionCache
 
 if TYPE_CHECKING:
@@ -340,23 +339,9 @@ class Classification(Base):
     data_source_id = Column(Integer, ForeignKey("datasources.id"), index=True)
     data_source: Mapped[DataSource | None]
 
-    # How much weight the data source gives to this classification.
+    # We don't count weight anymore but leaving this in due to so many dependencies, e.g. search.
     weight = Column(Integer)
 
-    # If we hear about a classification from a distributor (and we
-    # trust the distributor to have accurate classifications), we
-    # should give it this weight. This lets us keep the weights
-    # consistent across distributors.
-    TRUSTED_DISTRIBUTOR_WEIGHT = 100.0
-
-    @property
-    def scaled_weight(self):
-        weight = self.weight
-        if self.data_source.name == DataSourceConstants.OCLC_LINKED_DATA:
-            weight = weight / 10.0
-        elif self.data_source.name == DataSourceConstants.OVERDRIVE:
-            weight = weight * 50
-        return weight
 
 class Genre(Base, HasSessionCache):
     """A subject-matter classification for a book.

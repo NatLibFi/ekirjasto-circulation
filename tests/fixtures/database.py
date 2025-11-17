@@ -783,7 +783,6 @@ class DatabaseTransactionFixture:
             identifier=identifier,
             subject=subject,
             data_source=data_source,
-            weight=weight,
         )[0]
 
     def customlist(
