@@ -1232,8 +1232,8 @@ class TestBISACClassifier:
         # default for the target audience.
         target_age_is("Fiction / Science Fiction / Erotica", (18, None))
         target_age_is("Fiction / Science Fiction", (18, None))
-        target_age_is("Juvenile Fiction / Science Fiction", (None, None))
-        target_age_is("Young Adult Fiction / Science Fiction / General", (14, 17))
+        target_age_is("Juvenile Fiction / Science Fiction", (0, 12))
+        target_age_is("Young Adult Fiction / Science Fiction / General", (13, 17))
 
     def test_feedbooks_bisac(self):
         """Feedbooks uses a system based on BISAC but with different

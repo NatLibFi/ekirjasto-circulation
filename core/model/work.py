@@ -79,7 +79,7 @@ class WorkGenre(Base):
         return wg
 
     def __repr__(self):
-        return "%s (%d%%)" % (self.genre.name, self.affinity * 100)
+        return "%s" % (self.genre.name)
 
 
 class Work(Base):
@@ -2169,6 +2169,7 @@ class Work(Base):
         qu = qu.filter(condition)
         return qu
 
+    # This function is probably redundant, I don't see any references to it
     def classifications_with_genre(self):
         from core.model.classification import Classification, Subject
 
@@ -2178,10 +2179,11 @@ class Work(Base):
             _db.query(Classification)
             .join(Subject)
             .filter(Classification.identifier_id == identifier.id)
-            .filter(Subject.genre_id != None)
+            .filter(Subject.genre_id != None)  # If no genre, leave it out
             .order_by(Classification.weight.desc())
         )
 
+    # This function is probably redundant
     def top_genre(self):
         from core.model.classification import Genre
 
