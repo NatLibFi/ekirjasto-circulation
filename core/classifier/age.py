@@ -250,6 +250,3 @@ class AgeClassifier(SubjectClassifier):
 
 SubjectClassifier.classifiers[SubjectClassifier.SCHEMA_AGE_RANGE] = AgeClassifier
 SubjectClassifier.classifiers[SubjectClassifier.GRADE_LEVEL] = GradeLevelClassifier
-SubjectClassifier.classifiers[
-    SubjectClassifier.INTEREST_LEVEL
-] = InterestLevelClassifier

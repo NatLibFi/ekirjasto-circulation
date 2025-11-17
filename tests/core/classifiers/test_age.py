@@ -1,6 +1,4 @@
-from core.classifier import AgeOrGradeClassifier
-from core.classifier import LCSHClassifier as LCSH
-from core.classifier import SubjectClassifier
+from core.classifier import AgeOrGradeClassifier, SubjectClassifier
 from core.classifier.age import (
     AgeClassifier,
     GradeLevelClassifier,
@@ -105,33 +103,6 @@ class TestTargetAge:
         assert (None, None) == AgeClassifier.target_age("9-12", None, True)
         assert (9, 13) == AgeClassifier.target_age("9 and up", None, True)
         assert (7, 9) == AgeClassifier.target_age("7 years and up.", None, True)
-
-    def test_age_from_keyword_classifier(self):
-        def f(t):
-            return LCSH.target_age(t, None)
-
-        assert (5, 5) == f("Interest age: from c 5 years")
-        assert (9, 12) == f("Children's Books / 9-12 Years")
-        assert (9, 12) == f("Ages 9-12")
-        assert (9, 12) == f("Age 9-12")
-        assert (9, 12) == f("Children's Books/Ages 9-12 Fiction")
-        assert (4, 8) == f("Children's Books / 4-8 Years")
-        assert (0, 2) == f("For children c 0-2 years")
-        assert (12, 14) == f("Children: Young Adult (Gr. 7-9)")
-        assert (8, 10) == f("Grades 3-5 (Common Core History: The Alexandria Plan)")
-        assert (9, 11) == f("Children: Grades 4-6")
-
-        assert (0, 3) == f("Baby-3 Years")
-
-        assert (None, None) == f(
-            "Children's Audio - 9-12"
-        )  # Doesn't specify grade or years
-        assert (None, None) == f(
-            "Children's 9-12 - Literature - Classics / Contemporary"
-        )
-        assert (None, None) == f("Third-graders")
-        assert (None, None) == f("First graders")
-        assert (None, None) == f("Fifth grade (Education)--Curricula")
 
     def test_audience_from_age_classifier(self):
         def f(t):

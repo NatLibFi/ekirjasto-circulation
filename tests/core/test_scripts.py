@@ -864,7 +864,7 @@ class TestAddClassificationScript:
 
         # The identifier has been classified under 'children'.
         [classification] = identifier.classifications
-        assert 42 == classification.weight
+        assert None == classification.weight
         subject = classification.subject
         assert SubjectClassifier.SCHEMA_AUDIENCE == subject.type
         assert SubjectClassifier.AUDIENCE_CHILDREN == subject.identifier
@@ -1910,7 +1910,7 @@ class TestReclassifyWorksForUncheckedSubjectsScript:
     def test_paginate(self, db: DatabaseTransactionFixture):
         """Pagination is changed to be row-wise comparison
         Ensure we are paginating correctly within the same Subject page"""
-        subject = db.subject(Subject.AXIS_360_AUDIENCE, "Any")
+        subject = db.subject(Subject.BISAC, "Any")
         works = []
         for i in range(20):
             work: Work = db.work(with_license_pool=True)
@@ -1928,7 +1928,7 @@ class TestReclassifyWorksForUncheckedSubjectsScript:
             assert work == works[ix]
         assert ix == 19
 
-        other_subject = db.subject(Subject.BISAC, "Any")
+        other_subject = db.subject(Subject.BISAC, "History / General")
         last_work = works[-1]
         db.classification(
             last_work.presentation_edition.primary_identifier,
@@ -1942,7 +1942,7 @@ class TestReclassifyWorksForUncheckedSubjectsScript:
 
         # A checked subjects work is not included
         not_work = db.work(with_license_pool=True)
-        another_subject = db.subject(Subject.DDC, "Any")
+        another_subject = db.subject(Subject.SCHEMA_AUDIENCE, "Children")
         db.classification(
             not_work.presentation_edition.primary_identifier,
             another_subject,
@@ -1955,7 +1955,7 @@ class TestReclassifyWorksForUncheckedSubjectsScript:
         assert not_work not in next_works
 
     def test_subject_checked(self, db: DatabaseTransactionFixture):
-        subject = db.subject(Subject.AXIS_360_AUDIENCE, "Any")
+        subject = db.subject(Subject.BISAC, "History / General")
         assert subject.checked == False
 
         works = []

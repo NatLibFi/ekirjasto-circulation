@@ -474,7 +474,9 @@ class TestOPDSImporter:
         assert [Contributor.Role.AUTHOR] == contributor.roles
 
         subjects = book["subjects"]
-        assert ["LCSH", "LCSH", "LCSH", "LCC"] == [x.type for x in subjects]
+        assert ["tag", "tag", "tag", "tag"] == [
+            x.type for x in subjects
+        ]  # If not BISAC or schema, it's tag
         assert ["Essays", "Nature", "Walking", "PS"] == [x.identifier for x in subjects]
         assert [None, None, None, "American Literature"] == [
             x.name for x in book["subjects"]
@@ -496,12 +498,13 @@ class TestOPDSImporter:
         assert Edition.PERIODICAL_MEDIUM == periodical["medium"]
 
         subjects = periodical["subjects"]
+        # If not BISAC or schema, it's tag
         assert [
-            "LCSH",
-            "LCSH",
-            "LCSH",
-            "LCSH",
-            "LCC",
+            "tag",
+            "tag",
+            "tag",
+            "tag",
+            "tag",
             "schema:audience",
             "schema:typicalAgeRange",
         ] == [x.type for x in subjects]
@@ -879,7 +882,7 @@ class TestOPDSImporter:
         assert "sh2008108377" == new_york_s.identifier
 
         assert "7" == seven.subject.identifier
-        assert 100 == seven.weight
+        assert None == seven.weight
         assert Subject.SCHEMA_AGE_RANGE == seven.subject.type
         from core.classifier import SubjectClassifier
 

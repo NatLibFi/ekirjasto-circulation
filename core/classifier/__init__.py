@@ -34,7 +34,6 @@ NO_NUMBER = -1
 
 
 class ClassifierConstants:
-
     # Subject related constants
     BISAC = "BISAC"
     TAG = "tag"  # Folksonomic tags.
@@ -71,7 +70,7 @@ class ClassifierConstants:
         AUDIENCE_CHILDREN,
         AUDIENCE_ALL_AGES,
     }
-    
+
     # Subjects used when changed in the admin UI and what goes into our OPDS feed.
     SIMPLIFIED_GENRE = "http://librarysimplified.org/terms/genres/Simplified/"
     SIMPLIFIED_FICTION_STATUS = "http://librarysimplified.org/terms/fiction/"
@@ -1434,9 +1433,6 @@ class WorkClassifier:
 SubjectClassifier.classifiers[
     SubjectClassifier.SCHEMA_AUDIENCE
 ] = SchemaAudienceClassifier
-SubjectClassifier.classifiers[
-    SubjectClassifier.AXIS_360_AUDIENCE
-] = AgeOrGradeClassifier
 
 # Finally, import classifiers described in submodules.
 from core.classifier.age import (
@@ -1444,20 +1440,9 @@ from core.classifier.age import (
     GradeLevelClassifier,
     InterestLevelClassifier,
 )
-from core.classifier.bic import BICClassifier
 from core.classifier.bisac import BISACClassifier
-from core.classifier.ddc import DeweyDecimalClassifier
 from core.classifier.demarque import DeMarqueClassifier
-from core.classifier.gutenberg import GutenbergBookshelfClassifier
-from core.classifier.keyword import (
-    Eg,
-    FASTClassifier,
-    KeywordBasedClassifier,
-    LCSHClassifier,
-    TAGClassifier,
-)
-from core.classifier.lcc import LCCClassifier
-from core.classifier.overdrive import OverdriveClassifier
+from core.classifier.keyword import Eg, KeywordBasedClassifier, TAGClassifier
 from core.classifier.simplified import (
     SimplifiedFictionClassifier,
     SimplifiedGenreClassifier,
