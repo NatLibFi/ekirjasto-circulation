@@ -1091,7 +1091,6 @@ class BibliographicParser(Axis360Parser[tuple[Metadata, CirculationData]], Logge
                         type=Subject.BISAC,
                         identifier=None,
                         name=subject_identifier,
-                        weight=Classification.TRUSTED_DISTRIBUTOR_WEIGHT,
                     )
                 )
 
@@ -1113,7 +1112,6 @@ class BibliographicParser(Axis360Parser[tuple[Metadata, CirculationData]], Logge
                 SubjectData(
                     type=Subject.AXIS_360_AUDIENCE,
                     identifier=audience,
-                    weight=Classification.TRUSTED_DISTRIBUTOR_WEIGHT,
                 )
             )
 

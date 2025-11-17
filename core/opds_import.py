@@ -1507,15 +1507,8 @@ class OPDSImporter(BaseOPDSImporter[OPDSImporterSettings]):
         # (e.g. "English Satire & Humor") for this subject.
         term = attr.get("term")
         name = attr.get("label")
-        default_weight = 1
 
-        weight = attr.get("{http://schema.org/}ratingValue", default_weight)
-        try:
-            weight = int(weight)
-        except ValueError as e:
-            weight = default_weight
-
-        return SubjectData(type=subject_type, identifier=term, name=name, weight=weight)
+        return SubjectData(type=subject_type, identifier=term, name=name)
 
     @classmethod
     def extract_link(

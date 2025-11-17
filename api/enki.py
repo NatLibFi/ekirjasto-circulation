@@ -699,7 +699,6 @@ class BibliographicParser:
                     SubjectData(
                         Subject.TAG,
                         topic,
-                        weight=Classification.TRUSTED_DISTRIBUTOR_WEIGHT,
                     )
                 )
                 seen_topics.add(topic)

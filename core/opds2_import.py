@@ -267,7 +267,6 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
                 type=subject_type,
                 identifier=subject.code,
                 name=str(subject.name),
-                weight=1,
             )
 
             subject_metadata_list.append(subject_metadata)

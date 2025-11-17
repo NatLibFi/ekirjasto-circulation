@@ -136,7 +136,7 @@ class ReplacementPolicy:
 
 
 class SubjectData:
-    def __init__(self, type, identifier, name=None, weight=1):
+    def __init__(self, type, identifier, name=None):
         self.type = type
 
         # Because subjects are sometimes evaluated according to keyword
@@ -150,18 +150,15 @@ class SubjectData:
         if name:
             self.name = name.strip()
 
-        self.weight = weight
-
     @property
     def key(self):
         return self.type, self.identifier, self.name, self.weight
 
     def __repr__(self):
-        return '<SubjectData type="%s" identifier="%s" name="%s" weight=%d>' % (
+        return '<SubjectData type="%s" identifier="%s" name="%s">' % (
             self.type,
             self.identifier,
             self.name,
-            self.weight,
         )
 
 
@@ -2066,7 +2063,7 @@ class CSVMetadataImporter:
             values = self.list_field(row, field_name)
             for value in values:
                 subjects.append(
-                    SubjectData(type=subject_type, identifier=value, weight=weight)
+                    SubjectData(type=subject_type, identifier=value)
                 )
 
         contributors = []

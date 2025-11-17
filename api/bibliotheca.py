@@ -703,7 +703,6 @@ class ItemListParser(XMLProcessor[Metadata]):
                     Subject.BISAC,
                     None,
                     i,
-                    weight=Classification.TRUSTED_DISTRIBUTOR_WEIGHT,
                 )
             )
         return genres

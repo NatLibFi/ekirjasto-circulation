@@ -2492,7 +2492,6 @@ class OverdriveRepresentationExtractor(LoggerMixin):
                 subject = SubjectData(
                     type=Subject.OVERDRIVE,
                     identifier=sub["value"],
-                    weight=trusted_weight,
                 )
                 subjects.append(subject)
 
@@ -2500,11 +2499,6 @@ class OverdriveRepresentationExtractor(LoggerMixin):
                 subject = SubjectData(
                     type=Subject.TAG,
                     identifier=sub["value"],
-                    # We don't use TRUSTED_DISTRIBUTOR_WEIGHT because
-                    # we don't know where the tags come from --
-                    # probably Overdrive users -- and they're
-                    # frequently wrong.
-                    weight=1,
                 )
                 subjects.append(subject)
 
@@ -2518,7 +2512,6 @@ class OverdriveRepresentationExtractor(LoggerMixin):
                     subject = SubjectData(
                         type=Subject.GRADE_LEVEL,
                         identifier=i["value"],
-                        weight=trusted_weight / 10,
                     )
                     subjects.append(subject)
 
