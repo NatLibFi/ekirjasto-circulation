@@ -1957,11 +1957,11 @@ class CSVMetadataImporter:
     # When classifications are imported from a CSV file, we treat
     # them as though they came from a trusted distributor.
     DEFAULT_SUBJECT_FIELD_NAMES = {
-        "tags": (Subject.TAG, Classification.TRUSTED_DISTRIBUTOR_WEIGHT),
-        "age": (Subject.SCHEMA_AGE_RANGE, Classification.TRUSTED_DISTRIBUTOR_WEIGHT),
+        "tags": (Subject.TAG, None),
+        "age": (Subject.SCHEMA_AGE_RANGE, None),
         "audience": (
             Subject.SCHEMA_AUDIENCE,
-            Classification.TRUSTED_DISTRIBUTOR_WEIGHT,
+            None,
         ),
     }
 

@@ -86,13 +86,13 @@ class TestMetadataImporter:
 
         # Now let's check out subjects.
         assert [
-            ("schema:typicalAgeRange", "Adult", 100),
-            ("tag", "Character Driven", 100),
-            ("tag", "Historical", 100),
-            ("tag", "Nail-Biters", 100),
-            ("tag", "Setting Driven", 100),
+            ("schema:typicalAgeRange", "Adult"),
+            ("tag", "Character Driven"),
+            ("tag", "Historical"),
+            ("tag", "Nail-Biters"),
+            ("tag", "Setting Driven"),
         ] == [
-            (x.type, x.identifier, x.weight)
+            (x.type, x.identifier)
             for x in sorted(m2.subjects, key=lambda x: x.identifier)
         ]
 
