@@ -784,7 +784,7 @@ class TestLibraryAnnotator:
         result = annotator_fixture.annotator.language_and_audience_key_from_work(work)
         assert (
             "eng",
-            "Adult,Adults+Only,All+Ages,Children,Research,Young+Adult",
+            "Adult,Adults+Only,All+Ages,Children,Young+Adult",
         ) == result
 
         work = annotator_fixture.db.work(audience=SubjectClassifier.AUDIENCE_ALL_AGES)

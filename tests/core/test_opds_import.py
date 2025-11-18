@@ -517,7 +517,6 @@ class TestOPDSImporter:
             "Children",
             "7",
         ] == [x.identifier for x in subjects]
-        assert [1, 1, 1, 1, 1, 1, 1] == [x.weight for x in subjects]
 
         r1, r2, r3 = periodical["measurements"]
 

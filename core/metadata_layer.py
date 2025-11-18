@@ -19,7 +19,6 @@ from sqlalchemy.sql.expression import and_, or_
 from core.analytics import Analytics
 from core.classifier import NO_NUMBER, NO_VALUE
 from core.model import (
-    Classification,
     Collection,
     Contributor,
     CoverageRecord,
@@ -152,10 +151,10 @@ class SubjectData:
 
     @property
     def key(self):
-        return self.type, self.identifier, self.name, self.weight
+        return self.type, self.identifier, self.name
 
     def __repr__(self):
-        return '<SubjectData type="%s" identifier="%s" name="%s">' % (
+        return '<SubjectData type="{}" identifier="{}" name="{}">'.format(
             self.type,
             self.identifier,
             self.name,
@@ -2062,9 +2061,7 @@ class CSVMetadataImporter:
         for field_name, (subject_type, weight) in list(self.subject_fields.items()):
             values = self.list_field(row, field_name)
             for value in values:
-                subjects.append(
-                    SubjectData(type=subject_type, identifier=value)
-                )
+                subjects.append(SubjectData(type=subject_type, identifier=value))
 
         contributors = []
         sort_author = self._field(row, self.sort_author_field)

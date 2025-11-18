@@ -43,23 +43,13 @@ class TestAnnotators:
         source2 = DataSource.lookup(session, DataSource.OCLC)
 
         subjects = [
-            (source1, Subject.FAST, "fast1", "name1", 1),
-            (source1, Subject.LCSH, "lcsh1", "name2", 1),
-            (source2, Subject.LCSH, "lcsh1", "name2", 1),
-            (source1, Subject.LCSH, "lcsh2", "name3", 3),
-            (
-                source1,
-                Subject.DDC,
-                "300",
-                "Social sciences, sociology & anthropology",
-                1,
-            ),
+            (source1, Subject.BISAC, "HIS000000", "History"),
+            (source1, Subject.SCHEMA_AUDIENCE, "Adult", "Adult"),
+            (source2, Subject.SCHEMA_AGE_RANGE, "0-12", "0-12"),
         ]
 
-        for source, subject_type, subject, name, weight in subjects:
-            identifier.identifier_to_subject(
-                source, subject_type, subject, name, weight=weight
-            )
+        for source, subject_type, subject, name in subjects:
+            identifier.identifier_to_subject(source, subject_type, subject, name)
 
         # Mock Work.all_identifier_ids (called by VerboseAnnotator.categories)
         # so we can track the value that was passed in for `cutoff`.
@@ -80,26 +70,21 @@ class TestAnnotators:
         # extremely popular book is filed.
         assert 100 == work.called_with_policy.equivalent_identifier_cutoff
 
-        ddc_uri = Subject.uri_lookup[Subject.DDC]
-        rating_value = "ratingValue"
+        bisac_uri = Subject.uri_lookup[Subject.BISAC]
         assert [
             {
-                "term": "300",
-                rating_value: 1,
-                "label": "Social sciences, sociology & anthropology",
+                "term": "HIS000000",
+                "label": "History",
             }
-        ] == category_tags[ddc_uri]
+        ] == category_tags[bisac_uri]
 
-        fast_uri = Subject.uri_lookup[Subject.FAST]
-        assert [{"term": "fast1", "label": "name1", rating_value: 1}] == category_tags[
-            fast_uri
-        ]
+        audience_uri = Subject.uri_lookup[Subject.SCHEMA_AUDIENCE]
+        assert [{"term": "Adult", "label": "Adult"}] == category_tags[audience_uri]
 
-        lcsh_uri = Subject.uri_lookup[Subject.LCSH]
+        age_range_uri = Subject.uri_lookup[Subject.SCHEMA_AGE_RANGE]
         assert [
-            {"term": "lcsh1", "label": "name2", rating_value: 2},
-            {"term": "lcsh2", "label": "name3", rating_value: 3},
-        ] == sorted(category_tags[lcsh_uri], key=lambda x: x[rating_value])
+            {"term": "0-12", "label": "0-12"},
+        ] == category_tags[age_range_uri]
 
         genre_uri = Subject.uri_lookup[Subject.SIMPLIFIED_GENRE]
         assert [

@@ -53,7 +53,6 @@ from core.metadata_layer import (
 )
 from core.model import (
     CirculationEvent,
-    Classification,
     Collection,
     Contributor,
     DataSource,

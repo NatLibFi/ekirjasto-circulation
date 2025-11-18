@@ -40,7 +40,6 @@ from core.metadata_layer import (
     TimestampData,
 )
 from core.model import (
-    Classification,
     Collection,
     DataSource,
     DeliveryMechanism,

@@ -54,7 +54,6 @@ from core.metadata_layer import (
     TimestampData,
 )
 from core.model import (
-    Classification,
     Collection,
     Contributor,
     DataSource,
@@ -1107,13 +1106,6 @@ class BibliographicParser(Axis360Parser[tuple[Metadata, CirculationData]], Logge
         imprint = self.text_of_optional_subtag(element, "axis:imprint", ns)
 
         audience = self.text_of_optional_subtag(element, "axis:audience", ns)
-        if audience:
-            subjects.append(
-                SubjectData(
-                    type=Subject.AXIS_360_AUDIENCE,
-                    identifier=audience,
-                )
-            )
 
         language = self.text_of_subtag(element, "axis:language", ns)
 
