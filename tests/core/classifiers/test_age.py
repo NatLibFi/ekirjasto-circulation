@@ -2,7 +2,6 @@ from core.classifier import AgeOrGradeClassifier, SubjectClassifier
 from core.classifier.age import (
     AgeClassifier,
     GradeLevelClassifier,
-    InterestLevelClassifier,
 )
 
 
@@ -133,23 +132,3 @@ class TestTargetAge:
         assert (5, 6) == f("Children's - Kindergarten, Age 5-6")
         assert (5, 5) == f("Children's - Kindergarten")
         assert (9, 12) == f("Ages 9-12")
-
-
-class TestInterestLevelClassifier:
-    def test_audience(self):
-        def f(t):
-            return InterestLevelClassifier.audience(t, None)
-
-        assert SubjectClassifier.AUDIENCE_CHILDREN == f("lg")
-        assert SubjectClassifier.AUDIENCE_CHILDREN == f("mg")
-        assert SubjectClassifier.AUDIENCE_CHILDREN == f("mg+")
-        assert SubjectClassifier.AUDIENCE_YOUNG_ADULT == f("ug")
-
-    def test_target_age(self):
-        def f(t):
-            return InterestLevelClassifier.target_age(t, None)
-
-        assert (5, 8) == f("lg")
-        assert (9, 13) == f("mg")
-        assert (9, 13) == f("mg+")
-        assert (14, 17) == f("ug")
