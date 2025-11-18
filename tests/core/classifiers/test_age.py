@@ -1,8 +1,5 @@
 from core.classifier import AgeOrGradeClassifier, SubjectClassifier
-from core.classifier.age import (
-    AgeClassifier,
-    GradeLevelClassifier,
-)
+from core.classifier.age import AgeClassifier, GradeLevelClassifier
 
 
 class TestTargetAge:

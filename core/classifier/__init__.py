@@ -458,6 +458,7 @@ class GradeLevelClassifier(SubjectClassifier):
                     break
         return (target_age, grade_words)
 
+
 class AgeClassifier(SubjectClassifier):
     # Regular expressions that match common ways of expressing ages.
     age_res = [
@@ -1413,10 +1414,7 @@ SubjectClassifier.classifiers[
 ] = SchemaAudienceClassifier
 
 # Finally, import classifiers described in submodules.
-from core.classifier.age import (
-    AgeClassifier,
-    GradeLevelClassifier,
-)
+from core.classifier.age import AgeClassifier, GradeLevelClassifier
 from core.classifier.bisac import BISACClassifier
 from core.classifier.demarque import DeMarqueClassifier
 from core.classifier.keyword import Eg, KeywordBasedClassifier, TAGClassifier
