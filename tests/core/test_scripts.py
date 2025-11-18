@@ -855,8 +855,6 @@ class TestAddClassificationScript:
             SubjectClassifier.SCHEMA_AUDIENCE,
             "--subject-identifier",
             SubjectClassifier.AUDIENCE_CHILDREN,
-            "--weight",
-            "42",
             "--create-subject",
         ]
         script = AddClassificationScript(_db=db.session, cmd_args=cmd_args, stdin=stdin)

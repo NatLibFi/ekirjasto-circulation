@@ -822,13 +822,13 @@ class TestWorkController:
         subject3.genre = None
         source = DataSource.lookup(work_fixture.ctrl.db.session, DataSource.AXIS_360)
         classification1 = work_fixture.ctrl.db.classification(
-            identifier=identifier, subject=subject1, data_source=source, weight=1
+            identifier=identifier, subject=subject1, data_source=source
         )
         classification2 = work_fixture.ctrl.db.classification(
-            identifier=identifier, subject=subject2, data_source=source, weight=3
+            identifier=identifier, subject=subject2, data_source=source
         )
         classification3 = work_fixture.ctrl.db.classification(
-            identifier=identifier, subject=subject3, data_source=source, weight=2
+            identifier=identifier, subject=subject3, data_source=source
         )
 
         [lp] = work.license_pools
@@ -845,20 +845,18 @@ class TestWorkController:
             # First, check if the lengths match
             assert len(response["classifications"]) == len(expected_results)
 
-            # Create a set of tuples for expected results because weights are same
             expected_set = {
                 (
                     classification.subject.identifier,
                     classification.subject.type,
-                    classification.data_source.name,
-                    classification.weight,
+                    classification.data_source.name,  # type: ignore
                 )
                 for classification in expected_results
             }
 
             # Create a set of tuples for the response because weights are same
             response_set = {
-                (item["name"], item["type"], item["source"], item["weight"])
+                (item["name"], item["type"], item["source"])
                 for item in response["classifications"]
             }
 

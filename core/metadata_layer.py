@@ -1598,7 +1598,7 @@ class Metadata:
 
             def _key(classification):
                 s = classification.subject
-                return s.type, s.identifier, s.name, classification.weight
+                return s.type, s.identifier, s.name
 
             for classification in identifier.classifications:
                 if classification.data_source == data_source:

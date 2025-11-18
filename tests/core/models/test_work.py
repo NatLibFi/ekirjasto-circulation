@@ -566,13 +566,13 @@ class TestWork:
         subject3.genre = None
         source = DataSource.lookup(db.session, DataSource.AXIS_360)
         classification1 = db.classification(
-            identifier=identifier, subject=subject1, data_source=source, weight=1
+            identifier=identifier, subject=subject1, data_source=source
         )
         classification2 = db.classification(
-            identifier=identifier, subject=subject2, data_source=source, weight=2
+            identifier=identifier, subject=subject2, data_source=source
         )
         classification3 = db.classification(
-            identifier=identifier, subject=subject3, data_source=source, weight=2
+            identifier=identifier, subject=subject3, data_source=source
         )
 
         results = work.classifications_with_genre().all()  # order changes, hence set()

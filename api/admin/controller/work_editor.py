@@ -433,7 +433,6 @@ class WorkController(CirculationManagerController, AdminPermissionsControllerMix
             .join(Subject)
             .join(DataSource)
             .filter(Classification.identifier_id == identifier_id)
-            .order_by(Classification.weight.desc())
             .all()
         )
 
@@ -445,7 +444,6 @@ class WorkController(CirculationManagerController, AdminPermissionsControllerMix
                         "type": result.subject.type,
                         "name": result.subject.identifier,
                         "source": result.data_source.name,
-                        "weight": result.weight,
                     }
                 )
             )

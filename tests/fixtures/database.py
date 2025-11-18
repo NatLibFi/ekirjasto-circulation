@@ -774,9 +774,7 @@ class DatabaseTransactionFixture:
         )
         return record
 
-    def classification(
-        self, identifier, subject, data_source, weight=1
-    ) -> Classification:
+    def classification(self, identifier, subject, data_source) -> Classification:
         return get_one_or_create(
             self.session,
             Classification,

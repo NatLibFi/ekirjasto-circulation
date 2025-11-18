@@ -1354,9 +1354,9 @@ class WorkClassifier:
         # until we create a new audience that suits both.
         elif ya_counts >= children_counts and ya_counts > adult_counts:
             audience = SubjectClassifier.AUDIENCE_YOUNG_ADULT
-        # It's a children's book if there's more indication towards that than YA. And again,
-        # we don't case about adult counts.
-        elif children_counts > ya_counts:
+        # It's a children's book if there's more indication towards that than YA. There
+        # might be adult, but as long as there's more children, we go with that.
+        elif children_counts > ya_counts and children_counts > adult_counts:
             audience = SubjectClassifier.AUDIENCE_CHILDREN
         else:
             audience = SubjectClassifier.AUDIENCE_ADULT

@@ -496,16 +496,15 @@ class TestWorkClassifier:
             type=Subject.SIMPLIFIED_FICTION_STATUS, identifier="Fiction"
         )
         classification1 = work.transaction.classification(
-            identifier=work.identifier, subject=subject1, data_source=source, weight=10
+            identifier=work.identifier, subject=subject1, data_source=source
         )
         classification2 = work.transaction.classification(
-            identifier=work.identifier, subject=subject2, data_source=source, weight=10
+            identifier=work.identifier, subject=subject2, data_source=source
         )
         classification3 = work.transaction.classification(
             identifier=work.identifier,
             subject=subject3,
             data_source=staff_source,
-            weight=1,
         )
         work.classifier.prepare_classification(classification1)
         work.classifier.prepare_classification(classification2)

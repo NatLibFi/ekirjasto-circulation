@@ -481,7 +481,6 @@ class TestOPDSImporter:
         assert [None, None, None, "American Literature"] == [
             x.name for x in book["subjects"]
         ]
-        assert [1, 1, 1, 10] == [x.weight for x in book["subjects"]]
 
         assert [] == book["measurements"]
 
