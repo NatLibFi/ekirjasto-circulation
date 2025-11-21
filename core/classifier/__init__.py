@@ -1259,7 +1259,6 @@ class WorkClassifier:
         Determine the audience, target age, fiction status and genres of a work.
 
         Args:
-            default_fiction: Boolean| None: A default fiction status.
             default_audience: Any of the audience constants in ClassifierConstants
             or None.
         Returns:
@@ -1345,14 +1344,12 @@ class WorkClassifier:
         # There were subjects (most likely BISACs) from all audience categories.
         if children_counts > 0 and ya_counts > 0 and adult_counts > 0:
             audience = SubjectClassifier.AUDIENCE_ALL_AGES
-        # For now, if there were both ya and children's BISACs, make the audience YA
-        # until we create a new audience that suits both.
-        elif ya_counts >= children_counts and ya_counts > adult_counts:
-            audience = SubjectClassifier.AUDIENCE_YOUNG_ADULT
         # It's a children's book if there's more indication towards that than YA. There
-        # might be adult, but as long as there's more children, we go with that.
-        elif children_counts > ya_counts and children_counts > adult_counts:
+        # might be adult counts, but as long as there's more children, we go with that.
+        elif children_counts > ya_counts:
             audience = SubjectClassifier.AUDIENCE_CHILDREN
+        elif ya_counts:
+            audience = SubjectClassifier.AUDIENCE_YOUNG_ADULT
         else:
             audience = SubjectClassifier.AUDIENCE_ADULT
 

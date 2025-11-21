@@ -380,6 +380,7 @@ class TestWorkClassifier:
         assert not work.classifier.target_age_lower
         assert not work.classifier.target_age_upper == 12
 
+        # But we do set it from READ
         c2 = work.identifier.identifier_to_subject(source, Subject.DEMARQUE, "READ0001")
         work.classifier.prepare_classification(c2)
         assert work.classifier.target_age_lower == 0
@@ -619,7 +620,7 @@ class TestWorkClassifier:
         (genres, fiction, audience, target_age) = work.classifier.classify_work()
         assert target_age == (10, 12)
 
-    def test_audience_childrens_book_when_more_than_ya(
+    def test_audience_children(
         self, work_classifier_fixture: TestWorkClassifierFixture
     ):
         work = work_classifier_fixture
@@ -632,13 +633,29 @@ class TestWorkClassifier:
         }
         assert work.classifier._audience() == SubjectClassifier.AUDIENCE_CHILDREN
 
-    def test_audience_ya_book_when_childrens_and_ya(
-        self, work_classifier_fixture: TestWorkClassifierFixture
-    ):
+        work.classifier.audience_counts = {
+            SubjectClassifier.AUDIENCE_CHILDREN: 1,
+        }
+        assert work.classifier._audience() == SubjectClassifier.AUDIENCE_CHILDREN
+
+        # Most likely BISACs
+        work.classifier.audience_counts = {
+            SubjectClassifier.AUDIENCE_CHILDREN: 2,
+            SubjectClassifier.AUDIENCE_ADULT: 2,
+        }
+        assert work.classifier._audience() == SubjectClassifier.AUDIENCE_CHILDREN
+
+    def test_audience_ya(self, work_classifier_fixture: TestWorkClassifierFixture):
         work = work_classifier_fixture
         # Ellibs often contain both audiences in their children+ya books.
         work.classifier.audience_counts = {
             SubjectClassifier.AUDIENCE_CHILDREN: 1,
+            SubjectClassifier.AUDIENCE_YOUNG_ADULT: 1,
+        }
+        assert work.classifier._audience() == SubjectClassifier.AUDIENCE_YOUNG_ADULT
+
+        work.classifier.audience_counts = {
+            SubjectClassifier.AUDIENCE_ADULT: 2,
             SubjectClassifier.AUDIENCE_YOUNG_ADULT: 1,
         }
         assert work.classifier._audience() == SubjectClassifier.AUDIENCE_YOUNG_ADULT
@@ -654,10 +671,17 @@ class TestWorkClassifier:
         assert work.classifier._audience() == SubjectClassifier.AUDIENCE_YOUNG_ADULT
 
         # But if it's Erotica, it is always classified as Adults Only.
-        genres = {classifier.Erotica: 1, classifier.Science_Fiction: 2}
+        genres = [classifier.Erotica, classifier.Science_Fiction]
         assert (
             work.classifier._audience(genres) == SubjectClassifier.AUDIENCE_ADULTS_ONLY
         )
+
+    def test_audience_adult(self, work_classifier_fixture: TestWorkClassifierFixture):
+        work = work_classifier_fixture
+        work.classifier.audience_counts = {
+            SubjectClassifier.AUDIENCE_ADULT: 1,
+        }
+        assert work.classifier._audience() == SubjectClassifier.AUDIENCE_ADULT
 
     def test_audience_all_ages(
         self, work_classifier_fixture: TestWorkClassifierFixture
@@ -671,13 +695,6 @@ class TestWorkClassifier:
             SubjectClassifier.AUDIENCE_YOUNG_ADULT: 2,
         }
         assert work.classifier._audience() == SubjectClassifier.AUDIENCE_ALL_AGES
-
-    def test_audience_adults(self, work_classifier_fixture: TestWorkClassifierFixture):
-        work = work_classifier_fixture
-        work.classifier.audience_counts = {
-            SubjectClassifier.AUDIENCE_ADULT: 1,
-        }
-        assert work.classifier._audience() == SubjectClassifier.AUDIENCE_ADULT
 
     def test_audience_no_information_results_in_none(
         self, work_classifier_fixture: TestWorkClassifierFixture
@@ -945,6 +962,32 @@ class TestWorkClassifier:
         assert fiction == True
         assert audience == SubjectClassifier.AUDIENCE_YOUNG_ADULT
         assert target_age == (13, 17)
+
+    def test_classify_work_children(
+        self, work_classifier_fixture: TestWorkClassifierFixture
+    ):
+        """test that a children's book gets right classifications"""
+        work = work_classifier_fixture
+        session = work.transaction.session
+
+        work.work.presentation_edition.title = "Some book"
+        i = work.identifier
+        source = DataSource.lookup(session, DataSource.OVERDRIVE)
+        c1 = i.identifier_to_subject(
+            source, Subject.BISAC, "JUV043000", "JUVENILE FICTION / Readers / Beginner"
+        )
+        c2 = i.identifier_to_subject(source, Subject.SCHEMA_AUDIENCE, "Children")
+        c3 = i.identifier_to_subject(source, Subject.SCHEMA_AGE_RANGE, "0-12")
+        for classification in i.classifications:
+            work.classifier.prepare_classification(classification)
+
+        genres, fiction, audience, target_age = work.classifier.classify_work()
+
+        assert len(genres) == 0
+        assert fiction == True
+        assert audience == SubjectClassifier.AUDIENCE_CHILDREN
+        # Despite schema:typicalAgeRange, we had a more detailed age range from BISAC.
+        assert target_age == (0, 4)
 
     def test_classify_work_no_genre_when_not_ekirjasto_known_subject(
         self, work_classifier_fixture: TestWorkClassifierFixture
