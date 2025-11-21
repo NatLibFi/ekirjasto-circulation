@@ -958,7 +958,6 @@ class Work(Base):
         if policy.classify:
             classification_changed = self.assign_classification(
                 all_identifier_ids,
-                default_fiction=default_fiction,
                 default_audience=default_audience,
             )
             WorkCoverageRecord.add_for(
@@ -1293,7 +1292,6 @@ class Work(Base):
     def assign_classification(
         self,
         identifier_ids,
-        default_fiction=False,
         default_audience=SubjectClassifier.AUDIENCE_ADULT,
     ):
         """Set classification information for this work based on the
@@ -1327,9 +1325,7 @@ class Work(Base):
             self.fiction,
             self.audience,
             target_age,
-        ) = classifier.classify_work(
-            default_fiction=default_fiction, default_audience=default_audience
-        )
+        ) = classifier.classify_work(default_audience=default_audience)
         self.target_age = tuple_to_numericrange(target_age)
         workgenres, workgenres_changed = self.update_genres(genres)
 

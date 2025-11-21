@@ -1243,7 +1243,6 @@ class WorkClassifier:
                             self.target_age_lower, subject.target_age.lower
                         )
 
-    def classify_work(self, default_fiction=None, default_audience=None):
                     if self.target_age_upper is None:
                         self.target_age_upper = subject.target_age.upper
                     else:
@@ -1255,6 +1254,7 @@ class WorkClassifier:
                     self.bisac_target_age_lower = subject.target_age.lower
                     self.bisac_target_age_upper = subject.target_age.upper
 
+    def classify_work(self, default_audience=None):
         """
         Determine the audience, target age, fiction status and genres of a work.
 
@@ -1270,7 +1270,7 @@ class WorkClassifier:
             target_age: Tuple: A tuple indicating a target age range.
 
         """
-        fiction = self._fiction(default_fiction=default_fiction)
+        fiction = self._fiction()
         genres, fiction = self._genres(fiction)
         audience = self._audience(genres, default_audience=default_audience)
         target_age = self._target_age(audience)
@@ -1279,7 +1279,7 @@ class WorkClassifier:
         )
         return genres, fiction, audience, target_age
 
-    def _fiction(self, default_fiction=None):
+    def _fiction(self):
         """
         Is it more likely this is a fiction or nonfiction book?
 
@@ -1287,22 +1287,16 @@ class WorkClassifier:
         expand the book's related subjects so we classify the book as fiction rather
         than nonfiction. If, some time in the future, the tendency to get incorrect
         nonfiction BISACs change, we'll need to adjust this classification.
-        Args:
-            default_fiction: Boolean| None: A default fiction status.
+
         Returns:
-            is_fiction: Boolean or None
+            is_fiction: Boolean
         """
-        if not self.fiction_counts:
-            # We have absolutely no idea one way or the other, and it
-            # would be irresponsible to guess.
-            return default_fiction
-        is_fiction = default_fiction
+
+        is_fiction = True
 
         self.log.info(f"Fiction counts: {self.fiction_counts}")
 
-        if self.fiction_counts[True] > 0:
-            is_fiction = True
-        else:
+        if self.fiction_counts[False] and not self.fiction_counts[True]:
             is_fiction = False
 
         self.log.info(f"Fiction: {is_fiction}")

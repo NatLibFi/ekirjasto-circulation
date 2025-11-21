@@ -260,7 +260,7 @@ class TestWorkClassifier:
         about a work's classification.
         """
         work = work_classifier_fixture
-        assert work.classifier._fiction() == None
+        assert work.classifier._fiction() == True
         assert work.classifier._genres(None) == ([], None)
         assert work.classifier._audience() == None
         assert work.classifier._target_age(None) == (None, None)
@@ -895,32 +895,6 @@ class TestWorkClassifier:
         assert counts[SubjectClassifier.AUDIENCE_YOUNG_ADULT] == 1
         assert counts[SubjectClassifier.AUDIENCE_CHILDREN] == 1
 
-    def test_classify_work_uses_default_fiction_status(
-        self, work_classifier_fixture: TestWorkClassifierFixture
-    ):
-        work = work_classifier_fixture
-        genres, fiction, audience, target_age = work.classifier.classify_work(
-            default_fiction=True
-        )
-        assert fiction == True
-
-        genres, fiction, audience, target_age = work.classifier.classify_work(
-            default_fiction=False
-        )
-        assert fiction == False
-
-        genres, fiction, audience, target_age = work.classifier.classify_work(
-            default_fiction=None
-        )
-        assert fiction == None
-
-        # The default isn't used if there's any information about the fiction status.
-        work.classifier.fiction_counts[False] = 1
-        genres, fiction, audience, target_age = work.classifier.classify_work(
-            default_fiction=None
-        )
-        assert fiction == False
-
     def test_classify_work_uses_default_audience(
         self, work_classifier_fixture: TestWorkClassifierFixture
     ):
@@ -993,6 +967,6 @@ class TestWorkClassifier:
         genres, fiction, audience, target_age = work.classifier.classify_work()
 
         assert len(genres) == 0
-        assert fiction == None
+        assert fiction == True
         assert audience == None
         assert target_age == (None, None)
