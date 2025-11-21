@@ -1516,12 +1516,6 @@ class AddClassificationScript(IdentifierInputScript):
             default=DataSource.MANUAL,
         )
         parser.add_argument(
-            "--weight",
-            help="The weight to use when classifying.",
-            type=int,
-            default=1000,
-        )
-        parser.add_argument(
             "--create-subject",
             help="Add the subject to the database if it doesn't already exist",
             action="store_const",
@@ -1542,7 +1536,6 @@ class AddClassificationScript(IdentifierInputScript):
                 "Either subject-name or subject-identifier must be provided."
             )
         self.data_source = DataSource.lookup(self._db, args.data_source)
-        self.weight = args.weight
         self.subject, ignore = Subject.lookup(
             self._db,
             subject_type,
@@ -1569,7 +1562,6 @@ class AddClassificationScript(IdentifierInputScript):
                     self.subject.type,
                     self.subject.identifier,
                     self.subject.name,
-                    self.weight,
                 )
                 work = identifier.work
                 if work:

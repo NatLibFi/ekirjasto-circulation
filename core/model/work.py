@@ -79,7 +79,7 @@ class WorkGenre(Base):
         return wg
 
     def __repr__(self):
-        return "%s (%d%%)" % (self.genre.name, self.affinity * 100)
+        return "%s" % (self.genre.name)
 
 
 class Work(Base):
@@ -956,9 +956,8 @@ class Work(Base):
             direct_identifier_ids = all_identifier_ids = []
 
         if policy.classify:
-            classification_changed = self.assign_genres(
+            classification_changed = self.assign_classification(
                 all_identifier_ids,
-                default_fiction=default_fiction,
                 default_audience=default_audience,
             )
             WorkCoverageRecord.add_for(
@@ -1290,16 +1289,22 @@ class Work(Base):
         )
         WorkCoverageRecord.add_for(self, operation=WorkCoverageRecord.QUALITY_OPERATION)
 
-    def assign_genres(
+    def assign_classification(
         self,
         identifier_ids,
-        default_fiction=False,
         default_audience=SubjectClassifier.AUDIENCE_ADULT,
     ):
         """Set classification information for this work based on the
         subquery to get equivalent identifiers.
         :return: A boolean explaining whether or not any data actually
         changed.
+
+        Args:
+            identifier_ids: A list of identifiers of subjects.
+            default_fiction: Boolean or None
+            default_audience: "Adult"
+        Returns:
+            classification_changed: Boolean to indicate classification chnages.
         """
         classifier = WorkClassifier(self)
 
@@ -1311,20 +1316,18 @@ class Work(Base):
         classifications = Identifier.classifications_for_identifier_ids(
             _db, identifier_ids
         )
+
         for classification in classifications:
-            classifier.add(classification)
+            classifier.prepare_classification(classification)
 
         (
-            genre_weights,
+            genres,
             self.fiction,
             self.audience,
             target_age,
-        ) = classifier.classify_work(
-            default_fiction=default_fiction, default_audience=default_audience
-        )
+        ) = classifier.classify_work(default_audience=default_audience)
         self.target_age = tuple_to_numericrange(target_age)
-
-        workgenres, workgenres_changed = self.assign_genres_from_weights(genre_weights)
+        workgenres, workgenres_changed = self.update_genres(genres)
 
         classification_changed = (
             workgenres_changed
@@ -1335,16 +1338,16 @@ class Work(Base):
 
         return classification_changed
 
-    def assign_genres_from_weights(self, genre_weights):
+    def update_genres(self, genres):
         """
-        Assigns genres to a work based on existing genre associations.
-
         This method updates the work's genres by removing any genres that are no longer
         associated with the work and adding any new genres that are not already
         associated.
 
+        Args:
+            genres: List of Genre objects from the WorkClassifier.
         Returns:
-            tuple: A tuple containing the updated list of genres and a boolean
+            tuple: A tuple containing the updated list of WorkGenres and a boolean
                 indicating whether any changes were made.
         """
         # TO DO: E-kirjasto: Tear down the need for passing in weights because we won't
@@ -1358,15 +1361,15 @@ class Work(Base):
         by_genre = dict()
         for wg in current_workgenres:
             by_genre[wg.genre] = wg
-        for g, score in list(genre_weights.items()):
-            if not isinstance(g, Genre):
-                g, ignore = Genre.lookup(_db, g.name)
-            if g in by_genre:
-                wg = by_genre[g]
+        for genre in genres:
+            if not isinstance(genre, Genre):
+                genre, ignore = Genre.lookup(_db, genre.name)
+            if genre in by_genre:
+                wg = by_genre[genre]
                 is_new = False
-                del by_genre[g]
+                del by_genre[genre]
             else:
-                wg, is_new = get_one_or_create(_db, WorkGenre, work=self, genre=g)
+                wg, is_new = get_one_or_create(_db, WorkGenre, work=self, genre=genre)
             if is_new:
                 changed = True
             workgenres.append(wg)
@@ -2162,6 +2165,7 @@ class Work(Base):
         qu = qu.filter(condition)
         return qu
 
+    # This function is probably redundant, I don't see any references to it
     def classifications_with_genre(self):
         from core.model.classification import Classification, Subject
 
@@ -2171,10 +2175,11 @@ class Work(Base):
             _db.query(Classification)
             .join(Subject)
             .filter(Classification.identifier_id == identifier.id)
-            .filter(Subject.genre_id != None)
+            .filter(Subject.genre_id != None)  # If no genre, leave it out
             .order_by(Classification.weight.desc())
         )
 
+    # This function is probably redundant
     def top_genre(self):
         from core.model.classification import Genre
 

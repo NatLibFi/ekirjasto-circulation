@@ -872,7 +872,6 @@ class Identifier(Base, IdentifierConstants):
         subject_type,
         subject_identifier,
         subject_name=None,
-        weight=1,
     ):
         """Associate this Identifier under a Subject.
 
@@ -880,10 +879,6 @@ class Identifier(Base, IdentifierConstants):
         :param subject_identifier: Internal ID of the subject according to that classification scheme.
         :param value: Human-readable description of the subject, if different
             from the ID.
-        :param weight: How confident the data source is in classifying a
-            book under this subject. The meaning of this
-            number depends entirely on the source of the
-            information.
         """
         _db = Session.object_session(self)
         # Turn the subject type and identifier into a Subject.
@@ -902,7 +897,6 @@ class Identifier(Base, IdentifierConstants):
             subject.type,
             subject.identifier,
             subject.name,
-            weight,
         )
 
         # Use a Classification to connect the Identifier to the
@@ -929,7 +923,6 @@ class Identifier(Base, IdentifierConstants):
             for i in all_classifications[1:]:
                 _db.delete(i)
 
-        classification.weight = weight
         return classification
 
     @classmethod

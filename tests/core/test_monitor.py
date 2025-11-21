@@ -718,9 +718,9 @@ class TestSubjectSweepMonitor:
         class Mock(SubjectSweepMonitor):
             SERVICE_NAME = "Mock"
 
-        s1, ignore = Subject.lookup(db.session, Subject.DDC, "100", None)
+        s1, ignore = Subject.lookup(db.session, Subject.SCHEMA_AUDIENCE, "Adult", None)
         s2, ignore = Subject.lookup(
-            db.session, Subject.TAG, None, "100 Years of Solitude"
+            db.session, Subject.BISAC, None, "History / General"
         )
 
         # By default, SubjectSweepMonitor handles every Subject
@@ -730,18 +730,13 @@ class TestSubjectSweepMonitor:
 
         # But you can tell SubjectSweepMonitor to handle only Subjects
         # of a certain type.
-        dewey_monitor = Mock(db.session, subject_type=Subject.DDC)
-        assert [s1] == dewey_monitor.item_query().all()
+        schema_monitor = Mock(db.session, subject_type=Subject.SCHEMA_AUDIENCE)
+        assert [s1] == schema_monitor.item_query().all()
 
         # You can also SubjectSweepMonitor to handle only Subjects
         # whose names or identifiers match a certain string.
-        one_hundred_monitor = Mock(db.session, filter_string="100")
-        assert [s1, s2] == one_hundred_monitor.item_query().all()
-
-        specific_tag_monitor = Mock(
-            db.session, subject_type=Subject.TAG, filter_string="Years"
-        )
-        assert [s2] == specific_tag_monitor.item_query().all()
+        one_hundred_monitor = Mock(db.session, filter_string="History")
+        assert [s2] == one_hundred_monitor.item_query().all()
 
 
 class TestCustomListEntrySweepMonitor:

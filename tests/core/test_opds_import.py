@@ -474,12 +474,13 @@ class TestOPDSImporter:
         assert [Contributor.Role.AUTHOR] == contributor.roles
 
         subjects = book["subjects"]
-        assert ["LCSH", "LCSH", "LCSH", "LCC"] == [x.type for x in subjects]
+        assert ["tag", "tag", "tag", "tag"] == [
+            x.type for x in subjects
+        ]  # If not BISAC or schema, it's tag
         assert ["Essays", "Nature", "Walking", "PS"] == [x.identifier for x in subjects]
         assert [None, None, None, "American Literature"] == [
             x.name for x in book["subjects"]
         ]
-        assert [1, 1, 1, 10] == [x.weight for x in book["subjects"]]
 
         assert [] == book["measurements"]
 
@@ -496,12 +497,13 @@ class TestOPDSImporter:
         assert Edition.PERIODICAL_MEDIUM == periodical["medium"]
 
         subjects = periodical["subjects"]
+        # If not BISAC or schema, it's tag
         assert [
-            "LCSH",
-            "LCSH",
-            "LCSH",
-            "LCSH",
-            "LCC",
+            "tag",
+            "tag",
+            "tag",
+            "tag",
+            "tag",
             "schema:audience",
             "schema:typicalAgeRange",
         ] == [x.type for x in subjects]
@@ -514,7 +516,6 @@ class TestOPDSImporter:
             "Children",
             "7",
         ] == [x.identifier for x in subjects]
-        assert [1, 1, 1, 1, 1, 1, 1] == [x.weight for x in subjects]
 
         r1, r2, r3 = periodical["measurements"]
 
@@ -879,7 +880,7 @@ class TestOPDSImporter:
         assert "sh2008108377" == new_york_s.identifier
 
         assert "7" == seven.subject.identifier
-        assert 100 == seven.weight
+        assert None == seven.weight
         assert Subject.SCHEMA_AGE_RANGE == seven.subject.type
         from core.classifier import SubjectClassifier
 
@@ -899,7 +900,7 @@ class TestOPDSImporter:
         work.calculate_presentation()
         assert 0.4142 == round(work.quality, 4)
         assert SubjectClassifier.AUDIENCE_CHILDREN == work.audience
-        assert NumericRange(7, 7, "[]") == work.target_age
+        assert NumericRange(0, 12, "[]") == work.target_age
 
         # Bonus: make sure that delivery mechanisms are set appropriately.
         [mech] = mouse_pool.delivery_mechanisms
