@@ -142,27 +142,6 @@ class GradeLevelClassifier(SubjectClassifier):
         return (target_age, grade_words)
 
 
-class InterestLevelClassifier(SubjectClassifier):
-    @classmethod
-    def audience(cls, identifier, name):
-        if identifier in ("lg", "mg+", "mg"):
-            return cls.AUDIENCE_CHILDREN
-        elif identifier == "ug":
-            return cls.AUDIENCE_YOUNG_ADULT
-        else:
-            return None
-
-    @classmethod
-    def target_age(cls, identifier, name):
-        if identifier == "lg":
-            return cls.range_tuple(5, 8)
-        if identifier in ("mg+", "mg"):
-            return cls.range_tuple(9, 13)
-        if identifier == "ug":
-            return cls.range_tuple(14, 17)
-        return None
-
-
 class AgeClassifier(SubjectClassifier):
     # Regular expressions that match common ways of expressing ages.
     age_res = [
