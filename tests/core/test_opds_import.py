@@ -900,7 +900,7 @@ class TestOPDSImporter:
         work.calculate_presentation()
         assert 0.4142 == round(work.quality, 4)
         assert SubjectClassifier.AUDIENCE_CHILDREN == work.audience
-        assert NumericRange(7, 7, "[]") == work.target_age
+        assert NumericRange(0, 12, "[]") == work.target_age
 
         # Bonus: make sure that delivery mechanisms are set appropriately.
         [mech] = mouse_pool.delivery_mechanisms

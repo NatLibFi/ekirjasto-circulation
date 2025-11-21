@@ -701,10 +701,7 @@ class BISACClassifier(SubjectClassifier):
                 return None
             if target_age is not None:
                 return target_age
-
-        # If all else fails, try the keyword-based classifier.
-        keyword = "/".join(name)
-        return KeywordBasedClassifier.target_age(identifier, keyword)
+        return None
 
     @classmethod
     def genre(cls, identifier, name, fiction, audience):

@@ -239,14 +239,16 @@ class SubjectClassifier(ClassifierConstants):
         The default target age for a given audience.
         """
         if audience == SubjectClassifier.AUDIENCE_YOUNG_ADULT:
-            return cls.range_tuple(13, 17)
+            return cls.range_tuple(13, 17)  # 13, 18 in db
         elif audience in (
             SubjectClassifier.AUDIENCE_ADULT,
             SubjectClassifier.AUDIENCE_ADULTS_ONLY,
         ):
             return cls.range_tuple(18, None)
         elif audience == SubjectClassifier.AUDIENCE_CHILDREN:
-            return cls.range_tuple(0, 12)
+            return cls.range_tuple(0, 12)  # 0, 13 in db
+        elif audience == SubjectClassifier.AUDIENCE_ALL_AGES:
+            return cls.range_tuple(8, None)
         return cls.range_tuple(None, None)
 
     @classmethod
@@ -1016,6 +1018,8 @@ class WorkClassifier:
         self.audience_counts = Counter()
         self.target_age_lower = None
         self.target_age_upper = None
+        self.bisac_target_age_lower = None
+        self.bisac_target_age_upper = None
         self.log = logging.getLogger("Classifier (workid=%d)" % self.work.id)
         # For tracking whether classifications have been changed manually
         self.using_staff_genres = False
@@ -1089,7 +1093,7 @@ class WorkClassifier:
 
         # Collect information about target age.
         if not self.using_staff_target_age:
-            self._add_target_age_count(from_staff, subject)
+            self._add_target_age(from_staff, subject)
 
     def _add_genres(self, from_staff, is_genre, subject):
         """
@@ -1201,7 +1205,7 @@ class WorkClassifier:
                 else:
                     self.audience_counts["BISAC Adult"] += 1
 
-    def _add_target_age_count(self, from_staff, subject):
+    def _add_target_age(self, from_staff, subject):
         """
         Modify the classifier's target age if it's schema or from staff.
         Args:
@@ -1223,16 +1227,34 @@ class WorkClassifier:
             self.target_age_lower = subject.target_age.lower
             self.target_age_upper = subject.target_age.upper
         else:
-            # Ellibs schema:audience.
-            if subject.type == SubjectClassifier.SCHEMA_AGE_RANGE:
-                self.target_age_lower = subject.target_age.lower
-                self.target_age_upper = subject.target_age.upper
-            # De Marque READ.
-            elif subject.type == SubjectClassifier.DEMARQUE:
-                self.target_age_lower = subject.target_age.lower
-                self.target_age_upper = subject.target_age.upper
+            # De Marque children's subjects contain more granular target age information
+            # and a work can have more than one subject. We want to grab the largest age
+            # range possible based on the subjects.
+            if (
+                subject.audience == SubjectClassifier.AUDIENCE_CHILDREN
+                or subject.audience == SubjectClassifier.AUDIENCE_YOUNG_ADULT
+            ) and subject.target_age:
+                if subject.type == SubjectClassifier.DEMARQUE:
+                    # Set ages if not set
+                    if self.target_age_lower is None:
+                        self.target_age_lower = subject.target_age.lower
+                    else:
+                        self.target_age_lower = min(
+                            self.target_age_lower, subject.target_age.lower
+                        )
 
     def classify_work(self, default_fiction=None, default_audience=None):
+                    if self.target_age_upper is None:
+                        self.target_age_upper = subject.target_age.upper
+                    else:
+                        self.target_age_upper = max(
+                            self.target_age_upper, subject.target_age.upper
+                        )
+                # BISACs do not need such handling.
+                elif subject.type == SubjectClassifier.BISAC:
+                    self.bisac_target_age_lower = subject.target_age.lower
+                    self.bisac_target_age_upper = subject.target_age.upper
+
         """
         Determine the audience, target age, fiction status and genres of a work.
 
@@ -1352,21 +1374,34 @@ class WorkClassifier:
             Tuple: Indicating the age range.
 
         """
+        target_age = tuple()
+
         if audience not in (
             SubjectClassifier.AUDIENCE_CHILDREN,
             SubjectClassifier.AUDIENCE_YOUNG_ADULT,
         ):
             # This is not a children's or YA book. Assertions about
             # target age are irrelevant and the default value rules.
-            return SubjectClassifier.default_target_age_for_audience(audience)
+            target_age = SubjectClassifier.default_target_age_for_audience(audience)
+        # There is specific target age information.
+        elif self.target_age_lower or self.target_age_upper:
+            target_age = SubjectClassifier.range_tuple(
+                self.target_age_lower, self.target_age_upper
+            )
+        elif audience == SubjectClassifier.AUDIENCE_CHILDREN and (
+            self.bisac_target_age_lower or self.bisac_target_age_upper
+        ):
+            # It's one of the juvenile BISAC subjects that we set to have a target age
+            target_age = SubjectClassifier.range_tuple(
+                self.bisac_target_age_lower, self.bisac_target_age_upper
+            )
+        # There was no target age.
+        else:
+            target_age = SubjectClassifier.default_target_age_for_audience(audience)
 
-        # There was no schema target age or READ target age.
-        if not self.target_age_lower and not self.target_age_upper:
-            return SubjectClassifier.default_target_age_for_audience(audience)
+        self.log.info(f"Target age: {target_age}")
 
-        return SubjectClassifier.range_tuple(
-            self.target_age_lower, self.target_age_upper
-        )
+        return target_age
 
     def _genres(self, fiction):
         """

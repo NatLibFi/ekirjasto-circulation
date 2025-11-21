@@ -70,7 +70,7 @@ class TestClassifier:
         ) == (18, None)
         assert SubjectClassifier.default_target_age_for_audience(
             SubjectClassifier.AUDIENCE_ALL_AGES
-        ) == (None, None)
+        ) == (8, None)
 
     def test_default_audience_for_target_age(self):
         def aud(low, high, expect):
@@ -372,20 +372,20 @@ class TestWorkClassifier:
         session = work.transaction.session
         source = DataSource.lookup(session, DataSource.OVERDRIVE)
 
-        # schema:typicalAgeRange or READ modify target age
+        # schema:typicalAgeRange does not set target age
         c1 = work.identifier.identifier_to_subject(
             source, Subject.SCHEMA_AGE_RANGE, "0-12"
         )
         work.classifier.prepare_classification(c1)
-        assert work.classifier.target_age_lower == 0
-        assert work.classifier.target_age_upper == 12
+        assert not work.classifier.target_age_lower
+        assert not work.classifier.target_age_upper == 12
 
         c2 = work.identifier.identifier_to_subject(source, Subject.DEMARQUE, "READ0001")
         work.classifier.prepare_classification(c2)
         assert work.classifier.target_age_lower == 0
         assert work.classifier.target_age_upper == 3
 
-        # BISAC or some other subject does not
+        # ...or BISAC (only a few of them)
         c3 = work.identifier.identifier_to_subject(
             source, Subject.BISAC, "JUVENILE FICTION / General"
         )
@@ -686,7 +686,7 @@ class TestWorkClassifier:
         work.classifier.audience_counts = {}
         assert work.classifier._audience() == None
 
-    def test_target_age_children(
+    def test_target_age_from_bisac_children(
         self, work_classifier_fixture: TestWorkClassifierFixture
     ):
         work = work_classifier_fixture
@@ -702,12 +702,70 @@ class TestWorkClassifier:
         # And there's also an age range defined
         oclc = DataSource.lookup(session, DataSource.OCLC)
         c2 = work.identifier.identifier_to_subject(
-            oclc, Subject.SCHEMA_AGE_RANGE, "0-12"
+            oclc, Subject.BISAC, "JUV043000", "JUVENILE FICTION / Readers / Beginner"
         )
         work.classifier.prepare_classification(c2)
         audience = work.classifier._audience()
         assert audience == SubjectClassifier.AUDIENCE_CHILDREN
-        assert work.classifier._target_age(audience) == (0, 12)
+        assert work.classifier._target_age(audience) == (0, 4)
+
+    def test_target_age_children(
+        self, work_classifier_fixture: TestWorkClassifierFixture
+    ):
+        work = work_classifier_fixture
+        session = work.transaction.session
+
+        # Children's book
+        overdrive = DataSource.lookup(session, DataSource.OVERDRIVE)
+        c1 = work.identifier.identifier_to_subject(
+            overdrive, Subject.DEMARQUE, "READ0001"
+        )
+        work.classifier.prepare_classification(c1)
+
+        audience = work.classifier._audience()
+        assert audience == SubjectClassifier.AUDIENCE_CHILDREN
+        assert work.classifier._target_age(audience) == (0, 3)
+
+    def test_target_age_children_and_adult_subjects(
+        self, work_classifier_fixture: TestWorkClassifierFixture
+    ):
+        work = work_classifier_fixture
+        session = work.transaction.session
+        overdrive = DataSource.lookup(session, DataSource.OVERDRIVE)
+
+        c2 = work.identifier.identifier_to_subject(
+            overdrive, Subject.DEMARQUE, "READ0001"
+        )
+        work.classifier.prepare_classification(c2)
+        c3 = work.identifier.identifier_to_subject(
+            overdrive, Subject.BISAC, "FIC000000", "Fiction / General"
+        )
+        work.classifier.prepare_classification(c3)
+
+        audience = work.classifier._audience()
+        assert audience == SubjectClassifier.AUDIENCE_CHILDREN
+        assert work.classifier._target_age(audience) == (0, 3)
+
+    def test_target_age_two_reads(
+        self, work_classifier_fixture: TestWorkClassifierFixture
+    ):
+        work = work_classifier_fixture
+        session = work.transaction.session
+        overdrive = DataSource.lookup(session, DataSource.OVERDRIVE)
+
+        c5 = work.identifier.identifier_to_subject(
+            overdrive, Subject.DEMARQUE, "READ0002"
+        )
+        work.classifier.prepare_classification(c5)
+
+        c4 = work.identifier.identifier_to_subject(
+            overdrive, Subject.DEMARQUE, "READ0001"
+        )
+        work.classifier.prepare_classification(c4)
+
+        audience = work.classifier._audience()
+        assert audience == SubjectClassifier.AUDIENCE_CHILDREN
+        assert work.classifier._target_age(audience) == (0, 7)
 
     def test_target_age_ya(self, work_classifier_fixture: TestWorkClassifierFixture):
         work = work_classifier_fixture
@@ -722,7 +780,25 @@ class TestWorkClassifier:
 
         audience = work.classifier._audience()
         assert audience == SubjectClassifier.AUDIENCE_YOUNG_ADULT
-        assert work.classifier._target_age(audience) == (13, 18)
+        age = work.classifier._target_age(audience)
+        assert age == (13, 17)
+
+    def test_target_age_ya_no_upper(
+        self, work_classifier_fixture: TestWorkClassifierFixture
+    ):
+        work = work_classifier_fixture
+        session = work.transaction.session
+        overdrive = DataSource.lookup(session, DataSource.OVERDRIVE)
+
+        c2 = work.identifier.identifier_to_subject(
+            overdrive, Subject.DEMARQUE, "READ0005"
+        )
+        work.classifier.prepare_classification(c2)
+
+        audience = work.classifier._audience()
+        assert audience == SubjectClassifier.AUDIENCE_YOUNG_ADULT
+        age = work.classifier._target_age(audience)
+        assert age == (17, None)
 
     def test_target_age_adult(self, work_classifier_fixture: TestWorkClassifierFixture):
         work = work_classifier_fixture
