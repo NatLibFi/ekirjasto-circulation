@@ -4,6 +4,7 @@ import datetime
 from functools import partial
 from typing import Any, cast
 
+from flask_babel import gettext
 from lxml import etree
 
 from core.feed.serializer.base import SerializerInterface
@@ -321,14 +322,14 @@ class OPDS1Serializer(SerializerInterface[etree._Element], OPDSFeed):
             reading: etree._Element = self._tag("waysOfReading")
             for feature in accessibility.ways_of_reading:
                 element = self._tag("feature")
-                element.text = feature
+                element.text = gettext(feature)
                 reading.append(element)
             entry.append(reading)
         if accessibility.conformance:
             conformance: etree._Element = self._tag("conformance")
             for conforms in accessibility.conformance:
                 element = self._tag("conformsTo")
-                element.text = conforms
+                element.text = gettext(conforms)
                 conformance.append(element)
             entry.append(conformance)
 
