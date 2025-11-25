@@ -314,20 +314,21 @@ class AccessibilityDataMapper:
 
         if access_mode_list is not None:
             # All main content is provided in textual form.
-            if (
-                len(access_mode_list) == 1 and AccessMode.textual in access_mode_list
-            ) or (
-                access_mode_sufficient_list is not None
-                and AccessModeSufficient.textual in access_mode_sufficient_list
-            ):
+            if len(access_mode_list) == 1 and AccessMode.textual in access_mode_list:
                 w3c_variables.append(W3CVariables.all_necessary_content_textual)
+
+            # The content is at least partially readable in textual form.
+            elif AccessMode.textual in access_mode_list:
+                w3c_variables.append(W3CVariables.some_sufficient_text)
 
             # There is only a single access mode of auditory (an audiobook).
             elif len(access_mode_list) == 1 and AccessMode.auditory in access_mode_list:
+                print("4")
                 w3c_variables.append(W3CVariables.audio_only_content)
 
             # Prerecorded audio content is included as part of the work.
             elif AccessMode.auditory in access_mode_list:
+                print("3")
                 w3c_variables.append(W3CVariables.audio_content)
 
             # There is only a single access mode of visual and there are no sufficient access modes
@@ -339,19 +340,27 @@ class AccessibilityDataMapper:
                 ):
                     w3c_variables.append(W3CVariables.visual_only_content)
 
-        if access_mode_sufficient_list is not None:
-            # The content is at least partially readable in textual form (i.e., "textual" is one
-            # of a set of sufficient access modes).
-            if (
-                AccessModeSufficient.textual in access_mode_sufficient_list
-                or AccessModeSufficient.textual_visual in access_mode_sufficient_list
-                or AccessModeSufficient.visual_textual in access_mode_sufficient_list
-            ):
-                w3c_variables.append(W3CVariables.some_sufficient_text)
-
+        elif access_mode_sufficient_list is not None:
+            print("1")
             # All main content is provided in audio form.
             if AccessModeSufficient.auditory in access_mode_sufficient_list:
                 w3c_variables.append(W3CVariables.all_content_audio)
+
+            # All main content is provided in textual form. There was no accessModes.
+            elif (
+                len(access_mode_sufficient_list) == 1
+                and AccessModeSufficient.textual in access_mode_sufficient_list
+            ):
+                w3c_variables.append(W3CVariables.all_necessary_content_textual)
+
+            # The content is at least partially readable in textual form (i.e., "textual" is one
+            # of a set of sufficient access modes).
+            elif (
+                AccessModeSufficient.textual_visual in access_mode_sufficient_list
+                or AccessModeSufficient.visual_textual in access_mode_sufficient_list
+                or AccessModeSufficient.textual in access_mode_sufficient_list
+            ):
+                w3c_variables.append(W3CVariables.some_sufficient_text)
 
         if feature_list:
             # At least one of the following is present:
