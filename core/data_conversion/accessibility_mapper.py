@@ -323,12 +323,10 @@ class AccessibilityDataMapper:
 
             # There is only a single access mode of auditory (an audiobook).
             elif len(access_mode_list) == 1 and AccessMode.auditory in access_mode_list:
-                print("4")
                 w3c_variables.append(W3CVariables.audio_only_content)
 
             # Prerecorded audio content is included as part of the work.
             elif AccessMode.auditory in access_mode_list:
-                print("3")
                 w3c_variables.append(W3CVariables.audio_content)
 
             # There is only a single access mode of visual and there are no sufficient access modes
@@ -341,7 +339,6 @@ class AccessibilityDataMapper:
                     w3c_variables.append(W3CVariables.visual_only_content)
 
         elif access_mode_sufficient_list is not None:
-            print("1")
             # All main content is provided in audio form.
             if AccessModeSufficient.auditory in access_mode_sufficient_list:
                 w3c_variables.append(W3CVariables.all_content_audio)
