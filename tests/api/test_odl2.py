@@ -718,7 +718,7 @@ class TestODL2Importer:
         ]
         assert book.accessibility.ways_of_reading == [
             "Has alternative text",
-            "Not fully readable in read aloud or dynamic braille",
+            "Readable in read aloud or dynamic braille",
         ]
 
 
