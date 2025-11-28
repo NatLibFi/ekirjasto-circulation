@@ -51,7 +51,6 @@ from core.model import (
     MediaTypes,
     Representation,
     RightsStatus,
-    Subject,
 )
 from core.scripts import RunCollectionCoverageProviderScript
 from core.util.datetime_helpers import datetime_utc, utc_now
@@ -2752,10 +2751,8 @@ class TestOverdriveRepresentationExtractor:
         subjects = sorted(metadata.subjects, key=lambda x: x.identifier)
 
         assert [
-            ("Computer Technology", Subject.OVERDRIVE, 100),
-            ("Nonfiction", Subject.OVERDRIVE, 100),
-            ("Object Technologies - Miscellaneous", "tag", 1),
-        ] == [(x.identifier, x.type, x.weight) for x in subjects]
+            ("Object Technologies - Miscellaneous", "tag"),
+        ] == [(x.identifier, x.type) for x in subjects]
 
         # Related IDs.
         assert (Identifier.OVERDRIVE_ID, "3896665d-9d81-4cac-bd43-ffc5066de1f5") == (
@@ -2910,17 +2907,6 @@ class TestOverdriveRepresentationExtractor:
 
         assert 1 == len(samples)
         assert samples[0].media_type == MediaTypes.EPUB_MEDIA_TYPE
-
-    def test_book_info_with_grade_levels(
-        self, overdrive_api_fixture: OverdriveAPIFixture
-    ):
-        raw, info = overdrive_api_fixture.sample_json("has_grade_levels.json")
-        metadata = OverdriveRepresentationExtractor.book_info_to_metadata(info)
-
-        grade_levels = sorted(
-            x.identifier for x in metadata.subjects if x.type == Subject.GRADE_LEVEL
-        )
-        assert ["Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8"] == grade_levels
 
     def test_book_info_with_awards(self, overdrive_api_fixture: OverdriveAPIFixture):
         raw, info = overdrive_api_fixture.sample_json("has_awards.json")

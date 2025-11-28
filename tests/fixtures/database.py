@@ -774,16 +774,13 @@ class DatabaseTransactionFixture:
         )
         return record
 
-    def classification(
-        self, identifier, subject, data_source, weight=1
-    ) -> Classification:
+    def classification(self, identifier, subject, data_source) -> Classification:
         return get_one_or_create(
             self.session,
             Classification,
             identifier=identifier,
             subject=subject,
             data_source=data_source,
-            weight=weight,
         )[0]
 
     def customlist(

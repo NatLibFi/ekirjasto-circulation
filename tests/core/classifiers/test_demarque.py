@@ -47,5 +47,5 @@ class TestDeMarqueClassifier:
         assert (0, 3) == DeMarqueClassifier.target_age("READ0001", "Early childhood")
         assert (4, 7) == DeMarqueClassifier.target_age("READ0002", "Beginner reader")
         assert (8, 12) == DeMarqueClassifier.target_age("READ0003", "Advanced reader")
-        assert (13, 18) == DeMarqueClassifier.target_age("READ0004", "Teen")
+        assert (13, 17) == DeMarqueClassifier.target_age("READ0004", "Teen")
         assert (17, None) == DeMarqueClassifier.target_age("READ0005", "Young Adult")

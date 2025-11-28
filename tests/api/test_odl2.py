@@ -207,8 +207,8 @@ class TestODL2Importer:
         assert 1 == len(moby_dick_work.license_pools)
         assert moby_dick_license_pool == moby_dick_work.license_pools[0]
 
-        # The entry didn't contain any subject that maps to a genre
-        assert 0 == len(moby_dick_work.genres)
+        # The entry contained one subject that maps to a genre
+        assert 1 == len(moby_dick_work.genres)
         assert "Children" == moby_dick_work.audience
         assert True == moby_dick_work.fiction
 
@@ -359,6 +359,11 @@ class TestODL2Importer:
         assert maahan_katketty_edition == maahan_katketty_work.presentation_edition
         assert 1 == len(maahan_katketty_work.license_pools)
         assert maahan_katketty_licensepool == maahan_katketty_work.license_pools[0]
+
+        # The entry contained two subjects that maps to a genre
+        assert 2 == len(maahan_katketty_work.genres)
+        assert "Adult" == maahan_katketty_work.audience
+        assert True == maahan_katketty_work.fiction
 
     @freeze_time("2016-01-01T00:00:00+00:00")
     def test_import_audiobook_with_streaming(

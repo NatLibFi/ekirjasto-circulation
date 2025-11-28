@@ -44,6 +44,11 @@
             "code": "juvenile-fiction",
             "name": "Juvenile Fiction",
             "links": []
+          },
+          {
+              "code": "FIC000000",
+              "name": "Fiction / General",
+              "scheme": "http://www.bisg.org/standards/bisac_subject/"
           }
         ]
       },

@@ -126,8 +126,6 @@ class TestNoveListAPI:
         vampire = novelist_fixture.sample_representation("vampire_kisses.json")
         metadata = novelist_fixture.novelist.lookup_info_to_metadata(vampire)
         assert isinstance(metadata, Metadata)
-        [lexile] = [s for s in metadata.subjects if s.type == "Lexile"]
-        assert lexile.identifier == "630"
         assert metadata.series == "Vampire kisses manga"
         # The full title should be selected, since every volume
         # has the same main title: 'Vampire kisses'
