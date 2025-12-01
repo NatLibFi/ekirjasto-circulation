@@ -34,38 +34,16 @@ NO_NUMBER = -1
 
 
 class ClassifierConstants:
-    DDC = "DDC"
-    LCC = "LCC"
-    LCSH = "LCSH"
-    FAST = "FAST"
-    OVERDRIVE = "Overdrive"
+    # Subject related constants
     BISAC = "BISAC"
-    BIC = "BIC"
     TAG = "tag"  # Folksonomic tags.
     DEMARQUE = "De Marque"
-
-    # Appeal controlled vocabulary developed by NYPL
-    NYPL_APPEAL = "NYPL Appeal"
-
-    GRADE_LEVEL = "Grade level"  # "1-2", "Grade 4", "Kindergarten", etc.
     SCHEMA_AGE_RANGE = "schema:typicalAgeRange"  # "0-2", etc.
-    AXIS_360_AUDIENCE = "Axis 360 Audience"
-    DEMARQUE_AUDIENCE = "schema:Audience"
-
-    # We know this says something about the audience but we're not sure what.
-    # Could be any of the values from GRADE_LEVEL or AGE_RANGE, plus
-    # "YA", "Adult", etc.
     SCHEMA_AUDIENCE = "schema:audience"
 
-    GUTENBERG_BOOKSHELF = "gutenberg:bookshelf"
-    TOPIC = "schema:Topic"
-    PLACE = "schema:Place"
-    PERSON = "schema:Person"
-    ORGANIZATION = "schema:Organization"
-    LEXILE_SCORE = "Lexile"
-    ATOS_SCORE = "ATOS"
-    INTEREST_LEVEL = "Interest Level"
+    GRADE_LEVEL = "Grade level"  # "1-2", "Grade 4", "Kindergarten", etc.
 
+    # Audience related constants
     AUDIENCE_ADULT = "Adult"
     AUDIENCE_ADULTS_ONLY = "Adults Only"
     AUDIENCE_YOUNG_ADULT = "Young Adult"
@@ -91,16 +69,20 @@ class ClassifierConstants:
         AUDIENCE_YOUNG_ADULT,
         AUDIENCE_CHILDREN,
         AUDIENCE_ALL_AGES,
-        AUDIENCE_RESEARCH,
     }
 
+    # Subjects used when changed in the admin UI and what goes into our OPDS feed.
     SIMPLIFIED_GENRE = "http://librarysimplified.org/terms/genres/Simplified/"
     SIMPLIFIED_FICTION_STATUS = "http://librarysimplified.org/terms/fiction/"
 
 
 class SubjectClassifier(ClassifierConstants):
-    """Turn an external classification into an internal genre, an
+    """
+    Turn an external classification into an internal genre, an
     audience, an age level, and a fiction status.
+
+    The appropriate classifier is based on the subject's type which
+    is mapped to one of the Subject scheme constants.
     """
 
     AUDIENCES_NO_RESEARCH = [
@@ -113,7 +95,8 @@ class SubjectClassifier(ClassifierConstants):
 
     @classmethod
     def range_tuple(cls, lower, upper):
-        """Turn a pair of ages into a tuple that represents an age range.
+        """
+        Turn a pair of ages into a tuple that represents an age range.
         This may be turned into an inclusive postgres NumericRange later,
         but this code should not depend on postgres.
         """
@@ -125,18 +108,22 @@ class SubjectClassifier(ClassifierConstants):
 
     @classmethod
     def lookup(cls, scheme):
-        """Look up a classifier for a classification scheme."""
-        print(scheme)
+        """
+        Look up a classifier for a classification scheme.
+        """
         return cls.classifiers.get(scheme, None)
 
     @classmethod
     def name_for(cls, identifier):
-        """Look up a human-readable name for the given identifier."""
+        """
+        Look up a human-readable name for the given identifier.
+        """
         return None
 
     @classmethod
     def classify_subject(cls, subject):
-        """Try to determine genre, audience, target age, and fiction status
+        """
+        Try to determine genre, audience, target age, and fiction status
         for the given Subject.
         """
         identifier, name = cls.scrub_identifier_and_name(
@@ -158,7 +145,9 @@ class SubjectClassifier(ClassifierConstants):
 
     @classmethod
     def scrub_identifier_and_name(cls, identifier, name):
-        """Prepare identifier and name from within a call to classify_subject()."""
+        """
+        Prepare identifier and name from within a call to classify_subject().
+        """
         identifier = cls.scrub_identifier(identifier)
         if isinstance(identifier, tuple):
             # scrub_identifier returned a canonical value for name as
@@ -172,7 +161,8 @@ class SubjectClassifier(ClassifierConstants):
 
     @classmethod
     def scrub_identifier(cls, identifier):
-        """Prepare an identifier from within a call to classify_subject().
+        """
+        Prepare an identifier from within a call to classify_subject().
 
         This may involve data normalization, conversion to lowercase,
         etc.
@@ -183,25 +173,32 @@ class SubjectClassifier(ClassifierConstants):
 
     @classmethod
     def scrub_name(cls, name):
-        """Prepare a name from within a call to classify()."""
+        """
+        Prepare a name from within a call to classify().
+        """
         if name is None:
             return None
         return Lowercased(name)
 
     @classmethod
     def genre(cls, identifier, name, fiction=None, audience=None):
-        """Is this identifier associated with a particular Genre?"""
+        """
+        Is this identifier associated with a particular Genre?
+        """
         return None
 
     @classmethod
     def genre_match(cls, query):
-        """Does this query string match a particular Genre, and which part
-        of the query matches?"""
+        """
+        Does this query string match a particular Genre, and which part
+        of the query matches?
+        """
         return None, None
 
     @classmethod
     def is_fiction(cls, identifier, name):
-        """Is this identifier+name particularly indicative of fiction?
+        """
+        Is this identifier+name particularly indicative of fiction?
         How about nonfiction?
         """
         if "nonfiction" in name:
@@ -212,7 +209,8 @@ class SubjectClassifier(ClassifierConstants):
 
     @classmethod
     def audience(cls, identifier, name):
-        """What does this identifier+name say about the audience for
+        """
+        What does this identifier+name say about the audience for
         this book?
         """
         if "juvenile" in name:
@@ -229,27 +227,28 @@ class SubjectClassifier(ClassifierConstants):
 
     @classmethod
     def target_age(cls, identifier, name):
-        """For children's books, what does this identifier+name say
+        """
+        For children's books, what does this identifier+name say
         about the target age for this book?
         """
         return cls.range_tuple(None, None)
 
     @classmethod
     def default_target_age_for_audience(cls, audience):
-        """The default target age for a given audience.
-
-        We don't know what age range a children's book is appropriate
-        for, but we can make a decent guess for a YA book, for an
-        'Adult' book it's pretty clear, and for an 'Adults Only' book
-        it's very clear.
+        """
+        The default target age for a given audience.
         """
         if audience == SubjectClassifier.AUDIENCE_YOUNG_ADULT:
-            return cls.range_tuple(14, 17)
+            return cls.range_tuple(13, 17)  # 13, 18 in db
         elif audience in (
             SubjectClassifier.AUDIENCE_ADULT,
             SubjectClassifier.AUDIENCE_ADULTS_ONLY,
         ):
             return cls.range_tuple(18, None)
+        elif audience == SubjectClassifier.AUDIENCE_CHILDREN:
+            return cls.range_tuple(0, 12)  # 0, 13 in db
+        elif audience == SubjectClassifier.AUDIENCE_ALL_AGES:
+            return cls.range_tuple(8, None)
         return cls.range_tuple(None, None)
 
     @classmethod
@@ -301,7 +300,8 @@ class SubjectClassifier(ClassifierConstants):
 
     @classmethod
     def and_up(cls, young, keyword):
-        """Encapsulates the logic of what "[x] and up" actually means.
+        """
+        Encapsulates the logic of what "[x] and up" actually means.
 
         Given the lower end of an age range, tries to determine the
         upper end of the range.
@@ -459,27 +459,6 @@ class GradeLevelClassifier(SubjectClassifier):
                     grade_words = match.group()
                     break
         return (target_age, grade_words)
-
-
-class InterestLevelClassifier(SubjectClassifier):
-    @classmethod
-    def audience(cls, identifier, name):
-        if identifier in ("lg", "mg+", "mg"):
-            return cls.AUDIENCE_CHILDREN
-        elif identifier == "ug":
-            return cls.AUDIENCE_YOUNG_ADULT
-        else:
-            return None
-
-    @classmethod
-    def target_age(cls, identifier, name):
-        if identifier == "lg":
-            return cls.range_tuple(5, 8)
-        if identifier in ("mg+", "mg"):
-            return cls.range_tuple(9, 13)
-        if identifier == "ug":
-            return cls.range_tuple(14, 17)
-        return None
 
 
 class AgeClassifier(SubjectClassifier):
@@ -842,7 +821,8 @@ class GenreData:
 
     @classmethod
     def populate(cls, namespace, genres, fiction_source, nonfiction_source):
-        """Create a GenreData object for every genre and subgenre in the given
+        """
+        Create a GenreData object for every genre and subgenre in the given
         list of fiction and nonfiction genres.
         """
         for source, default_fiction in (
@@ -874,7 +854,9 @@ class GenreData:
     def add_genre(
         cls, namespace, genres, name, subgenres, fiction, parent, audience_restriction
     ):
-        """Create a GenreData object. Add it to a dictionary and a namespace."""
+        """
+        Create a GenreData object. Add it to a dictionary and a namespace.
+        """
         if isinstance(name, tuple):
             name, default_fiction = name
         default_fiction = None
@@ -921,7 +903,9 @@ GenreData.populate(globals(), genres, fiction_genres, nonfiction_genres)
 
 
 class Lowercased(str):
-    """A lowercased string that remembers its original value."""
+    """
+    A lowercased string that remembers its original value.
+    """
 
     def __new__(cls, value):
         if isinstance(value, Lowercased):
@@ -952,7 +936,8 @@ class AgeOrGradeClassifier(SubjectClassifier):
 
     @classmethod
     def target_age(cls, identifier, name):
-        """This tag might contain a grade level, an age in years, or nothing.
+        """
+        This tag might contain a grade level, an age in years, or nothing.
         We will try both a grade level and an age in years, but we
         will require that the tag indicate what's being measured. A
         tag like "9-12" will not match anything because we don't know if it's
@@ -965,16 +950,14 @@ class AgeOrGradeClassifier(SubjectClassifier):
 
 
 class SchemaAudienceClassifier(AgeOrGradeClassifier):
-    # NOTE: In practice, subjects like "books for all ages" tend to be
-    # more like advertising slogans than reliable indicators of an
-    # ALL_AGES audience. So the only subject of this type we handle is
-    # the literal string "all ages", as it would appear, e.g., in the
-    # output of the metadata wrangler.
+    """
+    E-kirjasto gets its audience information from schema:audience.
+    """
 
     @classmethod
     def audience(cls, identifier, name):
         if identifier in (
-            "children",
+            "children",  # This is the only children's identifier we actually get
             "juvenile",
             "juvenile-fiction",
             "juvenile-nonfiction",
@@ -983,21 +966,19 @@ class SchemaAudienceClassifier(AgeOrGradeClassifier):
         ):
             return cls.AUDIENCE_CHILDREN
         elif identifier in (
-            "young adult",
+            "young adult",  # This is the only YA identifier we actually get
             "ya",
             "teenagers",
             "adolescent",
             "early adolescents",
         ):
             return cls.AUDIENCE_YOUNG_ADULT
-        elif identifier == "adult":
+        elif identifier == "adult":  # This is the only adult identifier we actually get
             return cls.AUDIENCE_ADULT
         elif identifier == "adults only":
             return cls.AUDIENCE_ADULTS_ONLY
         elif identifier == "all ages":
             return cls.AUDIENCE_ALL_AGES
-        elif identifier == "research":
-            return cls.AUDIENCE_RESEARCH
         return AgeOrGradeClassifier.audience(identifier, name)
 
     @classmethod
@@ -1023,650 +1004,433 @@ class SchemaAudienceClassifier(AgeOrGradeClassifier):
 
 
 class WorkClassifier:
-    """Boil down a bunch of Subject objects into a few values."""
-
-    # TODO: This needs a lot of additions.
-    genre_publishers = {
-        "Harlequin": Romance,
-        "Pocket Books/Star Trek": Media_Tie_in_SF,
-        "Kensington": Urban_Fiction,
-        "Fodor's Travel Publications": Travel,
-        "Marvel Entertainment, LLC": Comics_Graphic_Novels,
-    }
-
-    genre_imprints = {
-        "Harlequin Intrigue": Romantic_Suspense,
-        "Love Inspired Suspense": Romantic_Suspense,
-        "Harlequin Historical": Historical_Romance,
-        "Harlequin Historical Undone": Historical_Romance,
-        "Frommers": Travel,
-        "LucasBooks": Media_Tie_in_SF,
-    }
-
-    audience_imprints = {
-        "Harlequin Teen": SubjectClassifier.AUDIENCE_YOUNG_ADULT,
-        "HarperTeen": SubjectClassifier.AUDIENCE_YOUNG_ADULT,
-        "Open Road Media Teen & Tween": SubjectClassifier.AUDIENCE_YOUNG_ADULT,
-        "Rosen Young Adult": SubjectClassifier.AUDIENCE_YOUNG_ADULT,
-    }
-
-    not_adult_publishers = {
-        "Scholastic Inc.",
-        "Random House Children's Books",
-        "Little, Brown Books for Young Readers",
-        "Penguin Young Readers Group",
-        "Hachette Children's Books",
-        "Nickelodeon Publishing",
-    }
-
-    not_adult_imprints = {
-        "Scholastic",
-        "Scholastic Paperbacks",
-        "Random House Books for Young Readers",
-        "HMH Books for Young Readers",
-        "Knopf Books for Young Readers",
-        "Delacorte Books for Young Readers",
-        "Open Road Media Young Readers",
-        "Macmillan Young Listeners",
-        "Bloomsbury Childrens",
-        "NYR Children's Collection",
-        "Bloomsbury USA Childrens",
-        "National Geographic Children's Books",
-    }
-
-    fiction_imprints = {"Del Rey"}
-    nonfiction_imprints = {"Harlequin Nonfiction"}
-
-    nonfiction_publishers = {"Wiley"}
-    fiction_publishers = set()
+    """
+    Boil down a bunch of Subject objects into a few values.
+    """
 
     def __init__(self, work, test_session=None, debug=False):
         self._db = Session.object_session(work)
         if test_session:
             self._db = test_session
         self.work = work
-        self.fiction_weights = Counter()
-        self.audience_weights = Counter()
-        self.target_age_lower_weights = Counter()
-        self.target_age_upper_weights = Counter()
-        self.genre_weights = Counter()
-        self.direct_from_license_source = set()
-        self.prepared = False
-        self.debug = debug
-        self.classifications = []
-        self.seen_classifications = set()
+        self.fiction_counts = Counter()
+        self.genre_list = list()
+        self.audience_counts = Counter()
+        self.target_age_lower = None
+        self.target_age_upper = None
+        self.bisac_target_age_lower = None
+        self.bisac_target_age_upper = None
         self.log = logging.getLogger("Classifier (workid=%d)" % self.work.id)
+        # For tracking whether classifications have been changed manually
         self.using_staff_genres = False
         self.using_staff_fiction_status = False
         self.using_staff_audience = False
         self.using_staff_target_age = False
+        self.seen_classifications = set()
 
-        # Keep track of whether we've seen one of Overdrive's generic
-        # "Juvenile" classifications, as well as its more specific
-        # subsets like "Picture Books" and "Beginning Readers"
-        self.overdrive_juvenile_generic = False
-        self.overdrive_juvenile_with_target_age = False
+    def prepare_classification(self, classification):
+        """
+        Prepare and process the classification information for a given subject.
 
-    def add(self, classification):
-        """Prepare a single Classification for consideration."""
+        This method extracts and categorizes genre, fiction/nonfiction, audience,
+        and target age information based on the subject type of the provided
+        classification (~subject). We know our subjects to be reliable so we only need
+        to keep count of the most relevant information.
+
+        - If the subject type is BISAC, it appends the genre to the genre list
+        and increments the fiction count.
+        - If the subject type is De Marque, it increments audience counts based
+        on the audience type and extracts target age range information.
+        - If the subject type is Schema Audience, it similarly increments audience
+        counts.
+        - If the subject type is Schema Age Range, it extracts the target age
+        range.
+        Args:
+            classification: Classification: An instance of a Classification object containing
+                            subject information.
+        Returns:
+            None
+        """
         try:
             from core.model import DataSource, Subject
         except ValueError:
             from model import DataSource, Subject
 
-        # We only consider a given classification once from a given
-        # data source.
+        # We only need to classify a subject once per work.
         key = (classification.subject, classification.data_source)
         if key in self.seen_classifications:
             return
         self.seen_classifications.add(key)
-        if self.debug:
-            self.classifications.append(classification)
 
-        # E-kirjasto: Commenting out the below check but leaving
-        # it in case we want to use it later. We want to force classification
-        # for all subjects so that they are up to date.
-        # if not classification.subject.checked  # or self.debug
-        classification.subject.assign_to_genre()
-
-        if classification.comes_from_license_source:
-            self.direct_from_license_source.add(classification)
-        else:
-            if classification.subject.describes_format:
-                # TODO: This is a bit of a hack.
-                #
-                # Only accept a classification having to do with
-                # format (e.g. 'comic books') if that classification
-                # comes direct from the license source. Otherwise it's
-                # really easy for a graphic adaptation of a novel to
-                # get mixed up with the original novel, whereupon the
-                # original book is classified as a graphic novel.
-                return
-
-        # Put the weight of the classification behind various
-        # considerations.
-        weight = classification.scaled_weight
         subject = classification.subject
+
+        # Prepare the subject by extracting its data.
+        subject.extract_subject_data()
+
+        # Changed in admin UI by someone.
         from_staff = classification.data_source.name == DataSource.LIBRARY_STAFF
 
-        # if classification is genre or NONE from staff, ignore all non-staff genres
         is_genre = subject.genre != None
+        # The genre has been deleted by someone manually. In work_editor, a manually
+        # defined genre is type SIMPLIFIED_GENRE and id NONE.
         is_none = (
             from_staff
             and subject.type == Subject.SIMPLIFIED_GENRE
             and subject.identifier == SimplifiedGenreClassifier.NONE
         )
+
+        # Collect information about genre.
         if is_genre or is_none:
-            if not from_staff and self.using_staff_genres:
-                return
-            if from_staff and not self.using_staff_genres:
-                # first encounter with staff genre, so throw out existing genre weights
-                self.using_staff_genres = True
-                self.genre_weights = Counter()
-            if is_genre:
-                self.weigh_genre(subject.genre, weight)
+            self._add_genres(from_staff, is_genre, subject)
 
-        # if staff classification is fiction or nonfiction, ignore all other fictions
+        # Collect information about fiction.
         if not self.using_staff_fiction_status:
-            if from_staff and subject.type == Subject.SIMPLIFIED_FICTION_STATUS:
-                # encountering first staff fiction status,
-                # so throw out existing fiction weights
-                self.using_staff_fiction_status = True
-                self.fiction_weights = Counter()
-            self.fiction_weights[subject.fiction] += weight
+            self._add_fiction_count(from_staff, subject)
 
-        # if staff classification is about audience, ignore all other audience classifications
+        # Collect information about audience.
         if not self.using_staff_audience:
-            if from_staff and subject.type == Subject.SCHEMA_AUDIENCE:
-                self.using_staff_audience = True
-                self.audience_weights = Counter()
-                self.audience_weights[subject.audience] += weight
-            else:
-                if classification.generic_juvenile_audience:
-                    # We have a generic 'juvenile' classification. The
-                    # audience might say 'Children' or it might say 'Young
-                    # Adult' but we don't actually know which it is.
-                    #
-                    # We're going to split the difference, with a slight
-                    # preference for YA, to bias against showing
-                    # age-inappropriate material to children. To
-                    # counterbalance the fact that we're splitting up the
-                    # weight this way, we're also going to treat this
-                    # classification as evidence _against_ an 'adult'
-                    # classification.
-                    self.audience_weights[SubjectClassifier.AUDIENCE_YOUNG_ADULT] += (
-                        weight * 0.6
-                    )
-                    self.audience_weights[SubjectClassifier.AUDIENCE_CHILDREN] += (
-                        weight * 0.4
-                    )
-                    for audience in SubjectClassifier.AUDIENCES_ADULT:
-                        if audience != SubjectClassifier.AUDIENCE_ALL_AGES:
-                            # 'All Ages' is considered an adult audience,
-                            # but a generic 'juvenile' classification
-                            # is not evidence against it.
-                            self.audience_weights[audience] -= weight * 0.5
-                else:
-                    self.audience_weights[subject.audience] += weight
+            self._add_audience_count(from_staff, subject)
 
+        # Collect information about target age.
         if not self.using_staff_target_age:
-            if from_staff and subject.type == Subject.SCHEMA_AGE_RANGE:
-                self.using_staff_target_age = True
-                self.target_age_lower_weights = Counter()
-                self.target_age_upper_weights = Counter()
-            if subject.target_age:
-                # Figure out how reliable this classification really is as
-                # an indicator of a target age.
-                scaled_weight = classification.weight_as_indicator_of_target_age
-                target_min = subject.target_age.lower
-                target_max = subject.target_age.upper
-                if target_min is not None:
-                    if not subject.target_age.lower_inc:
-                        target_min += 1
-                    self.target_age_lower_weights[target_min] += scaled_weight
-                if target_max is not None:
-                    if not subject.target_age.upper_inc:
-                        target_max -= 1
-                    self.target_age_upper_weights[target_max] += scaled_weight
+            self._add_target_age(from_staff, subject)
 
-        if not self.using_staff_audience and not self.using_staff_target_age:
+    def _add_genres(self, from_staff, is_genre, subject):
+        """
+        Append a genre to the classifier's genres if it's BISAC or from staff.
+        Args:
+            from_staff: Boolean: Indicates if the classification has been modified in
+            the admin UI.
+        Returns:
+            None
+        """
+        try:
+            from core.model import Genre, Subject
+        except ValueError:
+            from model import Genre, Subject
+
+        if not from_staff and self.using_staff_genres:
+            return
+        if from_staff and not self.using_staff_genres:
+            self.using_staff_genres = True
+            # first encounter with staff genre, so throw out existing genres
+            self.genre_list = []
+        if is_genre:
+            # De Marque has some of its own subjects that we don't want to use for any
+            # classifications at the moment.
             if (
-                subject.type == "Overdrive"
-                and subject.audience == SubjectClassifier.AUDIENCE_CHILDREN
+                subject.type == SubjectClassifier.BISAC
+                or subject.type == Subject.SIMPLIFIED_GENRE
             ):
-                if subject.target_age and (
-                    subject.target_age.lower or subject.target_age.upper
-                ):
-                    # This is a juvenile classification like "Picture
-                    # Books" which implies a target age.
-                    self.overdrive_juvenile_with_target_age = classification
+                # Ensure it's a Genre, not GenreData object.
+                genre, ignore = Genre.lookup(self._db, subject.genre.name)
+                self.genre_list.append(genre)
+
+    def _add_fiction_count(self, from_staff, subject):
+        """
+        Increment the classifier's fiction count if it's BISAC or from staff.
+        Args:
+            from_staff: Boolean: Indicates if the classification has been modified in
+            the admin UI.
+        Returns:
+            None
+        """
+
+        try:
+            from core.model import Subject
+        except ValueError:
+            from model import Subject
+
+        # A manually defined fiction status in work_editor is type SIMPLIFIED_FICTION_STATUS.
+        if from_staff and subject.type == Subject.SIMPLIFIED_FICTION_STATUS:
+            self.using_staff_fiction_status = True
+            # first encounter with staff fiction, so throw out existing fiction status
+            self.fiction_counts = Counter()
+        # De Marque has some of its own subjects that we don't want to use for any
+        # classifications at the moment.
+        if (
+            subject.type == SubjectClassifier.BISAC
+            or subject.type == Subject.SIMPLIFIED_FICTION_STATUS
+        ):
+            self.fiction_counts[subject.fiction] += 1
+
+    def _add_audience_count(self, from_staff, subject):
+        """
+        Increment the classifier's approppriate audience count if it's schema, BISAC
+        or from staff.
+        Args:
+            from_staff: Boolean: Indicates if the classification has been modified in
+            the admin UI.
+        Returns:
+            None
+        """
+        try:
+            from core.model import Subject
+        except ValueError:
+            from model import Subject
+
+        # A manually defined audience in work_editor is type SCHEMA_AUDIENCE.
+        if from_staff and subject.type == Subject.SCHEMA_AUDIENCE:
+            self.using_staff_audience = True
+            # first encounter with staff audience, so throw out existing audience counts
+            self.audience_counts = Counter()
+            self.audience_counts[subject.audience] += 1
+        else:
+            # De Marque READ.
+            if subject.type == SubjectClassifier.DEMARQUE:
+                if subject.audience == SubjectClassifier.AUDIENCE_CHILDREN:
+                    self.audience_counts[subject.audience] += 1
+                elif subject.audience == SubjectClassifier.AUDIENCE_YOUNG_ADULT:
+                    self.audience_counts[subject.audience] += 1
                 else:
-                    # This is a generic juvenile classification like
-                    # "Juvenile Fiction".
-                    self.overdrive_juvenile_generic = classification
+                    self.audience_counts[subject.audience] += 1
 
-        # E-kirjasto: Since De Marque classifications have target ages for children's and YA books, we want to weigh
-        # them more heavily by setting their weights to 1.0. This ensures that those books are classified accordingly.
-        if subject.type == "De Marque" and (
-            subject.audience == SubjectClassifier.AUDIENCE_CHILDREN
-            or subject.audience == SubjectClassifier.AUDIENCE_YOUNG_ADULT
-        ):
-            if subject.target_age:
-                # Set the weight to 1.0 for any target age.
-                self.audience_weights = Counter()
-                self.audience_weights[subject.audience] += weight * 1.0
-                scaled_weight = classification.weight_as_indicator_of_target_age
-                target_min = subject.target_age.lower
-                target_max = subject.target_age.upper
-                if target_min is not None:
-                    self.target_age_lower_weights[target_min] = 1.0
-                if target_max is not None:
-                    self.target_age_upper_weights[target_max] = 1.0
-        # E-kirjasto: Some De Marque adult books were incorrectly classified as children's books. Let's set the
-        # weight to 1.0 for any adult audience books.
-        if (
-            subject.type == "De Marque"
-            and subject.audience == SubjectClassifier.AUDIENCE_ADULT
-        ):
-            self.audience_weights = Counter()
-            self.audience_weights[subject.audience] += weight * 1.0
+            # Ellibs schema:audience.
+            elif subject.type == SubjectClassifier.SCHEMA_AUDIENCE:
+                if subject.audience == SubjectClassifier.AUDIENCE_CHILDREN:
+                    self.audience_counts[subject.audience] += 1
+                elif subject.audience == SubjectClassifier.AUDIENCE_YOUNG_ADULT:
+                    self.audience_counts[subject.audience] += 1
+                else:
+                    self.audience_counts[subject.audience] += 1
 
-    def weigh_metadata(self):
-        """Modify the weights according to the given Work's metadata.
+            elif subject.type == SubjectClassifier.BISAC:
+                # Though audience information, in most cases, is provided to us by schema,
+                # it's found to be missing in some cases. Save audience information from BISAC
+                # just in case.
+                if subject.audience == SubjectClassifier.AUDIENCE_CHILDREN:
+                    self.audience_counts["BISAC Children"] += 1
+                elif subject.audience == SubjectClassifier.AUDIENCE_YOUNG_ADULT:
+                    self.audience_counts["BISAC ya"] += 1
+                else:
+                    self.audience_counts["BISAC Adult"] += 1
 
-        Use work metadata to simulate classifications.
-
-        This is basic stuff, like: Harlequin tends to publish
-        romances.
+    def _add_target_age(self, from_staff, subject):
         """
-        if self.work.title and (
-            "Star Trek:" in self.work.title
-            or "Star Wars:" in self.work.title
-            or ("Jedi" in self.work.title and self.work.imprint == "Del Rey")
-        ):
-            self.weigh_genre(Media_Tie_in_SF, 100)
-
-        publisher = self.work.publisher
-        imprint = self.work.imprint
-        if (
-            imprint in self.nonfiction_imprints
-            or publisher in self.nonfiction_publishers
-        ):
-            self.fiction_weights[False] = 100
-        elif imprint in self.fiction_imprints or publisher in self.fiction_publishers:
-            self.fiction_weights[True] = 100
-
-        if imprint in self.genre_imprints:
-            self.weigh_genre(self.genre_imprints[imprint], 100)
-        elif publisher in self.genre_publishers:
-            self.weigh_genre(self.genre_publishers[publisher], 100)
-
-        if imprint in self.audience_imprints:
-            self.audience_weights[self.audience_imprints[imprint]] += 100
-        elif (
-            publisher in self.not_adult_publishers or imprint in self.not_adult_imprints
-        ):
-            for audience in [
-                SubjectClassifier.AUDIENCE_ADULT,
-                SubjectClassifier.AUDIENCE_ADULTS_ONLY,
-            ]:
-                self.audience_weights[audience] -= 100
-
-    def prepare_to_classify(self):
-        """Called the first time classify() is called. Does miscellaneous
-        one-time prep work that requires all data to be in place.
+        Modify the classifier's target age if it's schema or from staff.
+        Args:
+            from_staff: Boolean: Indicates if the classification has been modified in
+            the admin UI.
+        Returns:
+            None
         """
-        self.weigh_metadata()
 
-        explicitly_indicated_audiences = (
-            SubjectClassifier.AUDIENCE_CHILDREN,
-            SubjectClassifier.AUDIENCE_YOUNG_ADULT,
-            SubjectClassifier.AUDIENCE_ADULTS_ONLY,
+        try:
+            from core.model import Subject
+        except ValueError:
+            from model import Subject
+
+        # A manually defined audience in work_editor is type AGE_RANGE.
+        if from_staff and subject.type == Subject.SCHEMA_AGE_RANGE:
+            self.using_staff_target_age = True
+            # first encounter with staff target age, so set those
+            self.target_age_lower = subject.target_age.lower
+            self.target_age_upper = subject.target_age.upper
+        else:
+            # De Marque children's subjects contain more granular target age information
+            # and a work can have more than one subject. We want to grab the largest age
+            # range possible based on the subjects.
+            if (
+                subject.audience == SubjectClassifier.AUDIENCE_CHILDREN
+                or subject.audience == SubjectClassifier.AUDIENCE_YOUNG_ADULT
+            ) and subject.target_age:
+                if subject.type == SubjectClassifier.DEMARQUE:
+                    # Set ages if not set
+                    if self.target_age_lower is None:
+                        self.target_age_lower = subject.target_age.lower
+                    else:
+                        self.target_age_lower = min(
+                            self.target_age_lower, subject.target_age.lower
+                        )
+
+                    if self.target_age_upper is None:
+                        self.target_age_upper = subject.target_age.upper
+                    else:
+                        self.target_age_upper = max(
+                            self.target_age_upper, subject.target_age.upper
+                        )
+                # BISACs do not need such handling.
+                elif subject.type == SubjectClassifier.BISAC:
+                    self.bisac_target_age_lower = subject.target_age.lower
+                    self.bisac_target_age_upper = subject.target_age.upper
+
+    def classify_work(self, default_audience=None):
+        """
+        Determine the audience, target age, fiction status and genres of a work.
+
+        Args:
+            default_audience: Any of the audience constants in ClassifierConstants
+            or None.
+        Returns:
+            genres: List: A list of Genre objects.
+            fiction: Boolean: A boolean indicating fictions status.
+            audience: Any of the audience constants in ClassifierConstants indicating
+            the target audience.
+            target_age: Tuple: A tuple indicating a target age range.
+
+        """
+        fiction = self._fiction()
+        genres, fiction = self._genres(fiction)
+        audience = self._audience(genres, default_audience=default_audience)
+        target_age = self._target_age(audience)
+        self.log.info(
+            f"Work {self.work} classified: Fiction: {fiction}, Genres: {genres}, Audience: {audience}, Target age: {target_age}"
         )
-        audiences_from_license_source = {
-            classification.subject.audience
-            for classification in self.direct_from_license_source
-        }
-        if (
-            self.direct_from_license_source
-            and not self.using_staff_audience
-            and not any(
-                audience in explicitly_indicated_audiences
-                for audience in audiences_from_license_source
-            )
-        ):
-            # If this was erotica, or a book for children or young
-            # adults, the distributor would have given some indication
-            # of that fact. In the absense of any such indication, we
-            # can assume very strongly that this is a regular old book
-            # for adults.
-            #
-            # 3M is terrible at distinguishing between childrens'
-            # books and YA books, but books for adults can be
-            # distinguished by their _lack_ of childrens/YA
-            # classifications.
-            self.audience_weights[SubjectClassifier.AUDIENCE_ADULT] += 500
-
-        if (
-            self.overdrive_juvenile_generic
-            and not self.overdrive_juvenile_with_target_age
-        ):
-            # This book is classified under 'Juvenile Fiction' but not
-            # under 'Picture Books' or 'Beginning Readers'. The
-            # implicit target age here is 9-12 (the portion of
-            # Overdrive's 'juvenile' age range not covered by 'Picture
-            # Books' or 'Beginning Readers'.
-            weight = self.overdrive_juvenile_generic.weight_as_indicator_of_target_age
-            self.target_age_lower_weights[9] += weight
-            self.target_age_upper_weights[12] += weight
-
-        self.prepared = True
-
-    def classify_work(self, default_fiction=None, default_audience=None):
-        # Do a little prep work.
-        if not self.prepared:
-            self.prepare_to_classify()
-
-        if self.debug:
-            for c in self.classifications:
-                self.log.debug(
-                    "%d %r (via %s)", c.weight, c.subject, c.data_source.name
-                )
-
-        # Actually figure out the classifications
-        fiction = self.fiction(default_fiction=default_fiction)
-        genres, fiction = self.genres(fiction)
-        audience = self.audience(genres, default_audience=default_audience)
-        target_age = self.target_age(audience)
-        if self.debug:
-            self.log.debug("Fiction weights:")
-            for k, v in self.fiction_weights.most_common():
-                self.log.debug(" %s: %s", v, k)
-            self.log.debug("Genre weights:")
-            for k, v in self.genre_weights.most_common():
-                self.log.debug(" %s: %s", v, k)
-            self.log.debug("Audience weights:")
-            for k, v in self.audience_weights.most_common():
-                self.log.debug(" %s: %s", v, k)
         return genres, fiction, audience, target_age
 
-    def fiction(self, default_fiction=None):
-        """Is it more likely this is a fiction or nonfiction book?"""
-        if not self.fiction_weights:
-            # We have absolutely no idea one way or the other, and it
-            # would be irresponsible to guess.
-            return default_fiction
-        is_fiction = default_fiction
-        if self.fiction_weights[True] > self.fiction_weights[False]:
-            is_fiction = True
-        elif self.fiction_weights[False] > 0:
-            is_fiction = False
-        return is_fiction
+    def _fiction(self):
+        """
+        Is it more likely this is a fiction or nonfiction book?
 
-    def audience(self, genres=[], default_audience=None):
-        """What's the most likely audience for this book?
-        :param default_audience: To avoid embarassing situations we will
-        classify works as being intended for adults absent convincing
-        evidence to the contrary. In some situations (like the metadata
-        wrangler), it's better to state that we have no information, so
-        default_audience can be set to None.
+        In E-kirjasto, a fiction book can have nonfiction BISACs (~genres) that
+        expand the book's related subjects so we classify the book as fiction rather
+        than nonfiction. If, some time in the future, the tendency to get incorrect
+        nonfiction BISACs change, we'll need to adjust this classification.
+
+        Returns:
+            is_fiction: Boolean
         """
 
+        is_fiction = True
+
+        self.log.info(f"Fiction counts: {self.fiction_counts}")
+
+        if self.fiction_counts[False] and not self.fiction_counts[True]:
+            is_fiction = False
+
+        self.log.info(f"Fiction: {is_fiction}")
+
+        return is_fiction
+
+    def _audience(self, genres=[], default_audience=None):
+        """
+        What's the most likely audience for this book?
+        Since we get reliable schema audience information from our feeds,
+        we should always know exactly who the book is targeted to. If not,
+        we can use audience information collected from BISACs.
+
+        Args:
+            default_audience: It's better to state that we have no information, so
+            default_audience can be set to None.
+        Returns:
+            audience: Any of the audience constants in ClassifierConstants indicating
+            the target audience.
+        """
         # If we determined that Erotica was a significant enough
         # component of the classification to count as a genre, the
         # audience will always be 'Adults Only', even if the audience
-        # weights would indicate something else.
-        if Erotica in genres:
+        # counts would indicate something else.
+        is_erotica = [genre.name for genre in genres if genre.name == "Erotica"]
+        if is_erotica:
             return SubjectClassifier.AUDIENCE_ADULTS_ONLY
 
-        w = self.audience_weights
-        if not self.audience_weights:
-            # We have absolutely no idea, and it would be
-            # irresponsible to guess.
+        counts = self.audience_counts
+        if not counts:
             return default_audience
 
-        children_weight = w.get(SubjectClassifier.AUDIENCE_CHILDREN, 0)
-        ya_weight = w.get(SubjectClassifier.AUDIENCE_YOUNG_ADULT, 0)
-        adult_weight = w.get(SubjectClassifier.AUDIENCE_ADULT, 0)
-        adults_only_weight = w.get(SubjectClassifier.AUDIENCE_ADULTS_ONLY, 0)
-        all_ages_weight = w.get(SubjectClassifier.AUDIENCE_ALL_AGES, 0)
-        research_weight = w.get(SubjectClassifier.AUDIENCE_RESEARCH, 0)
+        self.log.info(f"Audience counts: {counts}")
 
-        total_adult_weight = adult_weight + adults_only_weight
-        total_weight = sum(w.values())
+        children_counts = counts.get(SubjectClassifier.AUDIENCE_CHILDREN, 0)
+        ya_counts = counts.get(SubjectClassifier.AUDIENCE_YOUNG_ADULT, 0)
+        adult_counts = counts.get(SubjectClassifier.AUDIENCE_ADULT, 0)
+        if children_counts == 0 and ya_counts == 0 and adult_counts == 0:
+            # We saved BISAC audience information in case the prefered schema audience info is missing.
+            children_counts = counts.get("BISAC Children", 0)
+            ya_counts = counts.get("BISAC ya", 0)
+            adult_counts = counts.get("BISAC Adult", 0)
 
         audience = default_audience
 
-        # A book will be classified as a young adult or childrens'
-        # book when the weight of that audience is more than twice the
-        # combined weight of the 'adult' and 'adults only' audiences.
-        # If that combined weight is zero, then any amount of evidence
-        # is sufficient.
-        threshold = total_adult_weight * 2
-
-        # If both the 'children' weight and the 'YA' weight pass the
-        # threshold, we go with the one that weighs more.
-        # If the 'children' weight passes the threshold on its own
-        # we go with 'children'.
-        total_juvenile_weight = children_weight + ya_weight
-        if (
-            research_weight > (total_adult_weight + all_ages_weight)
-            and research_weight > (total_juvenile_weight + all_ages_weight)
-            and research_weight > threshold
-        ):
-            audience = SubjectClassifier.AUDIENCE_RESEARCH
-        elif (
-            all_ages_weight > total_adult_weight
-            and all_ages_weight > total_juvenile_weight
-        ):
+        # There were subjects (most likely BISACs) from all audience categories.
+        if children_counts > 0 and ya_counts > 0 and adult_counts > 0:
             audience = SubjectClassifier.AUDIENCE_ALL_AGES
-        elif children_weight > threshold and children_weight > ya_weight:
+        # It's a children's book if there's more indication towards that than YA. There
+        # might be adult counts, but as long as there's more children, we go with that.
+        elif children_counts > ya_counts:
             audience = SubjectClassifier.AUDIENCE_CHILDREN
-        elif ya_weight > threshold:
+        elif ya_counts:
             audience = SubjectClassifier.AUDIENCE_YOUNG_ADULT
-        elif total_juvenile_weight > threshold:
-            # Neither weight passes the threshold on its own, but
-            # combined they do pass the threshold. Go with
-            # 'Young Adult' to be safe.
-            audience = SubjectClassifier.AUDIENCE_YOUNG_ADULT
-        elif total_adult_weight > 0:
+        else:
             audience = SubjectClassifier.AUDIENCE_ADULT
-
-        # If the 'adults only' weight is more than 1/4 of the total adult
-        # weight, classify as 'adults only' to be safe.
-        #
-        # TODO: This has not been calibrated.
-        if (
-            audience == SubjectClassifier.AUDIENCE_ADULT
-            and adults_only_weight > total_adult_weight / 4
-        ):
-            audience = SubjectClassifier.AUDIENCE_ADULTS_ONLY
 
         return audience
 
-    @classmethod
-    def top_tier_values(self, counter):
-        """Given a Counter mapping values to their frequency of occurance,
-        return all values that are as common as the most common value.
+    def _target_age(self, audience):
         """
-        top_frequency = None
-        top_tier = set()
-        for age, freq in counter.most_common():
-            if not top_frequency:
-                top_frequency = freq
-            if freq != top_frequency:
-                # We've run out of candidates
-                break
-            else:
-                # This candidate occurs with the maximum frequency.
-                top_tier.add(age)
-        return top_tier
+        Derive a target age from the gathered data.
 
-    def target_age(self, audience):
-        """Derive a target age from the gathered data."""
+        Args:
+            audience: Any of the audience constants in ClassifierConstants.
+        Returns:
+            Tuple: Indicating the age range.
+
+        """
+        target_age = tuple()
+
         if audience not in (
             SubjectClassifier.AUDIENCE_CHILDREN,
             SubjectClassifier.AUDIENCE_YOUNG_ADULT,
         ):
             # This is not a children's or YA book. Assertions about
             # target age are irrelevant and the default value rules.
-            return SubjectClassifier.default_target_age_for_audience(audience)
+            target_age = SubjectClassifier.default_target_age_for_audience(audience)
+        # There is specific target age information.
+        elif self.target_age_lower or self.target_age_upper:
+            target_age = SubjectClassifier.range_tuple(
+                self.target_age_lower, self.target_age_upper
+            )
+        elif audience == SubjectClassifier.AUDIENCE_CHILDREN and (
+            self.bisac_target_age_lower or self.bisac_target_age_upper
+        ):
+            # It's one of the juvenile BISAC subjects that we set to have a target age
+            target_age = SubjectClassifier.range_tuple(
+                self.bisac_target_age_lower, self.bisac_target_age_upper
+            )
+        # There was no target age.
+        else:
+            target_age = SubjectClassifier.default_target_age_for_audience(audience)
 
-        # Only consider the most reliable classifications.
+        self.log.info(f"Target age: {target_age}")
 
-        # Try to reach consensus on the lower and upper bounds of the
-        # age range.
-        if self.debug:
-            if self.target_age_lower_weights:
-                self.log.debug("Possible target age minima:")
-                for k, v in self.target_age_lower_weights.most_common():
-                    self.log.debug(" %s: %s", v, k)
-            if self.target_age_upper_weights:
-                self.log.debug("Possible target age maxima:")
-                for k, v in self.target_age_upper_weights.most_common():
-                    self.log.debug(" %s: %s", v, k)
+        return target_age
 
-        target_age_min = None
-        target_age_max = None
-        if self.target_age_lower_weights:
-            # Find the youngest age in the top tier of values.
-            candidates = self.top_tier_values(self.target_age_lower_weights)
-            target_age_min = min(candidates)
-
-        if self.target_age_upper_weights:
-            # Find the oldest age in the top tier of values.
-            candidates = self.top_tier_values(self.target_age_upper_weights)
-            target_age_max = max(candidates)
-
-        if not target_age_min and not target_age_max:
-            # We found no opinions about target age. Use the default.
-            return SubjectClassifier.default_target_age_for_audience(audience)
-
-        if target_age_min is None:
-            target_age_min = target_age_max
-
-        # Err on the side of setting the minimum age too high but first ensure we have values to compare.
-        if target_age_min and target_age_max and target_age_min > target_age_max:
-            target_age_max = target_age_min
-
-        return SubjectClassifier.range_tuple(target_age_min, target_age_max)
-
-    def genres(self, fiction, cutoff=0.15):
+    def _genres(self, fiction):
         """
-        Consolidate genres and apply a low-pass filter.
         The function compares all current genres to the fiction status and
         removes any if they differ from it. If there's only one genre and it
-        conflicts with the fiction status, the fiction status will will change
+        conflicts with the fiction status, the fiction status will change
         to the genre's fiction status.
 
         Args:
             fiction (Boolean): A derived fiction status of a work.
-            cutoff (Float): A cutoff value. TO DO: Remove it later because
-            E-kirjasto does not need it.
-
         Returns:
-            dictionary: Dictionary of genres and their weights.
+            list: List of genres.
             boolean: Fiction status.
-
         """
-        # Remove any genres whose fiction status is inconsistent with the
-        # (independently determined) fiction status of the book.
-        #
-        # It doesn't matter if a book is classified as 'science
-        # fiction' 100 times; if we know it's nonfiction, it can't be
-        # science fiction. (It's probably a history of science fiction
-        # or something.)
-        genres = dict(self.genre_weights)
+        genres = self.genre_list
+
         if not genres:
             # We have absolutely no idea, and it would be
             # irresponsible to guess.
-            return {}, fiction
+            return [], fiction
 
-        for genre in list(genres.keys()):
+        self.log.info(f"Collected genres: {genres} Initial fiction: {fiction}")
+
+        # copy the list because the original might have genres removed
+        for genre in list(genres):
             # If we have a fiction determination, that lets us eliminate
             # possible genres that conflict with that determination.
             if fiction is not None and (genre.default_fiction != fiction):
-                if len(list(genres.keys())) > 1:
-                    del genres[genre]
+                if len(genres) > 1:
+                    genres.remove(genre)
                 # If there's only one genre, we don't want to lose it or its
                 # fiction status.
                 else:
                     fiction = genre.default_fiction
 
-        # Consolidate parent genres into their heaviest subgenre.
-        # E-kirjasto: Leaving this for now as it's still somewhat useful.
-        genres = self.consolidate_genre_weights(genres)
+        self.log.info(f"Final genres: {genres} Final fiction: {fiction}")
+
         return genres, fiction
-
-    def weigh_genre(self, genre_data, weight):
-        """A helper method that ensure we always use database Genre
-        objects, not GenreData objects, when weighting genres.
-        """
-        # TO DO: E-kirjasto: This function is mostly used to weigh
-        # a genre based on its publisher. Could be teared down.
-        try:
-            from core.model import Genre
-        except ValueError:
-            from model import Genre
-        genre, ignore = Genre.lookup(self._db, genre_data.name)
-        self.genre_weights[genre] += weight
-
-    @classmethod
-    def consolidate_genre_weights(cls, weights, subgenre_swallows_parent_at=0.03):
-        """If a genre and its subgenres both show up, examine the subgenre
-        with the highest weight. If its weight exceeds a certain
-        proportion of the weight of the parent genre, assign the
-        parent's weight to the subgenre and remove the parent.
-        """
-        # print("Before consolidation:")
-        # for genre, weight in weights.items():
-        #    print("", genre, weight)
-
-        # Convert Genre objects to GenreData.
-        consolidated = Counter()
-        for genre, weight in list(weights.items()):
-            if not isinstance(genre, GenreData):
-                genre = genres[genre.name]
-            consolidated[genre] += weight
-
-        heaviest_child = dict()
-        for genre, weight in list(consolidated.items()):
-            for parent in genre.parents:
-                if parent in consolidated:
-                    if (not parent in heaviest_child) or weight > heaviest_child[
-                        parent
-                    ][1]:
-                        heaviest_child[parent] = (genre, weight)
-        # print("Heaviest child:")
-        # for parent, (genre, weight) in heaviest_child.items():
-        #    print("", parent, genre, weight)
-        made_it = False
-        while not made_it:
-            for parent, (child, weight) in sorted(
-                heaviest_child.items(), key=lambda genre: genre[1][1], reverse=True
-            ):
-                parent_weight = consolidated.get(parent, 0)
-                if weight > (subgenre_swallows_parent_at * parent_weight):
-                    consolidated[child] += parent_weight
-                    del consolidated[parent]
-                    changed = False
-                    for parent in parent.parents:
-                        if parent in heaviest_child:
-                            heaviest_child[parent] = (child, consolidated[child])
-                            changed = True
-                    if changed:
-                        # We changed the dict, so we need to restart
-                        # the iteration.
-                        break
-            # We made it all the way through the dict without changing it.
-            made_it = True
-        # print("Final heaviest child:")
-        # for parent, (genre, weight) in heaviest_child.items():
-        #    print("", parent, genre, weight)
-        # print("After consolidation:")
-        # for genre, weight in consolidated.items():
-        #    print("", genre, weight)
-        return consolidated
 
 
 # Make a dictionary of classification schemes to classifiers.
@@ -1674,30 +1438,12 @@ class WorkClassifier:
 SubjectClassifier.classifiers[
     SubjectClassifier.SCHEMA_AUDIENCE
 ] = SchemaAudienceClassifier
-SubjectClassifier.classifiers[
-    SubjectClassifier.AXIS_360_AUDIENCE
-] = AgeOrGradeClassifier
 
 # Finally, import classifiers described in submodules.
-from core.classifier.age import (
-    AgeClassifier,
-    GradeLevelClassifier,
-    InterestLevelClassifier,
-)
-from core.classifier.bic import BICClassifier
+from core.classifier.age import AgeClassifier, GradeLevelClassifier
 from core.classifier.bisac import BISACClassifier
-from core.classifier.ddc import DeweyDecimalClassifier
 from core.classifier.demarque import DeMarqueClassifier
-from core.classifier.gutenberg import GutenbergBookshelfClassifier
-from core.classifier.keyword import (
-    Eg,
-    FASTClassifier,
-    KeywordBasedClassifier,
-    LCSHClassifier,
-    TAGClassifier,
-)
-from core.classifier.lcc import LCCClassifier
-from core.classifier.overdrive import OverdriveClassifier
+from core.classifier.keyword import Eg, KeywordBasedClassifier, TAGClassifier
 from core.classifier.simplified import (
     SimplifiedFictionClassifier,
     SimplifiedGenreClassifier,

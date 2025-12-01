@@ -40,7 +40,6 @@ from core.metadata_layer import (
     TimestampData,
 )
 from core.model import (
-    Classification,
     Collection,
     DataSource,
     DeliveryMechanism,
@@ -699,7 +698,6 @@ class BibliographicParser:
                     SubjectData(
                         Subject.TAG,
                         topic,
-                        weight=Classification.TRUSTED_DISTRIBUTOR_WEIGHT,
                     )
                 )
                 seen_topics.add(topic)

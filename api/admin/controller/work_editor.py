@@ -433,7 +433,6 @@ class WorkController(CirculationManagerController, AdminPermissionsControllerMix
             .join(Subject)
             .join(DataSource)
             .filter(Classification.identifier_id == identifier_id)
-            .order_by(Classification.weight.desc())
             .all()
         )
 
@@ -445,7 +444,6 @@ class WorkController(CirculationManagerController, AdminPermissionsControllerMix
                         "type": result.subject.type,
                         "name": result.subject.identifier,
                         "source": result.data_source.name,
-                        "weight": result.weight,
                     }
                 )
             )
@@ -500,7 +498,6 @@ class WorkController(CirculationManagerController, AdminPermissionsControllerMix
                 data_source=staff_data_source,
                 subject_type=Subject.SCHEMA_AUDIENCE,
                 subject_identifier=new_audience,
-                weight=WorkController.STAFF_WEIGHT,
             )
 
         # Update target age if present
@@ -542,7 +539,6 @@ class WorkController(CirculationManagerController, AdminPermissionsControllerMix
                     data_source=staff_data_source,
                     subject_type=Subject.SCHEMA_AGE_RANGE,
                     subject_identifier=age_range_identifier,
-                    weight=WorkController.STAFF_WEIGHT * 100,
                 )
 
         # Update fiction status
@@ -561,7 +557,6 @@ class WorkController(CirculationManagerController, AdminPermissionsControllerMix
                 data_source=staff_data_source,
                 subject_type=Subject.SIMPLIFIED_FICTION_STATUS,
                 subject_identifier=fiction_term,
-                weight=WorkController.STAFF_WEIGHT,
             )
             classification.subject.fiction = new_fiction
 
@@ -592,7 +587,6 @@ class WorkController(CirculationManagerController, AdminPermissionsControllerMix
                         data_source=staff_data_source,
                         subject_type=Subject.SIMPLIFIED_GENRE,
                         subject_identifier=genre,
-                        weight=WorkController.STAFF_WEIGHT,
                     )
 
             # add NONE genre classification if we aren't keeping any genres
@@ -601,7 +595,6 @@ class WorkController(CirculationManagerController, AdminPermissionsControllerMix
                     data_source=staff_data_source,
                     subject_type=Subject.SIMPLIFIED_GENRE,
                     subject_identifier=SimplifiedGenreClassifier.NONE,
-                    weight=WorkController.STAFF_WEIGHT,
                 )
             else:
                 # otherwise delete existing NONE genre classification

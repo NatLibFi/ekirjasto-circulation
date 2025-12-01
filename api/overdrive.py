@@ -64,7 +64,6 @@ from core.metadata_layer import (
     TimestampData,
 )
 from core.model import (
-    Classification,
     Collection,
     Contributor,
     Credential,
@@ -2446,10 +2445,6 @@ class OverdriveRepresentationExtractor(LoggerMixin):
         overdrive_id = book["id"]
         primary_identifier = IdentifierData(Identifier.OVERDRIVE_ID, overdrive_id)
 
-        # If we trust classification data, we'll give it this weight.
-        # Otherwise we'll probably give it a fraction of this weight.
-        trusted_weight = Classification.TRUSTED_DISTRIBUTOR_WEIGHT
-
         duration: int | None = None
 
         if include_bibliographic:
@@ -2488,23 +2483,11 @@ class OverdriveRepresentationExtractor(LoggerMixin):
                 contributors.append(contributor)
 
             subjects = []
-            for sub in book.get("subjects", []):
-                subject = SubjectData(
-                    type=Subject.OVERDRIVE,
-                    identifier=sub["value"],
-                    weight=trusted_weight,
-                )
-                subjects.append(subject)
 
             for sub in book.get("keywords", []):
                 subject = SubjectData(
                     type=Subject.TAG,
                     identifier=sub["value"],
-                    # We don't use TRUSTED_DISTRIBUTOR_WEIGHT because
-                    # we don't know where the tags come from --
-                    # probably Overdrive users -- and they're
-                    # frequently wrong.
-                    weight=1,
                 )
                 subjects.append(subject)
 
@@ -2518,7 +2501,6 @@ class OverdriveRepresentationExtractor(LoggerMixin):
                     subject = SubjectData(
                         type=Subject.GRADE_LEVEL,
                         identifier=i["value"],
-                        weight=trusted_weight / 10,
                     )
                     subjects.append(subject)
 
@@ -2541,30 +2523,6 @@ class OverdriveRepresentationExtractor(LoggerMixin):
                 num_awards = len(extra["awards"])
                 measurements.append(
                     MeasurementData(Measurement.AWARDS, str(num_awards))
-                )
-
-            for name, subject_type in (
-                ("ATOS", Subject.ATOS_SCORE),
-                ("lexileScore", Subject.LEXILE_SCORE),
-                ("interestLevel", Subject.INTEREST_LEVEL),
-            ):
-                if not name in book:
-                    continue
-                identifier = str(book[name])
-                subjects.append(
-                    SubjectData(
-                        type=subject_type, identifier=identifier, weight=trusted_weight
-                    )
-                )
-
-            for grade_level_info in book.get("gradeLevels", []):
-                grade_level = grade_level_info.get("value")
-                subjects.append(
-                    SubjectData(
-                        type=Subject.GRADE_LEVEL,
-                        identifier=grade_level,
-                        weight=trusted_weight,
-                    )
                 )
 
             identifiers = []

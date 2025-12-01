@@ -53,7 +53,6 @@ from core.metadata_layer import (
 )
 from core.model import (
     CirculationEvent,
-    Classification,
     Collection,
     Contributor,
     DataSource,
@@ -703,7 +702,6 @@ class ItemListParser(XMLProcessor[Metadata]):
                     Subject.BISAC,
                     None,
                     i,
-                    weight=Classification.TRUSTED_DISTRIBUTOR_WEIGHT,
                 )
             )
         return genres

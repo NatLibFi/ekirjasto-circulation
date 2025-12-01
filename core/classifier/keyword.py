@@ -1257,18 +1257,8 @@ class KeywordBasedClassifier(AgeOrGradeClassifier):
         return (genre, genre_words)
 
 
-class LCSHClassifier(KeywordBasedClassifier):
-    pass
-
-
-class FASTClassifier(KeywordBasedClassifier):
-    pass
-
-
 class TAGClassifier(KeywordBasedClassifier):
     pass
 
 
-SubjectClassifier.classifiers[SubjectClassifier.FAST] = FASTClassifier
-SubjectClassifier.classifiers[SubjectClassifier.LCSH] = LCSHClassifier
 SubjectClassifier.classifiers[SubjectClassifier.TAG] = TAGClassifier

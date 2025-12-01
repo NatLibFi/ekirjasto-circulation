@@ -963,7 +963,6 @@ class TestParsers:
             Subject.BISAC,
             Subject.BISAC,
             Subject.BISAC,
-            Subject.AXIS_360_AUDIENCE,
         ] == [x.type for x in subjects]
         general_fiction, women_sleuths, romantic_suspense = sorted(
             x.name for x in subjects if x.type == Subject.BISAC
@@ -971,11 +970,6 @@ class TestParsers:
         assert "FICTION / General" == general_fiction
         assert "FICTION / Mystery & Detective / Women Sleuths" == women_sleuths
         assert "FICTION / Romance / Suspense" == romantic_suspense
-
-        [adult] = [
-            x.identifier for x in subjects if x.type == Subject.AXIS_360_AUDIENCE
-        ]
-        assert "General Adult" == adult
 
         # The second book has a cover image simulating some possible
         # future case, where B&T change their cover service so that

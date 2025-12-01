@@ -34,7 +34,6 @@ from core.model import (
     numericrange_to_tuple,
     tuple_to_numericrange,
 )
-from core.model.constants import DataSourceConstants
 from core.model.hassessioncache import HasSessionCache
 
 if TYPE_CHECKING:
@@ -49,45 +48,22 @@ class Subject(Base):
     """A subject under which books might be classified."""
 
     # Types of subjects.
-    LCC = SubjectClassifier.LCC  # Library of Congress Classification
-    LCSH = SubjectClassifier.LCSH  # Library of Congress Subject Headings
-    FAST = SubjectClassifier.FAST
-    DDC = SubjectClassifier.DDC  # Dewey Decimal Classification
-    OVERDRIVE = SubjectClassifier.OVERDRIVE  # Overdrive's classification system
     BISAC = SubjectClassifier.BISAC
-    BIC = SubjectClassifier.BIC  # BIC Subject Categories
     TAG: str = SubjectClassifier.TAG  # Folksonomic tags.
     SCHEMA_AUDIENCE: str = SubjectClassifier.SCHEMA_AUDIENCE
-    NYPL_APPEAL = SubjectClassifier.NYPL_APPEAL
     DEMARQUE = SubjectClassifier.DEMARQUE
+    SCHEMA_AGE_RANGE: str = SubjectClassifier.SCHEMA_AGE_RANGE
 
     # Types with terms that are suitable for search.
-    TYPES_FOR_SEARCH = [FAST, OVERDRIVE, BISAC, TAG]
+    TYPES_FOR_SEARCH = [BISAC]
 
-    AXIS_360_AUDIENCE = SubjectClassifier.AXIS_360_AUDIENCE
-    GRADE_LEVEL = SubjectClassifier.GRADE_LEVEL
-    SCHEMA_AGE_RANGE: str = SubjectClassifier.SCHEMA_AGE_RANGE
-    LEXILE_SCORE = SubjectClassifier.LEXILE_SCORE
-    ATOS_SCORE = SubjectClassifier.ATOS_SCORE
-    INTEREST_LEVEL = SubjectClassifier.INTEREST_LEVEL
-
-    GUTENBERG_BOOKSHELF = SubjectClassifier.GUTENBERG_BOOKSHELF
-    TOPIC = SubjectClassifier.TOPIC
-    PLACE = SubjectClassifier.PLACE
-    PERSON = SubjectClassifier.PERSON
-    ORGANIZATION = SubjectClassifier.ORGANIZATION
     SIMPLIFIED_GENRE = SubjectClassifier.SIMPLIFIED_GENRE
     SIMPLIFIED_FICTION_STATUS = SubjectClassifier.SIMPLIFIED_FICTION_STATUS
 
+    # SUbject schemes that define which classifier is used to classify the subject.
     by_uri = {
         SIMPLIFIED_GENRE: SIMPLIFIED_GENRE,
         SIMPLIFIED_FICTION_STATUS: SIMPLIFIED_FICTION_STATUS,
-        "http://librarysimplified.org/terms/genres/Overdrive/": OVERDRIVE,
-        "http://librarysimplified.org/terms/genres/3M/": BISAC,
-        "http://id.worldcat.org/fast/": FAST,  # I don't think this is official.
-        "http://purl.org/dc/terms/LCC": LCC,
-        "http://purl.org/dc/terms/LCSH": LCSH,
-        "http://purl.org/dc/terms/DDC": DDC,
         "http://schema.org/typicalAgeRange": SCHEMA_AGE_RANGE,
         "http://schema.org/audience": SCHEMA_AUDIENCE,
         "http://www.bisg.org/standards/bisac_subject/": BISAC,
@@ -283,15 +259,18 @@ class Subject(Base):
 
         counter = 0
         for subject in q:
-            subject.assign_to_genre()
+            subject.extract_subject_data()
             counter += 1
             if not counter % batch_size:
                 _db.commit()
         _db.commit()
 
     # Called by WorkClassifier
-    def assign_to_genre(self):
-        """Assign this subject to a genre."""
+    def extract_subject_data(self):
+        """
+        Maps the subject with a genre but also defines a fiction status, audience
+        and target age when possible.
+        """
         classifier = SubjectClassifier.classifiers.get(self.type, None)
         if not classifier:
             return
@@ -360,123 +339,8 @@ class Classification(Base):
     data_source_id = Column(Integer, ForeignKey("datasources.id"), index=True)
     data_source: Mapped[DataSource | None]
 
-    # How much weight the data source gives to this classification.
+    # We don't count weight anymore but leaving this in due to so many dependencies, e.g. search.
     weight = Column(Integer)
-
-    # If we hear about a classification from a distributor (and we
-    # trust the distributor to have accurate classifications), we
-    # should give it this weight. This lets us keep the weights
-    # consistent across distributors.
-    TRUSTED_DISTRIBUTOR_WEIGHT = 100.0
-
-    @property
-    def scaled_weight(self):
-        weight = self.weight
-        if self.data_source.name == DataSourceConstants.OCLC_LINKED_DATA:
-            weight = weight / 10.0
-        elif self.data_source.name == DataSourceConstants.OVERDRIVE:
-            weight = weight * 50
-        return weight
-
-    # These subject types are known to be problematic in that their
-    # "Juvenile" classifications are applied indiscriminately to both
-    # YA books and Children's books. As such, we need to split the
-    # difference when weighing a classification whose subject is of
-    # this type.
-    #
-    # This goes into Classification rather than Subject because it's
-    # possible that one particular data source could use a certain
-    # subject type in an unreliable way.
-    _juvenile_subject_types = {Subject.LCC}
-
-    _quality_as_indicator_of_target_age = {
-        # Not all classifications are equally reliable as indicators
-        # of a target age. This dictionary contains the coefficients
-        # we multiply against the weights of incoming classifications
-        # to reflect the overall reliability of that type of
-        # classification.
-        #
-        # If we had a ton of information about target age this might
-        # not be necessary--it doesn't seem necessary for genre
-        # classifications. But we sometimes have very little
-        # information about target age, so being careful about how
-        # much we trust different data sources can become important.
-        DataSourceConstants.MANUAL: 1.0,
-        DataSourceConstants.LIBRARY_STAFF: 1.0,
-        (DataSourceConstants.METADATA_WRANGLER, Subject.SCHEMA_AGE_RANGE): 1.0,
-        Subject.AXIS_360_AUDIENCE: 0.9,
-        (DataSourceConstants.OVERDRIVE, Subject.INTEREST_LEVEL): 0.9,
-        (DataSourceConstants.OVERDRIVE, Subject.OVERDRIVE): 0.9,  # But see below
-        (DataSourceConstants.AMAZON, Subject.SCHEMA_AGE_RANGE): 0.85,
-        (DataSourceConstants.AMAZON, Subject.GRADE_LEVEL): 0.85,
-        # Although Overdrive usually reserves Fiction and Nonfiction
-        # for books for adults, it's not as reliable an indicator as
-        # other Overdrive classifications.
-        (DataSourceConstants.OVERDRIVE, Subject.OVERDRIVE, "Fiction"): 0.7,
-        (DataSourceConstants.OVERDRIVE, Subject.OVERDRIVE, "Nonfiction"): 0.7,
-        Subject.SCHEMA_AGE_RANGE: 0.6,
-        Subject.GRADE_LEVEL: 0.6,
-        # There's no real way to know what this measures, since it
-        # could be anything. If a tag mentions a target age or a grade
-        # level, the accuracy seems to be... not terrible.
-        Subject.TAG: 0.45,
-        # Tags that come from OCLC Linked Data are of lower quality
-        # because they sometimes talk about completely the wrong book.
-        (DataSourceConstants.OCLC_LINKED_DATA, Subject.TAG): 0.3,
-        # These measure reading level, not age appropriateness.
-        # However, if the book is a remedial work for adults we won't
-        # be calculating a target age in the first place, so it's okay
-        # to use reading level as a proxy for age appropriateness in a
-        # pinch. (But not outside of a pinch.)
-        (DataSourceConstants.OVERDRIVE, Subject.GRADE_LEVEL): 0.35,
-        Subject.LEXILE_SCORE: 0.1,
-        Subject.ATOS_SCORE: 0.1,
-    }
-
-    @property
-    def generic_juvenile_audience(self):
-        """Is this a classification that mentions (e.g.) a Children's audience
-        but is actually a generic 'Juvenile' classification?
-        """
-        return (
-            self.subject.audience in SubjectClassifier.AUDIENCES_JUVENILE
-            and self.subject.type in self._juvenile_subject_types
-        )
-
-    @property
-    def quality_as_indicator_of_target_age(self):
-        if not self.subject.target_age:
-            return 0
-        data_source = self.data_source.name
-        subject_type = self.subject.type
-        q = self._quality_as_indicator_of_target_age
-
-        keys = [
-            (data_source, subject_type, self.subject.identifier),
-            (data_source, subject_type),
-            data_source,
-            subject_type,
-        ]
-        for key in keys:
-            if key in q:
-                return q[key]
-        return 0.1
-
-    @property
-    def weight_as_indicator_of_target_age(self):
-        return self.weight * self.quality_as_indicator_of_target_age
-
-    @property
-    def comes_from_license_source(self):
-        """Does this Classification come from a data source that also
-        provided a license for this book?
-        """
-        if not self.identifier.licensed_through:
-            return False
-        for pool in self.identifier.licensed_through:
-            if self.data_source == pool.data_source:
-                return True
-        return False
 
 
 class Genre(Base, HasSessionCache):

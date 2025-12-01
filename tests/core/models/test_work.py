@@ -5,7 +5,7 @@ import pytest
 import pytz
 from psycopg2.extras import NumericRange
 
-from core.classifier import Fantasy, Romance, Science_Fiction, SubjectClassifier
+from core.classifier import Fantasy, Romance, SubjectClassifier
 from core.equivalents_coverage import EquivalentIdentifiersCoverageProvider
 from core.model import get_one_or_create, tuple_to_numericrange
 from core.model.classification import Genre, Subject
@@ -539,20 +539,20 @@ class TestWork:
         work.set_presentation_ready_based_on_content(search_index_client=search)
         assert True == work.presentation_ready
 
-    def test_assign_genres_from_weights(self, db: DatabaseTransactionFixture):
+    def test_update_genres(self, db: DatabaseTransactionFixture):
         work = db.work()
 
         # This work was once classified under Fantasy and Romance.
-        work.assign_genres_from_weights({Romance: 1000, Fantasy: 1000})
+        work.update_genres([Romance, Fantasy])
         db.session.commit()
-        before = sorted((x.genre.name, x.affinity) for x in work.work_genres)
-        assert [("Fantasy", 0.0), ("Romance", 0.0)] == before
+        assert work.work_genres[0].genre.name == "Romance"
+        assert work.work_genres[1].genre.name == "Fantasy"
 
-        # But now it's classified under Science Fiction and Romance.
-        work.assign_genres_from_weights({Romance: 100, Science_Fiction: 300})
+        # But now Fantasy is no longer in this work's genres.
+        work.update_genres([Romance])
         db.session.commit()
-        after = sorted((x.genre.name, x.affinity) for x in work.work_genres)
-        assert [("Romance", 0.0), ("Science Fiction", 0.0)] == after
+        assert len(work.work_genres) == 1
+        assert work.work_genres[0].genre.name == "Romance"
 
     def test_classifications_with_genre(self, db: DatabaseTransactionFixture):
         work = db.work(with_open_access_download=True)
@@ -566,18 +566,18 @@ class TestWork:
         subject3.genre = None
         source = DataSource.lookup(db.session, DataSource.AXIS_360)
         classification1 = db.classification(
-            identifier=identifier, subject=subject1, data_source=source, weight=1
+            identifier=identifier, subject=subject1, data_source=source
         )
         classification2 = db.classification(
-            identifier=identifier, subject=subject2, data_source=source, weight=2
+            identifier=identifier, subject=subject2, data_source=source
         )
         classification3 = db.classification(
-            identifier=identifier, subject=subject3, data_source=source, weight=2
+            identifier=identifier, subject=subject3, data_source=source
         )
 
-        results = work.classifications_with_genre().all()
+        results = work.classifications_with_genre().all()  # order changes, hence set()
 
-        assert [classification2, classification1] == results
+        assert {classification2, classification1} == set(results)
 
     def test_mark_licensepools_as_superceded(self, db: DatabaseTransactionFixture):
         # A commercial LP that somehow got superceded will be
@@ -1048,45 +1048,17 @@ class TestWork:
 
         # This classification has no subject name, so the search document will use the subject identifier.
         edition.primary_identifier.identifier_to_subject(
-            data_source, Subject.BISAC, "FICTION/Science Fiction/Time Travel", None, 6
+            data_source, Subject.BISAC, "FICTION/Science Fiction/Time Travel", None
         )
 
-        # This one has the same subject type and identifier, so their weights will be combined.
+        # This one has the same subject type and identifier.
         identifier1.identifier_to_subject(
-            data_source, Subject.BISAC, "FICTION/Science Fiction/Time Travel", None, 1
-        )
-
-        # Here's another classification with a different subject type.
-        edition.primary_identifier.identifier_to_subject(
-            data_source, Subject.OVERDRIVE, "Romance", None, 2
-        )
-
-        # This classification has a subject name, so the search document will use that instead of the identifier.
-        identifier1.identifier_to_subject(
-            data_source,
-            Subject.FAST,
-            db.fresh_str(),
-            "Sea Stories",
-            7,
-        )
-
-        # This classification will be left out because its subject type isn't useful for search.
-        identifier1.identifier_to_subject(
-            data_source, Subject.DDC, db.fresh_str(), None
-        )
-
-        # These classifications will be left out because their identifiers aren't sufficiently equivalent to the edition's.
-        identifier2.identifier_to_subject(
-            data_source, Subject.FAST, db.fresh_str(), None
-        )
-        identifier3.identifier_to_subject(
-            data_source, Subject.FAST, db.fresh_str(), None
+            data_source, Subject.BISAC, "FICTION/Science Fiction/Time Travel", None
         )
 
         # Add some genres.
         genre1, ignore = Genre.lookup(db.session, "Science Fiction")
-        genre2, ignore = Genre.lookup(db.session, "Romance")
-        work.genres = [genre1, genre2]
+        work.genres = [genre1]
         work.work_genres[0].affinity = 1
 
         # Add two custom lists. The work is featured on one list but
@@ -1267,40 +1239,21 @@ class TestWork:
         assert Contributor.Role.AUTHOR == contributor2_doc["role"]
 
         classifications = search_doc["classifications"]
-        assert 3 == len(classifications)
+        assert 1 == len(classifications)
         [classification1_doc] = [
             c
             for c in classifications
             if c["scheme"] == Subject.uri_lookup[Subject.BISAC]
         ]
-        [classification2_doc] = [
-            c
-            for c in classifications
-            if c["scheme"] == Subject.uri_lookup[Subject.OVERDRIVE]
-        ]
-        [classification3_doc] = [
-            c
-            for c in classifications
-            if c["scheme"] == Subject.uri_lookup[Subject.FAST]
-        ]
         assert "FICTION Science Fiction Time Travel" == classification1_doc["term"]
-        assert float(6 + 1) / (6 + 1 + 2 + 7) == classification1_doc["weight"]
-        assert "Romance" == classification2_doc["term"]
-        assert float(2) / (6 + 1 + 2 + 7) == classification2_doc["weight"]
-        assert "Sea Stories" == classification3_doc["term"]
-        assert float(7) / (6 + 1 + 2 + 7) == classification3_doc["weight"]
+        assert None == classification1_doc["weight"]
 
         genres = search_doc["genres"]
-        assert 2 == len(genres)
+        assert 1 == len(genres)
         [genre1_doc] = [g for g in genres if g["name"] == genre1.name]
-        [genre2_doc] = [g for g in genres if g["name"] == genre2.name]
         assert Subject.SIMPLIFIED_GENRE == genre1_doc["scheme"]
         assert genre1.id == genre1_doc["term"]
-        assert 1 == genre1_doc["weight"]
-        assert Subject.SIMPLIFIED_GENRE == genre2_doc["scheme"]
-        assert genre2.id == genre2_doc["term"]
-        assert 0 == genre2_doc["weight"]
-
+        assert 1.0 == genre1_doc["weight"]
         target_age_doc = search_doc["target_age"]
         assert work.target_age.lower == target_age_doc["lower"]
         assert (

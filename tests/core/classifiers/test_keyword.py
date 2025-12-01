@@ -1,41 +1,6 @@
 from core import classifier
 from core.classifier import *
 from core.classifier.keyword import KeywordBasedClassifier as Keyword
-from core.classifier.keyword import LCSHClassifier as LCSH
-
-
-class TestLCSH:
-    def test_is_fiction(self):
-        def fic(lcsh):
-            return LCSH.is_fiction(None, LCSH.scrub_name(lcsh))
-
-        assert True == fic("Science fiction")
-        assert True == fic("Science fiction, American")
-        assert True == fic("Fiction")
-        assert True == fic("Historical fiction")
-        assert True == fic("Biographical fiction")
-        assert True == fic("Detective and mystery stories")
-        assert True == fic("Horror tales")
-        assert True == fic("Classical literature")
-        assert False == fic("History and criticism")
-        assert False == fic("Biography")
-        assert None == fic("Kentucky")
-        assert None == fic("Social life and customs")
-        assert True == fic("Poetry")  # Finland
-
-    def test_audience(self):
-        child = SubjectClassifier.AUDIENCE_CHILDREN
-
-        def aud(lcsh):
-            return LCSH.audience(None, LCSH.scrub_name(lcsh))
-
-        assert child == aud("Children's stories")
-        assert child == aud("Picture books for children")
-        assert child == aud("Juvenile fiction")
-        assert child == aud("Juvenile poetry")
-        assert None == aud("Juvenile delinquency")
-        assert None == aud("Runaway children")
-        assert None == aud("Humor")
 
 
 class TestKeyword:

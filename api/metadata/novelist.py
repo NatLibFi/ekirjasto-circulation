@@ -418,7 +418,6 @@ class NoveListAPI(
         if feature_content:
             series_info = feature_content.get("SeriesInfo")
             appeals_info = feature_content.get("Appeals")
-            lexile_info = feature_content.get("LexileInfo")
             goodreads_info = feature_content.get("GoodReads")
             recommendations_info = feature_content.get("SimilarTitles")
 
@@ -445,11 +444,6 @@ class NoveListAPI(
                         extracted_genres = True
                 if extracted_genres:
                     break
-
-        if lexile_info:
-            metadata.subjects.append(
-                SubjectData(Subject.LEXILE_SCORE, lexile_info["Lexile"])
-            )
 
         if goodreads_info:
             metadata.measurements.append(

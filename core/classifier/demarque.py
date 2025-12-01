@@ -48,13 +48,13 @@ class DeMarqueClassifier(SubjectClassifier):
         :return: A tuple representing the target age range.
         """
         if identifier == "READ0001":
-            return (0, 3)
+            return (0, 3)  # 0, 4 in db
         if identifier == "READ0002":
-            return (4, 7)
+            return (4, 7)  # 4,8 in db
         if identifier == "READ0003":
-            return (8, 12)
+            return (8, 12)  # 8,13 in db
         if identifier == "READ0004":
-            return (13, 18)
+            return (13, 17)  # 13,18 in db
         if identifier == "READ0005":
             return (17, None)
 

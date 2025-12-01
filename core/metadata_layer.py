@@ -19,7 +19,6 @@ from sqlalchemy.sql.expression import and_, or_
 from core.analytics import Analytics
 from core.classifier import NO_NUMBER, NO_VALUE
 from core.model import (
-    Classification,
     Collection,
     Contributor,
     CoverageRecord,
@@ -136,7 +135,7 @@ class ReplacementPolicy:
 
 
 class SubjectData:
-    def __init__(self, type, identifier, name=None, weight=1):
+    def __init__(self, type, identifier, name=None):
         self.type = type
 
         # Because subjects are sometimes evaluated according to keyword
@@ -150,18 +149,15 @@ class SubjectData:
         if name:
             self.name = name.strip()
 
-        self.weight = weight
-
     @property
     def key(self):
-        return self.type, self.identifier, self.name, self.weight
+        return self.type, self.identifier, self.name
 
     def __repr__(self):
-        return '<SubjectData type="%s" identifier="%s" name="%s" weight=%d>' % (
+        return '<SubjectData type="{}" identifier="{}" name="{}">'.format(
             self.type,
             self.identifier,
             self.name,
-            self.weight,
         )
 
 
@@ -1602,7 +1598,7 @@ class Metadata:
 
             def _key(classification):
                 s = classification.subject
-                return s.type, s.identifier, s.name, classification.weight
+                return s.type, s.identifier, s.name
 
             for classification in identifier.classifications:
                 if classification.data_source == data_source:
@@ -1636,7 +1632,6 @@ class Metadata:
                     subject.type,
                     subject.identifier,
                     subject.name,
-                    weight=subject.weight,
                 )
                 work_requires_full_recalculation = True
             except ValueError as e:
@@ -1958,11 +1953,11 @@ class CSVMetadataImporter:
     # When classifications are imported from a CSV file, we treat
     # them as though they came from a trusted distributor.
     DEFAULT_SUBJECT_FIELD_NAMES = {
-        "tags": (Subject.TAG, Classification.TRUSTED_DISTRIBUTOR_WEIGHT),
-        "age": (Subject.SCHEMA_AGE_RANGE, Classification.TRUSTED_DISTRIBUTOR_WEIGHT),
+        "tags": (Subject.TAG, None),
+        "age": (Subject.SCHEMA_AGE_RANGE, None),
         "audience": (
             Subject.SCHEMA_AUDIENCE,
-            Classification.TRUSTED_DISTRIBUTOR_WEIGHT,
+            None,
         ),
     }
 
@@ -2066,9 +2061,7 @@ class CSVMetadataImporter:
         for field_name, (subject_type, weight) in list(self.subject_fields.items()):
             values = self.list_field(row, field_name)
             for value in values:
-                subjects.append(
-                    SubjectData(type=subject_type, identifier=value, weight=weight)
-                )
+                subjects.append(SubjectData(type=subject_type, identifier=value))
 
         contributors = []
         sort_author = self._field(row, self.sort_author_field)
