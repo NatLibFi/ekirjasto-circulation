@@ -66,7 +66,8 @@ the admin UI, those classification subjects get such schemes and type.
 ## Genre
 
 As mentoined, a `SubjectClassifier` maps the subject with a genre. At the moment, only `BISAC` subjects (and simplified
-genre) map genres. The `BISACClassifier` maps the subject name to a genre based on regular expression rules.
+genre) map genres. The `BISACClassifier` maps the subject to a genre based on a dictionary where the BISAC codes are
+keys.
 
 There are over 100 genres divided to fiction genres and nonfictions genres. One genre can be associated to several
 subjects.
