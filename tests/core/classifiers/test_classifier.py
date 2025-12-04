@@ -274,16 +274,18 @@ class TestWorkClassifier:
 
         # 1. schema:audience and READ is Children
         c1 = work.identifier.identifier_to_subject(
-            source, Subject.SCHEMA_AUDIENCE, "Children"
+            source, Subject.SCHEMA_AUDIENCE, "Children", "Children"
         )
         work.classifier.prepare_classification(c1)
         assert work.classifier.audience_counts[SubjectClassifier.AUDIENCE_CHILDREN] == 1
-        c2 = work.identifier.identifier_to_subject(source, Subject.DEMARQUE, "READ0001")
+        c2 = work.identifier.identifier_to_subject(
+            source, Subject.DEMARQUE, "READ0001", "READ0001"
+        )
         work.classifier.prepare_classification(c2)
         assert work.classifier.audience_counts[SubjectClassifier.AUDIENCE_CHILDREN] == 2
         # BISAC adds to its own counting
         c3 = work.identifier.identifier_to_subject(
-            source, Subject.BISAC, "JUVENILE FICTION / General"
+            source, Subject.BISAC, "JUV000000", "JUVENILE FICTION / General"
         )
         work.classifier.prepare_classification(c3)
         assert work.classifier.audience_counts["BISAC Children"] == 1
@@ -291,14 +293,16 @@ class TestWorkClassifier:
         # 2. schema:audience and READ is Young Adult
 
         c4 = work.identifier.identifier_to_subject(
-            source, Subject.SCHEMA_AUDIENCE, "Young Adult"
+            source, Subject.SCHEMA_AUDIENCE, "Young Adult", "Young Adult"
         )
         work.classifier.prepare_classification(c4)
         assert (
             work.classifier.audience_counts[SubjectClassifier.AUDIENCE_YOUNG_ADULT] == 1
         )
 
-        c5 = work.identifier.identifier_to_subject(source, Subject.DEMARQUE, "READ0004")
+        c5 = work.identifier.identifier_to_subject(
+            source, Subject.DEMARQUE, "READ0004", "READ0004"
+        )
         work.classifier.prepare_classification(c5)
         assert (
             work.classifier.audience_counts[SubjectClassifier.AUDIENCE_YOUNG_ADULT] == 2
@@ -307,7 +311,10 @@ class TestWorkClassifier:
         # BISAC adds to its own counting
 
         c6 = work.identifier.identifier_to_subject(
-            source, Subject.BISAC, "YOUNG ADULT FICTION / Fantasy / General"
+            source,
+            Subject.BISAC,
+            "YAF019000",
+            "YOUNG ADULT FICTION / Fantasy / General",
         )
         work.classifier.prepare_classification(c6)
         assert work.classifier.audience_counts["BISAC ya"] == 1
@@ -315,26 +322,30 @@ class TestWorkClassifier:
         # 3. schema:audience, READ, or BISAC is Adult
 
         c7 = work.identifier.identifier_to_subject(
-            source, Subject.SCHEMA_AUDIENCE, "Adult"
+            source, Subject.SCHEMA_AUDIENCE, "Adult", "Adult"
         )
         work.classifier.prepare_classification(c7)
         assert work.classifier.audience_counts[SubjectClassifier.AUDIENCE_ADULT] == 1
 
-        c8 = work.identifier.identifier_to_subject(source, Subject.DEMARQUE, "READ0000")
+        c8 = work.identifier.identifier_to_subject(
+            source, Subject.DEMARQUE, "READ0000", "READ0000"
+        )
         work.classifier.prepare_classification(c8)
         assert work.classifier.audience_counts[SubjectClassifier.AUDIENCE_ADULT] == 2
 
         # BISAC adds to its own counting
 
         c9 = work.identifier.identifier_to_subject(
-            source, Subject.BISAC, "MEDICAL / Dermatology"
+            source, Subject.BISAC, "MED017000", "MEDICAL / Dermatology"
         )
         work.classifier.prepare_classification(c9)
         assert work.classifier.audience_counts["BISAC Adult"] == 1
 
         # Any other subject does not add to audience counting
 
-        c10 = work.identifier.identifier_to_subject(source, Subject.TAG, "Adult")
+        c10 = work.identifier.identifier_to_subject(
+            source, Subject.TAG, "Adult", "Adult"
+        )
         work.classifier.prepare_classification(c10)
         assert work.classifier.audience_counts[SubjectClassifier.AUDIENCE_ADULT] == 2
 
@@ -347,20 +358,20 @@ class TestWorkClassifier:
 
         # BISAC adds to genres
         c1 = work.identifier.identifier_to_subject(
-            source, Subject.BISAC, "MEDICAL / Dermatology"
+            source, Subject.BISAC, "MED017000", "MEDICAL / Dermatology"
         )
         work.classifier.prepare_classification(c1)
         assert len(work.classifier.genre_list) == 1
 
         # Any other subject does not
         c2 = work.identifier.identifier_to_subject(
-            source, Subject.SCHEMA_AUDIENCE, "Children"
+            source, Subject.SCHEMA_AUDIENCE, "Children", "Children"
         )
         work.classifier.prepare_classification(c2)
         assert len(work.classifier.genre_list) == 1
 
         c3 = work.identifier.identifier_to_subject(
-            source, Subject.TAG, "Juvenile Whatever Fiction"
+            source, Subject.TAG, "id", "Juvenile Whatever Fiction"
         )
         work.classifier.prepare_classification(c3)
         assert len(work.classifier.genre_list) == 1
@@ -374,21 +385,23 @@ class TestWorkClassifier:
 
         # schema:typicalAgeRange does not set target age
         c1 = work.identifier.identifier_to_subject(
-            source, Subject.SCHEMA_AGE_RANGE, "0-12"
+            source, Subject.SCHEMA_AGE_RANGE, "0-12", "0-12"
         )
         work.classifier.prepare_classification(c1)
         assert not work.classifier.target_age_lower
         assert not work.classifier.target_age_upper == 12
 
         # But we do set it from READ
-        c2 = work.identifier.identifier_to_subject(source, Subject.DEMARQUE, "READ0001")
+        c2 = work.identifier.identifier_to_subject(
+            source, Subject.DEMARQUE, "READ0001", "READ0001"
+        )
         work.classifier.prepare_classification(c2)
         assert work.classifier.target_age_lower == 0
         assert work.classifier.target_age_upper == 3
 
         # ...or BISAC (only a few of them)
         c3 = work.identifier.identifier_to_subject(
-            source, Subject.BISAC, "JUVENILE FICTION / General"
+            source, Subject.BISAC, "JUV000000", "JUVENILE FICTION / General"
         )
         work.classifier.prepare_classification(c3)
         assert work.classifier.target_age_lower == 0
@@ -406,11 +419,15 @@ class TestWorkClassifier:
         i = work.identifier
         source = DataSource.lookup(session, DataSource.AMAZON)
 
-        c1 = i.identifier_to_subject(source, Subject.BISAC, "HISTORY / General")
+        c1 = i.identifier_to_subject(
+            source, Subject.BISAC, "HIS000000", "HISTORY / General"
+        )
         work.classifier.prepare_classification(c1)
         assert len(work.classifier.genre_list) == 1
 
-        c2 = i.identifier_to_subject(source, Subject.BISAC, "HISTORY / General")
+        c2 = i.identifier_to_subject(
+            source, Subject.BISAC, "HIS000000", "HISTORY / General"
+        )
         work.classifier.prepare_classification(c2)
         assert len(work.classifier.genre_list) == 1
 
@@ -418,7 +435,9 @@ class TestWorkClassifier:
         # it will be taken into consideration.
 
         source2 = DataSource.lookup(session, DataSource.OCLC_LINKED_DATA)
-        c3 = i.identifier_to_subject(source2, Subject.BISAC, "HISTORY / General")
+        c3 = i.identifier_to_subject(
+            source2, Subject.BISAC, "HIS000000", "HISTORY / General"
+        )
         work.classifier.prepare_classification(c3)
         assert len(work.classifier.genre_list) == 2
 
@@ -712,7 +731,7 @@ class TestWorkClassifier:
         # Children's book
         overdrive = DataSource.lookup(session, DataSource.OVERDRIVE)
         c1 = work.identifier.identifier_to_subject(
-            overdrive, Subject.SCHEMA_AUDIENCE, "Children"
+            overdrive, Subject.SCHEMA_AUDIENCE, "Children", "Children"
         )
         work.classifier.prepare_classification(c1)
 
@@ -735,7 +754,7 @@ class TestWorkClassifier:
         # Children's book
         overdrive = DataSource.lookup(session, DataSource.OVERDRIVE)
         c1 = work.identifier.identifier_to_subject(
-            overdrive, Subject.DEMARQUE, "READ0001"
+            overdrive, Subject.DEMARQUE, "READ0001", "READ0001"
         )
         work.classifier.prepare_classification(c1)
 
@@ -751,7 +770,7 @@ class TestWorkClassifier:
         overdrive = DataSource.lookup(session, DataSource.OVERDRIVE)
 
         c2 = work.identifier.identifier_to_subject(
-            overdrive, Subject.DEMARQUE, "READ0001"
+            overdrive, Subject.DEMARQUE, "READ0001", "READ0001"
         )
         work.classifier.prepare_classification(c2)
         c3 = work.identifier.identifier_to_subject(
@@ -771,12 +790,12 @@ class TestWorkClassifier:
         overdrive = DataSource.lookup(session, DataSource.OVERDRIVE)
 
         c5 = work.identifier.identifier_to_subject(
-            overdrive, Subject.DEMARQUE, "READ0002"
+            overdrive, Subject.DEMARQUE, "READ0002", "READ0002"
         )
         work.classifier.prepare_classification(c5)
 
         c4 = work.identifier.identifier_to_subject(
-            overdrive, Subject.DEMARQUE, "READ0001"
+            overdrive, Subject.DEMARQUE, "READ0001", "READ0001"
         )
         work.classifier.prepare_classification(c4)
 
@@ -791,7 +810,7 @@ class TestWorkClassifier:
         # De Marque YA book
         overdrive = DataSource.lookup(session, DataSource.OVERDRIVE)
         c1 = work.identifier.identifier_to_subject(
-            overdrive, Subject.DEMARQUE, "READ0004"
+            overdrive, Subject.DEMARQUE, "READ0004", "READ0004"
         )
         work.classifier.prepare_classification(c1)
 
@@ -808,7 +827,7 @@ class TestWorkClassifier:
         overdrive = DataSource.lookup(session, DataSource.OVERDRIVE)
 
         c2 = work.identifier.identifier_to_subject(
-            overdrive, Subject.DEMARQUE, "READ0005"
+            overdrive, Subject.DEMARQUE, "READ0005", "READ0005"
         )
         work.classifier.prepare_classification(c2)
 
@@ -824,7 +843,7 @@ class TestWorkClassifier:
         # Adult
         overdrive = DataSource.lookup(session, DataSource.OVERDRIVE)
         c1 = work.identifier.identifier_to_subject(
-            overdrive, Subject.SCHEMA_AUDIENCE, "Adult"
+            overdrive, Subject.SCHEMA_AUDIENCE, "Adult", "Adult"
         )
         work.classifier.prepare_classification(c1)
         audience = work.classifier._audience()
@@ -891,14 +910,18 @@ class TestWorkClassifier:
         # we classify them as Children's.
         i = work.identifier
         source = DataSource.lookup(session, DataSource.OCLC)
-        c = i.identifier_to_subject(source, Subject.SCHEMA_AUDIENCE, "Children")
+        c = i.identifier_to_subject(
+            source, Subject.SCHEMA_AUDIENCE, "Children", "Children"
+        )
         work.classifier.prepare_classification(c)
-        c2 = i.identifier_to_subject(source, Subject.SCHEMA_AUDIENCE, "Young Adult")
+        c2 = i.identifier_to_subject(
+            source, Subject.SCHEMA_AUDIENCE, "Young Adult", "Young Adult"
+        )
         work.classifier.prepare_classification(c2)
 
-        # (This classification has no bearing on audience and its
-        # weight will be ignored.)
-        c3 = i.identifier_to_subject(source, Subject.BISAC, "Pets")
+        c3 = i.identifier_to_subject(
+            source, Subject.BISAC, "PET000000", "PETS / General"
+        )
         work.classifier.prepare_classification(c3)
         genres, fiction, audience, target_age = work.classifier.classify_work()
 
@@ -948,9 +971,11 @@ class TestWorkClassifier:
         )
         i = work.identifier
         source = DataSource.lookup(session, DataSource.OVERDRIVE)
-        c1 = i.identifier_to_subject(source, Subject.BISAC, "HISTORY / General")
+        c1 = i.identifier_to_subject(
+            source, Subject.BISAC, "HIS000000", "HISTORY / General"
+        )
         c2 = i.identifier_to_subject(
-            source, Subject.BISAC, "FICTION / Science Fiction / General"
+            source, Subject.BISAC, "FIC028000", "FICTION / Science Fiction / General"
         )
         c3 = i.identifier_to_subject(source, Subject.SCHEMA_AUDIENCE, "Young Adult")
         for classification in i.classifications:
@@ -983,7 +1008,7 @@ class TestWorkClassifier:
 
         genres, fiction, audience, target_age = work.classifier.classify_work()
 
-        assert len(genres) == 0
+        assert len(genres) == 1
         assert fiction == True
         assert audience == SubjectClassifier.AUDIENCE_CHILDREN
         # Despite schema:typicalAgeRange, we had a more detailed age range from BISAC.

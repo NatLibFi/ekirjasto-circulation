@@ -441,12 +441,14 @@ class TestWorkController:
         classification1 = primary_identifier.identifier_to_subject(
             data_source=axis_360,
             subject_type=Subject.BISAC,
-            subject_identifier="FICTION / Horror",
+            subject_identifier="FIC015000",
+            subject_name="FICTION / Horror",
         )
         classification2 = primary_identifier.identifier_to_subject(
             data_source=axis_360,
             subject_type=Subject.BISAC,
-            subject_identifier="FICTION / Science Fiction / Time Travel",
+            subject_identifier="FIC028080",
+            subject_name="FICTION / Science Fiction / Time Travel",
         )
         genre1, ignore = Genre.lookup(work_fixture.ctrl.db.session, "Horror")
         genre2, ignore = Genre.lookup(work_fixture.ctrl.db.session, "Science Fiction")
@@ -527,7 +529,7 @@ class TestWorkController:
                     ("fiction", "fiction"),
                     ("genres", "Drama"),
                     ("genres", "Urban Fantasy"),
-                    ("genres", "Women's Fiction"),
+                    ("genres", "General Fiction"),
                 ]
             )
             requested_genres = flask.request.form.getlist("genres")

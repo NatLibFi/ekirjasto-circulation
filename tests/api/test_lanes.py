@@ -90,14 +90,6 @@ class TestLaneCreation:
         assert "Science Fiction" == sf.display_name
         assert "Science Fiction" in [genre.name for genre in sf.genres]
 
-        [nonfiction_humor] = [
-            x for x in nonfiction.sublanes if "Humor" in x.display_name
-        ]
-        assert False == nonfiction_humor.fiction
-
-        [fiction_humor] = [x for x in fiction.sublanes if "Humor" in x.display_name]
-        assert True == fiction_humor.fiction
-
         [space_opera] = [x for x in sf.sublanes if "Space Opera" in x.display_name]
         assert True == sf.fiction
         assert "Space Opera" == space_opera.display_name

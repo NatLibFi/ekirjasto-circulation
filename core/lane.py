@@ -3094,7 +3094,7 @@ class Lane(Base, DatabaseBackedWorkList, HierarchyWorkList):
         """
         _db = Session.object_session(self)
         if isinstance(genre, (bytes, str)):
-            genre, ignore = Genre.lookup(_db, genre)
+            genre, ignore = Genre.lookup(_db, genre, True)
         lanegenre, is_new = get_one_or_create(_db, LaneGenre, lane=self, genre=genre)
         lanegenre.inclusive = inclusive
         lanegenre.recursive = recursive

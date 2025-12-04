@@ -91,10 +91,7 @@ class TestSubject:
     def test_extract_subject_data_returns_genre_when_bisac(
         self, db: DatabaseTransactionFixture
     ):
-        # Here's a Subject that identifies children's books.
-        subject, was_new = Subject.lookup(
-            db.session, Subject.BISAC, "History / General", None
-        )
+        subject, was_new = Subject.lookup(db.session, Subject.BISAC, "HIS000000", None)
         history, ignore = Genre.lookup(db.session, "History")
         subject.genre = history
 

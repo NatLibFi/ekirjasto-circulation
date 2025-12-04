@@ -523,10 +523,6 @@ class KeywordBasedClassifier(AgeOrGradeClassifier):
             "humourous",
             "wit",
         ),
-        Entertainment: match_kw(
-            # Almost a pure top-level category
-            "entertainment",
-        ),
         # These might be a problem because they might pick up
         # hateful books. Not sure if this will be a problem.
         Islam: match_kw(
@@ -1039,12 +1035,6 @@ class KeywordBasedClassifier(AgeOrGradeClassifier):
             "women private investigator",
             "women sleuths",
             "women sleuth",
-        ),
-        Womens_Fiction: match_kw(
-            "contemporary women",
-            "chick lit",
-            "womens fiction",
-            "women's fiction",
         ),
         World_History: match_kw(
             "world history",

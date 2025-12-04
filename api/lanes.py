@@ -157,10 +157,8 @@ def lane_from_genres(
     genre_lane_instructions = {
         "Dystopian SF": dict(display_name="Dystopian"),
         "Erotica": dict(audiences=[SubjectClassifier.AUDIENCE_ADULTS_ONLY]),
-        "Humorous Fiction": dict(display_name="Humor"),
         "Media Tie-in SF": dict(display_name="Movie and TV Novelizations"),
         "Suspense/Thriller": dict(display_name="Thriller"),
-        "Humorous Nonfiction": dict(display_name="Humor"),
         "Political Science": dict(display_name="Politics & Current Events"),
         "Periodicals": dict(visible=False),
     }

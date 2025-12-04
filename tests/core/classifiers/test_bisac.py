@@ -1,120 +1,4 @@
-import pytest
-
 from core.classifier import BISACClassifier, SubjectClassifier
-from core.classifier.bisac import (
-    RE,
-    MatchingRule,
-    anything,
-    fiction,
-    juvenile,
-    nonfiction,
-    something,
-    ya,
-)
-
-
-class TestMatchingRule:
-    def test_registered_object_returned_on_match(self):
-        o = object()
-        rule = MatchingRule(o, "Fiction")
-        assert o == rule.match("fiction")
-        assert None == rule.match("nonfiction")
-
-        # You can't create a MatchingRule that returns None on
-        # match, since that's the value returned on non-match.
-        pytest.raises(ValueError, MatchingRule, None, "Fiction")
-
-    def test_string_match(self):
-        rule = MatchingRule(True, "Fiction")
-        assert True == rule.match("fiction", "westerns")
-        assert None == rule.match("nonfiction", "westerns")
-        assert None == rule.match("all books", "fiction")
-
-    def test_regular_expression_match(self):
-        rule = MatchingRule(True, RE("F.*O"))
-        assert True == rule.match("food")
-        assert True == rule.match("flapjacks and oatmeal")
-        assert None == rule.match("good", "food")
-        assert None == rule.match("fads")
-
-    def test_special_tokens_must_be_first(self):
-        # In general, special tokens can only appear in the first
-        # slot of a ruleset.
-        for special in (juvenile, fiction, nonfiction):
-            pytest.raises(ValueError, MatchingRule, True, "first item", special)
-
-        # This rule doesn't apply to the 'anything' token.
-        MatchingRule(True, "first item", anything)
-
-    def test_juvenile_match(self):
-        rule = MatchingRule(True, juvenile, "western")
-        assert True == rule.match("juvenile fiction", "western")
-        assert None == rule.match("juvenile nonfiction", "western civilization")
-        assert None == rule.match("juvenile nonfiction", "penguins")
-        assert None == rule.match("young adult nonfiction", "western")
-        assert None == rule.match("fiction", "western")
-
-    def test_ya_match(self):
-        rule = MatchingRule(True, ya, "western")
-        assert True == rule.match("young adult fiction", "western")
-        assert True == rule.match("young adult nonfiction", "western")
-        assert None == rule.match("juvenile fiction", "western")
-        assert None == rule.match("fiction", "western")
-
-    def test_nonfiction_match(self):
-        rule = MatchingRule(True, nonfiction, "art")
-        assert True == rule.match("juvenile nonfiction", "art")
-        assert True == rule.match("art")
-        assert None == rule.match("juvenile fiction", "art")
-        assert None == rule.match("fiction", "art")
-
-    def test_fiction_match(self):
-        rule = MatchingRule(True, fiction, "art")
-        assert None == rule.match("juvenile nonfiction", "art")
-        assert None == rule.match("art")
-        assert True == rule.match("juvenile fiction", "art")
-        assert True == rule.match("fiction", "art")
-
-    def test_anything_match(self):
-        # 'anything' can go up front.
-        rule = MatchingRule(True, anything, "Penguins")
-        assert True == rule.match(
-            "juvenile fiction", "science fiction", "antarctica", "animals", "penguins"
-        )
-        assert True == rule.match("fiction", "penguins")
-        assert True == rule.match("nonfiction", "penguins")
-        assert True == rule.match("penguins")
-        assert None == rule.match("geese")
-
-        # 'anything' can go in the middle, even after another special
-        # match rule.
-        rule = MatchingRule(True, fiction, anything, "Penguins")
-        assert True == rule.match(
-            "juvenile fiction", "science fiction", "antarctica", "animals", "penguins"
-        )
-        assert True == rule.match("fiction", "penguins")
-        assert None == rule.match("fiction", "geese")
-
-        # It's redundant, but 'anything' can go last.
-        rule = MatchingRule(True, anything, "Penguins", anything)
-        assert True == rule.match(
-            "juvenile fiction", "science fiction", "antarctica", "animals", "penguins"
-        )
-        assert True == rule.match("fiction", "penguins", "more penguins")
-        assert True == rule.match("penguins")
-        assert None == rule.match("geese")
-
-    def test_something_match(self):
-        # 'something' can go anywhere.
-        rule = MatchingRule(True, something, "Penguins", something, something)
-
-        assert True == rule.match("juvenile fiction", "penguins", "are", "great")
-        assert True == rule.match("penguins", "penguins", "i said", "penguins")
-        assert None == rule.match("penguins", "what?", "i said", "penguins")
-
-        # unlike 'anything', 'something' must match a specific token.
-        assert None == rule.match("penguins")
-        assert None == rule.match("juvenile fiction", "penguins", "and seals")
 
 
 class MockSubject:
@@ -134,1105 +18,1391 @@ class TestBISACClassifier:
         ) = BISACClassifier.classify_subject(subject)
         return subject
 
-    def genre_is(self, name, expect):
-        subject = self._subject("", name)
+    def genre_is(self, identifier, name, expect):
+        subject = self._subject(identifier, "")
         if expect and subject.genre:
             assert expect == subject.genre.name
         else:
             assert expect == subject.genre
 
-    def test_every_rule_fires(self):
-        """There's no point in having a rule that doesn't catch any real BISAC
-        subjects. The presence of such a rule generally indicates a
-        bug -- usually a typo, or a rule is completely 'shadowed' by another
-        rule above it.
-        """
-        subjects = []
-        for identifier, name in sorted(BISACClassifier.NAMES.items()):
-            subjects.append(self._subject(identifier, name))
-
-        # caught_fiction_rules = []
-        for i in BISACClassifier.FICTION:
-            if i.caught == []:
-                # caught_fiction_rules.append(i)
-                raise Exception("Fiction rule %s didn't catch anything!" % i.ruleset)
-        # print("Caught fiction rules: ", len(caught_fiction_rules))
-        # for rule in caught_fiction_rules:
-        #     print(rule)
-
-        # caught_genre_rules = []
-        for i in BISACClassifier.GENRE:
-            if i.caught == []:
-                # caught_genre_rules.append(i)
-                raise Exception("Genre rule %s didn't catch anything!" % i.ruleset)
-        # print("Caught genre rules: ", len(caught_genre_rules))
-        # for rule in caught_genre_rules:
-        #     print(rule)
-
-        need_fiction = []
-        need_audience = []
-        for subject in subjects:
-            if subject.fiction is None:  # == humor, drama
-                need_fiction.append(subject)
-            if subject.audience is None:
-                need_audience.append(subject)
-
-        # We determined fiction/nonfiction status for every BISAC
-        # subject except for humor, drama, and poetry.
-        for subject in need_fiction:
-            assert any(subject.name.lower().startswith(x) for x in ["humor", "drama"])
-
-        # We determined the target audience for every BISAC subject.
-        assert [] == need_audience
-
-        # At this point, you can also create a list of subjects that
-        # were not classified in some way. The old Bisac had about
-        # 400 such subjects, most of them under Juvenile and Young
-        # Adult. The new Bisac has almost 650 such subjects.
-
-        # Not every subject has to be classified under a genre, but
-        # if it's possible for one to be, it should be. This is the place
-        # to check how well the current rules are operating.
-
-        # DEBUGGING:
-        # need_genre = sorted(x.name for x in subjects if x.genre is None)
-        # print("Bisac subjects without a genre: ", len(need_genre))
-        # print("Subjects without a genre: ")
-        # for genre in need_genre:
-        #     print(genre)
-
     def test_genre_spot_checks(self):
-        """Test some unusual cases with respect to how BISAC
-        classifications are turned into genres.
-        """
+        """Randomly selected 500 subject-genre classifications."""
         genre_is = self.genre_is
-
-        genre_is("Fiction / Science Fiction / Erotica", "Erotica")
-        genre_is("Literary Criticism / Science Fiction", "Literary Criticism")
-        genre_is("Fiction / Christian / Science Fiction", "Religious Fiction")
-        genre_is("Fiction / Science Fiction / Short Stories", "Short Stories")
-        genre_is("Fiction / Steampunk", "Steampunk")
-        genre_is("Fiction / Science Fiction / Steampunk", "Steampunk")
         genre_is(
-            "FICTION / African American & Black / Urban & Street Lit", "Urban Fiction"
+            "GAM010000",
+            "GAMES & ACTIVITIES / Role Playing & Fantasy",
+            "Games & Activities",
         )
-        genre_is("Fiction / Urban", None)
-        genre_is("History / Native American", "United States History")
+        genre_is("ART047000", "ART / Middle Eastern", "Art & Culture")
         genre_is(
-            "History / Modern / 17th Century", "Renaissance & Early Modern History"
+            "CKB040000",
+            "COOKING / Specific Ingredients / Herbs, Spices, Condiments",
+            "Cooking",
         )
-        genre_is("Biography & Autobiography / Music", "Music"),
         genre_is(
-            "Biography & Autobiography / Entertainment & Performing Arts",
-            "Entertainment",
-        ),
-        genre_is("Fiction / Christian", "Religious Fiction"),
-        genre_is("Juvenile Nonfiction / Science & Nature / Fossils", "Nature")
-        genre_is("Juvenile Nonfiction / Science & Nature / Physics", "Science")
-        genre_is("Juvenile Nonfiction / Science & Nature / General", "Science")
+            "CKB002000", "COOKING / Regional & Cultural / American / General", "Cooking"
+        )
+        genre_is("FIC033000", "FICTION / Westerns", "Westerns")
         genre_is(
-            "Juvenile Nonfiction / Religious / Christian / Social Issues",
+            "FIC098050",
+            "FICTION / World Literature / England / 20th Century",
+            "General Fiction",
+        )
+        genre_is("SEL036000", "SELF-HELP / Anxieties & Phobias", "Self-Help")
+        genre_is("EDU062000", "EDUCATION / Cultural Pedagogies", "Education")
+        genre_is("MED058150", "MEDICAL / Nursing / Nutrition", "Medical")
+        genre_is("NAT019000", "NATURE / Animals / Mammals", "Nature")
+        genre_is("LAW067000", "LAW / Mental Health", "Law")
+        genre_is(
+            "HIS037090",
+            "HISTORY / Modern / 16th Century",
+            "Renaissance & Early Modern History",
+        )
+        genre_is("BIB019060", "BIBLES / Reina Valera / Text", "Christianity")
+        genre_is(
+            "FIC136000",
+            "FICTION / LGBTQ+ / Two-Spirited & Indigiqueer",
+            "LGBTQ Fiction",
+        )
+        genre_is(
+            "BIB003050", "BIBLES / English Standard Version / Study", "Christianity"
+        )
+        genre_is("MED075000", "MEDICAL / Physiology", "Medical")
+        genre_is("DRA012000", "DRAMA / Australian & Oceanian", "Drama")
+        genre_is("LAW017000", "LAW / Conflict of Laws", "Law")
+        genre_is("LAW103000", "LAW / Common", "Law")
+        genre_is("HIS066000", "HISTORY / LGBTQ+", "History")
+        genre_is(
+            "BIB020030",
+            "BIBLES / The Message / New Testament & Portions",
             "Christianity",
         )
-
-        genre_is("Young Adult Fiction / Zombies", "Horror")
-        genre_is("Young Adult Fiction / Superheroes", "Suspense/Thriller")
-        genre_is("Young Adult Nonfiction / Social Topics", "Life Strategies")
-        genre_is("Young Adult Fiction / Social Themes", None)
-
-        genre_is("Young Adult Fiction / Poetry", "Poetry")
-        genre_is("Poetry / General", "Poetry")
-        # Making sure we classify Poetry as Poetry
-        genre_is("Poetry / European / General", "Poetry")
-        # Making sure we classify Literary Criticism as such, not Poetry
-        genre_is("Literary Criticism / Poetry", "Literary Criticism")
-
-        # Grandfathered in from an older test to validate that the new
-        # BISAC algorithm gives the same results as the old one.
-        genre_is("JUVENILE FICTION / Dystopian", "Dystopian SF")
-        genre_is("JUVENILE FICTION / Stories in Verse (see also Poetry)", "Poetry")
-
-        # These tests cover the missing rules for new BISAC codes
-        genre_is("FICTION / Absurdist", "Humorous Fiction")
-        genre_is("FICTION / Adaptations & Pastiche", "General Fiction")
-        genre_is("FICTION / African American & Black / General", "General Fiction")
-        genre_is("FICTION / African American & Black / Women", "General Fiction")
-        genre_is("FICTION / Amish & Mennonite", "General Fiction")
-        genre_is("FICTION / Animals", "General Fiction")
-        genre_is("FICTION / Asian American & Pacific Islander", "General Fiction")
-        genre_is("FICTION / Biographical", "General Fiction")
-        genre_is("FICTION / Buddhist", "General Fiction")
-        genre_is("FICTION / City Life", "Urban Fiction")
-        genre_is("FICTION / Coming of Age", "General Fiction")
-        genre_is("FICTION / Cultural Heritage", "Folklore")
-        genre_is("FICTION / Disabilities", "General Fiction")
-        genre_is("FICTION / Disaster", "General Fiction")
-        genre_is("FICTION / Diversity & Multicultural", "General Fiction")
-        genre_is("FICTION / Epistolary", "General Fiction")
-        genre_is("FICTION / Family Life / General", "General Fiction")
-        genre_is("FICTION / Family Life / Marriage & Divorce", "General Fiction")
-        genre_is("FICTION / Family Life / Siblings", "General Fiction")
-        genre_is("FICTION / Feminist", "General Fiction")
-        genre_is("FICTION / Friendship", "General Fiction")
-        genre_is("FICTION / Hispanic & Latino / Family Life", "General Fiction")
-        genre_is("FICTION / Hispanic & Latino / General", "General Fiction")
-        genre_is("FICTION / Hispanic & Latino / Inspirational", "General Fiction")
-        genre_is("FICTION / Hispanic & Latino / Urban & Street Lit", "Urban Fiction")
-        genre_is("FICTION / Hispanic & Latino / Women", "General Fiction")
-        genre_is("FICTION / Holidays", "General Fiction")
-        genre_is("FICTION / Immigration", "General Fiction")
         genre_is(
-            "FICTION / Indigenous / General (see also Indigenous Peoples of Turtle Island or Native American)",
+            "GAM002000",
+            "GAMES & ACTIVITIES / Card Games / General",
+            "Games & Activities",
+        )
+        genre_is("BIO022000", "BIOGRAPHY & AUTOBIOGRAPHY / Women", "Biography & Memoir")
+        genre_is(
+            "YAN052010",
+            "YOUNG ADULT NONFICTION / Social Science / Archaeology",
+            "Art & Culture",
+        )
+        genre_is(
+            "JNF053010",
+            "JUVENILE NONFICTION / Social Topics / Adolescence",
+            "Health & Wellness",
+        )
+        genre_is(
+            "YAN045000",
+            "YOUNG ADULT NONFICTION / Recycling & Green Living",
+            "Climate & Sustainability",
+        )
+        genre_is("JUV002190", "JUVENILE FICTION / Animals / Pets", "Pet Stories")
+        genre_is(
+            "REF033000",
+            "REFERENCE / Personal & Private Investigations",
+            "Reference & Study Aids",
+        )
+        genre_is(
+            "OCC041000", "BODY, MIND & SPIRIT / Sacred Sexuality", "Body, Mind & Spirit"
+        )
+        genre_is(
+            "COM060170",
+            "COMPUTERS / Internet / Content Management Systems",
+            "Computers",
+        )
+        genre_is("MUS054000", "MUSIC / Philosophy & Social Aspects", "Music")
+        genre_is(
+            "JNF052040", "JUVENILE NONFICTION / Social Science / Sociology", "Society"
+        )
+        genre_is(
+            "ANT012000", "ANTIQUES & COLLECTIBLES / Comics", "Antiques & Collectibles"
+        )
+        genre_is("CKB056000", "COOKING / Regional & Cultural / Mexican", "Cooking")
+        genre_is("LAW083000", "LAW / Securities", "Law")
+        genre_is("MED094000", "MEDICAL / Pediatric Emergencies", "Medical")
+        genre_is("OCC015000", "BODY, MIND & SPIRIT / Numerology", "Body, Mind & Spirit")
+        genre_is("NAT042000", "NATURE / Animals / Big Cats", "Nature")
+        genre_is("JNF006000", "JUVENILE NONFICTION / Art / General", "Art & Culture")
+        genre_is(
+            "ANT017000",
+            "ANTIQUES & COLLECTIBLES / Furniture",
+            "Antiques & Collectibles",
+        )
+        genre_is("SOC073000", "SOCIAL SCIENCE / Human Trafficking", "Social Sciences")
+        genre_is("TRV025040", "TRAVEL / United States / Northeast / General", "Travel")
+        genre_is(
+            "BIB016040",
+            "BIBLES / New Revised Standard Version / Reference",
+            "Christianity",
+        )
+        genre_is(
+            "YAF001000",
+            "YOUNG ADULT FICTION / Action & Adventure / General",
+            "Adventure",
+        )
+        genre_is("EDU029000", "EDUCATION / Teaching / General", "Education")
+        genre_is(
+            "COM084020",
+            "COMPUTERS / Business & Productivity Software / Email Clients",
+            "Computers",
+        )
+        genre_is(
+            "BUS070080",
+            "BUSINESS & ECONOMICS / Industries / Service",
+            "Personal Finance & Business",
+        )
+        genre_is(
+            "BIO028000", "BIOGRAPHY & AUTOBIOGRAPHY / Indigenous", "Biography & Memoir"
+        )
+        genre_is(
+            "JNF076030", "JUVENILE NONFICTION / Indigenous / Family Life", "Family"
+        )
+        genre_is(
+            "COM051240",
+            "COMPUTERS / Software Development & Engineering / Systems Analysis & Design",
+            "Computers",
+        )
+        genre_is(
+            "ART038000", "ART / American / African American & Black", "Art & Culture"
+        )
+        genre_is(
+            "BUS036070",
+            "BUSINESS & ECONOMICS / Investments & Securities / Analysis & Trading Strategies",
+            "Personal Finance & Investing",
+        )
+        genre_is(
+            "FIC059100",
+            "FICTION / Indigenous / Oral Storytelling & Teachings",
+            "Folklore Stories",
+        )
+        genre_is(
+            "HEA017000",
+            "HEALTH & FITNESS / Diet & Nutrition / Nutrition",
+            "Health & Diet",
+        )
+        genre_is(
+            "JNF062020",
+            "JUVENILE NONFICTION / Comics & Graphic Novels / History",
+            "History",
+        )
+        genre_is("GAR029000", "GARDENING / Water Gardens", "Gardening")
+        genre_is(
+            "YAN051050",
+            "YOUNG ADULT NONFICTION / Social Topics / Death, Grief, Bereavement",
+            "Health & Wellness",
+        )
+        genre_is("HIS010020", "HISTORY / Europe / Western", "European History")
+        genre_is(
+            "JUV015010",
+            "JUVENILE FICTION / Health & Daily Living / Daily Activities",
             "General Fiction",
         )
-        genre_is("FICTION / Indigenous / City Life", "Urban Fiction")
-        genre_is("FICTION / Indigenous / Elders", "General Fiction")
-        genre_is("FICTION / Indigenous / Family Life", "General Fiction")
-        genre_is("FICTION / Indigenous / Indigenous Futurism", "Science Fiction")
-        genre_is("FICTION / Indigenous / Life Stories", "General Fiction")
-        genre_is("FICTION / Indigenous / Oral Storytelling & Teachings", "Folklore")
-        genre_is("FICTION / Indigenous / Women", "General Fiction")
         genre_is(
-            "FICTION / Indigenous / Indigenous Peoples of Turtle Island",
+            "LAN008000",
+            "LANGUAGE ARTS & DISCIPLINES / Journalism",
+            "Reference & Study Aids",
+        )
+        genre_is(
+            "JUV033100",
+            "JUVENILE FICTION / Religious / Christian / Family",
+            "Family Stories",
+        )
+        genre_is(
+            "OCC029000",
+            "BODY, MIND & SPIRIT / Unexplained Phenomena",
+            "Body, Mind & Spirit",
+        )
+        genre_is("TRV003100", "TRAVEL / Asia / East / Taiwan", "Travel")
+        genre_is("CKB095000", "COOKING / Courses & Dishes / Confectionery", "Cooking")
+        genre_is(
+            "LIT008000", "LITERARY CRITICISM / Asian / General", "Literary Criticism"
+        )
+        genre_is(
+            "FOR043000", "FOREIGN LANGUAGE STUDY / Swedish", "Foreign Language Study"
+        )
+        genre_is("FIC093000", "FICTION / World Literature / Chile", "General Fiction")
+        genre_is("COM051370", "COMPUTERS / Programming / Macintosh", "Computers")
+        genre_is("HUM015000", "HUMOR / Form / Anecdotes & Quotations", "Humor")
+        genre_is(
+            "JUV008020",
+            "JUVENILE FICTION / Comics & Graphic Novels / Superheroes",
+            "Superheroes",
+        )
+        genre_is("COM080000", "COMPUTERS / History", "Computers")
+        genre_is("PHO007000", "PHOTOGRAPHY / Techniques / Equipment", "Photography")
+        genre_is(
+            "PSY041000", "PSYCHOLOGY / Psychotherapy / Couples & Family", "Psychology"
+        )
+        genre_is("LAW015000", "LAW / Communications", "Law")
+        genre_is("ART050010", "ART / Subjects & Themes / Human Figure", "Art & Culture")
+        genre_is(
+            "BUS118000",
+            "BUSINESS & ECONOMICS / Diversity & Inclusion",
+            "Personal Finance & Business",
+        )
+        genre_is(
+            "BIB015070",
+            "BIBLES / New Living Translation / Youth & Teen",
+            "Christianity",
+        )
+        genre_is(
+            "FIC009120", "FICTION / Fantasy / Dragons & Mythical Creatures", "Fantasy"
+        )
+        genre_is("MUS000000", "MUSIC / General", "Music")
+        genre_is("GAM012000", "GAMES & ACTIVITIES / Trivia", "Games & Activities")
+        genre_is(
+            "TEC009020", "TECHNOLOGY & ENGINEERING / Civil / General", "Technology"
+        )
+        genre_is("TEC026000", "TECHNOLOGY & ENGINEERING / Mining", "Technology")
+        genre_is("GAR008000", "GARDENING / Greenhouses", "Gardening")
+        genre_is(
+            "JNF007120",
+            "JUVENILE NONFICTION / Biography & Autobiography / Women",
+            "Biography & Memoir",
+        )
+        genre_is("ART069000", "ART / American / Native American", "Art & Culture")
+        genre_is("HUM009000", "HUMOR / Topic / Animals", "Humor")
+        genre_is(
+            "FIC054000",
+            "FICTION / Asian American & Pacific Islander",
             "General Fiction",
         )
-        genre_is("FICTION / Legal", "General Fiction")
-        genre_is("FICTION / Mashups", "General Fiction")
-        genre_is("FICTION / Media Tie-In", "General Fiction")
-        genre_is("FICTION / Medical", "General Fiction")
-        genre_is("FICTION / Middle Eastern & Arab American", "General Fiction")
-        genre_is("FICTION / Multiple Timelines", "General Fiction")
-        genre_is("FICTION / Muslim", "General Fiction")
-        genre_is("FICTION / Native American", "General Fiction")
-        genre_is("FICTION / Nature & the Environment", "General Fiction")
-        genre_is("FICTION / Neurodiversity", "General Fiction")
-        genre_is("FICTION / Own Voices", "General Fiction")
-        genre_is("FICTION / Performing Arts / General", "General Fiction")
+        genre_is("PSY022000", "PSYCHOLOGY / Psychopathology / General", "Psychology")
         genre_is(
-            "FICTION / Performing Arts / Dance, Theater & Musicals", "General Fiction"
+            "TRV029000", "TRAVEL / Special Interest / Amusement & Theme Parks", "Travel"
+        )
+        genre_is("ART015060", "ART / History / Ancient & Classical", "Art History")
+        genre_is("COM043040", "COMPUTERS / Networking / Network Protocols", "Computers")
+        genre_is("YAN005000", "YOUNG ADULT NONFICTION / Art / General", "Art & Culture")
+        genre_is("FIC004000", "FICTION / Classics", "Classics")
+        genre_is(
+            "YAN051270",
+            "YOUNG ADULT NONFICTION / Social Topics / Civil & Human Rights",
+            "Human Rights",
+        )
+        genre_is("MAT030000", "MATHEMATICS / Study & Teaching", "Mathematics")
+        genre_is("COM014000", "COMPUTERS / Computer Science", "Computers")
+        genre_is(
+            "FOR032000",
+            "FOREIGN LANGUAGE STUDY / Oceanic & Australian Languages",
+            "Foreign Language Study",
+        )
+        genre_is("MED103000", "MEDICAL / Parasitology", "Medical")
+        genre_is("HIS037060", "HISTORY / Modern / 19th Century", "Modern History")
+        genre_is(
+            "REL006630",
+            "RELIGION / Biblical Studies / History & Culture",
+            "Christianity",
         )
         genre_is(
-            "FICTION / Performing Arts / Film, Television & Radio", "General Fiction"
+            "REL055020",
+            "RELIGION / Christian Rituals & Practice / Worship & Liturgy",
+            "Christianity",
         )
-        genre_is("FICTION / Performing Arts / Music", "General Fiction")
-        genre_is("FICTION / Political", "General Fiction")
-        genre_is("FICTION / Psychological", "General Fiction")
-        genre_is("FICTION / Small Town & Rural", "General Fiction")
-        genre_is("FICTION / Southern", "General Fiction")
-        genre_is("FICTION / Sports", "General Fiction")
-        genre_is("FICTION / Suburban", "General Fiction")
-        genre_is("FICTION / Urban & Street Lit", "Urban Fiction")
-        genre_is("FICTION / Women", "General Fiction")
-        genre_is("FICTION / World Literature / Africa / East Africa", "General Fiction")
-        genre_is("FICTION / World Literature / Africa / General", "General Fiction")
-        genre_is("FICTION / World Literature / Africa / Nigeria", "General Fiction")
+        genre_is("BIB009040", "BIBLES / New American Bible / Reference", "Christianity")
+        genre_is("HIS064000", "HISTORY / Europe / Portugal", "European History")
+        genre_is("MUS023020", "MUSIC / Musical Instruments / Percussion", "Music")
         genre_is(
-            "FICTION / World Literature / Africa / Southern Africa", "General Fiction"
-        )
-        genre_is("FICTION / World Literature / Africa / West Africa", "General Fiction")
-        genre_is(
-            "FICTION / World Literature / American / 19th Century", "Historical Fiction"
+            "HEA039150",
+            "HEALTH & FITNESS / Diseases & Conditions / Chronic Fatigue Syndrome",
+            "Health & Diet",
         )
         genre_is(
-            "FICTION / World Literature / American / 20th Century", "General Fiction"
+            "BIO002020",
+            "BIOGRAPHY & AUTOBIOGRAPHY / Asian & Asian American",
+            "Biography & Memoir",
         )
         genre_is(
-            "FICTION / World Literature / American / 21st Century", "General Fiction"
+            "FAM016000", "FAMILY & RELATIONSHIPS / Education", "Family & Relationships"
+        )
+        genre_is("BIB008050", "BIBLES / Multiple Translations / Study", "Christianity")
+        genre_is("JUV075000", "JUVENILE FICTION / War & Military", "War")
+        genre_is("EDU011000", "EDUCATION / Evaluation & Assessment", "Education")
+        genre_is("LAW094000", "LAW / Discrimination", "Law")
+        genre_is(
+            "YAF032000",
+            "YOUNG ADULT FICTION / Lifestyles / City & Town Life",
+            "General Fiction",
         )
         genre_is(
-            "FICTION / World Literature / American / Colonial & Revolutionary Periods",
-            "Historical Fiction",
-        )
-        genre_is("FICTION / World Literature / American / General", "General Fiction")
-        genre_is("FICTION / World Literature / Argentina", "General Fiction")
-        genre_is("FICTION / World Literature / Asia (General)", "General Fiction")
-        genre_is("FICTION / World Literature / Australia", "General Fiction")
-        genre_is("FICTION / World Literature / Austria", "General Fiction")
-        genre_is("FICTION / World Literature / Brazil", "General Fiction")
-        genre_is(
-            "FICTION / World Literature / Canada / 20th Century", "General Fiction"
-        )
-        genre_is(
-            "FICTION / World Literature / Canada / 21st Century", "General Fiction"
-        )
-        genre_is(
-            "FICTION / World Literature / Canada / Colonial & 19th Century",
-            "Historical Fiction",
-        )
-        genre_is("FICTION / World Literature / Canada / General", "General Fiction")
-        genre_is(
-            "FICTION / World Literature / Caribbean & West Indies", "General Fiction"
-        )
-        genre_is("FICTION / World Literature / Central America", "General Fiction")
-        genre_is("FICTION / World Literature / Central Asia", "General Fiction")
-        genre_is("FICTION / World Literature / Chile", "General Fiction")
-        genre_is(
-            "FICTION / World Literature / China / 19th Century", "Historical Fiction"
-        )
-        genre_is("FICTION / World Literature / China / 20th Century", "General Fiction")
-        genre_is("FICTION / World Literature / China / 21st Century", "General Fiction")
-        genre_is("FICTION / World Literature / China / General", "General Fiction")
-        genre_is("FICTION / World Literature / Colombia", "General Fiction")
-        genre_is("FICTION / World Literature / Czech Republic", "General Fiction")
-        genre_is("FICTION / World Literature / Denmark", "General Fiction")
-        genre_is(
-            "FICTION / World Literature / England / 16th & 17th Century",
+            "YAF024000",
+            "YOUNG ADULT FICTION / Historical / General",
             "Historical Fiction",
         )
         genre_is(
-            "FICTION / World Literature / England / 18th Century", "Historical Fiction"
+            "BIB012110",
+            "BIBLES / New International Reader's Version / Reading",
+            "Christianity",
         )
         genre_is(
-            "FICTION / World Literature / England / 19th Century", "Historical Fiction"
+            "JNF003110", "JUVENILE NONFICTION / Animals / Horses", "Horses & Riding"
+        )
+        genre_is("MED018000", "MEDICAL / Diagnosis", "Medical")
+        genre_is("SCI090000", "SCIENCE / Cognitive Science", "Science")
+        genre_is("ART072000", "ART / Techniques / Beadwork", "Art & Culture")
+        genre_is("SOC026000", "SOCIAL SCIENCE / Sociology / General", "Social Sciences")
+        genre_is("TRV002010", "TRAVEL / Africa / Central", "Travel")
+        genre_is("COM051480", "COMPUTERS / Languages / JSON", "Computers")
+        genre_is(
+            "BIB001010", "BIBLES / Christian Standard Bible / Children", "Christianity"
+        )
+        genre_is("MUS001000", "MUSIC / Instruction & Study / Appreciation", "Music")
+        genre_is(
+            "BIB008080", "BIBLES / Multiple Translations / Dramatized", "Christianity"
         )
         genre_is(
-            "FICTION / World Literature / England / 20th Century", "General Fiction"
+            "FAM044000",
+            "FAMILY & RELATIONSHIPS / Toilet Training",
+            "Family & Relationships",
+        )
+        genre_is("REL007030", "RELIGION / Buddhism / Sacred Writings", "Buddhism")
+        genre_is("FIC009100", "FICTION / Fantasy / Action & Adventure", "Fantasy")
+        genre_is(
+            "YAN051190", "YOUNG ADULT NONFICTION / Social Topics / Runaways", "Society"
         )
         genre_is(
-            "FICTION / World Literature / England / 21st Century", "General Fiction"
+            "LAN006000",
+            "LANGUAGE ARTS & DISCIPLINES / Grammar & Punctuation",
+            "Reference & Study Aids",
+        )
+        genre_is("LAW086000", "LAW / Taxation", "Law")
+        genre_is("SCI043000", "SCIENCE / Research & Methodology", "Science")
+        genre_is("MED100000", "MEDICAL / Podiatry", "Medical")
+        genre_is(
+            "BUS064010",
+            "BUSINESS & ECONOMICS / Taxation / Corporate",
+            "Personal Finance & Business",
+        )
+        genre_is("SCI060000", "SCIENCE / Reference", "Science")
+        genre_is(
+            "BIB005100",
+            "BIBLES / International Children's Bible / Outreach",
+            "Christianity",
+        )
+        genre_is("MED070000", "MEDICAL / Perinatology & Neonatology", "Medical")
+        genre_is(
+            "YAF051000", "YOUNG ADULT FICTION / Religious / General", "General Fiction"
+        )
+        genre_is("MED016060", "MEDICAL / Dentistry / Endodontics", "Medical")
+        genre_is("TRV026010", "TRAVEL / Special Interest / Business", "Travel")
+        genre_is("BIB023110", "BIBLES / The Amplified Bible / Reading", "Christianity")
+        genre_is(
+            "YAN061000",
+            "YOUNG ADULT NONFICTION / Diversity & Multicultural",
+            "Diversity & Multicultural",
         )
         genre_is(
+            "SOC008080",
+            "SOCIAL SCIENCE / Cultural & Ethnic Studies / American / European American Studies",
+            "Social Sciences",
+        )
+        genre_is("TRV026090", "TRAVEL / Special Interest / Literary", "Travel")
+        genre_is(
+            "YAF072000", "YOUNG ADULT FICTION / Clean & Nonviolent", "General Fiction"
+        )
+        genre_is(
+            "FIC102000",
+            "FICTION / World Literature / Germany / General",
+            "General Fiction",
+        )
+        genre_is(
+            "BUS050050",
+            "BUSINESS & ECONOMICS / Personal Finance / Taxation",
+            "Personal Finance & Investing",
+        )
+        genre_is("TRV010000", "TRAVEL / Essays & Travelogues", "Travel")
+        genre_is("CKB046000", "COOKING / Regional & Cultural / Irish", "Cooking")
+        genre_is(
+            "FOR004000", "FOREIGN LANGUAGE STUDY / Danish", "Foreign Language Study"
+        )
+        genre_is("FIC028000", "FICTION / Science Fiction / General", "Science Fiction")
+        genre_is("PHI032000", "PHILOSOPHY / Movements / Rationalism", "Philosophy")
+        genre_is("PHI035000", "PHILOSOPHY / Essays", "Philosophy")
+        genre_is(
+            "POL006000",
+            "POLITICAL SCIENCE / American Government / Legislative Branch",
+            "Political Science",
+        )
+        genre_is("HIS027160", "HISTORY / Military / Canada", "Military History")
+        genre_is("MAT003000", "MATHEMATICS / Applied", "Mathematics")
+        genre_is(
+            "BUS033060",
+            "BUSINESS & ECONOMICS / Insurance / Life",
+            "Personal Finance & Business",
+        )
+        genre_is("FIC047000", "FICTION / Sea Stories", "Adventure")
+        genre_is(
+            "JNF008000",
+            "JUVENILE NONFICTION / Paranormal & Supernatural",
+            "Supernatural",
+        )
+        genre_is("TRA001150", "TRANSPORTATION / Automotive / Trucks", "Technology")
+        genre_is("JNF053180", "JUVENILE NONFICTION / Disabilities", "Health & Wellness")
+        genre_is(
+            "BUS030000",
+            "BUSINESS & ECONOMICS / Human Resources & Personnel Management",
+            "Personal Finance & Business",
+        )
+        genre_is(
+            "FAM015000",
+            "FAMILY & RELATIONSHIPS / Divorce & Separation",
+            "Family & Relationships",
+        )
+        genre_is(
+            "SEL026000",
+            "SELF-HELP / Substance Abuse & Addictions / General",
+            "Self-Help",
+        )
+        genre_is("TEC045000", "TECHNOLOGY & ENGINEERING / Fire Science", "Technology")
+        genre_is("GAR020000", "GARDENING / Shade", "Gardening")
+        genre_is("REL109030", "RELIGION / Christian Ministry / Youth", "Christianity")
+        genre_is("TEC072000", "TECHNOLOGY & ENGINEERING / Pharmaceutical", "Technology")
+        genre_is("JNF019010", "JUVENILE NONFICTION / Family / Adoption", "Family")
+        genre_is(
+            "YAF059060",
+            "YOUNG ADULT FICTION / Sports & Recreation / Football",
+            "Sports Stories",
+        )
+        genre_is("SCI100000", "SCIENCE / Natural History", "Science")
+        genre_is("FIC056060", "FICTION / Hispanic & Latino / Horror", "General Fiction")
+        genre_is(
+            "HIS027280", "HISTORY / Military / Guerrilla Warfare", "Military History"
+        )
+        genre_is("FIC027330", "FICTION / Romance / Sports", "Romance")
+        genre_is("MED071000", "MEDICAL / Pharmacology", "Medical")
+        genre_is(
+            "BIB015020", "BIBLES / New Living Translation / Devotional", "Christianity"
+        )
+        genre_is(
+            "FIC027310",
+            "FICTION / Romance / Paranormal / Shifters",
+            "Paranormal Romance",
+        )
+        genre_is(
+            "YAF046210",
+            "YOUNG ADULT FICTION / Indigenous / Historical",
+            "Historical Fiction",
+        )
+        genre_is(
+            "LAN002000",
+            "LANGUAGE ARTS & DISCIPLINES / Writing / Authorship",
+            "Reference & Study Aids",
+        )
+        genre_is(
+            "PER011020",
+            "PERFORMING ARTS / Theater / History & Criticism",
+            "Performing Arts",
+        )
+        genre_is(
+            "JNF026030",
+            "JUVENILE NONFICTION / Holidays & Celebrations / Halloween",
+            "Holidays & Celebrations",
+        )
+        genre_is(
+            "LIT004260",
+            "LITERARY CRITICISM / Science Fiction & Fantasy",
+            "Literary Criticism",
+        )
+        genre_is("YAF026000", "YOUNG ADULT FICTION / Horror", "Horror")
+        genre_is("SPO003040", "SPORTS & RECREATION / Baseball / Statistics", "Sports")
+        genre_is(
+            "HIS027390",
+            "HISTORY / Wars & Conflicts / World War II / Pacific Theater",
+            "History",
+        )
+        genre_is("SCI101000", "SCIENCE / Ethics", "Science")
+        genre_is("LAW119000", "LAW / Islamic", "Law")
+        genre_is("HIS001020", "HISTORY / Africa / East", "African History")
+        genre_is("HIS062000", "HISTORY / Asia / South / India", "Asian History")
+        genre_is(
+            "CGN007020",
+            "COMICS & GRAPHIC NOVELS / Nonfiction / History",
+            "Comics & Graphic Novels",
+        )
+        genre_is("TRV009160", "TRAVEL / Europe / Cyprus", "Travel")
+        genre_is("CRA050000", "CRAFTS & HOBBIES / Leatherwork", "Crafts & Hobbies")
+        genre_is(
+            "YAN051200",
+            "YOUNG ADULT NONFICTION / Social Topics / Self-Esteem & Self-Reliance",
+            "Mental Health",
+        )
+        genre_is("REL102000", "RELIGION / Theology", "Religion & Spirituality")
+        genre_is("PET004000", "PETS / Dogs / General", "Pets")
+        genre_is(
+            "CRA004000",
+            "CRAFTS & HOBBIES / Needlework / Crocheting",
+            "Crafts & Hobbies",
+        )
+        genre_is(
+            "TRV024040",
+            "TRAVEL / South America / Ecuador & Galapagos Islands",
+            "Travel",
+        )
+        genre_is("SOC018000", "SOCIAL SCIENCE / Men's Studies", "Social Sciences")
+        genre_is("REF032000", "REFERENCE / Event Planning", "Reference & Study Aids")
+        genre_is("DRA005010", "DRAMA / Asian / Japanese", "Drama")
+        genre_is(
+            "JNF054030",
+            "JUVENILE NONFICTION / Sports & Recreation / Camping & Outdoor Activities",
+            "Camping",
+        )
+        genre_is(
+            "SPO059000",
+            "SPORTS & RECREATION / Water Sports / Scuba & Snorkeling",
+            "Sports",
+        )
+        genre_is(
+            "BUS078000",
+            "BUSINESS & ECONOMICS / Distribution",
+            "Personal Finance & Business",
+        )
+        genre_is(
+            "BUS036020",
+            "BUSINESS & ECONOMICS / Investments & Securities / Futures",
+            "Personal Finance & Investing",
+        )
+        genre_is("HIS002020", "HISTORY / Ancient / Rome", "Ancient History")
+        genre_is("SCI013010", "SCIENCE / Chemistry / Analytic", "Science")
+        genre_is("LAW056000", "LAW / Law Office Management", "Law")
+        genre_is(
+            "LCO008030", "LITERARY COLLECTIONS / European / German", "Short Stories"
+        )
+        genre_is("TRV018000", "TRAVEL / Parks & Campgrounds", "Travel")
+        genre_is(
+            "BIB013020",
+            "BIBLES / New International Version / Devotional",
+            "Christianity",
+        )
+        genre_is(
+            "REL016000",
+            "RELIGION / Institutions & Organizations",
+            "Religion & Spirituality",
+        )
+        genre_is(
+            "SEL049010",
+            "SELF-HELP / Safety & Security / Survival & Emergency Preparedness",
+            "Self-Help",
+        )
+        genre_is("FIC009070", "FICTION / Fantasy / Dark Fantasy", "Fantasy")
+        genre_is(
+            "SCI104000", "SCIENCE / Indigenous Knowledge & Perspectives", "Science"
+        )
+        genre_is(
+            "CGN001000",
+            "COMICS & GRAPHIC NOVELS / Anthologies",
+            "Comics & Graphic Novels",
+        )
+        genre_is(
+            "JUV004080",
+            "JUVENILE FICTION / Biographical / Australia & Oceania",
+            "General Fiction",
+        )
+        genre_is("DRA001030", "DRAMA / American / Hispanic & Latino", "Drama")
+        genre_is(
+            "YAN055010",
+            "YOUNG ADULT NONFICTION / Technology / Aeronautics, Astronautics & Space Science",
+            "Stars & Space",
+        )
+        genre_is("CRA047000", "CRAFTS & HOBBIES / Folkcrafts", "Crafts & Hobbies")
+        genre_is(
+            "FIC095000", "FICTION / World Literature / Colombia", "General Fiction"
+        )
+        genre_is(
+            "JNF018020",
+            "JUVENILE NONFICTION / Asian American & Pacific Islander",
+            "Diversity & Multicultural",
+        )
+        genre_is("EDU060040", "EDUCATION / Schools / Types / Public", "Education")
+        genre_is("ART063000", "ART / Environmental & Land Art", "Art & Culture")
+        genre_is("COM048000", "COMPUTERS / Distributed Systems / General", "Computers")
+        genre_is("ART003000", "ART / Techniques / Calligraphy", "Art & Culture")
+        genre_is("YAF078000", "YOUNG ADULT FICTION / Inuit", "General Fiction")
+        genre_is(
+            "PHI037000", "PHILOSOPHY / History & Surveys / Renaissance", "Philosophy"
+        )
+        genre_is("SCI098000", "SCIENCE / Space Science / General", "Science")
+        genre_is("COM073000", "COMPUTERS / Speech & Audio Processing", "Computers")
+        genre_is(
+            "YAF024070",
+            "YOUNG ADULT FICTION / Historical / Holocaust",
+            "Difficult Topics",
+        )
+        genre_is("SCI074000", "SCIENCE / Physics / Atomic & Molecular", "Science")
+        genre_is("BIB020000", "BIBLES / The Message / General", "Christianity")
+        genre_is(
+            "POL040020", "POLITICAL SCIENCE / World / General", "Political Science"
+        )
+        genre_is(
+            "EDU029060", "EDUCATION / Teaching / Subjects / Library Skills", "Education"
+        )
+        genre_is("PHI018000", "PHILOSOPHY / Movements / Phenomenology", "Philosophy")
+        genre_is("JNF011000", "JUVENILE NONFICTION / Careers", "Society")
+        genre_is("FIC027400", "FICTION / Romance / LGBTQ+ / Transgender", "Romance")
+        genre_is(
+            "YAF077000", "YOUNG ADULT FICTION / First Nations", "Multicultural Stories"
+        )
+        genre_is("ART059000", "ART / Museum Studies", "Art & Culture")
+        genre_is("LAW001000", "LAW / Administrative Law & Regulatory Practice", "Law")
+        genre_is("POE015000", "POETRY / Native American", "Poetry")
+        genre_is("CKB024000", "COOKING / Courses & Dishes / Desserts", "Cooking")
+        genre_is("YAF027020", "YOUNG ADULT FICTION / Satire", "General Fiction")
+        genre_is(
+            "YAN050100",
+            "YOUNG ADULT NONFICTION / Science & Nature / Experiments & Projects",
+            "Science & Technology",
+        )
+        genre_is(
+            "COM021040", "COMPUTERS / Data Science / Data Warehousing", "Computers"
+        )
+        genre_is(
+            "COM050000",
+            "COMPUTERS / Hardware / Personal Computers / General",
+            "Computers",
+        )
+        genre_is(
+            "BUS075000",
+            "BUSINESS & ECONOMICS / Consulting",
+            "Personal Finance & Business",
+        )
+        genre_is(
+            "FIC028080", "FICTION / Science Fiction / Time Travel", "Science Fiction"
+        )
+        genre_is(
+            "REL006780",
+            "RELIGION / Biblical Commentary / Old Testament / Prophets",
+            "Christianity",
+        )
+        genre_is("SEL040000", "SELF-HELP / Communication & Social Skills", "Self-Help")
+        genre_is("CKB048000", "COOKING / Regional & Cultural / Japanese", "Cooking")
+        genre_is(
+            "BUS087000",
+            "BUSINESS & ECONOMICS / Production & Operations Management",
+            "Personal Finance & Business",
+        )
+        genre_is(
+            "BUS005000",
+            "BUSINESS & ECONOMICS / Bookkeeping",
+            "Personal Finance & Business",
+        )
+        genre_is("MED089020", "MEDICAL / Veterinary Medicine / Food Animal", "Medical")
+        genre_is("LAW009000", "LAW / Business & Financial", "Law")
+        genre_is(
+            "JNF053070",
+            "JUVENILE NONFICTION / Social Topics / Poverty & Homelessness",
+            "Society",
+        )
+        genre_is("COM055030", "COMPUTERS / Certification Guides / Cisco", "Computers")
+        genre_is("HUM001000", "HUMOR / Form / Comic Strips & Cartoons", "Humor")
+        genre_is(
+            "FIC022170",
+            "FICTION / Mystery & Detective / Cozy / Books, Bookstores & Libraries",
+            "Cozy Mystery",
+        )
+        genre_is("REF009000", "REFERENCE / Directories", "Reference & Study Aids")
+        genre_is(
+            "BIB026070", "BIBLES / Catholic Translations / Reading", "Christianity"
+        )
+        genre_is(
+            "FIC098010",
             "FICTION / World Literature / England / Early & Medieval Periods",
             "General Fiction",
         )
-        genre_is("FICTION / World Literature / England / General", "General Fiction")
-        genre_is("FICTION / World Literature / Europe (General)", "General Fiction")
-        genre_is("FICTION / World Literature / Finland", "General Fiction")
+        genre_is("MED085000", "MEDICAL / Surgery / General", "Medical")
+        genre_is("BIB000000", "BIBLES / General", "Christianity")
         genre_is(
-            "FICTION / World Literature / France / 18th Century", "Historical Fiction"
+            "YAN024080",
+            "YOUNG ADULT NONFICTION / Health & Daily Living / Sexuality & Pregnancy",
+            "Sexual Education",
+        )
+        genre_is("YAF009000", "YOUNG ADULT FICTION / Classics", "Classics")
+        genre_is(
+            "REL091000",
+            "RELIGION / Christian Education / Children & Youth",
+            "Christianity",
+        )
+        genre_is("CKB109000", "COOKING / Methods / Slow Cooking", "Cooking")
+        genre_is(
+            "PHO023090", "PHOTOGRAPHY / Subjects & Themes / Lifestyles", "Photography"
+        )
+        genre_is("EDU007000", "EDUCATION / Curricula", "Education")
+        genre_is("PHO021000", "PHOTOGRAPHY / Commercial", "Photography")
+        genre_is("POE023020", "POETRY / Subjects & Themes / Love & Erotica", "Poetry")
+        genre_is(
+            "BIB012050",
+            "BIBLES / New International Reader's Version / Study",
+            "Christianity",
         )
         genre_is(
-            "FICTION / World Literature / France / 19th Century", "Historical Fiction"
+            "YAN038140",
+            "YOUNG ADULT NONFICTION / Native American",
+            "Diversity & Multicultural",
         )
         genre_is(
-            "FICTION / World Literature / France / 20th Century", "General Fiction"
+            "HIS037050",
+            "HISTORY / Modern / 18th Century",
+            "Renaissance & Early Modern History",
+        )
+        genre_is("JNF009000", "JUVENILE NONFICTION / Boys & Men", "Health & Wellness")
+        genre_is(
+            "FIC119000", "FICTION / World Literature / Portugal", "General Fiction"
         )
         genre_is(
-            "FICTION / World Literature / France / 21st Century", "General Fiction"
+            "YAN030000",
+            "YOUNG ADULT NONFICTION / Language Arts / General",
+            "Foreign Language Study",
         )
-        genre_is("FICTION / World Literature / France / General", "General Fiction")
+        genre_is("HIS041040", "HISTORY / Caribbean & West Indies / Jamaica", "History")
+        genre_is("HIS004000", "HISTORY / Australia & New Zealand", "History")
         genre_is(
-            "FICTION / World Literature / Germany / 20th Century", "General Fiction"
-        )
-        genre_is(
-            "FICTION / World Literature / Germany / 21st Century", "General Fiction"
-        )
-        genre_is("FICTION / World Literature / Germany / General", "General Fiction")
-        genre_is("FICTION / World Literature / Greece", "General Fiction")
-        genre_is("FICTION / World Literature / Hungary", "General Fiction")
-        genre_is(
-            "FICTION / World Literature / India / 19th Century", "Historical Fiction"
-        )
-        genre_is("FICTION / World Literature / India / 20th Century", "General Fiction")
-        genre_is("FICTION / World Literature / India / 21st Century", "General Fiction")
-        genre_is("FICTION / World Literature / India / General", "General Fiction")
-        genre_is(
-            "FICTION / World Literature / Ireland / 19th Century", "Historical Fiction"
+            "LCO002010",
+            "LITERARY COLLECTIONS / American / African American & Black",
+            "Short Stories",
         )
         genre_is(
-            "FICTION / World Literature / Ireland / 20th Century", "General Fiction"
+            "BIB018060", "BIBLES / Other English Translations / Text", "Christianity"
         )
         genre_is(
-            "FICTION / World Literature / Ireland / 21st Century", "General Fiction"
-        )
-        genre_is("FICTION / World Literature / Ireland / General", "General Fiction")
-        genre_is("FICTION / World Literature / Italy", "General Fiction")
-        genre_is("FICTION / World Literature / Japan", "General Fiction")
-        genre_is("FICTION / World Literature / Korea", "General Fiction")
-        genre_is("FICTION / World Literature / Mexico", "General Fiction")
-        genre_is(
-            "FICTION / World Literature / Middle East / Arabian Peninsula",
-            "General Fiction",
+            "HIS015000",
+            "HISTORY / Europe / Great Britain / General",
+            "European History",
         )
         genre_is(
-            "FICTION / World Literature / Middle East / Egypt & North Africa",
-            "General Fiction",
+            "POL017000",
+            "POLITICAL SCIENCE / Public Affairs & Administration",
+            "Political Science",
+        )
+        genre_is("CKB010000", "COOKING / Courses & Dishes / Breakfast", "Cooking")
+        genre_is(
+            "TEC021000",
+            "TECHNOLOGY & ENGINEERING / Materials Science / General",
+            "Technology",
+        )
+        genre_is("MED072000", "MEDICAL / Pharmacy", "Medical")
+        genre_is(
+            "OCC025000",
+            "BODY, MIND & SPIRIT / UFOs & Extraterrestrials",
+            "Body, Mind & Spirit",
         )
         genre_is(
-            "FICTION / World Literature / Middle East / General", "General Fiction"
+            "BIB015080", "BIBLES / New Living Translation / Dramatized", "Christianity"
         )
-        genre_is("FICTION / World Literature / Middle East / Israel", "General Fiction")
-        genre_is("FICTION / World Literature / Netherlands", "General Fiction")
-        genre_is("FICTION / World Literature / New Zealand", "General Fiction")
-        genre_is("FICTION / World Literature / Norway", "General Fiction")
-        genre_is("FICTION / World Literature / Oceania", "General Fiction")
-        genre_is("FICTION / World Literature / Pakistan", "General Fiction")
-        genre_is("FICTION / World Literature / Peru", "General Fiction")
-        genre_is("FICTION / World Literature / Poland", "General Fiction")
-        genre_is("FICTION / World Literature / Portugal", "General Fiction")
+        genre_is("FIC110000", "FICTION / World Literature / Mexico", "General Fiction")
+        genre_is("COM046000", "COMPUTERS / Operating Systems / General", "Computers")
+        genre_is("MED089050", "MEDICAL / Veterinary Medicine / Surgery", "Medical")
+        genre_is("SPO035000", "SPORTS & RECREATION / Running & Jogging", "Sports")
+        genre_is("SEL046000", "SELF-HELP / Gender & Sexuality", "Self-Help")
         genre_is(
-            "FICTION / World Literature / Russia / 19th Century", "Historical Fiction"
+            "FIC027150",
+            "FICTION / Romance / Historical / Medieval",
+            "Historical Romance",
         )
+        genre_is("CKB030000", "COOKING / Essays & Narratives", "Cooking")
         genre_is(
-            "FICTION / World Literature / Russia / 20th Century", "General Fiction"
+            "TEC008050",
+            "TECHNOLOGY & ENGINEERING / Electronics / Circuits / VLSI & ULSI",
+            "Technology",
         )
+        genre_is("TRV002070", "TRAVEL / Africa / South / General", "Travel")
+        genre_is("HIS030000", "HISTORY / Reference", "History")
         genre_is(
-            "FICTION / World Literature / Russia / 21st Century", "General Fiction"
+            "CKB138000",
+            "COOKING / Regional & Cultural / Indigenous Food of Turtle Island",
+            "Cooking",
         )
-        genre_is("FICTION / World Literature / Russia / General", "General Fiction")
+        genre_is("CKB043000", "COOKING / Regional & Cultural / Hungarian", "Cooking")
+        genre_is("JUV003000", "JUVENILE FICTION / Art", "General Fiction")
         genre_is(
-            "FICTION / World Literature / Scotland / 19th Century", "Historical Fiction"
+            "BUS069020",
+            "BUSINESS & ECONOMICS / International / Economics & Trade",
+            "Personal Finance & Business",
         )
+        genre_is("ART015050", "ART / History / Prehistoric", "Art History")
         genre_is(
-            "FICTION / World Literature / Scotland / 20th Century", "General Fiction"
+            "COM060030", "COMPUTERS / Networking / Intranets & Extranets", "Computers"
         )
+        genre_is("DES015000", "DESIGN / Individual Designers", "Design")
         genre_is(
-            "FICTION / World Literature / Scotland / 21st Century", "General Fiction"
+            "YAF008000",
+            "YOUNG ADULT FICTION / Careers, Occupations, Internships",
+            "School & Study",
         )
-        genre_is("FICTION / World Literature / Scotland / General", "General Fiction")
+        genre_is("MED022000", "MEDICAL / Diseases", "Medical")
+        genre_is("PSY039000", "PSYCHOLOGY / Developmental / General", "Psychology")
         genre_is(
-            "FICTION / World Literature / South America (General)", "General Fiction"
+            "FIC027170",
+            "FICTION / Romance / Historical / Victorian",
+            "Historical Romance",
         )
-        genre_is("FICTION / World Literature / Southeast Asia", "General Fiction")
+        genre_is("PHI006000", "PHILOSOPHY / Movements / Existentialism", "Philosophy")
         genre_is(
-            "FICTION / World Literature / Spain / 19th Century", "Historical Fiction"
-        )
-        genre_is("FICTION / World Literature / Spain / 20th Century", "General Fiction")
-        genre_is("FICTION / World Literature / Spain / 21st Century", "General Fiction")
-        genre_is("FICTION / World Literature / Spain / General", "General Fiction")
-        genre_is("FICTION / World Literature / Sweden", "General Fiction")
-        genre_is("FICTION / World Literature / Switzerland", "General Fiction")
-        genre_is("FICTION / World Literature / Turkey", "General Fiction")
-        genre_is("FICTION / World Literature / Uruguay", "General Fiction")
-        genre_is("FICTION / World Literature / Wales", "General Fiction")
-        # Juvenile and YA subjects do not yet all have genres.
-        # Tests added to track them anyway.
-        genre_is("JUVENILE FICTION / Activity Books / Coloring", None)
-        genre_is("JUVENILE FICTION / Activity Books / General", None)
-        genre_is("JUVENILE FICTION / Activity Books / Sticker", None)
-        genre_is("JUVENILE FICTION / African American & Black", "General Fiction")
-        genre_is(
-            "JUVENILE FICTION / Animals / Alligators & Crocodiles", "General Fiction"
-        )
-        genre_is("JUVENILE FICTION / Animals / Apes, Monkeys, etc.", "General Fiction")
-        genre_is("JUVENILE FICTION / Animals / Baby Animals", "General Fiction")
-        genre_is("JUVENILE FICTION / Animals / Bears", "General Fiction")
-        genre_is("JUVENILE FICTION / Animals / Birds", "General Fiction")
-        genre_is(
-            "JUVENILE FICTION / Animals / Butterflies, Moths & Caterpillars",
-            "General Fiction",
-        )
-        genre_is("JUVENILE FICTION / Animals / Cats", "General Fiction")
-        genre_is("JUVENILE FICTION / Animals / Cows", "General Fiction")
-        genre_is(
-            "JUVENILE FICTION / Animals / Deer, Moose & Caribou", "General Fiction"
-        )
-        genre_is(
-            "JUVENILE FICTION / Animals / Dinosaurs & Prehistoric Creatures",
-            "General Fiction",
-        )
-        genre_is("JUVENILE FICTION / Animals / Dogs", "General Fiction")
-        genre_is("JUVENILE FICTION / Animals / Ducks, Geese, etc.", "General Fiction")
-        genre_is("JUVENILE FICTION / Animals / Elephants", "General Fiction")
-        genre_is("JUVENILE FICTION / Animals / Farm Animals", "General Fiction")
-        genre_is("JUVENILE FICTION / Animals / Fish", "General Fiction")
-        genre_is("JUVENILE FICTION / Animals / Foxes", "General Fiction")
-        genre_is("JUVENILE FICTION / Animals / Frogs & Toads", "General Fiction")
-        genre_is("JUVENILE FICTION / Animals / General", "General Fiction")
-        genre_is("JUVENILE FICTION / Animals / Giraffes", "General Fiction")
-        genre_is("JUVENILE FICTION / Animals / Hippos & Rhinos", "General Fiction")
-        genre_is("JUVENILE FICTION / Animals / Horses", "General Fiction")
-        genre_is(
-            "JUVENILE FICTION / Animals / Insects, Spiders, etc.", "General Fiction"
-        )
-        genre_is("JUVENILE FICTION / Animals / Jungle Animals", "General Fiction")
-        genre_is("JUVENILE FICTION / Animals / Kangaroos", "General Fiction")
-        genre_is(
-            "JUVENILE FICTION / Animals / Lions, Tigers, Leopards, etc.",
-            "General Fiction",
-        )
-        genre_is("JUVENILE FICTION / Animals / Mammals", "General Fiction")
-        genre_is("JUVENILE FICTION / Animals / Marine Life", "General Fiction")
-        genre_is(
-            "JUVENILE FICTION / Animals / Mice, Hamsters, Guinea Pigs, etc.",
-            "General Fiction",
-        )
-        genre_is("JUVENILE FICTION / Animals / Nocturnal", "General Fiction")
-        genre_is("JUVENILE FICTION / Animals / Penguins", "General Fiction")
-        genre_is("JUVENILE FICTION / Animals / Pets", "General Fiction")
-        genre_is("JUVENILE FICTION / Animals / Pigs", "General Fiction")
-        genre_is("JUVENILE FICTION / Animals / Rabbits", "General Fiction")
-        genre_is(
-            "JUVENILE FICTION / Animals / Reptiles & Amphibians", "General Fiction"
-        )
-        genre_is("JUVENILE FICTION / Animals / Squirrels", "General Fiction")
-        genre_is("JUVENILE FICTION / Animals / Turtles & Tortoises", "General Fiction")
-        genre_is(
-            "JUVENILE FICTION / Animals / Wolves, Coyotes & Wild Dogs",
-            "General Fiction",
-        )
-        genre_is("JUVENILE FICTION / Animals / Worms", "General Fiction")
-        genre_is("JUVENILE FICTION / Animals / Zoos", "General Fiction")
-        genre_is("JUVENILE FICTION / Architecture", None)
-        genre_is("JUVENILE FICTION / Art", None)
-        genre_is(
-            "JUVENILE FICTION / Asian American & Pacific Islander", "General Fiction"
-        )
-        genre_is("JUVENILE FICTION / Bedtime & Dreams", None)
-        genre_is("JUVENILE FICTION / Biographical / Africa", "General Fiction")
-        genre_is("JUVENILE FICTION / Biographical / Asia", "General Fiction")
-        genre_is(
-            "JUVENILE FICTION / Biographical / Australia & Oceania", "General Fiction"
-        )
-        genre_is("JUVENILE FICTION / Biographical / Canada", "General Fiction")
-        genre_is("JUVENILE FICTION / Biographical / Europe", "General Fiction")
-        genre_is("JUVENILE FICTION / Biographical / General", "General Fiction")
-        genre_is("JUVENILE FICTION / Biographical / Latin America", "General Fiction")
-        genre_is("JUVENILE FICTION / Biographical / United States", "General Fiction")
-        genre_is("JUVENILE FICTION / Biracial & Multiracial", None)
-        genre_is("JUVENILE FICTION / Books & Libraries", None)
-        genre_is("JUVENILE FICTION / Boys & Men", None)
-        genre_is("JUVENILE FICTION / Business, Careers, Occupations", None)
-        genre_is("JUVENILE FICTION / Clothing & Dress", None)
-        genre_is("JUVENILE FICTION / Computers & Digital Media", None)
-        genre_is("JUVENILE FICTION / Concepts / Alphabet", None)
-        genre_is("JUVENILE FICTION / Concepts / Body", None)
-        genre_is("JUVENILE FICTION / Concepts / Colors", None)
-        genre_is("JUVENILE FICTION / Concepts / Counting & Numbers", None)
-        genre_is("JUVENILE FICTION / Concepts / Date & Time", None)
-        genre_is("JUVENILE FICTION / Concepts / General", None)
-        genre_is("JUVENILE FICTION / Concepts / Language", None)
-        genre_is("JUVENILE FICTION / Concepts / Money", None)
-        genre_is("JUVENILE FICTION / Concepts / Opposites", None)
-        genre_is("JUVENILE FICTION / Concepts / Seasons", None)
-        genre_is("JUVENILE FICTION / Concepts / Senses & Sensation", None)
-        genre_is("JUVENILE FICTION / Concepts / Size & Shape", None)
-        genre_is("JUVENILE FICTION / Concepts / Sounds", None)
-        genre_is("JUVENILE FICTION / Concepts / Words", None)
-        genre_is("JUVENILE FICTION / Cooking & Food", None)
-        genre_is("JUVENILE FICTION / Disabilities", "General Fiction")
-        genre_is("JUVENILE FICTION / Diversity & Multicultural", "General Fiction")
-        genre_is("JUVENILE FICTION / Family / Adoption", None)
-        genre_is("JUVENILE FICTION / Family / Alternative Family", None)
-        genre_is("JUVENILE FICTION / Family / Blended Families", None)
-        genre_is(
-            "JUVENILE FICTION / Family / General (see also headings under Social Themes)",
-            None,
-        )
-        genre_is("JUVENILE FICTION / Family / Grandparents", None)
-        genre_is("JUVENILE FICTION / Family / Marriage & Divorce", None)
-        genre_is("JUVENILE FICTION / Family / Multigenerational", None)
-        genre_is("JUVENILE FICTION / Family / New Baby", None)
-        genre_is("JUVENILE FICTION / Family / Orphans & Foster Homes", None)
-        genre_is("JUVENILE FICTION / Family / Parents", None)
-        genre_is("JUVENILE FICTION / Family / Siblings", None)
-        genre_is("JUVENILE FICTION / First Nations", None)
-        genre_is("JUVENILE FICTION / Girls & Women", None)
-        genre_is("JUVENILE FICTION / Health & Daily Living / Daily Activities", None)
-        genre_is(
+            "JUV015020",
             "JUVENILE FICTION / Health & Daily Living / Diseases, Illnesses & Injuries",
-            None,
+            "Difficult Topics",
         )
-        genre_is("JUVENILE FICTION / Health & Daily Living / General", None)
-        genre_is("JUVENILE FICTION / Health & Daily Living / Mental Health", None)
         genre_is(
-            "JUVENILE FICTION / Health & Daily Living / Mindfulness & Meditation", None
+            "FAM001020",
+            "FAMILY & RELATIONSHIPS / Abuse / Elder Abuse",
+            "Family & Relationships",
         )
-        genre_is("JUVENILE FICTION / Health & Daily Living / Toilet Training", None)
-        genre_is("JUVENILE FICTION / Hispanic & Latino", "General Fiction")
-        genre_is("JUVENILE FICTION / Holidays & Celebrations / Birthdays", None)
+        genre_is("YAF031000", "YOUNG ADULT FICTION / LGBTQ+ / General", "LGBTQ Fiction")
+        genre_is("COM037000", "COMPUTERS / Machine Theory", "Computers")
         genre_is(
-            "JUVENILE FICTION / Holidays & Celebrations / Christmas & Advent", None
+            "MED003050",
+            "MEDICAL / Allied Health Services / Occupational Therapy",
+            "Medical",
         )
-        genre_is("JUVENILE FICTION / Holidays & Celebrations / Day of the Dead", None)
-        genre_is("JUVENILE FICTION / Holidays & Celebrations / Diwali", None)
-        genre_is("JUVENILE FICTION / Holidays & Celebrations / Easter & Lent", None)
-        genre_is("JUVENILE FICTION / Holidays & Celebrations / Father's Day", None)
+        genre_is("EDU032000", "EDUCATION / Leadership", "Education")
+        genre_is("DRA026000", "DRAMA / Type / Tragedy", "Drama")
         genre_is(
-            "JUVENILE FICTION / Holidays & Celebrations / General (see also Religious / Christian / Holidays & Celebrations)",
-            None,
+            "BIB018100",
+            "BIBLES / Other English Translations / Outreach",
+            "Christianity",
         )
-        genre_is("JUVENILE FICTION / Holidays & Celebrations / Halloween", None)
-        genre_is("JUVENILE FICTION / Holidays & Celebrations / Hanukkah", None)
-        genre_is("JUVENILE FICTION / Holidays & Celebrations / Juneteenth", None)
-        genre_is("JUVENILE FICTION / Holidays & Celebrations / Kwanzaa", None)
-        genre_is("JUVENILE FICTION / Holidays & Celebrations / Lunar New Year", None)
-        genre_is("JUVENILE FICTION / Holidays & Celebrations / Mother's Day", None)
-        genre_is("JUVENILE FICTION / Holidays & Celebrations / Passover", None)
         genre_is(
-            "JUVENILE FICTION / Holidays & Celebrations / Patriotic Holidays", None
+            "FIC121010",
+            "FICTION / World Literature / Scotland / 19th Century",
+            "Historical Fiction",
         )
-        genre_is("JUVENILE FICTION / Holidays & Celebrations / Ramadan", None)
-        genre_is("JUVENILE FICTION / Holidays & Celebrations / Thanksgiving", None)
-        genre_is("JUVENILE FICTION / Holidays & Celebrations / Valentine's Day", None)
-        genre_is("JUVENILE FICTION / Imagination & Play", None)
-        genre_is("JUVENILE FICTION / Indigenous / Animal Stories", "General Fiction")
-        genre_is("JUVENILE FICTION / Indigenous / Cautionary Tales", "General Fiction")
-        genre_is("JUVENILE FICTION / Indigenous / Elders", "General Fiction")
-        genre_is("JUVENILE FICTION / Indigenous / Family Life", "General Fiction")
-        genre_is("JUVENILE FICTION / Indigenous / General", "General Fiction")
+        genre_is("TEC050000", "TECHNOLOGY & ENGINEERING / Holography", "Technology")
         genre_is(
-            "JUVENILE FICTION / Indigenous / Life Stories (see also headings under Biographical)",
+            "COM046090",
+            "COMPUTERS / System Administration / Virtualization & Containerization",
+            "Computers",
+        )
+        genre_is("EDU055000", "EDUCATION / Violence & Harassment", "Education")
+        genre_is("CRA020000", "CRAFTS & HOBBIES / Models", "Crafts & Hobbies")
+        genre_is("TRV007000", "TRAVEL / Caribbean & West Indies", "Travel")
+        genre_is(
+            "PHO023020", "PHOTOGRAPHY / Subjects & Themes / Children", "Photography"
+        )
+        genre_is("HEA002000", "HEALTH & FITNESS / Exercise / Aerobics", "Health & Diet")
+        genre_is(
+            "COM050010", "COMPUTERS / Hardware / Personal Computers / PCs", "Computers"
+        )
+        genre_is(
+            "CGN010020",
+            "COMICS & GRAPHIC NOVELS / Historical Fiction / Medieval",
+            "Comics & Graphic Novels",
+        )
+        genre_is("SPO015000", "SPORTS & RECREATION / Football", "Sports")
+        genre_is("LAW038010", "LAW / Family Law / Children", "Law")
+        genre_is(
+            "SOC008010",
+            "SOCIAL SCIENCE / Cultural & Ethnic Studies / African Studies",
+            "Social Sciences",
+        )
+        genre_is(
+            "BUS057000",
+            "BUSINESS & ECONOMICS / Industries / Retailing",
+            "Personal Finance & Business",
+        )
+        genre_is("DRA004010", "DRAMA / European / French", "Drama")
+        genre_is("ART067000", "ART / Forgeries", "Art & Culture")
+        genre_is(
+            "YAF058270",
+            "YOUNG ADULT FICTION / Social Themes / Violence",
+            "Difficult Topics",
+        )
+        genre_is("MED007000", "MEDICAL / Audiology & Speech Pathology", "Medical")
+        genre_is(
+            "BUS043040",
+            "BUSINESS & ECONOMICS / Marketing / Multilevel",
+            "Personal Finance & Business",
+        )
+        genre_is(
+            "LAN007000",
+            "LANGUAGE ARTS & DISCIPLINES / Handwriting",
+            "Reference & Study Aids",
+        )
+        genre_is("JNF003260", "JUVENILE NONFICTION / Animals / Cows", "Animals")
+        genre_is(
+            "TEC005020",
+            "TECHNOLOGY & ENGINEERING / Construction / Contracting",
+            "Technology",
+        )
+        genre_is("MAT011000", "MATHEMATICS / Game Theory", "Mathematics")
+        genre_is("JNF003180", "JUVENILE NONFICTION / Animals / Rabbits", "Animals")
+        genre_is("CKB067000", "COOKING / Specific Ingredients / Poultry", "Cooking")
+        genre_is("MAT012010", "MATHEMATICS / Geometry / Algebraic", "Mathematics")
+        genre_is("MUS036000", "MUSIC / Genres & Styles / Latin", "Music")
+        genre_is("SEL016000", "SELF-HELP / Personal Growth / Happiness", "Self-Help")
+        genre_is("LAW061000", "LAW / Legal Profession", "Law")
+        genre_is("HEA000000", "HEALTH & FITNESS / General", "Health & Diet")
+        genre_is(
+            "ART050030", "ART / Subjects & Themes / Plants & Animals", "Art & Culture"
+        )
+        genre_is(
+            "HIS007000",
+            "HISTORY / Latin America / Central America",
+            "Latin American History",
+        )
+        genre_is(
+            "TRV022000",
+            "TRAVEL / Food, Lodging & Transportation / Restaurants",
+            "Travel",
+        )
+        genre_is(
+            "BIO009000",
+            "BIOGRAPHY & AUTOBIOGRAPHY / Philosophers",
+            "Biography & Memoir",
+        )
+        genre_is("DRA016000", "DRAMA / Russian & Soviet", "Drama")
+        genre_is(
+            "COM083000", "COMPUTERS / Security / Cryptography & Encryption", "Computers"
+        )
+        genre_is("MUS056000", "MUSIC / Genres & Styles / Indigenous", "Music")
+        genre_is(
+            "HIS027370",
+            "HISTORY / Wars & Conflicts / World War II / European Theater",
+            "History",
+        )
+        genre_is("FIC042030", "FICTION / Christian / Historical", "Religious Fiction")
+        genre_is(
+            "FIC090010",
+            "FICTION / World Literature / Canada / Colonial & 19th Century",
+            "Historical Fiction",
+        )
+        genre_is("CKB060000", "COOKING / Methods / Outdoor", "Cooking")
+        genre_is(
+            "CRA044000",
+            "CRAFTS & HOBBIES / Needlework / Cross-Stitch",
+            "Crafts & Hobbies",
+        )
+        genre_is("MED016020", "MEDICAL / Dentistry / Dental Hygiene", "Medical")
+        genre_is(
+            "MUS037090", "MUSIC / Printed Music / Piano & Keyboard Repertoire", "Music"
+        )
+        genre_is("MED000000", "MEDICAL / General", "Medical")
+        genre_is(
+            "FIC105030",
+            "FICTION / World Literature / India / 21st Century",
             "General Fiction",
         )
-        genre_is("JUVENILE FICTION / Indigenous / Oral Stories", "General Fiction")
-        genre_is("JUVENILE FICTION / Indigenous / Retellings", "General Fiction")
-        genre_is("JUVENILE FICTION / Indigenous / Teachings", "General Fiction")
+        genre_is("BIB009010", "BIBLES / New American Bible / Children", "Christianity")
+        genre_is("JNF040000", "JUVENILE NONFICTION / Philosophy", "Philosophy")
         genre_is(
-            "JUVENILE FICTION / Indigenous Peoples of Turtle Island", "General Fiction"
-        )
-        genre_is("JUVENILE FICTION / Interactive Adventures", None)
-        genre_is("JUVENILE FICTION / Inuit", None)
-        genre_is("JUVENILE FICTION / Lifestyles / City & Town Life", None)
-        genre_is("JUVENILE FICTION / Lifestyles / Country Life", None)
-        genre_is("JUVENILE FICTION / Lifestyles / Farm & Ranch Life", None)
-        genre_is("JUVENILE FICTION / Mathematics", None)
-        genre_is("JUVENILE FICTION / Media Tie-In", "General Fiction")
-        genre_is("JUVENILE FICTION / Mermaids & Mermen", "Fantasy")
-        genre_is("JUVENILE FICTION / Middle Eastern & Arab American", "General Fiction")
-        genre_is("JUVENILE FICTION / M�tis", None)
-        genre_is("JUVENILE FICTION / Native American", "General Fiction")
-        genre_is("JUVENILE FICTION / Neurodiversity", "General Fiction")
-        genre_is("JUVENILE FICTION / Performing Arts / Circus", "General Fiction")
-        genre_is("JUVENILE FICTION / Performing Arts / Dance", "General Fiction")
-        genre_is("JUVENILE FICTION / Performing Arts / Film", "General Fiction")
-        genre_is("JUVENILE FICTION / Performing Arts / General", "General Fiction")
-        genre_is("JUVENILE FICTION / Performing Arts / Music", "General Fiction")
-        genre_is(
-            "JUVENILE FICTION / Performing Arts / Television & Radio", "General Fiction"
+            "LIT024030",
+            "LITERARY CRITICISM / Modern / 18th Century",
+            "Literary Criticism",
         )
         genre_is(
-            "JUVENILE FICTION / Performing Arts / Theater & Musicals", "General Fiction"
+            "FIC022080",
+            "FICTION / Mystery & Detective / International Crime & Mystery",
+            "Mystery",
         )
-        genre_is("JUVENILE FICTION / Places / Africa", None)
-        genre_is("JUVENILE FICTION / Places / Asia", None)
-        genre_is("JUVENILE FICTION / Places / Australia & Oceania", None)
-        genre_is("JUVENILE FICTION / Places / Canada", None)
-        genre_is("JUVENILE FICTION / Places / Caribbean & Latin America", None)
-        genre_is("JUVENILE FICTION / Places / Europe", None)
-        genre_is("JUVENILE FICTION / Places / General", None)
-        genre_is("JUVENILE FICTION / Places / Mexico", None)
-        genre_is("JUVENILE FICTION / Places / Middle East", None)
-        genre_is("JUVENILE FICTION / Places / Polar Regions", None)
-        genre_is("JUVENILE FICTION / Places / United States", None)
-        genre_is("JUVENILE FICTION / Politics & Government", None)
-        genre_is("JUVENILE FICTION / Readers / Beginner", None)
-        genre_is("JUVENILE FICTION / Readers / Chapter Books", None)
-        genre_is("JUVENILE FICTION / Readers / Hi-Lo", None)
-        genre_is("JUVENILE FICTION / Readers / Intermediate", None)
-        genre_is("JUVENILE FICTION / Recycling & Green Living", None)
-        genre_is("JUVENILE FICTION / Royalty", None)
-        genre_is("JUVENILE FICTION / School & Education", None)
-        genre_is("JUVENILE FICTION / Science & Nature / Disasters", None)
-        genre_is("JUVENILE FICTION / Science & Nature / Environment", None)
-        genre_is("JUVENILE FICTION / Science & Nature / Flowers & Plants", None)
-        genre_is("JUVENILE FICTION / Science & Nature / General", None)
-        genre_is("JUVENILE FICTION / Science & Nature / Trees & Forests", None)
-        genre_is("JUVENILE FICTION / Science & Nature / Weather", None)
-        genre_is("JUVENILE FICTION / Social Themes / Activism & Social Justice", None)
-        genre_is("JUVENILE FICTION / Social Themes / Adolescence & Coming of Age", None)
-        genre_is("JUVENILE FICTION / Social Themes / Bullying", None)
-        genre_is("JUVENILE FICTION / Social Themes / Dating & Relationships", None)
-        genre_is("JUVENILE FICTION / Social Themes / Death, Grief, Bereavement", None)
-        genre_is("JUVENILE FICTION / Social Themes / Depression & Mental Illness", None)
         genre_is(
-            "JUVENILE FICTION / Social Themes / Drugs, Alcohol, Substance Abuse", None
+            "YAN038150",
+            "YOUNG ADULT NONFICTION / Middle Eastern & Arab American",
+            "Diversity & Multicultural",
         )
-        genre_is("JUVENILE FICTION / Social Themes / Emigration & Immigration", None)
-        genre_is("JUVENILE FICTION / Social Themes / Emotions & Feelings", None)
-        genre_is("JUVENILE FICTION / Social Themes / Friendship", None)
         genre_is(
-            "JUVENILE FICTION / Social Themes / General (see also headings under Family)",
-            None,
+            "BIO013000",
+            "BIOGRAPHY & AUTOBIOGRAPHY / Rich & Famous",
+            "Biography & Memoir",
         )
-        genre_is("JUVENILE FICTION / Social Themes / Manners & Etiquette", None)
-        genre_is("JUVENILE FICTION / Social Themes / New Experience", None)
-        genre_is("JUVENILE FICTION / Social Themes / Peer Pressure", None)
         genre_is(
-            "JUVENILE FICTION / Social Themes / Physical & Emotional Abuse (see also Social Themes / Sexual Abuse)",
-            None,
+            "POL074010",
+            "POLITICAL SCIENCE / Indigenous / Governance & Sovereignty",
+            "Political Science",
         )
-        genre_is("JUVENILE FICTION / Social Themes / Poverty & Homelessness", None)
-        genre_is("JUVENILE FICTION / Social Themes / Prejudice & Racism", None)
-        genre_is("JUVENILE FICTION / Social Themes / Religion & Faith", None)
-        genre_is("JUVENILE FICTION / Social Themes / Runaways", None)
-        genre_is("JUVENILE FICTION / Social Themes / Self-Esteem & Self-Reliance", None)
-        genre_is("JUVENILE FICTION / Social Themes / Sexual Abuse", None)
-        genre_is("JUVENILE FICTION / Social Themes / Strangers", None)
-        genre_is("JUVENILE FICTION / Social Themes / Values & Virtues", None)
-        genre_is("JUVENILE FICTION / Social Themes / Violence", None)
-        genre_is("JUVENILE FICTION / Sports & Recreation / Baseball & Softball", None)
-        genre_is("JUVENILE FICTION / Sports & Recreation / Basketball", None)
         genre_is(
-            "JUVENILE FICTION / Sports & Recreation / Camping & Outdoor Activities",
-            None,
+            "TRV005000",
+            "TRAVEL / Food, Lodging & Transportation / Bed & Breakfast",
+            "Travel",
         )
-        genre_is("JUVENILE FICTION / Sports & Recreation / Cheerleading", None)
-        genre_is("JUVENILE FICTION / Sports & Recreation / Cycling", None)
-        genre_is("JUVENILE FICTION / Sports & Recreation / Equestrian", None)
-        genre_is("JUVENILE FICTION / Sports & Recreation / Extreme Sports", None)
-        genre_is("JUVENILE FICTION / Sports & Recreation / Football", None)
-        genre_is("JUVENILE FICTION / Sports & Recreation / Games", None)
-        genre_is("JUVENILE FICTION / Sports & Recreation / General", None)
-        genre_is("JUVENILE FICTION / Sports & Recreation / Golf", None)
-        genre_is("JUVENILE FICTION / Sports & Recreation / Gymnastics", None)
-        genre_is("JUVENILE FICTION / Sports & Recreation / Hockey", None)
-        genre_is("JUVENILE FICTION / Sports & Recreation / Ice Skating", None)
-        genre_is("JUVENILE FICTION / Sports & Recreation / Martial Arts", None)
-        genre_is("JUVENILE FICTION / Sports & Recreation / Motor Sports", None)
         genre_is(
-            "JUVENILE FICTION / Sports & Recreation / Olympics & Paralympics", None
+            "BIO015000",
+            "BIOGRAPHY & AUTOBIOGRAPHY / Science & Technology",
+            "Biography & Memoir",
         )
-        genre_is("JUVENILE FICTION / Sports & Recreation / Skateboarding", None)
-        genre_is("JUVENILE FICTION / Sports & Recreation / Soccer", None)
-        genre_is("JUVENILE FICTION / Sports & Recreation / Track & Field", None)
-        genre_is("JUVENILE FICTION / Sports & Recreation / Water Sports", None)
-        genre_is("JUVENILE FICTION / Sports & Recreation / Winter Sports", None)
-        genre_is("JUVENILE FICTION / Sports & Recreation / Wrestling", None)
-        genre_is("JUVENILE FICTION / Technology / Astronauts & Space", None)
-        genre_is("JUVENILE FICTION / Technology / General", None)
-        genre_is("JUVENILE FICTION / Technology / Inventions", None)
-        genre_is("JUVENILE FICTION / Toys, Dolls & Puppets", None)
-        genre_is("JUVENILE FICTION / Transportation / Aviation", None)
         genre_is(
-            "JUVENILE FICTION / Transportation / Boats, Ships & Underwater Craft", None
+            "BIB010100",
+            "BIBLES / New American Standard Bible / Outreach",
+            "Christianity",
         )
-        genre_is("JUVENILE FICTION / Transportation / Cars & Trucks", None)
-        genre_is("JUVENILE FICTION / Transportation / General", None)
-        genre_is("JUVENILE FICTION / Transportation / Railroads & Trains", None)
-        genre_is("JUVENILE FICTION / Travel", None)
-        genre_is("JUVENILE FICTION / Trickster Tales", None)
-        genre_is("JUVENILE NONFICTION / Activism & Social Justice", None)
-        genre_is("JUVENILE NONFICTION / Activity Books / Coloring", None)
-        genre_is("JUVENILE NONFICTION / Activity Books / General", None)
-        genre_is("JUVENILE NONFICTION / Activity Books / Sticker", None)
-        genre_is("JUVENILE NONFICTION / Adventure & Adventurers", None)
-        genre_is("JUVENILE NONFICTION / African American & Black", None)
-        genre_is("JUVENILE NONFICTION / Asian American & Pacific Islander", None)
-        genre_is("JUVENILE NONFICTION / Bedtime & Dreams", None)
-        genre_is("JUVENILE NONFICTION / Biracial & Multiracial", None)
-        genre_is("JUVENILE NONFICTION / Books & Libraries", None)
-        genre_is("JUVENILE NONFICTION / Boys & Men", None)
-        genre_is("JUVENILE NONFICTION / Clothing & Dress", None)
-        genre_is("JUVENILE NONFICTION / Concepts / Alphabet", None)
-        genre_is("JUVENILE NONFICTION / Concepts / Body", None)
-        genre_is("JUVENILE NONFICTION / Concepts / Colors", None)
-        genre_is("JUVENILE NONFICTION / Concepts / Counting & Numbers", None)
-        genre_is("JUVENILE NONFICTION / Concepts / Date & Time", None)
-        genre_is("JUVENILE NONFICTION / Concepts / General", None)
-        genre_is("JUVENILE NONFICTION / Concepts / Money", None)
-        genre_is("JUVENILE NONFICTION / Concepts / Opposites", None)
-        genre_is("JUVENILE NONFICTION / Concepts / Seasons", None)
-        genre_is("JUVENILE NONFICTION / Concepts / Senses & Sensation", None)
-        genre_is("JUVENILE NONFICTION / Concepts / Size & Shape", None)
-        genre_is("JUVENILE NONFICTION / Concepts / Sounds", None)
+        genre_is("COM051260", "COMPUTERS / Languages / JavaScript", "Computers")
+        genre_is("ARC000000", "ARCHITECTURE / General", "Architecture")
         genre_is(
-            "JUVENILE NONFICTION / Concepts / Words (see also headings under Language Arts)",
-            None,
+            "TEC074000",
+            "TECHNOLOGY & ENGINEERING / Explosives & Pyrotechnics",
+            "Technology",
         )
-        genre_is("JUVENILE NONFICTION / Curiosities & Wonders", None)
-        genre_is("JUVENILE NONFICTION / Disabilities", None)
-        genre_is("JUVENILE NONFICTION / Diversity & Multicultural", None)
-        genre_is("JUVENILE NONFICTION / First Nations", None)
-        genre_is("JUVENILE NONFICTION / General", None)
-        genre_is("JUVENILE NONFICTION / Girls & Women", None)
-        genre_is("JUVENILE NONFICTION / Hispanic & Latino", None)
-        genre_is("JUVENILE NONFICTION / Holidays & Celebrations / Birthdays", None)
         genre_is(
-            "JUVENILE NONFICTION / Holidays & Celebrations / Day of the Dead", None
+            "YAN052040",
+            "YOUNG ADULT NONFICTION / Social Science / Politics & Government",
+            "Society",
         )
-        genre_is("JUVENILE NONFICTION / Holidays & Celebrations / Diwali", None)
-        genre_is("JUVENILE NONFICTION / Holidays & Celebrations / Easter & Lent", None)
         genre_is(
-            "JUVENILE NONFICTION / Holidays & Celebrations / General (see also Religious / Christian / Holidays & Celebrations)",
-            None,
+            "LAN030000",
+            "LANGUAGE ARTS & DISCIPLINES / Orality",
+            "Reference & Study Aids",
         )
-        genre_is("JUVENILE NONFICTION / Holidays & Celebrations / Halloween", None)
-        genre_is("JUVENILE NONFICTION / Holidays & Celebrations / Hanukkah", None)
-        genre_is("JUVENILE NONFICTION / Holidays & Celebrations / Juneteenth", None)
-        genre_is("JUVENILE NONFICTION / Holidays & Celebrations / Kwanzaa", None)
-        genre_is("JUVENILE NONFICTION / Holidays & Celebrations / Lunar New Year", None)
-        genre_is("JUVENILE NONFICTION / Holidays & Celebrations / Passover", None)
         genre_is(
-            "JUVENILE NONFICTION / Holidays & Celebrations / Patriotic Holidays", None
+            "YAF010140",
+            "YOUNG ADULT FICTION / Comics & Graphic Novels / LGBTQ+",
+            "LGBTQ Fiction",
         )
-        genre_is("JUVENILE NONFICTION / Holidays & Celebrations / Ramadan", None)
-        genre_is("JUVENILE NONFICTION / Holidays & Celebrations / Thanksgiving", None)
         genre_is(
-            "JUVENILE NONFICTION / Holidays & Celebrations / Valentine's Day", None
+            "REF007000", "REFERENCE / Curiosities & Wonders", "Reference & Study Aids"
         )
-        genre_is("JUVENILE NONFICTION / Indigenous / Animal Stories", None)
-        genre_is("JUVENILE NONFICTION / Indigenous / Elders", None)
-        genre_is("JUVENILE NONFICTION / Indigenous / Family Life", None)
-        genre_is("JUVENILE NONFICTION / Indigenous / General", None)
-        genre_is("JUVENILE NONFICTION / Indigenous / Land-Based Knowledge", None)
-        genre_is("JUVENILE NONFICTION / Indigenous / Reconciliation", None)
-        genre_is("JUVENILE NONFICTION / Indigenous Peoples of Turtle Island", None)
-        genre_is("JUVENILE NONFICTION / Inspirational & Personal Growth", None)
-        genre_is("JUVENILE NONFICTION / Inuit", None)
-        genre_is("JUVENILE NONFICTION / LGBTQ+", None)
-        genre_is("JUVENILE NONFICTION / Language Study / French", None)
-        genre_is("JUVENILE NONFICTION / Language Study / General", None)
+        genre_is("CKB029000", "COOKING / Entertaining", "Cooking")
         genre_is(
-            "JUVENILE NONFICTION / Language Study / Indigenous Languages in the Americas",
-            None,
+            "TEC012000",
+            "TECHNOLOGY & ENGINEERING / Food Science / General",
+            "Technology",
         )
-        genre_is("JUVENILE NONFICTION / Language Study / Spanish", None)
-        genre_is("JUVENILE NONFICTION / Lifestyles / City & Town Life", None)
-        genre_is("JUVENILE NONFICTION / Lifestyles / Country Life", None)
-        genre_is("JUVENILE NONFICTION / Lifestyles / Farm & Ranch Life", None)
-        genre_is("JUVENILE NONFICTION / Media Tie-In", None)
-        genre_is("JUVENILE NONFICTION / Middle Eastern & Arab American", None)
-        genre_is("JUVENILE NONFICTION / M�tis", None)
-        genre_is("JUVENILE NONFICTION / Native American", None)
-        genre_is("JUVENILE NONFICTION / Neurodiversity", None)
-        genre_is("JUVENILE NONFICTION / Paranormal & Supernatural", None)
-        genre_is("JUVENILE NONFICTION / Pirates", None)
-        genre_is("JUVENILE NONFICTION / Places / Africa", None)
-        genre_is("JUVENILE NONFICTION / Places / Asia", None)
-        genre_is("JUVENILE NONFICTION / Places / Australia & Oceania", None)
-        genre_is("JUVENILE NONFICTION / Places / Canada", None)
-        genre_is("JUVENILE NONFICTION / Places / Caribbean & Latin America", None)
-        genre_is("JUVENILE NONFICTION / Places / Europe", None)
-        genre_is("JUVENILE NONFICTION / Places / General", None)
-        genre_is("JUVENILE NONFICTION / Places / Mexico", None)
-        genre_is("JUVENILE NONFICTION / Places / Middle East", None)
-        genre_is("JUVENILE NONFICTION / Places / Polar Regions", None)
-        genre_is("JUVENILE NONFICTION / Places / United States", None)
-        genre_is("JUVENILE NONFICTION / Readers / Beginner", None)
-        genre_is("JUVENILE NONFICTION / Readers / Chapter Books", None)
-        genre_is("JUVENILE NONFICTION / Readers / Hi-Lo", None)
-        genre_is("JUVENILE NONFICTION / Readers / Intermediate", None)
-        genre_is("JUVENILE NONFICTION / Recycling & Green Living", None)
-        genre_is("JUVENILE NONFICTION / Spies & Spying", None)
-        genre_is("JUVENILE NONFICTION / Toys, Dolls & Puppets", None)
-        genre_is("JUVENILE NONFICTION / Volunteering", None)
-        genre_is("NON-CLASSIFIABLE", None)
-        genre_is("YOUNG ADULT FICTION / African American & Black", "General Fiction")
-        genre_is("YOUNG ADULT FICTION / Animals / General", "General Fiction")
-        genre_is("YOUNG ADULT FICTION / Animals / Horses", "General Fiction")
-        genre_is("YOUNG ADULT FICTION / Animals / Marine Life", "General Fiction")
+        genre_is("MAT025000", "MATHEMATICS / Recreations & Games", "Mathematics")
+        genre_is("NAT036000", "NATURE / Weather", "Nature")
         genre_is(
-            "YOUNG ADULT FICTION / Animals / Mythical Creatures", "General Fiction"
-        )
-        genre_is("YOUNG ADULT FICTION / Animals / Pets", "General Fiction")
-        genre_is("YOUNG ADULT FICTION / Art", None)
-        genre_is(
-            "YOUNG ADULT FICTION / Asian American & Pacific Islander", "General Fiction"
-        )
-        genre_is("YOUNG ADULT FICTION / Biographical", "General Fiction")
-        genre_is("YOUNG ADULT FICTION / Biracial & Multiracial", None)
-        genre_is("YOUNG ADULT FICTION / Books & Libraries", None)
-        genre_is("YOUNG ADULT FICTION / Boys & Men", None)
-        genre_is("YOUNG ADULT FICTION / Careers, Occupations, Internships", None)
-        genre_is("YOUNG ADULT FICTION / Clean & Nonviolent", None)
-        genre_is("YOUNG ADULT FICTION / Coming of Age", "General Fiction")
-        genre_is("YOUNG ADULT FICTION / Computers & Digital Media", None)
-        genre_is("YOUNG ADULT FICTION / Cooking & Food", None)
-        genre_is("YOUNG ADULT FICTION / Disabilities", "General Fiction")
-        genre_is("YOUNG ADULT FICTION / Diversity & Multicultural", "General Fiction")
-        genre_is("YOUNG ADULT FICTION / Epistolary (Letters & Diaries)", None)
-        genre_is("YOUNG ADULT FICTION / Family / Adoption", None)
-        genre_is("YOUNG ADULT FICTION / Family / Alternative Family", None)
-        genre_is("YOUNG ADULT FICTION / Family / Blended Families", None)
-        genre_is(
-            "YOUNG ADULT FICTION / Family / General (see also headings under Social Themes)",
-            None,
-        )
-        genre_is("YOUNG ADULT FICTION / Family / Marriage & Divorce", None)
-        genre_is("YOUNG ADULT FICTION / Family / Multigenerational", None)
-        genre_is("YOUNG ADULT FICTION / Family / Orphans & Foster Homes", None)
-        genre_is("YOUNG ADULT FICTION / Family / Parents", None)
-        genre_is("YOUNG ADULT FICTION / Family / Siblings", None)
-        genre_is("YOUNG ADULT FICTION / Fashion & Beauty", None)
-        genre_is("YOUNG ADULT FICTION / First Nations", None)
-        genre_is("YOUNG ADULT FICTION / Girls & Women", None)
-        genre_is(
-            "YOUNG ADULT FICTION / Health & Daily Living / Diseases, Illnesses & Injuries",
-            None,
-        )
-        genre_is("YOUNG ADULT FICTION / Health & Daily Living / General", None)
-        genre_is("YOUNG ADULT FICTION / Hispanic & Latino", "General Fiction")
-        genre_is("YOUNG ADULT FICTION / Holidays & Celebrations", None)
-        genre_is(
-            "YOUNG ADULT FICTION / Indigenous / Cautionary Tales", "General Fiction"
-        )
-        genre_is("YOUNG ADULT FICTION / Indigenous / City Life", "Urban Fiction")
-        genre_is("YOUNG ADULT FICTION / Indigenous / Family Life", "General Fiction")
-        genre_is("YOUNG ADULT FICTION / Indigenous / General", "General Fiction")
-        genre_is(
-            "YOUNG ADULT FICTION / Indigenous / Life Stories (see also Biographical)",
+            "JUV008000",
+            "JUVENILE FICTION / Comics & Graphic Novels / General",
             "General Fiction",
         )
-        genre_is("YOUNG ADULT FICTION / Indigenous / Oral Stories", "General Fiction")
-        genre_is("YOUNG ADULT FICTION / Indigenous / Retellings", "General Fiction")
-        genre_is("YOUNG ADULT FICTION / Indigenous / Teachings", "General Fiction")
+        genre_is("POE013000", "POETRY / Middle Eastern", "Poetry")
         genre_is(
-            "YOUNG ADULT FICTION / Indigenous Peoples of Turtle Island",
-            "General Fiction",
+            "BIB026020", "BIBLES / Catholic Translations / Devotional", "Christianity"
         )
-        genre_is("YOUNG ADULT FICTION / Interactive Adventures", None)
-        genre_is("YOUNG ADULT FICTION / Inuit", None)
-        genre_is("YOUNG ADULT FICTION / Lifestyles / City & Town Life", None)
-        genre_is("YOUNG ADULT FICTION / Lifestyles / Country Life", None)
-        genre_is("YOUNG ADULT FICTION / Lifestyles / Farm & Ranch Life", None)
-        genre_is("YOUNG ADULT FICTION / Loners & Outcasts", None)
-        genre_is("YOUNG ADULT FICTION / Media Tie-In", "General Fiction")
-        genre_is("YOUNG ADULT FICTION / Mermaids & Mermen", "Fantasy")
+        genre_is("PHI020000", "PHILOSOPHY / Movements / Pragmatism", "Philosophy")
         genre_is(
-            "YOUNG ADULT FICTION / Middle Eastern & Arab American", "General Fiction"
-        )
-        genre_is("YOUNG ADULT FICTION / M�tis", None)
-        genre_is("YOUNG ADULT FICTION / Native American", "General Fiction")
-        genre_is("YOUNG ADULT FICTION / Neurodiversity", "General Fiction")
-        genre_is("YOUNG ADULT FICTION / Own Voices", "General Fiction")
-        genre_is("YOUNG ADULT FICTION / Performing Arts / Dance", "General Fiction")
-        genre_is("YOUNG ADULT FICTION / Performing Arts / Film", "General Fiction")
-        genre_is("YOUNG ADULT FICTION / Performing Arts / General", "General Fiction")
-        genre_is("YOUNG ADULT FICTION / Performing Arts / Music", "General Fiction")
-        genre_is(
-            "YOUNG ADULT FICTION / Performing Arts / Television & Radio",
-            "General Fiction",
+            "JUV043000", "JUVENILE FICTION / Readers / Beginner", "General Fiction"
         )
         genre_is(
-            "YOUNG ADULT FICTION / Performing Arts / Theater & Musicals",
-            "General Fiction",
-        )
-        genre_is("YOUNG ADULT FICTION / Places / Africa", None)
-        genre_is("YOUNG ADULT FICTION / Places / Asia", None)
-        genre_is("YOUNG ADULT FICTION / Places / Australia & Oceania", None)
-        genre_is("YOUNG ADULT FICTION / Places / Canada", None)
-        genre_is("YOUNG ADULT FICTION / Places / Caribbean & Latin America", None)
-        genre_is("YOUNG ADULT FICTION / Places / Europe", None)
-        genre_is("YOUNG ADULT FICTION / Places / General", None)
-        genre_is("YOUNG ADULT FICTION / Places / Mexico", None)
-        genre_is("YOUNG ADULT FICTION / Places / Middle East", None)
-        genre_is("YOUNG ADULT FICTION / Places / Polar Regions", None)
-        genre_is("YOUNG ADULT FICTION / Places / United States", None)
-        genre_is("YOUNG ADULT FICTION / Politics & Government", None)
-        genre_is("YOUNG ADULT FICTION / Recycling & Green Living", None)
-        genre_is("YOUNG ADULT FICTION / Royalty", None)
-        genre_is(
-            "YOUNG ADULT FICTION / School & Education / Boarding School & Prep School",
-            None,
+            "FIC042120", "FICTION / Christian / Romance / Suspense", "Religious Fiction"
         )
         genre_is(
-            "YOUNG ADULT FICTION / School & Education / College & University", None
+            "BUS090040",
+            "BUSINESS & ECONOMICS / E-Commerce / Small Business",
+            "Personal Finance & Business",
         )
-        genre_is("YOUNG ADULT FICTION / School & Education / General", None)
-        genre_is("YOUNG ADULT FICTION / Science & Nature / Environment", None)
+        genre_is("NAT045040", "NATURE / Ecosystems & Habitats / Wilderness", "Nature")
+        genre_is("EDU039000", "EDUCATION / Computers & Technology", "Education")
+        genre_is("MED029000", "MEDICAL / Family & General Practice", "Medical")
+        genre_is("HIS020000", "HISTORY / Europe / Italy", "European History")
         genre_is(
-            "YOUNG ADULT FICTION / Science & Nature / General (see also headings under Animals)",
-            None,
+            "HEA014000", "HEALTH & FITNESS / Massage & Reflexology", "Health & Diet"
         )
+        genre_is("SOC052000", "SOCIAL SCIENCE / Media Studies", "Social Sciences")
         genre_is(
-            "YOUNG ADULT FICTION / Social Themes / Activism & Social Justice", None
-        )
-        genre_is("YOUNG ADULT FICTION / Social Themes / Assimilation", None)
-        genre_is("YOUNG ADULT FICTION / Social Themes / Bullying", None)
-        genre_is("YOUNG ADULT FICTION / Social Themes / Class Differences", None)
-        genre_is("YOUNG ADULT FICTION / Social Themes / Cutting & Self-Harm", None)
-        genre_is("YOUNG ADULT FICTION / Social Themes / Dating & Sex", None)
-        genre_is(
-            "YOUNG ADULT FICTION / Social Themes / Death, Grief, Bereavement", None
-        )
-        genre_is("YOUNG ADULT FICTION / Social Themes / Depression", None)
-        genre_is(
-            "YOUNG ADULT FICTION / Social Themes / Drugs, Alcohol, Substance Abuse",
-            None,
+            "SPO034000", "SPORTS & RECREATION / Roller & In-Line Skating", "Sports"
         )
         genre_is(
-            "YOUNG ADULT FICTION / Social Themes / Eating Disorders & Body Image", None
+            "BIB027030",
+            "BIBLES / Other Spanish Translations / Dramatized",
+            "Christianity",
         )
-        genre_is("YOUNG ADULT FICTION / Social Themes / Emigration & Immigration", None)
-        genre_is("YOUNG ADULT FICTION / Social Themes / Emotions & Feelings", None)
-        genre_is("YOUNG ADULT FICTION / Social Themes / Friendship", None)
+        genre_is("SPO008000", "SPORTS & RECREATION / Boxing", "Sports")
         genre_is(
-            "YOUNG ADULT FICTION / Social Themes / General (see also headings under Family)",
-            None,
+            "SOC017000",
+            "SOCIAL SCIENCE / LGBTQ+ Studies / Lesbian Studies",
+            "Social Sciences",
         )
-        genre_is("YOUNG ADULT FICTION / Social Themes / Mental Illness", None)
-        genre_is("YOUNG ADULT FICTION / Social Themes / New Experience", None)
-        genre_is("YOUNG ADULT FICTION / Social Themes / Peer Pressure", None)
+        genre_is("NAT002000", "NATURE / Animals / Primates", "Nature")
+        genre_is("TEC052000", "TECHNOLOGY & ENGINEERING / Social Aspects", "Technology")
+        genre_is("FIC028120", "FICTION / Science Fiction / Humorous", "Science Fiction")
+        genre_is("DES003000", "DESIGN / Decorative Arts", "Design")
         genre_is(
-            "YOUNG ADULT FICTION / Social Themes / Physical & Emotional Abuse (see also Social Themes / Sexual Abuse)",
-            None,
+            "JNF076070",
+            "JUVENILE NONFICTION / Indigenous / Reconciliation",
+            "Diversity & Multicultural",
         )
-        genre_is("YOUNG ADULT FICTION / Social Themes / Poverty & Homelessness", None)
-        genre_is("YOUNG ADULT FICTION / Social Themes / Pregnancy", None)
-        genre_is("YOUNG ADULT FICTION / Social Themes / Prejudice & Racism", None)
-        genre_is("YOUNG ADULT FICTION / Social Themes / Religion & Faith", None)
-        genre_is("YOUNG ADULT FICTION / Social Themes / Runaways", None)
         genre_is(
-            "YOUNG ADULT FICTION / Social Themes / Self-Esteem & Self-Reliance", None
+            "CGN011000",
+            "COMICS & GRAPHIC NOVELS / Religious",
+            "Comics & Graphic Novels",
         )
-        genre_is("YOUNG ADULT FICTION / Social Themes / Sexual Abuse", None)
-        genre_is("YOUNG ADULT FICTION / Social Themes / Suicide", None)
-        genre_is("YOUNG ADULT FICTION / Social Themes / Values & Virtues", None)
-        genre_is("YOUNG ADULT FICTION / Social Themes / Violence", None)
         genre_is(
-            "YOUNG ADULT FICTION / Sports & Recreation / Baseball & Softball", None
+            "ART006020",
+            "ART / Collections, Catalogs, Exhibitions / Permanent Collections",
+            "Art & Culture",
         )
-        genre_is("YOUNG ADULT FICTION / Sports & Recreation / Basketball", None)
         genre_is(
-            "YOUNG ADULT FICTION / Sports & Recreation / Camping & Outdoor Activities",
-            None,
+            "SCI036000",
+            "SCIENCE / Life Sciences / Human Anatomy & Physiology",
+            "Science",
         )
-        genre_is("YOUNG ADULT FICTION / Sports & Recreation / Equestrian", None)
-        genre_is("YOUNG ADULT FICTION / Sports & Recreation / Extreme Sports", None)
-        genre_is("YOUNG ADULT FICTION / Sports & Recreation / Football", None)
-        genre_is("YOUNG ADULT FICTION / Sports & Recreation / General", None)
-        genre_is("YOUNG ADULT FICTION / Sports & Recreation / Gymnastics", None)
-        genre_is("YOUNG ADULT FICTION / Sports & Recreation / Hockey", None)
-        genre_is("YOUNG ADULT FICTION / Sports & Recreation / Martial Arts", None)
-        genre_is("YOUNG ADULT FICTION / Sports & Recreation / Skateboarding", None)
-        genre_is("YOUNG ADULT FICTION / Sports & Recreation / Soccer", None)
-        genre_is("YOUNG ADULT FICTION / Sports & Recreation / Track & Field", None)
-        genre_is("YOUNG ADULT FICTION / Sports & Recreation / Water Sports", None)
-        genre_is("YOUNG ADULT FICTION / Sports & Recreation / Winter Sports", None)
-        genre_is("YOUNG ADULT FICTION / Technology", None)
+        genre_is("HIS003000", "HISTORY / Asia / General", "Asian History")
         genre_is(
-            "YOUNG ADULT FICTION / Travel & Transportation / Car & Road Trips", None
+            "EDU041000", "EDUCATION / Distance, Open & Online Education", "Education"
         )
-        genre_is("YOUNG ADULT FICTION / Travel & Transportation / General", None)
-        genre_is("YOUNG ADULT FICTION / Urban & Street Lit", "Urban Fiction")
-        genre_is("YOUNG ADULT NONFICTION / Activism & Social Justice", None)
-        genre_is("YOUNG ADULT NONFICTION / Activity Books", None)
-        genre_is("YOUNG ADULT NONFICTION / Adventure & Adventurers", None)
-        genre_is("YOUNG ADULT NONFICTION / African American & Black", None)
-        genre_is("YOUNG ADULT NONFICTION / Asian American & Pacific Islander", None)
-        genre_is("YOUNG ADULT NONFICTION / Biracial & Multiracial", None)
-        genre_is("YOUNG ADULT NONFICTION / Books & Libraries", None)
-        genre_is("YOUNG ADULT NONFICTION / Boys & Men", None)
-        genre_is("YOUNG ADULT NONFICTION / Curiosities & Wonders", None)
-        genre_is("YOUNG ADULT NONFICTION / Disabilities", None)
-        genre_is("YOUNG ADULT NONFICTION / Diversity & Multicultural", None)
-        genre_is("YOUNG ADULT NONFICTION / First Nations", None)
-        genre_is("YOUNG ADULT NONFICTION / General", None)
-        genre_is("YOUNG ADULT NONFICTION / Girls & Women", None)
-        genre_is("YOUNG ADULT NONFICTION / Hispanic & Latino", None)
-        genre_is("YOUNG ADULT NONFICTION / Holidays & Celebrations", None)
-        genre_is("YOUNG ADULT NONFICTION / Indigenous / Elders", None)
-        genre_is("YOUNG ADULT NONFICTION / Indigenous / Family Life", None)
-        genre_is("YOUNG ADULT NONFICTION / Indigenous / General", None)
-        genre_is("YOUNG ADULT NONFICTION / Indigenous / Land-Based Knowledge", None)
-        genre_is("YOUNG ADULT NONFICTION / Indigenous / Reconciliation", None)
-        genre_is("YOUNG ADULT NONFICTION / Indigenous Peoples of Turtle Island", None)
-        genre_is("YOUNG ADULT NONFICTION / Inspirational & Personal Growth", None)
-        genre_is("YOUNG ADULT NONFICTION / Inuit", None)
-        genre_is("YOUNG ADULT NONFICTION / LGBTQ+", None)
-        genre_is("YOUNG ADULT NONFICTION / Language Study / French", None)
-        genre_is("YOUNG ADULT NONFICTION / Language Study / General", None)
+        genre_is("PER014000", "PERFORMING ARTS / Business Aspects", "Performing Arts")
         genre_is(
-            "YOUNG ADULT NONFICTION / Language Study / Indigenous Languages in the Americas",
-            None,
+            "POL019000",
+            "POLITICAL SCIENCE / Public Policy / Social Services & Welfare",
+            "Political Science",
         )
-        genre_is("YOUNG ADULT NONFICTION / Language Study / Spanish", None)
-        genre_is("YOUNG ADULT NONFICTION / Media Tie-In", None)
-        genre_is("YOUNG ADULT NONFICTION / Middle Eastern & Arab American", None)
-        genre_is("YOUNG ADULT NONFICTION / M�tis", None)
-        genre_is("YOUNG ADULT NONFICTION / Native American", None)
-        genre_is("YOUNG ADULT NONFICTION / Neurodiversity", None)
-        genre_is("YOUNG ADULT NONFICTION / Paranormal & Supernatural", None)
-        genre_is("YOUNG ADULT NONFICTION / Places / Africa", None)
-        genre_is("YOUNG ADULT NONFICTION / Places / Asia", None)
-        genre_is("YOUNG ADULT NONFICTION / Places / Australia & Oceania", None)
-        genre_is("YOUNG ADULT NONFICTION / Places / Canada", None)
-        genre_is("YOUNG ADULT NONFICTION / Places / Caribbean & Latin America", None)
-        genre_is("YOUNG ADULT NONFICTION / Places / Europe", None)
-        genre_is("YOUNG ADULT NONFICTION / Places / General", None)
-        genre_is("YOUNG ADULT NONFICTION / Places / Mexico", None)
-        genre_is("YOUNG ADULT NONFICTION / Places / Middle East", None)
-        genre_is("YOUNG ADULT NONFICTION / Places / United States", None)
-        genre_is("YOUNG ADULT NONFICTION / Recycling & Green Living", None)
-        genre_is("FICTION / Mystery & Detective / Amateur Sleuth", "Mystery")
-        genre_is("BIOGRAPHY & AUTOBIOGRAPHY / Historical", "Biography & Memoir")
-        genre_is("FICTION / General", "General Fiction")
-
-    def test_deprecated_bisac_terms(self):
-        """These BISAC terms have been deprecated. We classify them
-        the same as the new terms.
-        """
-        self.genre_is("Psychology & Psychiatry / Jungian", "Psychology")
-        self.genre_is("Mind & Spirit / Crystals, Man", "Body, Mind & Spirit")
-        self.genre_is("Technology / Fire", "Technology")
-        self.genre_is(
-            "Young Adult Nonfiction / Social Situations / Junior Prom",
-            "Life Strategies",
+        genre_is("MED085080", "MEDICAL / Surgery / Laparoscopic & Robotic", "Medical")
+        genre_is(
+            "BIB012000",
+            "BIBLES / New International Reader's Version / General",
+            "Christianity",
         )
+        genre_is(
+            "OCC011020",
+            "BODY, MIND & SPIRIT / Healing / Prayer & Spiritual",
+            "Body, Mind & Spirit",
+        )
+        genre_is("DES009000", "DESIGN / Industrial", "Design")
+        genre_is(
+            "TEC009100", "TECHNOLOGY & ENGINEERING / Civil / Bridges", "Technology"
+        )
+        genre_is("GAR004000", "GARDENING / Flowers / General", "Gardening")
+        genre_is("TRA003000", "TRANSPORTATION / Motorcycles / General", "Technology")
+        genre_is("HUM017000", "HUMOR / Form / Pictorial", "Humor")
+        genre_is(
+            "BUS073000",
+            "BUSINESS & ECONOMICS / Commerce",
+            "Personal Finance & Business",
+        )
+        genre_is(
+            "BIB010080",
+            "BIBLES / New American Standard Bible / Dramatized",
+            "Christianity",
+        )
+        genre_is("DRA004000", "DRAMA / European / General", "Drama")
+        genre_is("SCI013090", "SCIENCE / Chemistry / Toxicology", "Science")
+        genre_is("POE030000", "POETRY / Indigenous", "Poetry")
+        genre_is(
+            "PSY022050", "PSYCHOLOGY / Psychopathology / Schizophrenia", "Psychology"
+        )
+        genre_is(
+            "YAN039020", "YOUNG ADULT NONFICTION / Performing Arts / Film", "Film & TV"
+        )
+        genre_is(
+            "BUS064020",
+            "BUSINESS & ECONOMICS / International / Taxation",
+            "Personal Finance & Business",
+        )
+        genre_is(
+            "JNF055030",
+            "JUVENILE NONFICTION / Study Aids / Test Preparation",
+            "Reference & Study Aids",
+        )
+        genre_is("PHI010000", "PHILOSOPHY / Movements / Humanism", "Philosophy")
+        genre_is(
+            "MAT029020",
+            "MATHEMATICS / Probability & Statistics / Multivariate Analysis",
+            "Mathematics",
+        )
+        genre_is("HIS037080", "HISTORY / Modern / 21st Century", "Modern History")
+        genre_is("FIC027350", "FICTION / Romance / Firefighters", "Romance")
+        genre_is("MED086000", "MEDICAL / Test Preparation & Review", "Medical")
+        genre_is(
+            "JUV028000",
+            "JUVENILE FICTION / Mysteries & Detective Stories",
+            "Crime & Detective Stories",
+        )
+        genre_is("EDU029090", "EDUCATION / Teaching / Materials & Devices", "Education")
+        genre_is("TRV009050", "TRAVEL / Europe / France", "Travel")
+        genre_is("ART057000", "ART / Film & Video", "Art & Culture")
+        genre_is("SPO052000", "SPORTS & RECREATION / Winter Sports / General", "Sports")
+        genre_is(
+            "JNF032000", "JUVENILE NONFICTION / Lifestyles / Country Life", "Society"
+        )
+        genre_is(
+            "BUS024000",
+            "BUSINESS & ECONOMICS / Education",
+            "Personal Finance & Business",
+        )
+        genre_is("JUV069000", "JUVENILE FICTION / Ghost Stories", "Horror")
+        genre_is("MED087000", "MEDICAL / Transportation", "Medical")
+        genre_is("REF019000", "REFERENCE / Quotations", "Reference & Study Aids")
+        genre_is("COM051350", "COMPUTERS / Languages / Perl", "Computers")
+        genre_is(
+            "BIO021000",
+            "BIOGRAPHY & AUTOBIOGRAPHY / Social Scientists & Psychologists",
+            "Biography & Memoir",
+        )
+        genre_is("SOC016000", "SOCIAL SCIENCE / Human Services", "Social Sciences")
+        genre_is(
+            "LIT024060",
+            "LITERARY CRITICISM / Modern / 21st Century",
+            "Literary Criticism",
+        )
+        genre_is(
+            "COM062000",
+            "COMPUTERS / Data Science / Data Modeling & Design",
+            "Computers",
+        )
+        genre_is("JUV087000", "JUVENILE FICTION / Trickster Tales", "General Fiction")
+        genre_is(
+            "BUS036060",
+            "BUSINESS & ECONOMICS / Investments & Securities / Stocks",
+            "Personal Finance & Investing",
+        )
+        genre_is(
+            "YAF046000", "YOUNG ADULT FICTION / Places / General", "General Fiction"
+        )
+        genre_is("LAW082000", "LAW / Right to Die", "Law")
+        genre_is(
+            "POL011000",
+            "POLITICAL SCIENCE / International Relations / General",
+            "Political Science",
+        )
+        genre_is(
+            "PER010130",
+            "PERFORMING ARTS / Television / Genres / Documentary",
+            "Film & TV",
+        )
+        genre_is("SPO056000", "SPORTS & RECREATION / Rugby", "Sports")
+        genre_is("DRA000000", "DRAMA / General", "Drama")
+        genre_is("YAN019000", "YOUNG ADULT NONFICTION / Fashion", "Fashion & Looks")
+        genre_is("YAF058070", "YOUNG ADULT FICTION / Disabilities", "Disabilities")
+        genre_is("BIB008060", "BIBLES / Multiple Translations / Text", "Christianity")
+        genre_is("TEC030000", "TECHNOLOGY & ENGINEERING / Optics", "Technology")
+        genre_is("SEL019000", "SELF-HELP / Meditations", "Self-Help")
+        genre_is("FIC036000", "FICTION / Thrillers / Technological", "Technothriller")
+        genre_is(
+            "CGN014000", "COMICS & GRAPHIC NOVELS / Humorous", "Comics & Graphic Novels"
+        )
+        genre_is(
+            "BIB027110",
+            "BIBLES / Other Spanish Translations / Youth & Teen",
+            "Christianity",
+        )
+        genre_is("SPO061030", "SPORTS & RECREATION / Coaching / Soccer", "Sports")
+        genre_is(
+            "LIT024050",
+            "LITERARY CRITICISM / Modern / 20th Century",
+            "Literary Criticism",
+        )
+        genre_is("LAW078000", "LAW / Real Estate", "Law")
+        genre_is("TRV003020", "TRAVEL / Asia / East / China", "Travel")
+        genre_is(
+            "SPO023000",
+            "SPORTS & RECREATION / Winter Sports / Ice & Figure Skating",
+            "Sports",
+        )
+        genre_is("JNF006030", "JUVENILE NONFICTION / Art / Fashion", "Fashion & Looks")
+        genre_is("BIB004060", "BIBLES / God's Word / Text", "Christianity")
+        genre_is("EDU046000", "EDUCATION / Professional Development", "Education")
+        genre_is(
+            "YAN005030", "YOUNG ADULT NONFICTION / Art / Fashion", "Fashion & Looks"
+        )
+        genre_is(
+            "BUS050010",
+            "BUSINESS & ECONOMICS / Personal Finance / Budgeting",
+            "Personal Finance & Investing",
+        )
+        genre_is("EDU022000", "EDUCATION / Parent Participation", "Education")
+        genre_is(
+            "BUS019000",
+            "BUSINESS & ECONOMICS / Decision-Making & Problem Solving",
+            "Personal Finance & Business",
+        )
+        genre_is(
+            "LIT004190",
+            "LITERARY CRITICISM / Ancient & Classical",
+            "Literary Criticism",
+        )
+        genre_is(
+            "CRA015000", "CRAFTS & HOBBIES / Needlework / Knitting", "Crafts & Hobbies"
+        )
+        genre_is(
+            "BUS070050",
+            "BUSINESS & ECONOMICS / Industries / Manufacturing",
+            "Personal Finance & Business",
+        )
+        genre_is("PHO017000", "PHOTOGRAPHY / Reference", "Photography")
+        genre_is(
+            "BUS119000",
+            "BUSINESS & ECONOMICS / Indigenous Economies",
+            "Personal Finance & Business",
+        )
+        genre_is(
+            "TRA002050",
+            "TRANSPORTATION / Aviation / Piloting & Flight Instruction",
+            "Technology",
+        )
+        genre_is("LAW080000", "LAW / Remedies & Damages", "Law")
+        genre_is(
+            "BIB018030",
+            "BIBLES / Other English Translations / New Testament & Portions",
+            "Christianity",
+        )
+        genre_is(
+            "ARC005050", "ARCHITECTURE / History / Baroque & Rococo", "Architecture"
+        )
+        genre_is(
+            "FIC139000", "FICTION / World Literature / Central Asia", "General Fiction"
+        )
+        genre_is("SOC020000", "SOCIAL SCIENCE / Minority Studies", "Social Sciences")
+        genre_is("ART027000", "ART / Study & Teaching", "Art & Culture")
+        genre_is(
+            "TEC016010",
+            "TECHNOLOGY & ENGINEERING / Industrial Design / Packaging",
+            "Technology",
+        )
+        genre_is(
+            "HEA019000",
+            "HEALTH & FITNESS / Diet & Nutrition / Weight Loss",
+            "Health & Diet",
+        )
+        genre_is(
+            "BIB012070",
+            "BIBLES / New International Reader's Version / Youth & Teen",
+            "Christianity",
+        )
+        genre_is("JNF058000", "JUVENILE NONFICTION / Travel", "Travel")
+        genre_is("COM055000", "COMPUTERS / Certification Guides / General", "Computers")
+        genre_is("HIS026040", "HISTORY / Middle East / Syria", "History")
+        genre_is("REL097000", "RELIGION / Christianity / Presbyterian", "Christianity")
+        genre_is("REF000000", "REFERENCE / General", "Reference & Study Aids")
+        genre_is("COM059000", "COMPUTERS / Computer Engineering", "Computers")
 
     def test_fiction_spot_checks(self):
-        def fiction_is(name, expect):
-            subject = self._subject("", name)
+        def fiction_is(identifier, name, expect):
+            subject = self._subject(identifier, "")
             assert expect == subject.fiction
 
-        # Some easy tests.
-        fiction_is("Fiction / Science Fiction", True)
-        fiction_is("Antiques & Collectibles / Kitchenware", False)
-
-        # Humor and drama do not have fiction classifications
-        # unless the fiction classification comes from elsewhere in the
-        # subject. Poetry used y´to be in this category but as changed in
-        # e-kirjasto.
-        fiction_is("Humor", None)
-        fiction_is("Drama", None)
-        fiction_is("Poetry / Russian & Former Soviet Union", True)
-        fiction_is("Young Adult Fiction / Poetry", True)
-        fiction_is("Poetry / General", True)
-
-        # When Poetry is a subclass, fiction status is based on the upper class.
-        fiction_is("Literary Criticism / Poetry", False)
-
-        fiction_is("Young Adult Nonfiction / Humor", False)
-        fiction_is("Juvenile Fiction / Humorous Stories", True)
-
-        # Literary collections in general are presumed to be
-        # collections of short fiction, but letters and essays are
-        # definitely nonfiction.
-        fiction_is("Literary Collections / General", True)
-        fiction_is("Literary Collections / Letters", False)
-        fiction_is("Literary Collections / Essays", False)
-
-        # Grandfathered in from an older test to validate that the new
-        # BISAC algorithm gives the same results as the old one.
-        fiction_is("FICTION / Classics", True)
-        fiction_is("JUVENILE FICTION / Concepts / Date & Time", True)
-        fiction_is("YOUNG ADULT FICTION / Lifestyles / Country Life", True)
-        fiction_is("HISTORY / General", False)
-
-        fiction_is("JUVENILE FICTION / General", True)
+        fiction_is("FIC028000", "Fiction / Science Fiction / General", True)
+        fiction_is("ANT022000", "Antiques & Collectibles / Kitchenware", False)
+        fiction_is("HUM000000", "Humor / General", True)
+        fiction_is("DRA000000", "Drama / General", True)
+        fiction_is("YAF048000", "Young Adult Fiction / Poetry", True)
+        fiction_is("POE000000", "Poetry / General", True)
+        fiction_is("LIT014000", "Literary Criticism / Poetry", False)
+        fiction_is("YAN028000", "Young Adult Nonfiction / Humor", False)
+        fiction_is("JUV019000", "Juvenile Fiction / Humorous Stories", True)
+        fiction_is("LCO000000", "Literary Collections / General", True)
+        fiction_is("LCO011000", "Literary Collections / Letters", True)
+        fiction_is("LCO010000", "Literary Collections / Essays", True)
+        fiction_is("FIC004000", "FICTION / Classics", True)
+        fiction_is("JUV009070", "JUVENILE FICTION / Concepts / Date & Time", True)
+        fiction_is("YAF033000", "YOUNG ADULT FICTION / Lifestyles / Country Life", True)
+        fiction_is("HIS000000", "HISTORY / General", False)
+        fiction_is("JUV000000", "JUVENILE FICTION / General", True)
 
     def test_audience_spot_checks(self):
-        def audience_is(name, expect):
-            subject = self._subject("", name)
+        def audience_is(identifier, expect):
+            subject = self._subject(identifier, "")
             assert expect == subject.audience
 
         adult = SubjectClassifier.AUDIENCE_ADULT
-        adults_only = SubjectClassifier.AUDIENCE_ADULTS_ONLY
         ya = SubjectClassifier.AUDIENCE_YOUNG_ADULT
         children = SubjectClassifier.AUDIENCE_CHILDREN
 
-        audience_is("Fiction / Science Fiction", adult)
-        audience_is("Fiction / Science Fiction / Erotica", adults_only)
-        audience_is("Juvenile Fiction / Science Fiction", children)
-        audience_is("Young Adult Fiction / Science Fiction / General", ya)
-
-        # Grandfathered in from an older test to validate that the new
-        # BISAC algorithm gives the same results as the old one.
-        audience_is("FAMILY & RELATIONSHIPS / Love & Romance", adult)
-        audience_is("JUVENILE FICTION / Action & Adventure / General", children)
-        audience_is("YOUNG ADULT FICTION / Action & Adventure / General", ya)
+        audience_is("HIS000000", adult)
+        audience_is("JUV016180", children)
+        audience_is("YAN053070", ya)
 
     def test_target_age_spot_checks(self):
-        def target_age_is(name, expect):
-            subject = self._subject("", name)
+        def target_age_is(identifier, expect):
+            subject = self._subject(identifier, "")
             assert expect == subject.target_age
 
         # These are the only BISAC classifications with implied target
         # ages.
-        for check in ("Fiction", "Nonfiction"):
-            target_age_is("Juvenile %s / Readers / Beginner" % check, (0, 4))
-            target_age_is("Juvenile %s / Readers / Intermediate" % check, (5, 7))
-            target_age_is("Juvenile %s / Readers / Chapter Books" % check, (8, 13))
-            target_age_is(
-                "Juvenile %s / Religious / Christian / Early Readers" % check, (5, 7)
-            )
+        target_age_is("JUV043000", (0, 4))
+        target_age_is("JUV044000", (5, 7))
+        target_age_is("JUV045000", (8, 13))
 
-        # In all other cases, the classifier will not have a target age.
-        target_age_is("Fiction / Science Fiction / Erotica", None)
-        target_age_is("Fiction / Science Fiction", None)
-        target_age_is("Juvenile Fiction / Science Fiction", None)
-        target_age_is("Young Adult Fiction / Science Fiction / General", None)
+        # In all other cases, target age will return None.
+        target_age_is("CGN004020", None)
+        target_age_is("HEA022000", None)
+        target_age_is("JUV016180", None)
+        target_age_is("YAN053070", None)
 
     def test_feedbooks_bisac(self):
         """Feedbooks uses a system based on BISAC but with different
@@ -1242,7 +1412,7 @@ class TestBISACClassifier:
         subject = self._subject("FBFIC022000", "Mystery & Detective")
         assert "Mystery" == subject.genre.name
 
-        # This is not an official BISAC classification, so we're not
+        # This is not an official BISAC classification, so we"re not
         # expecting to find anything
         subject = self._subject("FSHUM000000N", "Human Science")
         if subject.genre is None:
@@ -1266,29 +1436,18 @@ class TestBISACClassifier:
     def test_scrub_name(self):
         """Sometimes a data provider sends BISAC names that contain extra or
         nonstandard characters. We store the data as it was provided to us,
-        but when it's time to classify things, we normalize it.
+        but when it"s time to classify things, we normalize it.
         """
 
         def scrubbed(before, after):
             assert after == BISACClassifier.scrub_name(before)
 
         scrubbed(
-            "ART/Collections  Catalogs  Exhibitions/",
-            ["art", "collections, catalogs, exhibitions"],
-        )
-        scrubbed(
-            "ARCHITECTURE|History|Contemporary|",
-            ["architecture", "history", "contemporary"],
-        )
-        scrubbed(
             "BIOGRAPHY & AUTOBIOGRAPHY / Editors, Journalists, Publishers",
-            ["biography & autobiography", "editors, journalists, publishers"],
+            "BIOGRAPHY & AUTOBIOGRAPHY / Editors, Journalists, Publishers",
         )
-        scrubbed(
-            "EDUCATION/Teaching Methods & Materials/Arts & Humanities */",
-            ["education", "teaching methods & materials", "arts & humanities"],
-        )
+        # No such BISAC
         scrubbed(
             "JUVENILE FICTION / Family / General (see also headings under Social Issues)",
-            ["juvenile fiction", "family", "general"],
+            None,
         )
