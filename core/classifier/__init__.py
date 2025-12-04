@@ -593,7 +593,7 @@ fiction_genres = [
         ],
     ),
     "Folklore Stories",
-    "Growing up",
+    "Growing Up",
     "Historical Fiction",
     dict(
         name="Horror",
@@ -709,7 +709,7 @@ nonfiction_genres = [
     "Family",
     "Fashion & Looks",
     "Folklore",
-    dict(name="Games", subgenres=["Videogames", "Boardgames & Strategic Games"]),
+    dict(name="Games", subgenres=["Video Games", "Board Games & Strategic Games"]),
     dict(
         name="Food & Health",
         subgenres=[
