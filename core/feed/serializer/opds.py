@@ -31,6 +31,7 @@ TAG_MAPPING = {
     "patron": f"{{{OPDSFeed.SIMPLIFIED_NS}}}patron",
     "series": f"{{{OPDSFeed.SCHEMA_NS}}}series",
     "hashed_passphrase": f"{{{OPDSFeed.LCP_NS}}}hashed_passphrase",
+    "unhashed_passphrase": f"{{{OPDSFeed.LCP_NS}}}unhashed_passphrase",
     "selected": f"{{{OPDSFeed.SIMPLIFIED_NS}}}selected",
 }
 
@@ -398,6 +399,11 @@ class OPDS1Serializer(SerializerInterface[etree._Element], OPDSFeed):
         if link.lcp_hashed_passphrase:
             element.append(
                 self._tag("hashed_passphrase", link.lcp_hashed_passphrase.text)
+            )
+
+        if link.lcp_unhashed_passphrase:
+            element.append(
+                self._tag("unhashed_passphrase", link.lcp_unhashed_passphrase.text)
             )
 
         if link.drm_licensor:
