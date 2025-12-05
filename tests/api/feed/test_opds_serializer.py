@@ -97,6 +97,7 @@ class TestOPDSSerializer:
             availability_status="available",
             indirect_acquisitions=[IndirectAcquisition(type="indirect")],
             lcp_hashed_passphrase=FeedEntryType(text="passphrase"),
+            lcp_unhashed_passphrase=FeedEntryType(text="unhashed passphrase"),
             drm_licensor=FeedEntryType.create(
                 vendor="vendor", clientToken=FeedEntryType(text="token")
             ),
@@ -119,6 +120,10 @@ class TestOPDSSerializer:
             (
                 f"{{{OPDSFeed.LCP_NS}}}hashed_passphrase",
                 lambda child: child.text == "passphrase",
+            ),
+            (
+                f"{{{OPDSFeed.LCP_NS}}}unhashed_passphrase",
+                lambda child: child.text == "unhashed passphrase",
             ),
             (
                 f"{{{OPDSFeed.DRM_NS}}}licensor",

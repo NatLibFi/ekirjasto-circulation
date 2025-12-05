@@ -123,6 +123,7 @@ class Acquisition(Link):
     rights: str | None = None
 
     lcp_hashed_passphrase: FeedEntryType | None = None
+    lcp_unhashed_passphrase: FeedEntryType | None = None
     drm_licensor: FeedEntryType | None = None
 
     indirect_acquisitions: list[IndirectAcquisition] = field(default_factory=list)
