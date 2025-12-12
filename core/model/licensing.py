@@ -1623,6 +1623,7 @@ class LicensePoolDeliveryMechanism(Base):
 
         if other.id == self.id:
             # They two LicensePoolDeliveryMechanisms are the same object.
+            # E-kirjasto download.
             return True
 
         # The two LicensePoolDeliveryMechanisms must be different ways
@@ -1638,6 +1639,18 @@ class LicensePoolDeliveryMechanism(Base):
             # open-access book gets its content mirrored to two
             # different places.
             return True
+
+        # Switch to streaming if the requested content_type is streaming.
+        if (
+            other.delivery_mechanism.drm_scheme == self.delivery_mechanism.drm_scheme
+            and self.delivery_mechanism.drm_scheme == DeliveryMechanism.LCP_DRM
+        ):
+            if (
+                other.delivery_mechanism.content_type
+                == DeliveryMechanism.EKIRJASTO_STREAMING_PROFILE
+                and self.delivery_mechanism.content_type == MediaTypes.EPUB_MEDIA_TYPE
+            ):
+                return True
 
         # If the DeliveryMechanisms themselves are compatible, then the
         # LicensePoolDeliveryMechanisms are compatible.
@@ -1767,6 +1780,7 @@ class DeliveryMechanism(Base, HasSessionCache):
     STREAMING_PROFILE = (
         ';profile="http://librarysimplified.org/terms/profiles/streaming-media"'
     )
+    EKIRJASTO_STREAMING_PROFILE = 'text/html;profile="http://librarysimplified.org/terms/profiles/streaming-media"'
     MEDIA_TYPES_FOR_STREAMING = {
         STREAMING_TEXT_CONTENT_TYPE: MediaTypes.TEXT_HTML_MEDIA_TYPE,
         STREAMING_AUDIO_CONTENT_TYPE: MediaTypes.TEXT_HTML_MEDIA_TYPE,
