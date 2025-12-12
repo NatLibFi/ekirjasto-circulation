@@ -556,12 +556,16 @@ class BaseODLAPI(
             loan_status = self._request_loan_status(
                 checkout_url,
                 ignored_problem_types=[
-                    "http://opds-spec.org/odl/error/checkout/unavailable"
+                    "http://opds-spec.org/odl/error/checkout/unavailable",
+                    "http://opds-spec.org/odl/error/checkout/loan",
                 ],
             )
             return loan_status
         except OpdsWithOdlException as e:
-            if e.type == "http://opds-spec.org/odl/error/checkout/unavailable":
+            if (
+                e.type == "http://opds-spec.org/odl/error/checkout/unavailable"
+                or "http://opds-spec.org/odl/error/checkout/loan"
+            ):
                 # TODO: This would be a good place to do an async availability update, since we know
                 #   the book is unavailable, when we thought it was available. For now, we know that
                 #   the license has no checkouts_available, so we do that update.

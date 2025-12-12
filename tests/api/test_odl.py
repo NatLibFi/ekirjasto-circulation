@@ -29,6 +29,7 @@ from api.circulation_exceptions import (
 )
 from api.lcp.status import LoanStatus
 from api.odl import ODLAPI, BaseODLImporter, ODLImporter
+from api.odl_api.auth import OpdsWithOdlException
 from core.metadata_layer import LicenseData
 from core.model.collection import Collection
 from core.model.edition import Edition
@@ -116,10 +117,25 @@ class TestODLAPI:
                         detail="broken",
                     )
                 ),
-                RemoteIntegrationException,
+                OpdsWithOdlException,
                 "Error requesting Loan Status Document. 'http://loan' returned status code 403. "
                 "Problem Detail: 'http://problem-detail-uri' - server error - broken",
                 id="problem detail response",
+            ),
+            pytest.param(
+                409,
+                {"Content-Type": "application/problem+json; charset=UTF-8"},
+                json.dumps(
+                    dict(
+                        type="http://opds-spec.org/odl/error/checkout/loan",
+                        description="No available loans left for selected license 111.",
+                        code="409",
+                    )
+                ),
+                OpdsWithOdlException,
+                "Error requesting Loan Status Document. 'http://loan' returned status code 409. "
+                "Problem Detail: 'http://opds-spec.org/odl/error/checkout/loan' - no title - No available loans left for selected license 111.",
+                id="problem detail response from Ellibs",
             ),
         ],
     )

@@ -44,8 +44,8 @@ class OpdsWithOdlException(BadResponseException):
         if response.headers.get("Content-Type") not in [
             "application/api-problem+json",
             "application/problem+json",
+            "application/problem+json; charset=UTF-8",
         ]:
-            print(f"auth.py: {response.headers}")
             return None
 
         try:
@@ -54,11 +54,10 @@ class OpdsWithOdlException(BadResponseException):
             json_response = {}
 
         type = json_response.get("type")
-        title = json_response.get("title")
+        title = json_response.get("title") or "no title"
         status = json_response.get("status") or response.status_code
-        detail = json_response.get("detail")
+        detail = json_response.get("detail") or json_response.get("description")
 
-        if type is None or title is None:
+        if type is None:
             return None
-
         return cls(type, title, status, detail, response)
