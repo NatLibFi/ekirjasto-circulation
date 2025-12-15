@@ -339,7 +339,7 @@ class TestODL2Importer:
         assert 1 == maahan_katketty_license.checkouts_available  # type: ignore
 
         # 3. Make our delivery mechanisms are set
-        assert 1 == len(maahan_katketty_licensepool.delivery_mechanisms)
+        assert 2 == len(maahan_katketty_licensepool.delivery_mechanisms)
 
         maahan_katketty_epub_lcp_drm_delivery_mechanism = (
             self._get_delivery_mechanism_by_drm_scheme_and_content_type(
@@ -349,6 +349,14 @@ class TestODL2Importer:
             )
         )
         assert maahan_katketty_epub_lcp_drm_delivery_mechanism is not None
+        maahan_katketty_epub_lcp_streaming_drm_delivery_mechanism = (
+            self._get_delivery_mechanism_by_drm_scheme_and_content_type(
+                maahan_katketty_licensepool.delivery_mechanisms,
+                DeliveryMechanism.EKIRJASTO_STREAMING_PROFILE,
+                DeliveryMechanism.LCP_DRM,
+            )
+        )
+        assert maahan_katketty_epub_lcp_streaming_drm_delivery_mechanism is not None
 
         # 4. Make sure that work objects contain all the required metadata
         assert isinstance(works, list)
