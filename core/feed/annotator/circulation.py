@@ -39,7 +39,11 @@ from core.feed.types import (
 )
 from core.feed.util import strftime
 from core.lane import Facets, FacetsWithEntryPoint, Lane, Pagination, WorkList
-from core.lcp.credential import LCPCredentialFactory, LCPHashedPassphrase
+from core.lcp.credential import (
+    LCPCredentialFactory,
+    LCPHashedPassphrase,
+    LCPUnhashedPassphrase,
+)
 from core.lcp.exceptions import LCPError
 from core.model.circulationevent import CirculationEvent
 from core.model.collection import Collection
@@ -1484,7 +1488,8 @@ class LibraryAnnotator(CirculationManagerAnnotator):
 
         if delivery_mechanism.drm_scheme == DeliveryMechanism.LCP_DRM:
             # Generate a <lcp:hashed_passphrase> tag that can be used for the loan
-            # in the mobile apps.
+            # in the mobile apps, and the <lcp:unhashed_passphrase> to be used in
+            # Thorium.
 
             return self.lcp_key_retrieval_tags(active_loan)
 
@@ -1556,6 +1561,16 @@ class LibraryAnnotator(CirculationManagerAnnotator):
             )
         except LCPError:
             # The patron's passphrase wasn't generated yet and not present in the database.
+            pass
+
+        try:
+            unhashed_passphrase: LCPUnhashedPassphrase = (
+                lcp_credential_factory.get_patron_passphrase(db, active_loan.patron)
+            )
+            response["lcp_unhashed_passphrase"] = FeedEntryType(
+                text=unhashed_passphrase.text
+            )
+        except LCPError:
             pass
 
         return response
