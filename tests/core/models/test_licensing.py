@@ -1447,6 +1447,19 @@ class TestLicensePoolDeliveryMechanism:
         db.session.commit()
         assert True == mech1.compatible_with(mech2)
 
+        # E-kirjasto streaming is compatible with lcp epubs.
+        ekirjasto_streaming, ignore = DeliveryMechanism.lookup(
+            db.session, DeliveryMechanism.LCP_DRM, MediaTypes.EPUB_MEDIA_TYPE
+        )
+        mech1.delivery_mechanism = ekirjasto_streaming
+        db.session.commit()
+        lcp_epub, ignore = DeliveryMechanism.lookup(
+            db.session, DeliveryMechanism.LCP_DRM, MediaTypes.EPUB_MEDIA_TYPE
+        )
+        mech2.delivery_mechanism = lcp_epub
+        db.session.commit()
+        assert True == mech1.compatible_with(mech2)
+
     def test_compatible_with_calls_compatible_with_on_deliverymechanism(
         self, db: DatabaseTransactionFixture
     ):

@@ -101,7 +101,10 @@
                 {
                     "metadata": {
                         "identifier": "urn:license:222",
-                        "format": "application/epub+zip",
+                        "format": [
+                            "application/epub+zip",
+                            "text/html;profile=\"http://librarysimplified.org/terms/profiles/streaming-media\""
+                        ],
                         "created": "2025-06-05T14:23:33+03:00",
                         "terms": {
                             "concurrency": "1",
