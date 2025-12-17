@@ -208,7 +208,6 @@ Flask = "^3.0"
 Flask-Babel = "^4.0"
 Flask-Cors = "6.0.1"
 fuzzywuzzy = "0.18.0"  # fuzzywuzzy is for author name manipulations
-grpcio = "1.54.3"
 html-sanitizer = "^2.1.0"
 isbnlib = "^3.10.14"
 itsdangerous = "^2.1.2"
