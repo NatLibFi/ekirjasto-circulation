@@ -1459,6 +1459,10 @@ class TestLicensePoolDeliveryMechanism:
         mech2.delivery_mechanism = lcp_epub
         db.session.commit()
         assert True == mech1.compatible_with(mech2)
+        # And lcp epub is compatable with E-kirjasto streaming.
+        mech1.delivery_mechanism = ekirjasto_streaming
+        db.session.commit()
+        assert True == mech2.compatible_with(mech1)
 
     def test_compatible_with_calls_compatible_with_on_deliverymechanism(
         self, db: DatabaseTransactionFixture
