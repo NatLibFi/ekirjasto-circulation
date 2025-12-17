@@ -1219,7 +1219,7 @@ class TestLibraryAnnotator:
         fulfill_links = [
             link for link in links if link["rel"] == "http://opds-spec.org/acquisition"
         ]
-        assert 2 == len(fulfill_links)
+        assert 3 == len(fulfill_links)
 
         assert {
             mech1.delivery_mechanism.drm_scheme_media_type,
