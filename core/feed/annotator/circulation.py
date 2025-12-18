@@ -511,22 +511,14 @@ class CirculationManagerAnnotator(Annotator):
                 # set. There is one link for the delivery mechanism
                 # that was locked in, and links for any streaming
                 # delivery mechanisms.
-                #
-                # Since the delivery mechanism has already been locked in,
-                # we choose not to use visible_delivery_mechanisms --
-                # they already chose it and they're stuck with it.
                 for lpdm in active_license_pool.delivery_mechanisms:
-                    if (
-                        lpdm is active_loan.fulfillment
-                        or lpdm.delivery_mechanism.is_streaming
-                    ):
-                        fulfill_links.append(
-                            self.fulfill_link(
-                                active_license_pool,
-                                active_loan,
-                                lpdm.delivery_mechanism,
-                            )
+                    fulfill_links.append(
+                        self.fulfill_link(
+                            active_license_pool,
+                            active_loan,
+                            lpdm.delivery_mechanism,
                         )
+                    )
             elif active_license_pool is not None:
                 # The delivery mechanism for this loan has not been
                 # set. There is one fulfill link for every visible

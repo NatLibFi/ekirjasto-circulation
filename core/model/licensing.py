@@ -1652,6 +1652,13 @@ class LicensePoolDeliveryMechanism(Base):
             ):
                 return True
 
+            if (
+                other.delivery_mechanism.content_type == MediaTypes.EPUB_MEDIA_TYPE
+                and self.delivery_mechanism.content_type
+                == DeliveryMechanism.EKIRJASTO_STREAMING_PROFILE
+            ):
+                return True
+
         # If the DeliveryMechanisms themselves are compatible, then the
         # LicensePoolDeliveryMechanisms are compatible.
         #
