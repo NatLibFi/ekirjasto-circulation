@@ -207,8 +207,8 @@ class Configuration(ConfigurationConstants):
                 % url
             )
 
-        # Calling __to_string__ will hide the password.
-        logging.info("Connecting to database: %s" % url_obj.__to_string__())
+        # Calling render_as_string will hide the password.
+        logging.info("Connecting to database: %s" % url_obj.render_as_string())
         return url
 
     # TODO: We can remove this method once basic token authentication is fully deployed.
