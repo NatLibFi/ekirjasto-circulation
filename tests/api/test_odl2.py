@@ -941,8 +941,6 @@ class TestODL2HoldQueueReaper:
         hold2, ignore = expired_pool.on_hold_to(
             db.patron(), end=month_later, position=1
         )
-        expired_pool.update_availability_from_licenses()
-
         # A license pool with both an active and an expired license. The pool
         # is therefore still active.
         active_pool = db.licensepool(
@@ -957,19 +955,18 @@ class TestODL2HoldQueueReaper:
         active_hold, ignore = active_pool.on_hold_to(
             db.patron(), end=month_later, position=1
         )
-        active_pool.update_availability_from_licenses()
 
+        expired_pool.update_availability_from_licenses()
+        active_pool.update_availability_from_licenses()
         assert expired_pool.patrons_in_hold_queue == 2
         assert active_pool.patrons_in_hold_queue == 1
 
         progress = reaper.run_once(reaper.timestamp().to_data())
 
         assert "Removed 2 holds from 1 license pools" in progress.achievements
-        print(progress.achievements)
         # After reaping, the holds in the expired pool have been deleted and
         # only the holds in the active pool remain.
-        # expired_pool.update_availability_from_licenses()
-        # active_pool.update_availability_from_licenses()
-
-        assert len(expired_pool.holds) == 0
-        assert len(active_pool.holds) != 1
+        expired_pool.update_availability_from_licenses()
+        active_pool.update_availability_from_licenses()
+        assert expired_pool.patrons_in_hold_queue == 0
+        assert active_pool.patrons_in_hold_queue == 1
