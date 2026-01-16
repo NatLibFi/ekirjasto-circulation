@@ -8,6 +8,7 @@ from typing import Any
 from flask_babel import lazy_gettext as _
 from pydantic import PositiveInt
 from requests import Response
+from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.expression import and_, or_
 
@@ -26,7 +27,7 @@ from core.integration.settings import (
 from core.metadata_layer import FormatData, LicenseData, Metadata, TimestampData
 from core.model import Collection, Edition, LicensePool, Loan, RightsStatus
 from core.model.configuration import ExternalIntegration
-from core.model.licensing import LicenseStatus
+from core.model.licensing import License, LicenseStatus
 from core.model.patron import Hold, Patron
 from core.monitor import CollectionMonitor
 from core.opds2_import import OPDS2Importer, OPDS2ImporterSettings, OPDS2ImportMonitor
@@ -419,4 +420,72 @@ class ODL2HoldReaper(CollectionMonitor):
             len(changed_pools),
         )
         progress = TimestampData(achievements=message)
+        return progress
+
+
+class ODL2HoldQueueReaper(CollectionMonitor):
+    """Delete hold queues in expired license pools."""
+
+    SERVICE_NAME = "Hold Queue Reaper"
+    PROTOCOL = ODL2API.label()
+
+    def __init__(
+        self,
+        _db: Session,
+        collection: Collection,
+        api: ODL2API | None = None,
+        **kwargs: Any,
+    ):
+        super().__init__(_db, collection, **kwargs)
+        self.api = api or ODL2API(_db, collection)
+
+    def run_once(self, progress: TimestampData) -> TimestampData:
+        """Delete holds in expired license pools."""
+        self.log.info("Hold Queue Reaper Job started")
+
+        # Find license pools where all licenses are unavailable
+        expired_pools = (
+            select(LicensePool.id)
+            .outerjoin(License, License.license_pool_id == LicensePool.id)
+            .filter(LicensePool.collection_id == self.api.collection_id)
+            .group_by(LicensePool.id)
+            # Checks if the total amount of licenses matches the amount of 'unavailable' licenses
+            .having(
+                func.count(License.id)
+                == func.count(
+                    case(
+                        whens=[(License.status == LicenseStatus.unavailable, 1)],
+                        else_=None,
+                    )
+                )
+            )
+        ).subquery()
+        # Find all the holds in those license pools
+        holds = (
+            self._db.query(Hold)
+            .join(Hold.license_pool)
+            .filter(Hold.license_pool_id.in_(select(expired_pools)))
+        ).all()
+
+        holds_count = len(holds)
+        message = ["Hold queue reaping is done!"]
+        if holds:
+            cleaned_pools = set()
+            # Execute the deletions
+            for hold in holds:
+                cleaned_pools.add(hold.license_pool)
+                self._db.delete(hold)
+            message.append(
+                f"Removed {holds_count} holds from {len(cleaned_pools)} license pools:"
+            )
+            for pool in cleaned_pools:
+                edition = pool.presentation_edition
+                identifier = pool.identifier
+                message.append(
+                    f"   {identifier.identifier}/{edition.title}: {len(pool.holds)} holds"
+                )
+        else:
+            message.append("No expired license pools to reap.")
+
+        progress = TimestampData(achievements="\n".join(message))
         return progress

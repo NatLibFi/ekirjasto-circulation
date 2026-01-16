@@ -8,7 +8,7 @@ import pytest
 from freezegun import freeze_time
 
 from api.circulation_exceptions import PatronHoldLimitReached, PatronLoanLimitReached
-from api.odl2 import ODL2HoldReaper, ODL2Importer, ODL2LoanReaper
+from api.odl2 import ODL2HoldQueueReaper, ODL2HoldReaper, ODL2Importer, ODL2LoanReaper
 from core.coverage import CoverageFailure
 from core.model import (
     Collection,
@@ -913,3 +913,60 @@ class TestODL2HoldReaper:
         # that will be applied by run().
         assert None == progress.start
         assert None == progress.finish
+
+
+class TestODL2HoldQueueReaper:
+    def test_run_once(
+        self, odl2_api_fixture: ODL2ApiFixture, db: DatabaseTransactionFixture
+    ):
+        data_source = DataSource.lookup(db.session, "Feedbooks", autocreate=True)
+        DatabaseTransactionFixture.set_settings(
+            odl2_api_fixture.collection.integration_configuration,
+            **{Collection.DATA_SOURCE_NAME_SETTING: data_source.name},
+        )
+        reaper = ODL2HoldQueueReaper(
+            db.session, odl2_api_fixture.collection, api=odl2_api_fixture.api
+        )
+        now = utc_now()
+        month_later = now - datetime.timedelta(days=30)
+
+        # A license pool with a license that's expired.
+        expired_pool = odl2_api_fixture.pool
+        expired_pool.licenses = []
+        expired_license1 = db.license(expired_pool, status="unavailable")
+        # Active holds in the expired pool.
+        hold1, ignore = expired_pool.on_hold_to(
+            db.patron(), end=month_later, position=10
+        )
+        hold2, ignore = expired_pool.on_hold_to(
+            db.patron(), end=month_later, position=1
+        )
+        # A license pool with both an active and an expired license. The pool
+        # is therefore still active.
+        active_pool = db.licensepool(
+            None,
+            collection=odl2_api_fixture.collection,
+            data_source_name=data_source.name,
+        )
+        active_pool.licenses = []
+        active_license = db.license(active_pool, status="available")
+        expired_license = db.license(active_pool, status="unavailable")
+        # And the pool has an active hold.
+        active_hold, ignore = active_pool.on_hold_to(
+            db.patron(), end=month_later, position=1
+        )
+
+        expired_pool.update_availability_from_licenses()
+        active_pool.update_availability_from_licenses()
+        assert expired_pool.patrons_in_hold_queue == 2
+        assert active_pool.patrons_in_hold_queue == 1
+
+        progress = reaper.run_once(reaper.timestamp().to_data())
+
+        assert "Removed 2 holds from 1 license pools" in progress.achievements
+        # After reaping, the holds in the expired pool have been deleted and
+        # only the holds in the active pool remain.
+        expired_pool.update_availability_from_licenses()
+        active_pool.update_availability_from_licenses()
+        assert expired_pool.patrons_in_hold_queue == 0
+        assert active_pool.patrons_in_hold_queue == 1
