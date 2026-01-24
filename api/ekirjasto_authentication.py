@@ -15,6 +15,7 @@ from flask import url_for
 from flask_babel import lazy_gettext as _
 from sqlalchemy.orm import Session
 from werkzeug.datastructures import Authorization
+from pydantic import field_validator
 
 from api.authentication.base import (
     AuthenticationProvider,
@@ -55,6 +56,7 @@ class EkirjastoEnvironment(Enum):
     FAKE = "http://localhost"
     DEVELOPMENT = "https://tunnistus-dev.e-kirjasto.fi/"
     PRODUCTION = "https://tunnistus.e-kirjasto.fi"
+    OLD_DEV = "https://e-kirjasto.loikka.dev"
 
 
 class MagazineEnvironment(Enum):
@@ -114,6 +116,12 @@ class EkirjastoAuthAPISettings(AuthProviderSettings):
         ),
     )
 
+    @field_validator("ekirjasto_environment", mode="before")
+    def validate_url(cls, value):
+        """Handle the previous dev url."""
+        if value == EkirjastoEnvironment.OLD_DEV.value:
+            value = EkirjastoEnvironment.DEVELOPMENT.value
+        return value
 
 class EkirjastoAuthAPILibrarySettings(AuthProviderLibrarySettings):
     ...
