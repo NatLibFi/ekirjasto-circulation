@@ -13,9 +13,9 @@ import requests
 from cryptography.fernet import Fernet, InvalidToken
 from flask import url_for
 from flask_babel import lazy_gettext as _
+from pydantic import field_validator
 from sqlalchemy.orm import Session
 from werkzeug.datastructures import Authorization
-from pydantic import field_validator
 
 from api.authentication.base import (
     AuthenticationProvider,
@@ -122,6 +122,7 @@ class EkirjastoAuthAPISettings(AuthProviderSettings):
         if value == EkirjastoEnvironment.OLD_DEV.value:
             value = EkirjastoEnvironment.DEVELOPMENT.value
         return value
+
 
 class EkirjastoAuthAPILibrarySettings(AuthProviderLibrarySettings):
     ...
