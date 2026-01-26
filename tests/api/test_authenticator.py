@@ -803,6 +803,11 @@ class TestLibraryAuthenticator:
         assert isinstance(integration, IntegrationLibraryConfiguration)
         auth = LibraryAuthenticator(_db=db.session, library=library)
         auth.register_provider(integration)
+        # The dev url has changed.
+        assert (
+            auth.ekirjasto_provider.ekirjasto_environment.value
+            == EkirjastoEnvironment.DEVELOPMENT.value
+        )
         assert auth.ekirjasto_provider is not None
         assert isinstance(auth.ekirjasto_provider, EkirjastoAuthenticationAPI)
 
