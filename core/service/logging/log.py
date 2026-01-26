@@ -54,13 +54,14 @@ class JSONFormatter(logging.Formatter):
             host=self.hostname,
             name=record.name,
             level=record.levelname,
-            filename=record.filename,
+            # filename=record.filename,
+            pathname=record.pathname,
             message=message,
             timestamp=utc_now().isoformat(),
         )
         if record.exc_info:
             data["traceback"] = self.formatException(record.exc_info)
-        return json.dumps(data)
+        return json.dumps(data, indent=4)
 
 
 class LogLoopPreventionFilter(logging.Filter):
