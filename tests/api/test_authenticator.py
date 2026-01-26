@@ -808,7 +808,7 @@ class TestLibraryAuthenticator:
         auth.register_provider(integration)
         # The dev url has changed.
         assert (
-            auth.ekirjasto_provider.ekirjasto_environment.value
+            auth.ekirjasto_provider.ekirjasto_environment.value  # type: ignore[union-attr]
             == EkirjastoEnvironment.DEVELOPMENT.value
         )
         assert auth.ekirjasto_provider is not None
@@ -826,9 +826,9 @@ class TestLibraryAuthenticator:
         assert isinstance(integration, IntegrationLibraryConfiguration)
         auth = LibraryAuthenticator(_db=db.session, library=library)
         auth.register_provider(integration)
-        # The dev url has changed.
+        # The dev url has not changed.
         assert (
-            auth.ekirjasto_provider.ekirjasto_environment.value
+            auth.ekirjasto_provider.ekirjasto_environment.value  # type: ignore[union-attr]
             == EkirjastoEnvironment.DEVELOPMENT.value
         )
         assert auth.ekirjasto_provider is not None
@@ -846,9 +846,9 @@ class TestLibraryAuthenticator:
         assert isinstance(integration, IntegrationLibraryConfiguration)
         auth = LibraryAuthenticator(_db=db.session, library=library)
         auth.register_provider(integration)
-        # The dev url has changed.
+        # The production url has not changed.
         assert (
-            auth.ekirjasto_provider.ekirjasto_environment.value
+            auth.ekirjasto_provider.ekirjasto_environment.value  # type: ignore[union-attr]
             == EkirjastoEnvironment.PRODUCTION.value
         )
         assert auth.ekirjasto_provider is not None

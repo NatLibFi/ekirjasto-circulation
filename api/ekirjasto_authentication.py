@@ -5,7 +5,7 @@ import uuid
 from abc import ABC
 from base64 import b64decode, b64encode
 from enum import Enum
-from typing import Any
+from typing import Any, TypeVar
 
 import flask_babel
 import jwt
@@ -16,7 +16,6 @@ from flask_babel import lazy_gettext as _
 from pydantic import field_validator
 from sqlalchemy.orm import Session
 from werkzeug.datastructures import Authorization
-from typing import Any, TypeVar
 
 from api.authentication.base import (
     AuthenticationProvider,
@@ -134,6 +133,7 @@ LibrarySettingsType = TypeVar(
     "LibrarySettingsType", bound=EkirjastoAuthAPILibrarySettings, covariant=True
 )
 
+
 class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
     """Verify a token for E-kirjasto login, with a remote source of truth."""
 
@@ -143,7 +143,7 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
         integration_id: int,
         settings: SettingsType,
         library_settings: LibrarySettingsType,
-        analytics: Analytics | None = None
+        analytics: Analytics | None = None,
     ):
         """Create a EkirjastoAuthenticationAPI."""
         super().__init__(
