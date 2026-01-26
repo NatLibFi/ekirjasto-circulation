@@ -266,7 +266,9 @@ class LibraryAuthenticator(LoggerMixin):
         )
 
         self.saml_providers_by_name = {}
-        self.ekirjasto_provider = ekirjasto_provider  # Finland
+        self.ekirjasto_provider = None
+        if ekirjasto_provider:
+            self.ekirjasto_provider = ekirjasto_provider  # Finland
         self.bearer_token_signing_secret = bearer_token_signing_secret
         self.initialization_exceptions: dict[
             tuple[int | None, int | None], Exception

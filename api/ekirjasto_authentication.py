@@ -16,6 +16,7 @@ from flask_babel import lazy_gettext as _
 from pydantic import field_validator
 from sqlalchemy.orm import Session
 from werkzeug.datastructures import Authorization
+from typing import Any, TypeVar
 
 from api.authentication.base import (
     AuthenticationProvider,
@@ -128,6 +129,11 @@ class EkirjastoAuthAPILibrarySettings(AuthProviderLibrarySettings):
     ...
 
 
+SettingsType = TypeVar("SettingsType", bound=EkirjastoAuthAPISettings, covariant=True)
+LibrarySettingsType = TypeVar(
+    "LibrarySettingsType", bound=EkirjastoAuthAPILibrarySettings, covariant=True
+)
+
 class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
     """Verify a token for E-kirjasto login, with a remote source of truth."""
 
@@ -135,9 +141,9 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
         self,
         library_id: int,
         integration_id: int,
-        settings: EkirjastoAuthAPISettings,
-        library_settings: EkirjastoAuthAPILibrarySettings,
-        analytics: Analytics | None = None,
+        settings: SettingsType,
+        library_settings: LibrarySettingsType,
+        analytics: Analytics | None = None
     ):
         """Create a EkirjastoAuthenticationAPI."""
         super().__init__(

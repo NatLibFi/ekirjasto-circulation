@@ -820,7 +820,7 @@ class TestLibraryAuthenticator:
             protocol,
             library,
             settings_dict={
-                "ekirjasto_environment": EkirjastoEnvironment.DEVELOPMENT,
+                "ekirjasto_environment": EkirjastoEnvironment.DEVELOPMENT.value,
             },
         )
         assert isinstance(integration, IntegrationLibraryConfiguration)
@@ -840,7 +840,7 @@ class TestLibraryAuthenticator:
             protocol,
             library,
             settings_dict={
-                "ekirjasto_environment": EkirjastoEnvironment.PRODUCTION,
+                "ekirjasto_environment": EkirjastoEnvironment.PRODUCTION.value,
             },
         )
         assert isinstance(integration, IntegrationLibraryConfiguration)
