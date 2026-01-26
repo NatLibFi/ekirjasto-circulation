@@ -793,6 +793,9 @@ class TestLibraryAuthenticator:
     ):
         library = db.default_library()
         protocol = patron_auth_registry.get_protocol(EkirjastoAuthenticationAPI, "")
+
+        # 1. Test that when E-kirjasto auth integration has the old dev url,
+        # it's changed to the current dev url.
         _, integration = create_auth_integration_configuration(
             protocol,
             library,
@@ -807,6 +810,46 @@ class TestLibraryAuthenticator:
         assert (
             auth.ekirjasto_provider.ekirjasto_environment.value
             == EkirjastoEnvironment.DEVELOPMENT.value
+        )
+        assert auth.ekirjasto_provider is not None
+        assert isinstance(auth.ekirjasto_provider, EkirjastoAuthenticationAPI)
+
+        # 2. Test that the current dev url does not change.
+        protocol = patron_auth_registry.get_protocol(EkirjastoAuthenticationAPI, "")
+        _, integration = create_auth_integration_configuration(
+            protocol,
+            library,
+            settings_dict={
+                "ekirjasto_environment": EkirjastoEnvironment.DEVELOPMENT,
+            },
+        )
+        assert isinstance(integration, IntegrationLibraryConfiguration)
+        auth = LibraryAuthenticator(_db=db.session, library=library)
+        auth.register_provider(integration)
+        # The dev url has changed.
+        assert (
+            auth.ekirjasto_provider.ekirjasto_environment.value
+            == EkirjastoEnvironment.DEVELOPMENT.value
+        )
+        assert auth.ekirjasto_provider is not None
+        assert isinstance(auth.ekirjasto_provider, EkirjastoAuthenticationAPI)
+
+        # 3. Test that the production url does not change.
+        protocol = patron_auth_registry.get_protocol(EkirjastoAuthenticationAPI, "")
+        _, integration = create_auth_integration_configuration(
+            protocol,
+            library,
+            settings_dict={
+                "ekirjasto_environment": EkirjastoEnvironment.PRODUCTION,
+            },
+        )
+        assert isinstance(integration, IntegrationLibraryConfiguration)
+        auth = LibraryAuthenticator(_db=db.session, library=library)
+        auth.register_provider(integration)
+        # The dev url has changed.
+        assert (
+            auth.ekirjasto_provider.ekirjasto_environment.value
+            == EkirjastoEnvironment.PRODUCTION.value
         )
         assert auth.ekirjasto_provider is not None
         assert isinstance(auth.ekirjasto_provider, EkirjastoAuthenticationAPI)
