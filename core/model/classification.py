@@ -429,7 +429,7 @@ class Genre(Base, HasSessionCache):
         _db = Session.object_session(self)
         genres = []
         for genre_data in self.genredata.self_and_subgenres:
-            genres.append(self.lookup(_db, genre_data.name)[0])
+            genres.append(self.lookup(_db, genre_data.name, True)[0])
         return genres
 
     @property
