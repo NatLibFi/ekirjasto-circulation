@@ -2130,7 +2130,7 @@ class TestDeleteInvisibleLanesScript:
     def test_do_run(self, db: DatabaseTransactionFixture):
         """Test that invisible lanes and their visible children are deleted."""
         l1 = db.default_library()
-        # with a set of default lanes
+        # with a set of default lanes. There is only an English collection.
         create_default_lanes(db.session, l1)
 
         # verify there is a top level visible Fiction lane
@@ -2138,7 +2138,7 @@ class TestDeleteInvisibleLanesScript:
             db.session.query(Lane)
             .filter(Lane.library == l1)
             .filter(Lane.parent == None)
-            .filter(Lane.display_name == "Fiction")
+            .filter(Lane.display_name == "Books in English")
             .order_by(Lane.priority)
             .one()
         )
@@ -2155,7 +2155,7 @@ class TestDeleteInvisibleLanesScript:
             db.session.query(Lane)
             .filter(Lane.library == l1)
             .filter(Lane.parent == None)
-            .filter(Lane.display_name == "Fiction")
+            .filter(Lane.display_name == "Books in English")
             .order_by(Lane.priority)
             .one()
         )
@@ -2172,7 +2172,7 @@ class TestDeleteInvisibleLanesScript:
             db.session.query(Lane)
             .filter(Lane.library == l1)
             .filter(Lane.parent == None)
-            .filter(Lane.display_name == "Fiction")
+            .filter(Lane.display_name == "Books in English")
             .order_by(Lane.priority)
             .all()
         )
