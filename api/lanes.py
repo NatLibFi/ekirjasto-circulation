@@ -1,16 +1,12 @@
 import logging
 
+from flask_babel import gettext as _
+
 import core.classifier as genres
 from api.config import CannotLoadConfiguration, Configuration
 from api.metadata.novelist import NoveListAPI
-from api.metadata.nyt import NYTBestSellerAPI
 from core import classifier
-from core.classifier import (
-    GenreData,
-    SubjectClassifier,
-    fiction_genres,
-    nonfiction_genres,
-)
+from core.classifier import GenreData, SubjectClassifier
 from core.lane import (
     DatabaseBackedWorkList,
     DefaultSortOrderFacets,
@@ -18,7 +14,7 @@ from core.lane import (
     Lane,
     WorkList,
 )
-from core.model import Contributor, DataSource, Edition, Library, Session, create
+from core.model import Contributor, Edition, Library, Session, create
 from core.util import LanguageCodes
 
 
