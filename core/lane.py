@@ -3017,8 +3017,7 @@ class Lane(Base, DatabaseBackedWorkList, HierarchyWorkList):
                 and self.fiction != genre.default_fiction
             ):
                 logging.error(
-                    "Lane %s has a genre %s that does not match its fiction restriction.",
-                    (self.full_identifier, genre.name),
+                    f"Lane {self.full_identifier}:{self.display_name} with parent {self.parent} has a genre {genre.name} that does not match its fiction restriction."
                 )
             bucket.add(genre.id)
             if lanegenre.recursive:

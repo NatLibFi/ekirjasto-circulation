@@ -68,7 +68,6 @@ def _lane_configuration_from_collection_sizes(estimates):
     # interested in the languages in the estimates so that we get all the
     # smaller languages to make up the "Other Languages" lanes.
     for language, _ in estimates.most_common():
-        print(language)
         # We want to be exact with our large languages because we know
         # what they are.
         if language in {"fin", "swe", "eng"}:
