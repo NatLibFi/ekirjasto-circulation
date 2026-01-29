@@ -204,386 +204,2852 @@ def lane_from_genres(
         lane.add_genre(genre, inclusive=False)
     return lane
 
-
-def create_lanes_for_large_collection(_db, library, languages, priority=0):
-    """Ensure that the lanes appropriate to a large collection are all
-    present.
-
-    This means:
-
-    * A "%(language)s Adult Fiction" lane containing sublanes for each fiction
-        genre.
-    * A "%(language)s Adult Nonfiction" lane containing sublanes for
-        each nonfiction genre.
-    * A "%(language)s YA Fiction" lane containing sublanes for the
-        most popular YA fiction genres.
-    * A "%(language)s YA Nonfiction" lane containing sublanes for the
-        most popular YA fiction genres.
-    * A "%(language)s Children and Middle Grade" lane containing
-        sublanes for childrens' books at different age levels.
+def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1000):
+    """
+    Defines the lanes of the Finnish collection.
 
     :param library: Newly created lanes will be associated with this
         library.
-    :param languages: Newly created lanes will contain only books
+    :param language: Newly created lanes will contain only books
         in these languages.
+    :param priority: An integer that defines the order of main lanes on the main view.
+
     :return: A list of top-level Lane objects.
 
-    TODO: If there are multiple large collections, their top-level lanes do
-    not have distinct display names.
     """
-    if isinstance(languages, str):
-        languages = [languages]
+    if isinstance(language, str):
+        language = [language]
 
     ADULT = SubjectClassifier.AUDIENCES_ADULT
     YA = [SubjectClassifier.AUDIENCE_YOUNG_ADULT]
-    CHILDREN = [SubjectClassifier.AUDIENCE_CHILDREN]
 
-    common_args = dict(languages=languages, media=None)
+    common_args = dict(languages=language, media=None)
     adult_common_args = dict(common_args)
     adult_common_args["audiences"] = ADULT
 
-    nyt_data_source = DataSource.lookup(_db, DataSource.NYT)
-    try:
-        NYTBestSellerAPI.from_config(_db)
-        include_best_sellers = True
-    except CannotLoadConfiguration:
-        # No NYT Best Seller integration is configured.
-        include_best_sellers = False
-
-    sublanes = []
-    if include_best_sellers:
-        best_sellers, ignore = create(
-            _db,
-            Lane,
-            library=library,
-            display_name="Best Sellers",
-            priority=priority,
-            **common_args
-        )
-        priority += 1
-        best_sellers.list_datasource = nyt_data_source
-        sublanes.append(best_sellers)
-
-    adult_fiction_sublanes = []
-    adult_fiction_priority = 0
-    if include_best_sellers:
-        adult_fiction_best_sellers, ignore = create(
-            _db,
-            Lane,
-            library=library,
-            display_name="Best Sellers",
-            fiction=True,
-            priority=adult_fiction_priority,
-            **adult_common_args
-        )
-        adult_fiction_priority += 1
-        adult_fiction_best_sellers.list_datasource = nyt_data_source
-        adult_fiction_sublanes.append(adult_fiction_best_sellers)
-
-    for genre in fiction_genres:
-        if isinstance(genre, str):
-            genre_name = genre
-        else:
-            genre_name = genre.get("name")
-        genre_lane = lane_from_genres(
-            _db, library, [genre], priority=adult_fiction_priority, **adult_common_args
-        )
-        adult_fiction_priority += 1
-        adult_fiction_sublanes.append(genre_lane)
+    # The main lanes shown on the main view.
+    main_lanes = []
 
     adult_fiction, ignore = create(
         _db,
         Lane,
         library=library,
-        display_name="Fiction",
+        display_name="Aikuisten kaunokirjat",
         genres=[],
-        sublanes=adult_fiction_sublanes,
+        sublanes=[],
         fiction=True,
         priority=priority,
         **adult_common_args
     )
     priority += 1
-    sublanes.append(adult_fiction)
+    main_lanes.append(adult_fiction)
 
-    adult_nonfiction_sublanes = []
-    adult_nonfiction_priority = 0
-    if include_best_sellers:
-        adult_nonfiction_best_sellers, ignore = create(
+    # Order of fiction lanes.
+    adult_fiction_priority = 0
+
+    adult_fiction.sublanes.append(
+        lane_from_genres(
             _db,
-            Lane,
-            library=library,
-            display_name="Best Sellers",
-            fiction=False,
-            priority=adult_nonfiction_priority,
+            library,
+            display_name="Yleinen kaunokirjallisuus",
+            genres=[
+                genres.General_Fiction,
+                genres.LGBTQ_Fiction,
+                genres.Urban_Fiction,
+                genres.Religious_Fiction,
+            ],
+            priority=adult_fiction_priority,
             **adult_common_args
         )
-        adult_nonfiction_priority += 1
-        adult_nonfiction_best_sellers.list_datasource = nyt_data_source
-        adult_nonfiction_sublanes.append(adult_nonfiction_best_sellers)
+    )
+    adult_fiction_priority += 1
+    adult_fiction_suspense, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Jännitys",
+        genres=[],
+        fiction=True,
+        sublanes=[],
+        priority=adult_fiction_priority,
+        **adult_common_args
+    )
+    adult_fiction_priority += 1
+    adult_fiction.sublanes.append(adult_fiction_suspense)
+    adult_fiction_suspense.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Jännitys",
+            genres=[
+                genres.Suspense_Thriller,
+                genres.Historical_Thriller,
+                genres.Espionage,
+                genres.Supernatural_Thriller,
+                genres.Medical_Thriller,
+                genres.Political_Thriller,
+                genres.Technothriller,
+                genres.Legal_Thriller,
+                genres.Military_Thriller,
+            ],
+            priority=1,
+            **adult_common_args
+        )
+    )
+    adult_fiction_suspense.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Dekkarit",
+            genres=[
+                genres.Mystery,
+                genres.Crime_Detective_Stories,
+                genres.Hard_Boiled_Mystery,
+                genres.Police_Procedural,
+                genres.Cozy_Mystery,
+                genres.Historical_Mystery,
+                genres.Paranormal_Mystery,
+                genres.Women_Detectives,
+            ],
+            priority=2,
+            **adult_common_args
+        )
+    )
+    adult_fiction_suspense.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Hyvän mielen dekkarit",
+            genres=[genres.Cozy_Mystery],
+            priority=3,
+            **adult_common_args
+        )
+    )
+    adult_fiction_suspense.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Seikkailu",
+            genres=[genres.Adventure],
+            priority=4,
+            **adult_common_args
+        )
+    )
+    adult_fiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Fantasia",
+            genres=[
+                genres.Fantasy,
+                genres.Epic_Fantasy,
+                genres.Historical_Fantasy,
+                genres.Urban_Fantasy,
+            ],
+            priority=adult_fiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_fiction_priority += 1
+    adult_fiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Kauhu",
+            genres=[
+                genres.Horror,
+                genres.Gothic_Horror,
+                genres.Ghost_Stories,
+                genres.Vampires,
+                genres.Werewolves,
+                genres.Occult_Horror,
+            ],
+            priority=adult_fiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_fiction_priority += 1
+    adult_fiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Scifi",
+            genres=[
+                genres.Science_Fiction,
+                genres.Dystopian_SF,
+                genres.Space_Opera,
+                genres.Cyberpunk,
+                genres.Military_SF,
+                genres.Alternative_History,
+                genres.Steampunk,
+                genres.Romantic_SF,
+                genres.Media_Tie_in_SF,
+            ],
+            priority=adult_fiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_fiction_priority += 1
+    adult_fiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Historialliset romaanit",
+            genres=[
+                genres.Historical_Fiction,
+                genres.Westerns,
+                genres.Historical_Fantasy,
+                genres.Historical_Mystery,
+                genres.Historical_Romance,
+                genres.Historical_Thriller,
+            ],
+            priority=adult_fiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_fiction_priority += 1
+    adult_fiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Romantiikka",
+            genres=[
+                genres.Romance,
+                genres.Contemporary_Romance,
+                genres.Gothic_Romance,
+                genres.Historical_Romance,
+                genres.Paranormal_Romance,
+                genres.Western_Romance,
+                genres.Romantic_Suspense,
+                genres.Erotica,
+                genres.Romantic_SF,
+            ],
+            priority=adult_fiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_fiction_priority += 1
+    adult_fiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Sarjakuvat",
+            genres=[genres.Comics_Graphic_Novels],
+            priority=adult_fiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_fiction_priority += 1
+    adult_fiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Huumori",
+            genres=[genres.Humor, genres.Humorous_Fiction],
+            priority=adult_fiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_fiction_priority += 1
+    adult_fiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Klassikot ja kansantarinat",
+            genres=[genres.Classics, genres.Folklore_Stories],
+            priority=adult_fiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_fiction_priority += 1
+    adult_fiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Novellit",
+            genres=[genres.Short_Stories],
+            priority=adult_fiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_fiction_priority += 1
+    adult_fiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Runot ja näytelmät",
+            genres=[genres.Poetry, genres.Drama],
+            priority=adult_fiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_fiction_priority += 1
+    adult_fiction_all, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Kaikki aikuisten kaunokirjat",
+        fiction=True,
+        priority=adult_fiction_priority,
+        **adult_common_args
+    )
+    adult_fiction.sublanes.append(adult_fiction_all)
 
-    for genre in nonfiction_genres:
-        # "Life Strategies" is a YA-specific genre that should not be
-        # included in the Adult Nonfiction lane.
-        if genre != genres.Life_Strategies:
-            if isinstance(genre, str):
-                genre_name = genre
-            else:
-                genre_name = genre.get("name")
-            genre_lane = lane_from_genres(
-                _db,
-                library,
-                [genre],
-                priority=adult_nonfiction_priority,
-                **adult_common_args
-            )
-            adult_nonfiction_priority += 1
-            adult_nonfiction_sublanes.append(genre_lane)
-
+    # Adult nonfiction.
     adult_nonfiction, ignore = create(
         _db,
         Lane,
         library=library,
-        display_name="Nonfiction",
+        display_name="Aikuisten tietokirjat",
         genres=[],
-        sublanes=adult_nonfiction_sublanes,
+        sublanes=[],
         fiction=False,
         priority=priority,
         **adult_common_args
     )
     priority += 1
-    sublanes.append(adult_nonfiction)
+    main_lanes.append(adult_fiction)
 
-    ya_common_args = dict(common_args)
-    ya_common_args["audiences"] = YA
+    # Order of nonfiction lanes.
+    adult_nonfiction_priority = 0
 
-    ya_fiction, ignore = create(
+    adult_nonfiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Elämäkerrat ja muistelmat",
+            genres=[genres.Biography_Memoir],
+            priority=adult_nonfiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_nonfiction_priority += 1
+    adult_nonfiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Historia",
+            genres=[
+                genres.History,
+                genres.African_History,
+                genres.Ancient_History,
+                genres.Asian_History,
+                genres.Civil_War_History,
+                genres.European_History,
+                genres.Latin_American_History,
+                genres.Medieval_History,
+                genres.Middle_East_History,
+                genres.Military_History,
+                genres.Modern_History,
+                genres.Renaissance_Early_Modern_History,
+                genres.United_States_History,
+                genres.World_History,
+            ],
+            priority=adult_nonfiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_nonfiction_priority += 1
+    adult_society, ignore = create(
         _db,
         Lane,
         library=library,
-        display_name="Young Adult Fiction",
+        display_name="Yhteiskunta",
         genres=[],
-        fiction=True,
+        sublanes=[],
+        priority=adult_nonfiction_priority,
+        **adult_common_args
+    )
+    adult_nonfiction_priority += 1
+    adult_nonfiction.sublanes.append(adult_society)
+    adult_society.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Filosofia",
+            genres=[genres.Philosophy],
+            priority=1,
+            **adult_common_args
+        )
+    )
+    adult_society.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Yhteiskunta",
+            genres=[
+                genres.Social_Sciences,
+                genres.Political_Science,
+                genres.Law,
+                genres.Study_Aids,
+            ],
+            priority=2,
+            **adult_common_args
+        )
+    )
+    adult_economics, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Talous ja johtaminen",
+        genres=[],
+        sublanes=[],
+        priority=adult_nonfiction_priority,
+        **adult_common_args
+    )
+    adult_nonfiction_priority += 1
+    adult_nonfiction.sublanes.append(adult_economics)
+    adult_economics.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Sijoittaminen",
+            genres=[
+                genres.Personal_Finance_Business,
+                genres.Personal_Finance_Investing,
+                genres.Real_Estate,
+            ],
+            priority=1,
+            **adult_common_args
+        )
+    )
+    adult_economics.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Liiketalous ja johtaminen",
+            genres=[genres.Business, genres.Management_Leadership],
+            priority=2,
+            **adult_common_args
+        )
+    )
+    adult_economics.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Taloustiede",
+            genres=[genres.Economics],
+            priority=3,
+            **adult_common_args
+        )
+    )
+    adult_psychology, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Psykologia ja elämäntaito",
+        genres=[],
+        sublanes=[],
+        priority=adult_nonfiction_priority,
+        **adult_common_args
+    )
+    adult_nonfiction_priority += 1
+    adult_nonfiction.sublanes.append(adult_psychology)
+    adult_psychology.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Elämäntaito",
+            genres=[genres.Self_Help, genres.Life_Strategies],
+            priority=1,
+            **adult_common_args
+        )
+    )
+    adult_psychology.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Psykologia",
+            genres=[genres.Psychology],
+            priority=2,
+            **adult_common_args
+        )
+    )
+    adult_psychology.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Filosofia",
+            genres=[genres.Philosophy],
+            priority=3,
+            **adult_common_args
+        )
+    )
+    adult_nonfiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Matkailu",
+            genres=[genres.Travel],
+            priority=adult_nonfiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_nonfiction_priority += 1
+    adult_spirit, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Uskonto ja hengellisyys",
+        genres=[],
+        sublanes=[],
+        priority=adult_nonfiction_priority,
+        **adult_common_args
+    )
+    adult_nonfiction_priority += 1
+    adult_nonfiction.sublanes.append(adult_spirit)
+    adult_spirit.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Keho ja mieli",
+            genres=[genres.Body_Mind_Spirit],
+            priority=1,
+            **adult_common_args
+        )
+    )
+    adult_spirit.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Uskonnot",
+            genres=[
+                genres.Religion_Spirituality,
+                genres.Buddhism,
+                genres.Christianity,
+                genres.Hinduism,
+                genres.Islam,
+                genres.Judaism,
+            ],
+            priority=2,
+            **adult_common_args
+        )
+    )
+    adult_nonfiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Vanhemmuus ja perhe",
+            genres=[
+                genres.Parenting_Family,
+                genres.Family_Relationships,
+                genres.Parenting,
+            ],
+            priority=adult_nonfiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_nonfiction_priority += 1
+    adult_nonfiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Ruoka ja terveys",
+            genres=[
+                genres.Food_Health,
+                genres.Cooking,
+                genres.Health_Diet,
+                genres.Vegetarian_Vegan,
+                genres.Bartending_Cocktails,
+            ],
+            priority=adult_nonfiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_nonfiction_priority += 1
+    adult_nonfiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Harrastukset ja koti",
+            genres=[
+                genres.Hobbies_Home,
+                genres.Antiques_Collectibles,
+                genres.Crafts_Hobbies,
+                genres.Gardening,
+                genres.Games_Activities,
+                genres.House_Home,
+                genres.Pets,
+            ],
+            priority=adult_nonfiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_nonfiction_priority += 1
+    adult_nonfiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Urheilu",
+            genres=[genres.Sports],
+            priority=adult_nonfiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_nonfiction_priority += 1
+    adult_nonfiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Luonto ja eläimet",
+            genres=[genres.Nature],
+            priority=adult_nonfiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_nonfiction_priority += 1
+    adult_science, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Tiede ja teknologia",
+        genres=[],
+        sublanes=[],
+        priority=adult_nonfiction_priority,
+        **adult_common_args
+    )
+    adult_nonfiction_priority += 1
+    adult_nonfiction.sublanes.append(adult_science)
+    adult_science.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Teknologia",
+            genres=[genres.Technology, genres.Computers],
+            priority=1,
+            **adult_common_args
+        )
+    )
+    adult_science.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Luonnontieteet",
+            genres=[genres.Mathematics, genres.Science],
+            priority=2,
+            **adult_common_args
+        )
+    )
+    adult_science.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Lääketiede",
+            genres=[genres.Medical],
+            priority=3,
+            **adult_common_args
+        )
+    )
+    adult_science.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Kielet ja kirjallisuus",
+            genres=[
+                genres.Dictionaries,
+                genres.Foreign_Language_Study,
+                genres.Literary_Criticism,
+            ],
+            priority=4,
+            **adult_common_args
+        )
+    )
+    adult_nonfiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="True Crime",
+            genres=[genres.True_Crime],
+            priority=adult_nonfiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_nonfiction_priority += 1
+    adult_nonfiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Taiteet",
+            genres=[
+                genres.Art_Culture,
+                genres.Film_TV,
+                genres.Music,
+                genres.Performing_Arts,
+                genres.Architecture,
+                genres.Art,
+                genres.Art_Criticism_Theory,
+                genres.Art_History,
+                genres.Design,
+                genres.Fashion,
+                genres.Photography,
+            ],
+            priority=adult_nonfiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_nonfiction_priority += 1
+    adult_nonfiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Muut tietokirjat",
+            genres=[
+                genres.Humorous_Nonfiction,
+                genres.Reference_Study_Aids,
+                genres.Folklore,
+                genres.Education,
+                genres.Periodicals,
+            ],
+            priority=adult_nonfiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_nonfiction_priority += 1
+    adult_nonfiction_all, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Kaikki aikuisten tietokirjat",
+        fiction=False,
+        priority=adult_nonfiction_priority,
+        **adult_common_args
+    )
+    adult_nonfiction.sublanes.append(adult_nonfiction_all)
+
+    # YA lanes
+    ya_common_args = dict(common_args)
+    ya_common_args["audiences"] = YA
+
+    ya_books, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Nuortenkirjat",
+        genres=[],
         sublanes=[],
         priority=priority,
         **ya_common_args
     )
     priority += 1
-    sublanes.append(ya_fiction)
+    main_lanes.append(ya_books)
 
-    ya_fiction_priority = 0
-    if include_best_sellers:
-        ya_fiction_best_sellers, ignore = create(
-            _db,
-            Lane,
-            library=library,
-            display_name="Best Sellers",
-            fiction=True,
-            priority=ya_fiction_priority,
-            **ya_common_args
-        )
-        ya_fiction_priority += 1
-        ya_fiction_best_sellers.list_datasource = nyt_data_source
-        ya_fiction.sublanes.append(ya_fiction_best_sellers)
+    # Order of YA lanes.
+    ya_priority = 0
 
-    ya_fiction.sublanes.append(
-        lane_from_genres(
-            _db,
-            library,
-            [genres.Dystopian_SF],
-            priority=ya_fiction_priority,
-            **ya_common_args
-        )
+    ya_general, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Yleinen kaunokirjallisuus",
+        fiction=True,
+        priority=ya_priority,
+        **ya_common_args
     )
-    ya_fiction_priority += 1
-    ya_fiction.sublanes.append(
-        lane_from_genres(
-            _db,
-            library,
-            [genres.Fantasy],
-            priority=ya_fiction_priority,
-            **ya_common_args
-        )
+    ya_priority += 1
+    ya_general.add_genres(
+        [
+            genres.General_Fiction.name,
+            genres.Diary_Stories.name,
+            genres.Family_Stories.name,
+            genres.Festivities_Holidays.name,
+            genres.Easter_Stories.name,
+            genres.Christmas_Stories.name,
+            genres.Halloween_Stories.name,
+            genres.Classics.name,
+            genres.School_Study.name,
+            genres.Drama.name,
+            genres.Folklore_Stories.name,
+            genres.LGBTQ_Fiction.name,
+            genres.Historical_Fiction.name,
+            genres.Growing_Up.name,
+        ]
     )
-    ya_fiction_priority += 1
-    ya_fiction.sublanes.append(
-        lane_from_genres(
-            _db,
-            library,
-            [genres.Comics_Graphic_Novels],
-            priority=ya_fiction_priority,
-            **ya_common_args
-        )
+    ya_books.sublanes.append(ya_general)
+    ya_suspense, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Jännitys",
+        fiction=True,
+        priority=ya_priority,
+        **ya_common_args
     )
-    ya_fiction_priority += 1
-    ya_fiction.sublanes.append(
-        lane_from_genres(
-            _db,
-            library,
-            [genres.General_Fiction],
-            display_name="Contemporary Fiction",
-            priority=ya_fiction_priority,
-            **ya_common_args
-        )
+    ya_priority += 1
+    ya_suspense.add_genres(
+        [
+            genres.Mystery.name,
+            genres.Crime_Detective_Stories.name,
+            genres.Suspense_Thriller.name,
+            genres.Adventure.name,
+        ]
     )
-    ya_fiction_priority += 1
-    ya_fiction.sublanes.append(
-        lane_from_genres(
-            _db,
-            library,
-            [genres.LGBTQ_Fiction],
-            priority=ya_fiction_priority,
-            **ya_common_args
-        )
+    ya_books.sublanes.append(ya_suspense)
+    ya_fantasy, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Fantasia",
+        fiction=True,
+        priority=ya_priority,
+        **ya_common_args
     )
-    ya_fiction_priority += 1
-    ya_fiction.sublanes.append(
-        lane_from_genres(
-            _db,
-            library,
-            [genres.Suspense_Thriller, genres.Mystery],
-            display_name="Mystery & Thriller",
-            priority=ya_fiction_priority,
-            **ya_common_args
-        )
+    ya_priority += 1
+    ya_fantasy.add_genre(genres.Fantasy.name)
+    ya_books.sublanes.append(ya_fantasy)
+    ya_scifi, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Scifi",
+        fiction=True,
+        priority=ya_priority,
+        **ya_common_args
     )
-    ya_fiction_priority += 1
-    ya_fiction.sublanes.append(
-        lane_from_genres(
-            _db,
-            library,
-            [genres.Romance],
-            priority=ya_fiction_priority,
-            **ya_common_args
-        )
+    ya_priority += 1
+    ya_scifi.add_genre(genres.Science_Fiction.name)
+    ya_books.sublanes.append(ya_scifi)
+    ya_horror, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Kauhu",
+        fiction=True,
+        priority=ya_priority,
+        **ya_common_args
     )
-    ya_fiction_priority += 1
-    ya_fiction.sublanes.append(
-        lane_from_genres(
-            _db,
-            library,
-            [genres.Science_Fiction],
-            exclude_genres=[genres.Dystopian_SF, genres.Steampunk],
-            priority=ya_fiction_priority,
-            **ya_common_args
-        )
+    ya_priority += 1
+    ya_horror.add_genre(genres.Horror.name)
+    ya_books.sublanes.append(ya_horror)
+    ya_romance, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Romantiikka",
+        fiction=True,
+        priority=ya_priority,
+        **ya_common_args
     )
-    ya_fiction_priority += 1
-    ya_fiction.sublanes.append(
-        lane_from_genres(
-            _db,
-            library,
-            [genres.Steampunk],
-            priority=ya_fiction_priority,
-            **ya_common_args
-        )
+    ya_priority += 1
+    ya_romance.add_genre(genres.Romance.name)
+    ya_books.sublanes.append(ya_romance)
+    ya_sports, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Urheilu",
+        fiction=True,
+        priority=ya_priority,
+        **ya_common_args
     )
-    ya_fiction_priority += 1
-
+    ya_priority += 1
+    ya_sports.add_genres(
+        [
+            genres.Sports_Stories.name,
+            genres.Football_Stories.name,
+            genres.Hockey_Stories.name,
+            genres.Dance_Stories.name,
+            genres.Riding_Stories.name,
+            genres.Skating_Stories.name,
+        ]
+    )
+    ya_books.sublanes.append(ya_sports)
+    ya_animals, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Eläimet",
+        fiction=True,
+        priority=ya_priority,
+        **ya_common_args
+    )
+    ya_priority += 1
+    ya_animals.add_genres(
+        [genres.Animal_Stories.name, genres.Horse_Stories.name, genres.Pet_Stories.name]
+    )
+    ya_books.sublanes.append(ya_animals)
+    ya_humor, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Huumori",
+        fiction=True,
+        priority=ya_priority,
+        **ya_common_args
+    )
+    ya_priority += 1
+    ya_humor.add_genres([genres.Humor.name, genres.Humorous_Fiction.name])
+    ya_books.sublanes.append(ya_humor)
+    ya_comics, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Sarjakuvat",
+        fiction=True,
+        priority=ya_priority,
+        **ya_common_args
+    )
+    ya_priority += 1
+    ya_comics.add_genre(genres.Comics_Graphic_Novels.name)
+    ya_books.sublanes.append(ya_comics)
+    ya_poetry, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Runot",
+        fiction=True,
+        priority=ya_priority,
+        **ya_common_args
+    )
+    ya_priority += 1
+    ya_poetry.add_genre(genres.Poetry.name)
+    ya_books.sublanes.append(ya_poetry)
+    ya_difficult, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Vaikeat aiheet",
+        fiction=True,
+        priority=ya_priority,
+        **ya_common_args
+    )
+    ya_priority += 1
+    ya_difficult.add_genres(
+        [
+            genres.Difficult_Topics.name,
+            genres.Bullying.name,
+            genres.Death.name,
+            genres.Multicultural_Stories.name,
+            genres.Disabilities.name,
+            genres.War.name,
+            genres.Drugs.name,
+            genres.Eating_Disorders_Self_Image.name,
+            genres.Mental_Health.name,
+        ]
+    )
+    ya_books.sublanes.append(ya_difficult)
     ya_nonfiction, ignore = create(
         _db,
         Lane,
         library=library,
-        display_name="Young Adult Nonfiction",
+        display_name="Tietokirjat",
         genres=[],
         fiction=False,
-        sublanes=[],
-        priority=priority,
+        priority=ya_priority,
         **ya_common_args
     )
-    priority += 1
-    sublanes.append(ya_nonfiction)
-
-    ya_nonfiction_priority = 0
-    if include_best_sellers:
-        ya_nonfiction_best_sellers, ignore = create(
-            _db,
-            Lane,
-            library=library,
-            display_name="Best Sellers",
-            fiction=False,
-            priority=ya_nonfiction_priority,
-            **ya_common_args
-        )
-        ya_nonfiction_priority += 1
-        ya_nonfiction_best_sellers.list_datasource = nyt_data_source
-        ya_nonfiction.sublanes.append(ya_nonfiction_best_sellers)
-
-    ya_nonfiction.sublanes.append(
-        lane_from_genres(
-            _db,
-            library,
-            [genres.Biography_Memoir],
-            display_name="Biography",
-            priority=ya_nonfiction_priority,
-            **ya_common_args
-        )
-    )
-    ya_nonfiction_priority += 1
-    ya_nonfiction.sublanes.append(
-        lane_from_genres(
-            _db,
-            library,
-            [genres.History, genres.Social_Sciences],
-            display_name="History & Sociology",
-            priority=ya_nonfiction_priority,
-            **ya_common_args
-        )
-    )
-    ya_nonfiction_priority += 1
-    ya_nonfiction.sublanes.append(
-        lane_from_genres(
-            _db,
-            library,
-            [genres.Life_Strategies],
-            priority=ya_nonfiction_priority,
-            **ya_common_args
-        )
-    )
-    ya_nonfiction_priority += 1
-    ya_nonfiction.sublanes.append(
-        lane_from_genres(
-            _db,
-            library,
-            [genres.Religion_Spirituality],
-            priority=ya_nonfiction_priority,
-            **ya_common_args
-        )
-    )
-    ya_nonfiction_priority += 1
-
-    children_common_args = dict(common_args)
-    children_common_args["target_age"] = SubjectClassifier.range_tuple(
-        0, SubjectClassifier.YOUNG_ADULT_AGE_CUTOFF - 1
-    )
-
-    children, ignore = create(
+    ya_priority += 1
+    ya_books.sublanes.append(ya_nonfiction)
+    ya_all, ignore = create(
         _db,
         Lane,
         library=library,
-        display_name="Children and Middle Grade",
+        display_name="Kaikki nuortenkirjat",
         genres=[],
-        fiction=None,
+        priority=ya_priority,
+        **ya_common_args
+    )
+    ya_books.sublanes.append(ya_all)
+
+    # Children's lanes
+    children_common_args = dict(common_args)
+    children_common_args["target_age"] = SubjectClassifier.range_tuple(
+        0, SubjectClassifier.YOUNG_ADULT_AGE_CUTOFF - 2
+    )
+
+    childrens_books, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Lastenkirjat",
+        genres=[],
         sublanes=[],
         priority=priority,
         **children_common_args
     )
     priority += 1
-    sublanes.append(children)
+    main_lanes.append(childrens_books)
 
+    # Order of children's lanes.
     children_priority = 0
-    if include_best_sellers:
-        children_best_sellers, ignore = create(
-            _db,
-            Lane,
-            library=library,
-            display_name="Best Sellers",
-            priority=children_priority,
-            **children_common_args
-        )
-        children_priority += 1
-        children_best_sellers.list_datasource = nyt_data_source
-        children.sublanes.append(children_best_sellers)
 
+    children_general, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Yleinen kaunokirjallisuus",
+        fiction=True,
+        priority=children_priority,
+        **children_common_args
+    )
+    children_priority += 1
+    children_general.add_genres(
+        [
+            genres.General_Fiction.name,
+            genres.Diary_Stories.name,
+            genres.Family_Stories.name,
+            genres.Festivities_Holidays.name,
+            genres.Easter_Stories.name,
+            genres.Christmas_Stories.name,
+            genres.Halloween_Stories.name,
+            genres.Classics.name,
+            genres.School_Study.name,
+            genres.Drama.name,
+            genres.Folklore_Stories.name,
+            genres.LGBTQ_Fiction.name,
+            genres.Sports_Stories.name,
+            genres.Vehicles_Technology.name,
+            genres.Cars.name,
+            genres.Trains.name,
+            genres.Airplanes.name,
+        ]
+    )
+    childrens_books.sublanes.append(children_general)
+    children_animals, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Eläimet",
+        fiction=True,
+        priority=children_priority,
+        **children_common_args
+    )
+    children_priority += 1
+    children_animals.add_genres(
+        [genres.Animal_Stories.name, genres.Horse_Stories.name, genres.Pet_Stories.name]
+    )
+    childrens_books.sublanes.append(children_animals)
+    children_humor, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Huumori",
+        fiction=True,
+        priority=children_priority,
+        **children_common_args
+    )
+    children_priority += 1
+    children_humor.add_genres([genres.Humor.name, genres.Humorous_Fiction.name])
+    childrens_books.sublanes.append(children_humor)
+    children_suspense, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Jännitys",
+        fiction=True,
+        priority=children_priority,
+        **children_common_args
+    )
+    children_priority += 1
+    children_suspense.add_genres(
+        [
+            genres.Mystery.name,
+            genres.Crime_Detective_Stories.name,
+            genres.Suspense_Thriller.name,
+            genres.Historical_Thriller.name,
+            genres.Adventure.name,
+            genres.Superheroes.name,
+        ]
+    )
+    childrens_books.sublanes.append(children_suspense)
+    children_scifi, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Scifi ja fantasia",
+        fiction=True,
+        priority=children_priority,
+        **children_common_args
+    )
+    children_priority += 1
+    children_scifi.add_genres([genres.Science_Fiction.name, genres.Fantasy.name])
+    childrens_books.sublanes.append(children_scifi)
+    children_horror, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Kauhu",
+        fiction=True,
+        priority=children_priority,
+        **children_common_args
+    )
+    children_priority += 1
+    children_horror.add_genre(genres.Horror.name)
+    childrens_books.sublanes.append(children_horror)
+    picture_books, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Kuvakirjat",
+        target_age=(0, 4),
+        genres=[],
+        fiction=None,
+        priority=children_priority,
+    )
+    children_priority += 1
+    childrens_books.sublanes.append(picture_books)
+    children_comics, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Sarjakuvat",
+        fiction=True,
+        priority=children_priority,
+        **children_common_args
+    )
+    children_priority += 1
+    children_comics.add_genre(genres.Comics_Graphic_Novels.name)
+    childrens_books.sublanes.append(children_comics)
+    children_poetry, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Runot",
+        fiction=True,
+        priority=children_priority,
+        **children_common_args
+    )
+    children_priority += 1
+    children_poetry.add_genre(genres.Poetry.name)
+    childrens_books.sublanes.append(children_poetry)
+    children_difficult, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Vaikeat aiheet",
+        fiction=True,
+        priority=children_priority,
+        **children_common_args
+    )
+    children_priority += 1
+    children_difficult.add_genres(
+        [
+            genres.Difficult_Topics.name,
+            genres.Bullying.name,
+            genres.Death.name,
+            genres.Multicultural_Stories.name,
+            genres.Disabilities.name,
+            genres.War.name,
+            genres.Drugs.name,
+            genres.Eating_Disorders_Self_Image.name,
+            genres.Mental_Health.name,
+        ]
+    )
+    childrens_books.sublanes.append(children_difficult)
+    children_nonfiction, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Tietokirjat",
+        genres=[],
+        fiction=False,
+        priority=children_priority,
+        **children_common_args
+    )
+    children_priority += 1
+    childrens_books.sublanes.append(children_nonfiction)
+    children_all, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Kaikki lastenkirjat",
+        genres=[],
+        priority=children_priority,
+        **children_common_args
+    )
+    childrens_books.sublanes.append(children_all)
+    return priority
+
+
+def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2000):
+    """
+    Defines the lanes of the Swedish collection.
+
+    :param library: Newly created lanes will be associated with this
+        library.
+    :param language: Newly created lanes will contain only books
+        in these languages.
+    :param priority: An integer that defines the order of main lanes on the main view.
+
+    :return: A list of top-level Lane objects.
+
+    """
+    if isinstance(language, str):
+        language = [language]
+
+    ADULT = SubjectClassifier.AUDIENCES_ADULT
+    YA = [SubjectClassifier.AUDIENCE_YOUNG_ADULT]
+
+    common_args = dict(languages=language, media=None)
+    adult_common_args = dict(common_args)
+    adult_common_args["audiences"] = ADULT
+
+    main_lanes = []
+
+    all_swedish, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Böcker på svenska",
+        genres=[],
+        sublanes=[],
+        priority=priority,
+        **adult_common_args
+    )
+    priority += 1
+    main_lanes.append(all_swedish)
+
+    adult_fiction, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Skönlitteratur för vuxen",
+        genres=[],
+        fiction=True,
+        sublanes=[],
+        priority=1,
+        **adult_common_args
+    )
+    all_swedish.sublanes.append(adult_fiction)
+
+    # Order of fiction lanes.
+    adult_fiction_priority = 0
+
+    adult_fiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Skönlitteratur allmänt",
+            genres=[
+                genres.General_Fiction,
+                genres.LGBTQ_Fiction,
+                genres.Urban_Fiction,
+                genres.Religious_Fiction,
+                genres.Humor,
+                genres.Humorous_Fiction,
+            ],
+            priority=adult_fiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_fiction_priority += 1
+    adult_fiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Historiska romaner",
+            genres=[
+                genres.Historical_Fiction,
+                genres.Westerns,
+                genres.Historical_Fantasy,
+                genres.Historical_Mystery,
+                genres.Historical_Romance,
+                genres.Historical_Thriller,
+            ],
+            priority=adult_fiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_fiction_priority += 1
+    adult_fiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Deckare",
+            genres=[
+                genres.Mystery,
+                genres.Crime_Detective_Stories,
+                genres.Hard_Boiled_Mystery,
+                genres.Police_Procedural,
+                genres.Cozy_Mystery,
+                genres.Historical_Mystery,
+                genres.Paranormal_Mystery,
+                genres.Women_Detectives,
+                genres.Cozy_Mystery,
+            ],
+            priority=adult_fiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_fiction_priority += 1
+    adult_fiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Spänning",
+            genres=[
+                genres.Suspense_Thriller,
+                genres.Historical_Thriller,
+                genres.Espionage,
+                genres.Supernatural_Thriller,
+                genres.Medical_Thriller,
+                genres.Political_Thriller,
+                genres.Technothriller,
+                genres.Legal_Thriller,
+                genres.Military_Thriller,
+                genres.Adventure,
+            ],
+            priority=adult_fiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_fiction_priority += 1
+    adult_fiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Romantik",
+            genres=[
+                genres.Romance,
+                genres.Contemporary_Romance,
+                genres.Gothic_Romance,
+                genres.Historical_Romance,
+                genres.Paranormal_Romance,
+                genres.Western_Romance,
+                genres.Romantic_Suspense,
+                genres.Erotica,
+                genres.Romantic_SF,
+            ],
+            priority=adult_fiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_fiction_priority += 1
+
+    adult_fiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Fantasi",
+            genres=[
+                genres.Fantasy,
+                genres.Epic_Fantasy,
+                genres.Historical_Fantasy,
+                genres.Urban_Fantasy,
+            ],
+            priority=adult_fiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_fiction_priority += 1
+    adult_fiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Skräck",
+            genres=[
+                genres.Horror,
+                genres.Gothic_Horror,
+                genres.Ghost_Stories,
+                genres.Vampires,
+                genres.Werewolves,
+                genres.Occult_Horror,
+            ],
+            priority=adult_fiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_fiction_priority += 1
+    adult_fiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Scifi",
+            genres=[
+                genres.Science_Fiction,
+                genres.Dystopian_SF,
+                genres.Space_Opera,
+                genres.Cyberpunk,
+                genres.Military_SF,
+                genres.Alternative_History,
+                genres.Steampunk,
+                genres.Romantic_SF,
+                genres.Media_Tie_in_SF,
+            ],
+            priority=adult_fiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_fiction_priority += 1
+    adult_fiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Klassiker och folkdikter",
+            genres=[genres.Classics, genres.Folklore_Stories],
+            priority=adult_fiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_fiction_priority += 1
+    adult_fiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Dikter och skådespel",
+            genres=[genres.Poetry, genres.Drama],
+            priority=adult_fiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_fiction_priority += 1
+    adult_fiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Tecknade serier",
+            genres=[genres.Comics_Graphic_Novels],
+            priority=adult_fiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_fiction_priority += 1
+    adult_fiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Noveller",
+            genres=[genres.Short_Stories],
+            priority=adult_fiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_fiction_priority += 1
+    adult_fiction_all, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Alla skönlitteratur för vuxen",
+        genres=[],
+        priority=adult_fiction_priority,
+        **adult_common_args
+    )
+    adult_fiction.sublanes.append(adult_fiction_all)
+
+    # Adult nonfiction
+    adult_nonfiction, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Facklitteratur för vuxen",
+        genres=[],
+        sublanes=[],
+        fiction=False,
+        priority=2,
+        **adult_common_args
+    )
+    all_swedish.sublanes.append(adult_nonfiction)
+
+    # Order of nonfiction lanes.
+    adult_nonfiction_priority = 0
+
+    adult_nonfiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Biografier och memoarer",
+            genres=[genres.Biography_Memoir],
+            priority=adult_nonfiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_nonfiction_priority += 1
+    adult_nonfiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Historia",
+            genres=[
+                genres.History,
+                genres.African_History,
+                genres.Ancient_History,
+                genres.Asian_History,
+                genres.Civil_War_History,
+                genres.European_History,
+                genres.Latin_American_History,
+                genres.Medieval_History,
+                genres.Middle_East_History,
+                genres.Military_History,
+                genres.Modern_History,
+                genres.Renaissance_Early_Modern_History,
+                genres.United_States_History,
+                genres.World_History,
+            ],
+            priority=adult_nonfiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_nonfiction_priority += 1
+    adult_nonfiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Samhälle",
+            genres=[
+                genres.Social_Sciences,
+                genres.Political_Science,
+                genres.Law,
+                genres.Study_Aids,
+                genres.Philosophy,
+            ],
+            priority=adult_nonfiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_nonfiction_priority += 1
+    adult_nonfiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Ekonomi och management",
+            genres=[
+                genres.Personal_Finance_Business,
+                genres.Personal_Finance_Investing,
+                genres.Real_Estate,
+                genres.Business,
+                genres.Management_Leadership,
+                genres.Economics,
+            ],
+            priority=1,
+            **adult_common_args
+        )
+    )
+    adult_nonfiction_priority += 1
+    adult_nonfiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Psykologi och självhjälpsböcker",
+            genres=[genres.Self_Help, genres.Life_Strategies, genres.Psychology],
+            priority=1,
+            **adult_common_args
+        )
+    )
+    adult_nonfiction_priority += 1
+    adult_nonfiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Hem och hobbyer",
+            genres=[
+                genres.Hobbies_Home,
+                genres.Antiques_Collectibles,
+                genres.Crafts_Hobbies,
+                genres.Gardening,
+                genres.Games_Activities,
+                genres.House_Home,
+                genres.Pets,
+            ],
+            priority=adult_nonfiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_nonfiction_priority += 1
+    adult_nonfiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Mat och hälsa",
+            genres=[
+                genres.Food_Health,
+                genres.Cooking,
+                genres.Health_Diet,
+                genres.Vegetarian_Vegan,
+                genres.Bartending_Cocktails,
+            ],
+            priority=adult_nonfiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_nonfiction_priority += 1
+    adult_nonfiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Vetenskap och teknologi",
+            genres=[
+                genres.Technology,
+                genres.Computers,
+                genres.Mathematics,
+                genres.Science,
+                genres.Medical,
+                genres.Nature,
+                genres.Social_Sciences,
+            ],
+            priority=1,
+            **adult_common_args
+        )
+    )
+    adult_nonfiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Idrott",
+            genres=[genres.Sports],
+            priority=adult_nonfiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_nonfiction_priority += 1
+    adult_nonfiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Resor",
+            genres=[genres.Travel],
+            priority=adult_nonfiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_nonfiction_priority += 1
+    adult_nonfiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Andra faktaböcker",
+            genres=[
+                genres.Dictionaries,
+                genres.Foreign_Language_Study,
+                genres.Literary_Criticism,
+                genres.Body_Mind_Spirit,
+                genres.Religion_Spirituality,
+                genres.Buddhism,
+                genres.Christianity,
+                genres.Hinduism,
+                genres.Islam,
+                genres.Judaism,
+                genres.Parenting_Family,
+                genres.Family_Relationships,
+                genres.Parenting,
+                genres.True_Crime,
+                genres.Art_Culture,
+                genres.Film_TV,
+                genres.Music,
+                genres.Performing_Arts,
+                genres.Architecture,
+                genres.Art,
+                genres.Art_Criticism_Theory,
+                genres.Art_History,
+                genres.Design,
+                genres.Fashion,
+                genres.Photography,
+                genres.Humorous_Nonfiction,
+                genres.Reference_Study_Aids,
+                genres.Folklore,
+                genres.Education,
+                genres.Periodicals,
+            ],
+            priority=adult_nonfiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_nonfiction_priority += 1
+    adult_nonfiction_all, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Alla facklitteratur för vuxen",
+        fiction=False,
+        priority=adult_nonfiction_priority,
+        **adult_common_args
+    )
+    adult_nonfiction.sublanes.append(adult_nonfiction_all)
+
+    # # YA lanes
+    ya_common_args = dict(common_args)
+    ya_common_args["audiences"] = YA
+
+    ya_books, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Böcker för ungdomar",
+        genres=[],
+        sublanes=[],
+        priority=3,
+        **ya_common_args
+    )
+    all_swedish.sublanes.append(ya_books)
+
+    # Order of YA lanes.
+    ya_priority = 0
+
+    ya_general, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Skönlitteratur allmänt",
+        fiction=True,
+        priority=ya_priority,
+        **ya_common_args
+    )
+    ya_priority += 1
+    ya_general.add_genres(
+        [
+            genres.General_Fiction.name,
+            genres.Diary_Stories.name,
+            genres.Family_Stories.name,
+            genres.Festivities_Holidays.name,
+            genres.Easter_Stories.name,
+            genres.Christmas_Stories.name,
+            genres.Halloween_Stories.name,
+            genres.Classics.name,
+            genres.School_Study.name,
+            genres.Drama.name,
+            genres.Folklore_Stories.name,
+            genres.Westerns.name,
+            genres.LGBTQ_Fiction.name,
+            genres.Sports_Stories.name,
+            genres.Football_Stories.name,
+            genres.Hockey_Stories.name,
+            genres.Dance_Stories.name,
+            genres.Riding_Stories.name,
+            genres.Skating_Stories.name,
+            genres.Animal_Stories.name,
+            genres.Horse_Stories.name,
+            genres.Pet_Stories.name,
+            genres.Humor.name,
+            genres.Humorous_Fiction.name,
+            genres.Comics_Graphic_Novels.name,
+            genres.Difficult_Topics.name,
+            genres.Bullying.name,
+            genres.Death.name,
+            genres.Multicultural_Stories.name,
+            genres.Disabilities.name,
+            genres.War.name,
+            genres.Drugs.name,
+            genres.Eating_Disorders_Self_Image.name,
+            genres.Mental_Health.name,
+            genres.Growing_Up.name,
+        ]
+    )
+    ya_books.sublanes.append(ya_general)
+    ya_fantasy, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Fantasi",
+        fiction=True,
+        priority=ya_priority,
+        **ya_common_args
+    )
+    ya_priority += 1
+    ya_fantasy.add_genre(genres.Fantasy.name)
+    ya_books.sublanes.append(ya_fantasy)
+    ya_adventure, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Äventyr",
+        fiction=True,
+        priority=ya_priority,
+        **ya_common_args
+    )
+    ya_priority += 1
+    ya_adventure.add_genre(genres.Adventure.name)
+    ya_books.sublanes.append(ya_adventure)
+    ya_suspense, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Spänning",
+        fiction=True,
+        priority=ya_priority,
+        **ya_common_args
+    )
+    ya_priority += 1
+    ya_suspense.add_genres(
+        [
+            genres.Mystery.name,
+            genres.Crime_Detective_Stories.name,
+            genres.Suspense_Thriller.name,
+        ]
+    )
+    ya_books.sublanes.append(ya_suspense)
+    ya_scifi, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Scifi",
+        fiction=True,
+        priority=ya_priority,
+        **ya_common_args
+    )
+    ya_priority += 1
+    ya_scifi.add_genre(genres.Science_Fiction.name)
+    ya_books.sublanes.append(ya_scifi)
+    ya_horror, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Skräk",
+        fiction=True,
+        priority=ya_priority,
+        **ya_common_args
+    )
+    ya_priority += 1
+    ya_horror.add_genre(genres.Horror.name)
+    ya_books.sublanes.append(ya_horror)
+    ya_historical, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Historiska romaner",
+        fiction=True,
+        priority=ya_priority,
+        **ya_common_args
+    )
+    ya_priority += 1
+    ya_historical.add_genre(genres.Historical_Fiction.name)
+    ya_books.sublanes.append(ya_historical)
+    ya_romance, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Romantik",
+        fiction=True,
+        priority=ya_priority,
+        **ya_common_args
+    )
+    ya_priority += 1
+    ya_romance.add_genre(genres.Romance.name)
+    ya_books.sublanes.append(ya_romance)
+    ya_poetry, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Dikter och skådespel",
+        fiction=True,
+        priority=ya_priority,
+        **ya_common_args
+    )
+    ya_priority += 1
+    ya_poetry.add_genres([genres.Poetry.name, genres.Drama.name])
+    ya_books.sublanes.append(ya_poetry)
+    ya_nonfiction, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Facklitteratur",
+        genres=[],
+        fiction=False,
+        priority=ya_priority,
+        **ya_common_args
+    )
+    ya_priority += 1
+    ya_books.sublanes.append(ya_nonfiction)
+    ya_all, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Alla böcker för ungdomar",
+        genres=[],
+        priority=ya_priority,
+        **ya_common_args
+    )
+    ya_books.sublanes.append(ya_all)
+
+    # Children's lanes
+    children_common_args = dict(common_args)
+    children_common_args["target_age"] = SubjectClassifier.range_tuple(
+        0, SubjectClassifier.YOUNG_ADULT_AGE_CUTOFF - 2
+    )
+
+    childrens_books, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Böcker för barn",
+        genres=[],
+        sublanes=[],
+        priority=4,
+        **children_common_args
+    )
+    all_swedish.sublanes.append(childrens_books)
+
+    # Order of children's lanes.
+    children_priority = 0
+
+    children_general, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Skönlitteratur allmänt",
+        fiction=True,
+        priority=children_priority,
+        **children_common_args
+    )
+    children_priority += 1
+    children_general.add_genres(
+        [
+            genres.General_Fiction.name,
+            genres.Diary_Stories.name,
+            genres.Family_Stories.name,
+            genres.Festivities_Holidays.name,
+            genres.Classics.name,
+            genres.School_Study.name,
+            genres.Drama.name,
+            genres.Folklore_Stories.name,
+            genres.LGBTQ_Fiction.name,
+            genres.Sports_Stories.name,
+            genres.Football_Stories.name,
+            genres.Hockey_Stories.name,
+            genres.Dance_Stories.name,
+            genres.Riding_Stories.name,
+            genres.Skating_Stories.name,
+            genres.Animal_Stories.name,
+            genres.Horse_Stories.name,
+            genres.Pet_Stories.name,
+            genres.Humor.name,
+            genres.Humorous_Fiction.name,
+            genres.Comics_Graphic_Novels.name,
+            genres.Difficult_Topics.name,
+            genres.Bullying.name,
+            genres.Death.name,
+            genres.Multicultural_Stories.name,
+            genres.Disabilities.name,
+            genres.War.name,
+            genres.Drugs.name,
+            genres.Eating_Disorders_Self_Image.name,
+            genres.Mental_Health.name,
+            genres.Vehicles_Technology.name,
+            genres.Cars.name,
+            genres.Trains.name,
+            genres.Airplanes.name,
+        ]
+    )
+    childrens_books.sublanes.append(children_general)
+    picture_books, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Bilderböcker",
+        target_age=(0, 4),
+        genres=[],
+        fiction=None,
+        priority=children_priority,
+    )
+    children_priority += 1
+    childrens_books.sublanes.append(picture_books)
+    children_suspense, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Spänning",
+        fiction=True,
+        priority=children_priority,
+        **children_common_args
+    )
+    children_priority += 1
+    children_suspense.add_genres(
+        [
+            genres.Mystery.name,
+            genres.Crime_Detective_Stories.name,
+            genres.Suspense_Thriller.name,
+            genres.Adventure.name,
+            genres.Superheroes.name,
+        ]
+    )
+    childrens_books.sublanes.append(children_suspense)
+    children_adventure, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Äventyr",
+        fiction=True,
+        priority=children_priority,
+        **children_common_args
+    )
+    children_priority += 1
+    children_adventure.add_genre(genres.Adventure.name)
+    childrens_books.sublanes.append(children_adventure)
+    children_humor, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Humor",
+        fiction=True,
+        priority=children_priority,
+        **children_common_args
+    )
+    children_priority += 1
+    children_humor.add_genres([genres.Humor.name, genres.Humorous_Fiction.name])
+    childrens_books.sublanes.append(children_humor)
+    children_horror, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Skräk",
+        fiction=True,
+        priority=children_priority,
+        **children_common_args
+    )
+    children_priority += 1
+    children_horror.add_genre(genres.Horror.name)
+    childrens_books.sublanes.append(children_horror)
+    children_scifi, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Scifi och fantasi",
+        fiction=True,
+        priority=children_priority,
+        **children_common_args
+    )
+    children_priority += 1
+    children_scifi.add_genres([genres.Science_Fiction.name, genres.Fantasy.name])
+    childrens_books.sublanes.append(children_scifi)
+    children_historical, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Historiska romaner",
+        fiction=True,
+        priority=children_priority,
+        **ya_common_args
+    )
+    children_priority += 1
+    children_historical.add_genre(genres.Historical_Fiction.name)
+    childrens_books.sublanes.append(children_historical)
+    children_poetry, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Dikter och skådespel",
+        fiction=True,
+        priority=children_priority,
+        **children_common_args
+    )
+    children_priority += 1
+    children_poetry.add_genres([genres.Poetry.name, genres.Drama.name])
+    childrens_books.sublanes.append(children_poetry)
+    children_nonfiction, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Facklitteratur",
+        genres=[],
+        fiction=False,
+        priority=children_priority,
+        **children_common_args
+    )
+    children_priority += 1
+    childrens_books.sublanes.append(children_nonfiction)
+    children_all, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Alla böcker för barn",
+        genres=[],
+        priority=children_priority,
+        **children_common_args
+    )
+    childrens_books.sublanes.append(children_all)
+
+    return priority
+
+
+def create_lanes_for_english_collection(_db, library, language="eng", priority=3000):
+    """
+    Defines the lanes of the English collection.
+
+    :param library: Newly created lanes will be associated with this
+        library.
+    :param language: Newly created lanes will contain only books
+        in these languages.
+    :param priority: An integer that defines the order of main lanes on the main view.
+
+    :return: A list of top-level Lane objects.
+
+    """
+    if isinstance(language, str):
+        language = [language]
+
+    ADULT = SubjectClassifier.AUDIENCES_ADULT
+    YA = [SubjectClassifier.AUDIENCE_YOUNG_ADULT]
+
+    common_args = dict(languages=language, media=None)
+    adult_common_args = dict(common_args)
+    adult_common_args["audiences"] = ADULT
+    main_lanes = []
+
+    all_english, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Books in English",
+        genres=[],
+        sublanes=[],
+        priority=priority,
+        **adult_common_args
+    )
+    priority += 1
+    main_lanes.append(all_english)
+
+    adult_fiction, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Fiction for Adults",
+        genres=[],
+        fiction=True,
+        sublanes=[],
+        priority=1,
+        **adult_common_args
+    )
+    all_english.sublanes.append(adult_fiction)
+
+    # Order of fiction lanes.
+    adult_fiction_priority = 0
+
+    adult_fiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="General Fiction",
+            genres=[
+                genres.General_Fiction,
+                genres.LGBTQ_Fiction,
+                genres.Urban_Fiction,
+                genres.Religious_Fiction,
+                genres.Humor,
+                genres.Humorous_Fiction,
+                genres.Comics_Graphic_Novels,
+            ],
+            priority=adult_fiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_fiction_priority += 1
+    adult_suspense, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Suspense",
+        genres=[],
+        fiction=True,
+        sublanes=[],
+        priority=adult_fiction_priority,
+        **adult_common_args
+    )
+    adult_fiction_priority += 1
+    adult_suspense.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Suspense",
+            genres=[
+                genres.Suspense_Thriller,
+                genres.Historical_Thriller,
+                genres.Espionage,
+                genres.Supernatural_Thriller,
+                genres.Medical_Thriller,
+                genres.Political_Thriller,
+                genres.Technothriller,
+                genres.Legal_Thriller,
+                genres.Military_Thriller,
+            ],
+            priority=1,
+            **adult_common_args
+        )
+    )
+    adult_fiction.sublanes.append(adult_suspense)
+    adult_suspense.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Crime & Detective Stories",
+            genres=[
+                genres.Mystery,
+                genres.Crime_Detective_Stories,
+                genres.Hard_Boiled_Mystery,
+                genres.Police_Procedural,
+                genres.Cozy_Mystery,
+                genres.Historical_Mystery,
+                genres.Paranormal_Mystery,
+                genres.Women_Detectives,
+            ],
+            priority=2,
+            **adult_common_args
+        )
+    )
+    adult_suspense.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Cozy Crime",
+            genres=[genres.Cozy_Mystery],
+            priority=3,
+            **adult_common_args
+        )
+    )
+    adult_fiction_priority += 1
+    adult_suspense.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Adventure",
+            genres=[genres.Adventure],
+            priority=adult_fiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_fiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Romance",
+            genres=[
+                genres.Romance,
+                genres.Contemporary_Romance,
+                genres.Gothic_Romance,
+                genres.Historical_Romance,
+                genres.Paranormal_Romance,
+                genres.Western_Romance,
+                genres.Romantic_Suspense,
+                genres.Erotica,
+                genres.Romantic_SF,
+            ],
+            priority=adult_fiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_fiction_priority += 1
+    adult_fiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="LGBTQ+",
+            genres=[
+                genres.LGBTQ_Fiction,
+            ],
+            priority=adult_fiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_fiction_priority += 1
+    adult_fiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Science Fiction",
+            genres=[
+                genres.Science_Fiction,
+                genres.Dystopian_SF,
+                genres.Space_Opera,
+                genres.Cyberpunk,
+                genres.Military_SF,
+                genres.Alternative_History,
+                genres.Steampunk,
+                genres.Romantic_SF,
+                genres.Media_Tie_in_SF,
+            ],
+            priority=adult_fiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_fiction_priority += 1
+    adult_fiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Fantasy",
+            genres=[
+                genres.Fantasy,
+                genres.Epic_Fantasy,
+                genres.Historical_Fantasy,
+                genres.Urban_Fantasy,
+            ],
+            priority=adult_fiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_fiction_priority += 1
+    adult_fiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Horror",
+            genres=[
+                genres.Horror,
+                genres.Gothic_Horror,
+                genres.Ghost_Stories,
+                genres.Vampires,
+                genres.Werewolves,
+                genres.Occult_Horror,
+            ],
+            priority=adult_fiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_fiction_priority += 1
+    adult_fiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Historical Fiction",
+            genres=[
+                genres.Historical_Fiction,
+                genres.Westerns,
+                genres.Historical_Fantasy,
+                genres.Historical_Mystery,
+                genres.Historical_Romance,
+                genres.Historical_Thriller,
+            ],
+            priority=adult_fiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_fiction_priority += 1
+
+    adult_fiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Short Stories",
+            genres=[genres.Short_Stories],
+            priority=adult_fiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_fiction_priority += 1
+    adult_fiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Classics and Folklore",
+            genres=[genres.Classics, genres.Folklore_Stories],
+            priority=adult_fiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_fiction_priority += 1
+    adult_fiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Poetry and Drama",
+            genres=[genres.Poetry, genres.Drama],
+            priority=adult_fiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_fiction_priority += 1
+    adult_fiction_all, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="All Fiction for Adults",
+        genres=[],
+        priority=adult_fiction_priority,
+        **adult_common_args
+    )
+    adult_fiction.sublanes.append(adult_fiction_all)
+
+    # Nonfiction lanes.
+    adult_nonfiction, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Nonfiction for Adults",
+        genres=[],
+        sublanes=[],
+        fiction=False,
+        priority=2,
+        **adult_common_args
+    )
+    all_english.sublanes.append(adult_nonfiction)
+
+    # Order of nonfiction lanes.
+    adult_nonfiction_priority = 0
+
+    adult_nonfiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Biography & Memoir",
+            genres=[genres.Biography_Memoir],
+            priority=adult_nonfiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_nonfiction_priority += 1
+    adult_nonfiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="History",
+            genres=[
+                genres.History,
+                genres.African_History,
+                genres.Ancient_History,
+                genres.Asian_History,
+                genres.Civil_War_History,
+                genres.European_History,
+                genres.Latin_American_History,
+                genres.Medieval_History,
+                genres.Middle_East_History,
+                genres.Military_History,
+                genres.Modern_History,
+                genres.Renaissance_Early_Modern_History,
+                genres.United_States_History,
+                genres.World_History,
+            ],
+            priority=adult_nonfiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_nonfiction_priority += 1
+    adult_nonfiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Society",
+            genres=[
+                genres.Social_Sciences,
+                genres.Political_Science,
+                genres.Law,
+                genres.Study_Aids,
+                genres.Philosophy,
+            ],
+            priority=adult_nonfiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_nonfiction_priority += 1
+    adult_nonfiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Economics & Management",
+            genres=[
+                genres.Personal_Finance_Business,
+                genres.Personal_Finance_Investing,
+                genres.Real_Estate,
+                genres.Business,
+                genres.Management_Leadership,
+                genres.Economics,
+            ],
+            priority=1,
+            **adult_common_args
+        )
+    )
+    adult_nonfiction_priority += 1
+    adult_nonfiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Psychology & Self-Help",
+            genres=[genres.Self_Help, genres.Life_Strategies, genres.Psychology],
+            priority=1,
+            **adult_common_args
+        )
+    )
+    adult_nonfiction_priority += 1
+    adult_nonfiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Home & Hobbies",
+            genres=[
+                genres.Hobbies_Home,
+                genres.Antiques_Collectibles,
+                genres.Crafts_Hobbies,
+                genres.Gardening,
+                genres.Games_Activities,
+                genres.House_Home,
+                genres.Pets,
+            ],
+            priority=adult_nonfiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_nonfiction_priority += 1
+    adult_nonfiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Health & Diet",
+            genres=[
+                genres.Food_Health,
+                genres.Cooking,
+                genres.Health_Diet,
+                genres.Vegetarian_Vegan,
+                genres.Bartending_Cocktails,
+            ],
+            priority=adult_nonfiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_nonfiction_priority += 1
+    adult_nonfiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Science & Technology",
+            genres=[
+                genres.Technology,
+                genres.Computers,
+                genres.Mathematics,
+                genres.Science,
+                genres.Medical,
+                genres.Nature,
+                genres.Social_Sciences,
+            ],
+            priority=1,
+            **adult_common_args
+        )
+    )
+    adult_nonfiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Sports",
+            genres=[genres.Sports],
+            priority=adult_nonfiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_nonfiction_priority += 1
+    adult_nonfiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Travel",
+            genres=[genres.Travel],
+            priority=adult_nonfiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_nonfiction_priority += 1
+    adult_nonfiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Art",
+            genres=[
+                genres.Art_Culture,
+                genres.Film_TV,
+                genres.Music,
+                genres.Performing_Arts,
+                genres.Architecture,
+                genres.Art,
+                genres.Art_Criticism_Theory,
+                genres.Art_History,
+                genres.Design,
+                genres.Fashion,
+                genres.Photography,
+            ],
+            priority=adult_nonfiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_nonfiction_priority += 1
+    adult_nonfiction.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Other Nonfiction",
+            genres=[
+                genres.Dictionaries,
+                genres.Foreign_Language_Study,
+                genres.Literary_Criticism,
+                genres.Body_Mind_Spirit,
+                genres.Religion_Spirituality,
+                genres.Buddhism,
+                genres.Christianity,
+                genres.Hinduism,
+                genres.Islam,
+                genres.Judaism,
+                genres.Parenting_Family,
+                genres.Family_Relationships,
+                genres.Parenting,
+                genres.True_Crime,
+                genres.Humorous_Nonfiction,
+                genres.Reference_Study_Aids,
+                genres.Folklore,
+                genres.Education,
+                genres.Periodicals,
+            ],
+            priority=adult_nonfiction_priority,
+            **adult_common_args
+        )
+    )
+    adult_nonfiction_priority += 1
+    adult_nonfiction_all, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="All Nonfiction for Adults",
+        fiction=False,
+        priority=adult_nonfiction_priority,
+        **adult_common_args
+    )
+    adult_nonfiction.sublanes.append(adult_nonfiction_all)
+
+    # # YA lanes
+    ya_common_args = dict(common_args)
+    ya_common_args["audiences"] = YA
+
+    ya_books, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Books for Young Adults",
+        genres=[],
+        sublanes=[],
+        priority=3,
+        **ya_common_args
+    )
+    all_english.sublanes.append(ya_books)
+
+    # Order of YA lanes.
+    ya_priority = 0
+    ya_general, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="General Fiction",
+        fiction=True,
+        priority=ya_priority,
+        **ya_common_args
+    )
+    ya_priority += 1
+    ya_general.add_genres(
+        [
+            genres.General_Fiction.name,
+            genres.Diary_Stories.name,
+            genres.Family_Stories.name,
+            genres.Festivities_Holidays.name,
+            genres.Easter_Stories.name,
+            genres.Christmas_Stories.name,
+            genres.Halloween_Stories.name,
+            genres.Classics.name,
+            genres.School_Study.name,
+            genres.Drama.name,
+            genres.Folklore_Stories.name,
+            genres.LGBTQ_Fiction.name,
+            genres.Sports_Stories.name,
+            genres.Football_Stories.name,
+            genres.Hockey_Stories.name,
+            genres.Dance_Stories.name,
+            genres.Riding_Stories.name,
+            genres.Skating_Stories.name,
+            genres.Animal_Stories.name,
+            genres.Horse_Stories.name,
+            genres.Pet_Stories.name,
+            genres.Humor.name,
+            genres.Humorous_Fiction.name,
+            genres.Comics_Graphic_Novels.name,
+            genres.Difficult_Topics.name,
+            genres.Bullying.name,
+            genres.Death.name,
+            genres.Multicultural_Stories.name,
+            genres.Disabilities.name,
+            genres.War.name,
+            genres.Drugs.name,
+            genres.Eating_Disorders_Self_Image.name,
+            genres.Mental_Health.name,
+            genres.Historical_Fiction.name,
+            genres.Romance.name,
+            genres.Poetry.name,
+            genres.Growing_Up.name,
+        ]
+    )
+    ya_books.sublanes.append(ya_general)
+    ya_adventure, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Adventure",
+        fiction=True,
+        priority=ya_priority,
+        **ya_common_args
+    )
+    ya_priority += 1
+    ya_adventure.add_genre(genres.Adventure.name)
+    ya_books.sublanes.append(ya_adventure)
+    ya_fantasy, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Fantasy",
+        fiction=True,
+        priority=ya_priority,
+        **ya_common_args
+    )
+    ya_priority += 1
+    ya_fantasy.add_genre(genres.Fantasy.name)
+    ya_books.sublanes.append(ya_fantasy)
+    ya_suspense, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Suspense",
+        fiction=True,
+        priority=ya_priority,
+        **ya_common_args
+    )
+    ya_priority += 1
+    ya_suspense.add_genres(
+        [
+            genres.Mystery.name,
+            genres.Crime_Detective_Stories.name,
+            genres.Suspense_Thriller.name,
+            genres.Horror.name,
+        ]
+    )
+    ya_books.sublanes.append(ya_suspense)
+    ya_scifi, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Science Fiction",
+        fiction=True,
+        priority=ya_priority,
+        **ya_common_args
+    )
+    ya_priority += 1
+    ya_scifi.add_genre(genres.Science_Fiction.name)
+    ya_books.sublanes.append(ya_scifi)
+    ya_nonfiction, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Nonfiction",
+        genres=[],
+        fiction=False,
+        priority=ya_priority,
+        **ya_common_args
+    )
+    ya_priority += 1
+    ya_books.sublanes.append(ya_nonfiction)
+    ya_all, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="All Books for Young Adults",
+        genres=[],
+        priority=ya_priority,
+        **ya_common_args
+    )
+    ya_books.sublanes.append(ya_all)
+
+    # Children's lanes
+    children_common_args = dict(common_args)
+    children_common_args["target_age"] = SubjectClassifier.range_tuple(
+        0, SubjectClassifier.YOUNG_ADULT_AGE_CUTOFF - 2
+    )
+    childrens_books, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Books for Children",
+        genres=[],
+        sublanes=[],
+        priority=4,
+        **children_common_args
+    )
+    all_english.sublanes.append(childrens_books)
+
+    # Order of children's lanes.
+    children_priority = 0
+
+    children_general, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="General Fiction",
+        fiction=True,
+        priority=children_priority,
+        **children_common_args
+    )
+    children_priority += 1
+    children_general.add_genres(
+        [
+            genres.General_Fiction.name,
+            genres.Diary_Stories.name,
+            genres.Family_Stories.name,
+            genres.Festivities_Holidays.name,
+            genres.Classics.name,
+            genres.School_Study.name,
+            genres.Drama.name,
+            genres.Folklore_Stories.name,
+            genres.LGBTQ_Fiction.name,
+            genres.Sports_Stories.name,
+            genres.Football_Stories.name,
+            genres.Hockey_Stories.name,
+            genres.Dance_Stories.name,
+            genres.Riding_Stories.name,
+            genres.Skating_Stories.name,
+            genres.Animal_Stories.name,
+            genres.Horse_Stories.name,
+            genres.Pet_Stories.name,
+            genres.Humor.name,
+            genres.Humorous_Fiction.name,
+            genres.Comics_Graphic_Novels.name,
+            genres.Difficult_Topics.name,
+            genres.Bullying.name,
+            genres.Death.name,
+            genres.Multicultural_Stories.name,
+            genres.Disabilities.name,
+            genres.War.name,
+            genres.Drugs.name,
+            genres.Eating_Disorders_Self_Image.name,
+            genres.Mental_Health.name,
+            genres.Historical_Fiction.name,
+            genres.Poetry.name,
+            genres.Science_Fiction.name,
+            genres.Fantasy.name,
+            genres.Vehicles_Technology.name,
+            genres.Cars.name,
+            genres.Trains.name,
+            genres.Airplanes.name,
+        ]
+    )
+    childrens_books.sublanes.append(children_general)
+    children_adventure, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Adventure",
+        fiction=True,
+        priority=children_priority,
+        **children_common_args
+    )
+    children_priority += 1
+    children_adventure.add_genre(genres.Adventure.name)
+    childrens_books.sublanes.append(children_adventure)
+    children_fantasy, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Fantasy",
+        fiction=True,
+        priority=ya_priority,
+        **ya_common_args
+    )
+    ya_priority += 1
+    children_fantasy.add_genre(genres.Fantasy.name)
+    childrens_books.sublanes.append(children_fantasy)
+    children_suspense, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Suspense",
+        fiction=True,
+        priority=ya_priority,
+        **ya_common_args
+    )
+    ya_priority += 1
+    children_suspense.add_genres(
+        [
+            genres.Mystery.name,
+            genres.Crime_Detective_Stories.name,
+            genres.Suspense_Thriller.name,
+            genres.Horror.name,
+        ]
+    )
+    childrens_books.sublanes.append(children_suspense)
     picture_books, ignore = create(
         _db,
         Lane,
@@ -593,151 +3059,31 @@ def create_lanes_for_large_collection(_db, library, languages, priority=0):
         genres=[],
         fiction=None,
         priority=children_priority,
-        languages=languages,
     )
     children_priority += 1
-    children.sublanes.append(picture_books)
-
-    early_readers, ignore = create(
+    childrens_books.sublanes.append(picture_books)
+    children_nonfiction, ignore = create(
         _db,
         Lane,
         library=library,
-        display_name="Early Readers",
-        target_age=(5, 8),
+        display_name="Nonfiction for Children",
         genres=[],
-        fiction=None,
-        priority=children_priority,
-        languages=languages,
-    )
-    children_priority += 1
-    children.sublanes.append(early_readers)
-
-    chapter_books, ignore = create(
-        _db,
-        Lane,
-        library=library,
-        display_name="Chapter Books",
-        target_age=(9, 12),
-        genres=[],
-        fiction=None,
-        priority=children_priority,
-        languages=languages,
-    )
-    children_priority += 1
-    children.sublanes.append(chapter_books)
-
-    children_poetry, ignore = create(
-        _db,
-        Lane,
-        library=library,
-        display_name="Poetry Books",
-        priority=children_priority,
-        **children_common_args
-    )
-    children_priority += 1
-    children_poetry.add_genre(genres.Poetry.name)
-    children.sublanes.append(children_poetry)
-
-    children_folklore, ignore = create(
-        _db,
-        Lane,
-        library=library,
-        display_name="Folklore",
-        priority=children_priority,
-        **children_common_args
-    )
-    children_priority += 1
-    children_folklore.add_genre(genres.Folklore.name)
-    children.sublanes.append(children_folklore)
-
-    children_fantasy, ignore = create(
-        _db,
-        Lane,
-        library=library,
-        display_name="Fantasy",
-        fiction=True,
-        priority=children_priority,
-        **children_common_args
-    )
-    children_priority += 1
-    children_fantasy.add_genre(genres.Fantasy.name)
-    children.sublanes.append(children_fantasy)
-
-    children_sf, ignore = create(
-        _db,
-        Lane,
-        library=library,
-        display_name="Science Fiction",
-        fiction=True,
-        priority=children_priority,
-        **children_common_args
-    )
-    children_priority += 1
-    children_sf.add_genre(genres.Science_Fiction.name)
-    children.sublanes.append(children_sf)
-
-    realistic_fiction, ignore = create(
-        _db,
-        Lane,
-        library=library,
-        display_name="Realistic Fiction",
-        fiction=True,
-        priority=children_priority,
-        **children_common_args
-    )
-    children_priority += 1
-    realistic_fiction.add_genre(genres.General_Fiction.name)
-    children.sublanes.append(realistic_fiction)
-
-    children_graphic_novels, ignore = create(
-        _db,
-        Lane,
-        library=library,
-        display_name="Comics & Graphic Novels",
-        priority=children_priority,
-        **children_common_args
-    )
-    children_priority += 1
-    children_graphic_novels.add_genre(genres.Comics_Graphic_Novels.name)
-    children.sublanes.append(children_graphic_novels)
-
-    children_biography, ignore = create(
-        _db,
-        Lane,
-        library=library,
-        display_name="Biography",
-        priority=children_priority,
-        **children_common_args
-    )
-    children_priority += 1
-    children_biography.add_genre(genres.Biography_Memoir.name)
-    children.sublanes.append(children_biography)
-
-    children_historical_fiction, ignore = create(
-        _db,
-        Lane,
-        library=library,
-        display_name="Historical Fiction",
-        priority=children_priority,
-        **children_common_args
-    )
-    children_priority += 1
-    children_historical_fiction.add_genre(genres.Historical_Fiction.name)
-    children.sublanes.append(children_historical_fiction)
-
-    informational, ignore = create(
-        _db,
-        Lane,
-        library=library,
-        display_name="Informational Books",
         fiction=False,
-        genres=[],
         priority=children_priority,
         **children_common_args
     )
     children_priority += 1
-    informational.add_genre(genres.Biography_Memoir.name, inclusive=False)
-    children.sublanes.append(informational)
+    childrens_books.sublanes.append(children_nonfiction)
+    children_all, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="All Books for Children",
+        genres=[],
+        priority=ya_priority,
+        **ya_common_args
+    )
+    childrens_books.sublanes.append(children_all)
 
     return priority
 
