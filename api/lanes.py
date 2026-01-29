@@ -3129,21 +3129,21 @@ def create_lane_for_small_collection(_db, library, parent, language, priority=0)
     :param parent: The parent of the new lane.
     """
     if isinstance(language, str):
-        languages = [language]
+        language = [language]
     ADULT = SubjectClassifier.AUDIENCES_ADULT
     YA = (SubjectClassifier.AUDIENCE_YOUNG_ADULT,)
     CHILDREN = (SubjectClassifier.AUDIENCE_CHILDREN,)
 
     common_args = dict(
-        languages=languages,
+        languages=language,
         genres=[],
     )
 
     try:
-        language_identifier = LanguageCodes.name_for_languageset(languages)
+        language_identifier = LanguageCodes.name_for_languageset(language)
     except ValueError as e:
         logging.getLogger().warning(
-            "Could not create a lane for small collection with languages %s", languages
+            "Could not create a lane for small collection with languages %s", language
         )
         return 0
 
