@@ -87,26 +87,17 @@ def _lane_configuration_from_collection_sizes(estimates):
 def create_default_lanes(_db, library):
     """Reset the lanes for the given library to the default.
 
-    This method will create a set of default lanes  for the first
-    major language specified in the UI or if no language is specified
-    then the most represented language in the catalogue.  If more than
-    one major language is specified, all but the first will be ignored
-    in terms of default lane creation. In other words, don't specify
-    multiple top level languages.
+    This method will create a set of default lanes. For E-kirjasto,
+    they will always be the same: Finnish, Swedish and English as
+    "large" languages and any others as "small" languages ending up
+    in Books in Other Languages lane.
 
-    If there are any small- or tiny-collection languages, the database
-    will also have a top-level lane called 'World Languages'. The
-    'World Languages' lane will have a sublane for every small- and
-    tiny-collection languages. The small-collection languages will
-    have "Adult Fiction", "Adult Nonfiction", and "Children/YA"
-    sublanes; the tiny-collection languages will not have any sublanes.
-
-    If run on a Library that already has Lane configuration, this can
-    be an extremely destructive method. All new Lanes will be visible
+    When run on a Library that already has Lane configuration, this is
+    an extremely destructive method. All new Lanes will be visible
     and all Lanes based on CustomLists (but not the CustomLists
     themselves) will be destroyed.
     """
-    # Delete existing lanes.
+    # Delete existing lanes. This includes custom lanes as well.
     for lane in _db.query(Lane).filter(Lane.library_id == library.id):
         _db.delete(lane)
 
@@ -116,30 +107,24 @@ def create_default_lanes(_db, library):
     if not library.is_default:
         return
 
-    top_level_lanes = []
-
-    # Hopefully this library is configured with explicit guidance as
-    # to how the languages should be set up.
+    # E-kirjasto does not configure languages. Keeping it for tests.
     large = Configuration.large_collection_languages(library) or []
     small = Configuration.small_collection_languages(library) or []
     tiny = Configuration.tiny_collection_languages(library) or []
 
-    # If there are no language configuration settings, we can estimate
-    # the current collection size to determine the lanes.
+    # E-kirjasto will always have a Finnish, Swedish and English collection but
+    # others may change over time. Get the current languages.
     if not large and not small and not tiny:
         estimates = library.estimated_holdings_by_language()
-        large, small, tiny = _lane_configuration_from_collection_sizes(estimates)
+        large, small = _lane_configuration_from_collection_sizes(estimates)
 
-    priority = 1000
-
-    if large and len(large) > 0:
-        language = large[0]
-        priority = create_lanes_for_large_collection(
-            _db, library, language, priority=priority
-        )
-
-    create_world_languages_lane(_db, library, small, tiny, priority)
-
+    if "fin" in large:
+        create_lanes_for_finnish_collection(_db, library)
+    if "swe" in large:
+        create_lanes_for_swedish_collection(_db, library)
+    if "eng" in large:
+        create_lanes_for_english_collection(_db, library)
+    create_world_languages_lane(_db, library, small)
 
 def lane_from_genres(
     _db,
