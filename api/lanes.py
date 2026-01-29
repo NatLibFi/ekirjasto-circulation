@@ -113,12 +113,14 @@ def create_default_lanes(_db, library):
         estimates = library.estimated_holdings_by_language()
         large, small = _lane_configuration_from_collection_sizes(estimates)
 
+    logging.getLogger().info(f"Creating lanes for large languages {large}")
     if "fin" in large:
         create_lanes_for_finnish_collection(_db, library)
     if "swe" in large:
         create_lanes_for_swedish_collection(_db, library)
     if "eng" in large:
         create_lanes_for_english_collection(_db, library)
+    logging.getLogger().info(f"Creating lanes for small languages {small}")
     create_world_languages_lane(_db, library, small)
 
 
@@ -1354,6 +1356,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
         **children_common_args
     )
     childrens_books.sublanes.append(children_all)
+    logging.getLogger().info(f"Created lanes for {language}")
     return priority
 
 
@@ -2241,7 +2244,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
         **children_common_args
     )
     childrens_books.sublanes.append(children_all)
-
+    logging.getLogger().info(f"Created lanes for {language}")
     return priority
 
 
@@ -3081,7 +3084,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
         **ya_common_args
     )
     childrens_books.sublanes.append(children_all)
-
+    logging.getLogger().info(f"Created lanes for {language}")
     return priority
 
 
@@ -3119,14 +3122,14 @@ def create_world_languages_lane(
     return priority
 
 
-def create_lane_for_small_collection(_db, library, parent, languages, priority=0):
+def create_lane_for_small_collection(_db, library, parent, language, priority=0):
     """Create a lane (with sublanes) for a small collection based on language,
-    if the language exists in the lookup table. In E-kirjasto, this consists mainly of Sami language.
+    if the language exists in the lookup table.
 
     :param parent: The parent of the new lane.
     """
-    if isinstance(languages, str):
-        languages = [languages]
+    if isinstance(language, str):
+        languages = [language]
     ADULT = SubjectClassifier.AUDIENCES_ADULT
     YA = (SubjectClassifier.AUDIENCE_YOUNG_ADULT,)
     CHILDREN = (SubjectClassifier.AUDIENCE_CHILDREN,)
@@ -3190,6 +3193,7 @@ def create_lane_for_small_collection(_db, library, parent, languages, priority=0
         **common_args
     )
     priority += 1
+    logging.getLogger().info(f"Created lanes for {language}")
     return priority
 
 
