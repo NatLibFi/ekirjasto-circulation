@@ -5,7 +5,7 @@ import uuid
 from abc import ABC
 from base64 import b64decode, b64encode
 from enum import Enum
-from typing import Any
+from typing import Any, TypeVar
 
 import flask_babel
 import jwt
@@ -13,6 +13,7 @@ import requests
 from cryptography.fernet import Fernet, InvalidToken
 from flask import url_for
 from flask_babel import lazy_gettext as _
+from pydantic import field_validator
 from sqlalchemy.orm import Session
 from werkzeug.datastructures import Authorization
 
@@ -53,8 +54,9 @@ from core.util.problem_detail import ProblemDetail
 
 class EkirjastoEnvironment(Enum):
     FAKE = "http://localhost"
-    DEVELOPMENT = "https://e-kirjasto.loikka.dev"
+    DEVELOPMENT = "https://tunnistus-dev.e-kirjasto.fi"
     PRODUCTION = "https://tunnistus.e-kirjasto.fi"
+    OLD_DEV = "https://e-kirjasto.loikka.dev"
 
 
 class MagazineEnvironment(Enum):
@@ -114,9 +116,22 @@ class EkirjastoAuthAPISettings(AuthProviderSettings):
         ),
     )
 
+    @field_validator("ekirjasto_environment", mode="before")
+    def validate_url(cls, value):
+        """Handle the previous dev url."""
+        if value == EkirjastoEnvironment.OLD_DEV.value:
+            value = EkirjastoEnvironment.DEVELOPMENT.value
+        return value
+
 
 class EkirjastoAuthAPILibrarySettings(AuthProviderLibrarySettings):
     ...
+
+
+SettingsType = TypeVar("SettingsType", bound=EkirjastoAuthAPISettings, covariant=True)
+LibrarySettingsType = TypeVar(
+    "LibrarySettingsType", bound=EkirjastoAuthAPILibrarySettings, covariant=True
+)
 
 
 class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
@@ -126,8 +141,8 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
         self,
         library_id: int,
         integration_id: int,
-        settings: EkirjastoAuthAPISettings,
-        library_settings: EkirjastoAuthAPILibrarySettings,
+        settings: SettingsType,
+        library_settings: LibrarySettingsType,
         analytics: Analytics | None = None,
     ):
         """Create a EkirjastoAuthenticationAPI."""

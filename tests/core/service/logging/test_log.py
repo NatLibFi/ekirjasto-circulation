@@ -47,7 +47,7 @@ class TestJSONFormatter:
         assert "1990-05-05T00:00:00+00:00" == data["timestamp"]
         assert "DEBUG" == data["level"]
         assert "A message" == data["message"]
-        assert "pathname" == data["filename"]
+        assert "pathname" == data["pathname"]
         assert "ValueError: fake exception" in data["traceback"]
 
     @pytest.mark.parametrize(

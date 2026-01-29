@@ -26,7 +26,10 @@ from api.authentication.basic import BasicAuthenticationProvider
 from api.authentication.basic_token import BasicTokenAuthenticationProvider
 from api.config import CannotLoadConfiguration, Configuration
 from api.custom_patron_catalog import CustomPatronCatalog
-from api.ekirjasto_authentication import EkirjastoAuthenticationAPI  # Finland
+from api.ekirjasto_authentication import (  # Finland
+    EkirjastoAuthAPISettings,
+    EkirjastoAuthenticationAPI,
+)
 from api.integration.registry.patron_auth import PatronAuthRegistry
 from api.problem_details import *
 from core.analytics import Analytics
@@ -263,7 +266,9 @@ class LibraryAuthenticator(LoggerMixin):
         )
 
         self.saml_providers_by_name = {}
-        self.ekirjasto_provider = ekirjasto_provider  # Finland
+        self.ekirjasto_provider = None
+        if ekirjasto_provider:
+            self.ekirjasto_provider = ekirjasto_provider  # Finland
         self.bearer_token_signing_secret = bearer_token_signing_secret
         self.initialization_exceptions: dict[
             tuple[int | None, int | None], Exception
@@ -363,6 +368,9 @@ class LibraryAuthenticator(LoggerMixin):
             )
         try:
             settings = impl_cls.settings_load(integration.parent)
+            # Update settings in case anything has changed.
+            if isinstance(settings, EkirjastoAuthAPISettings):
+                impl_cls.settings_update(integration.parent, settings)
             library_settings = impl_cls.library_settings_load(integration)
             provider = impl_cls(
                 self.library_id,  # type: ignore[arg-type]
