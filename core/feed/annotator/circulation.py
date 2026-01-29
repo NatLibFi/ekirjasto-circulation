@@ -11,7 +11,6 @@ from typing import Any
 
 from dependency_injector.wiring import Provide, inject
 from flask import url_for
-from flask_babel import lazy_gettext as _
 from sqlalchemy.orm import Session
 
 from api.adobe_vendor_id import AuthdataUtility
@@ -22,7 +21,6 @@ from api.lanes import DynamicLane
 from api.metadata.novelist import NoveListAPI
 from core.analytics import Analytics
 from core.classifier import SubjectClassifier
-from core.classifier.localized_names import genres as localized_genre_names
 from core.config import CannotLoadConfiguration
 from core.entrypoint import EverythingEntryPoint
 from core.external_search import WorkSearchResult
