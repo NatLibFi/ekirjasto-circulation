@@ -558,6 +558,9 @@ class AgeClassifier(SubjectClassifier):
 
 COMICS_AND_GRAPHIC_NOVELS = "Comics & Graphic Novels"
 
+# E-kirjasto does not utilize the genre structure here anymore to
+# build default lanes in the main page. The structure is left as
+# is for clarity.
 fiction_genres = [
     "Adventure",
     dict(name="Animal Stories", subgenres=["Horse Stories", "Pet Stories"]),
