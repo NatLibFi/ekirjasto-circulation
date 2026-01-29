@@ -132,7 +132,7 @@ def lane_from_genres(
     exclude_genres=None,
     priority=0,
     audiences=None,
-    **extra_args
+    **extra_args,
 ):
     """Turn genre info into a Lane object."""
 
@@ -148,7 +148,7 @@ def lane_from_genres(
                         library,
                         [subgenre],
                         priority=sublane_priority,
-                        **extra_args
+                        **extra_args,
                     )
                 )
                 sublane_priority += 1
@@ -193,7 +193,7 @@ def lane_from_genres(
         audiences=audiences,
         sublanes=sublanes,
         priority=priority,
-        **extra_args
+        **extra_args,
     )
     lane.visible = visible
     for genre in genres:
@@ -238,7 +238,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
         sublanes=[],
         fiction=True,
         priority=priority,
-        **adult_common_args
+        **adult_common_args,
     )
     priority += 1
     main_lanes.append(adult_fiction)
@@ -258,7 +258,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
                 genres.Religious_Fiction,
             ],
             priority=adult_fiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_fiction_priority += 1
@@ -271,7 +271,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
         fiction=True,
         sublanes=[],
         priority=adult_fiction_priority,
-        **adult_common_args
+        **adult_common_args,
     )
     adult_fiction_priority += 1
     adult_fiction.sublanes.append(adult_fiction_suspense)
@@ -292,7 +292,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
                 genres.Military_Thriller,
             ],
             priority=1,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_fiction_suspense.sublanes.append(
@@ -311,7 +311,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
                 genres.Women_Detectives,
             ],
             priority=2,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_fiction_suspense.sublanes.append(
@@ -321,7 +321,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
             display_name="Hyvän mielen dekkarit",
             genres=[genres.Cozy_Mystery],
             priority=3,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_fiction_suspense.sublanes.append(
@@ -331,7 +331,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
             display_name="Seikkailu",
             genres=[genres.Adventure],
             priority=4,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_fiction.sublanes.append(
@@ -346,7 +346,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
                 genres.Urban_Fantasy,
             ],
             priority=adult_fiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_fiction_priority += 1
@@ -364,7 +364,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
                 genres.Occult_Horror,
             ],
             priority=adult_fiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_fiction_priority += 1
@@ -385,7 +385,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
                 genres.Media_Tie_in_SF,
             ],
             priority=adult_fiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_fiction_priority += 1
@@ -403,7 +403,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
                 genres.Historical_Thriller,
             ],
             priority=adult_fiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_fiction_priority += 1
@@ -424,7 +424,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
                 genres.Romantic_SF,
             ],
             priority=adult_fiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_fiction_priority += 1
@@ -435,7 +435,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
             display_name="Sarjakuvat",
             genres=[genres.Comics_Graphic_Novels],
             priority=adult_fiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_fiction_priority += 1
@@ -446,7 +446,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
             display_name="Huumori",
             genres=[genres.Humor, genres.Humorous_Fiction],
             priority=adult_fiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_fiction_priority += 1
@@ -457,7 +457,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
             display_name="Klassikot ja kansantarinat",
             genres=[genres.Classics, genres.Folklore_Stories],
             priority=adult_fiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_fiction_priority += 1
@@ -468,7 +468,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
             display_name="Novellit",
             genres=[genres.Short_Stories],
             priority=adult_fiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_fiction_priority += 1
@@ -479,7 +479,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
             display_name="Runot ja näytelmät",
             genres=[genres.Poetry, genres.Drama],
             priority=adult_fiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_fiction_priority += 1
@@ -490,7 +490,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
         display_name="Kaikki aikuisten kaunokirjat",
         fiction=True,
         priority=adult_fiction_priority,
-        **adult_common_args
+        **adult_common_args,
     )
     adult_fiction.sublanes.append(adult_fiction_all)
 
@@ -504,7 +504,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
         sublanes=[],
         fiction=False,
         priority=priority,
-        **adult_common_args
+        **adult_common_args,
     )
     priority += 1
     main_lanes.append(adult_fiction)
@@ -519,7 +519,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
             display_name="Elämäkerrat ja muistelmat",
             genres=[genres.Biography_Memoir],
             priority=adult_nonfiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_nonfiction_priority += 1
@@ -545,7 +545,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
                 genres.World_History,
             ],
             priority=adult_nonfiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_nonfiction_priority += 1
@@ -557,7 +557,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
         genres=[],
         sublanes=[],
         priority=adult_nonfiction_priority,
-        **adult_common_args
+        **adult_common_args,
     )
     adult_nonfiction_priority += 1
     adult_nonfiction.sublanes.append(adult_society)
@@ -568,7 +568,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
             display_name="Filosofia",
             genres=[genres.Philosophy],
             priority=1,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_society.sublanes.append(
@@ -583,7 +583,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
                 genres.Study_Aids,
             ],
             priority=2,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_economics, ignore = create(
@@ -594,7 +594,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
         genres=[],
         sublanes=[],
         priority=adult_nonfiction_priority,
-        **adult_common_args
+        **adult_common_args,
     )
     adult_nonfiction_priority += 1
     adult_nonfiction.sublanes.append(adult_economics)
@@ -609,7 +609,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
                 genres.Real_Estate,
             ],
             priority=1,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_economics.sublanes.append(
@@ -619,7 +619,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
             display_name="Liiketalous ja johtaminen",
             genres=[genres.Business, genres.Management_Leadership],
             priority=2,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_economics.sublanes.append(
@@ -629,7 +629,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
             display_name="Taloustiede",
             genres=[genres.Economics],
             priority=3,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_psychology, ignore = create(
@@ -640,7 +640,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
         genres=[],
         sublanes=[],
         priority=adult_nonfiction_priority,
-        **adult_common_args
+        **adult_common_args,
     )
     adult_nonfiction_priority += 1
     adult_nonfiction.sublanes.append(adult_psychology)
@@ -651,7 +651,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
             display_name="Elämäntaito",
             genres=[genres.Self_Help, genres.Life_Strategies],
             priority=1,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_psychology.sublanes.append(
@@ -661,7 +661,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
             display_name="Psykologia",
             genres=[genres.Psychology],
             priority=2,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_psychology.sublanes.append(
@@ -671,7 +671,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
             display_name="Filosofia",
             genres=[genres.Philosophy],
             priority=3,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_nonfiction.sublanes.append(
@@ -681,7 +681,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
             display_name="Matkailu",
             genres=[genres.Travel],
             priority=adult_nonfiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_nonfiction_priority += 1
@@ -693,7 +693,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
         genres=[],
         sublanes=[],
         priority=adult_nonfiction_priority,
-        **adult_common_args
+        **adult_common_args,
     )
     adult_nonfiction_priority += 1
     adult_nonfiction.sublanes.append(adult_spirit)
@@ -704,7 +704,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
             display_name="Keho ja mieli",
             genres=[genres.Body_Mind_Spirit],
             priority=1,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_spirit.sublanes.append(
@@ -721,7 +721,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
                 genres.Judaism,
             ],
             priority=2,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_nonfiction.sublanes.append(
@@ -735,7 +735,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
                 genres.Parenting,
             ],
             priority=adult_nonfiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_nonfiction_priority += 1
@@ -752,7 +752,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
                 genres.Bartending_Cocktails,
             ],
             priority=adult_nonfiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_nonfiction_priority += 1
@@ -771,7 +771,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
                 genres.Pets,
             ],
             priority=adult_nonfiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_nonfiction_priority += 1
@@ -782,7 +782,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
             display_name="Urheilu",
             genres=[genres.Sports],
             priority=adult_nonfiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_nonfiction_priority += 1
@@ -793,7 +793,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
             display_name="Luonto ja eläimet",
             genres=[genres.Nature],
             priority=adult_nonfiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_nonfiction_priority += 1
@@ -805,7 +805,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
         genres=[],
         sublanes=[],
         priority=adult_nonfiction_priority,
-        **adult_common_args
+        **adult_common_args,
     )
     adult_nonfiction_priority += 1
     adult_nonfiction.sublanes.append(adult_science)
@@ -816,7 +816,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
             display_name="Teknologia",
             genres=[genres.Technology, genres.Computers],
             priority=1,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_science.sublanes.append(
@@ -826,7 +826,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
             display_name="Luonnontieteet",
             genres=[genres.Mathematics, genres.Science],
             priority=2,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_science.sublanes.append(
@@ -836,7 +836,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
             display_name="Lääketiede",
             genres=[genres.Medical],
             priority=3,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_science.sublanes.append(
@@ -850,7 +850,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
                 genres.Literary_Criticism,
             ],
             priority=4,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_nonfiction.sublanes.append(
@@ -860,7 +860,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
             display_name="True Crime",
             genres=[genres.True_Crime],
             priority=adult_nonfiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_nonfiction_priority += 1
@@ -883,7 +883,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
                 genres.Photography,
             ],
             priority=adult_nonfiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_nonfiction_priority += 1
@@ -900,7 +900,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
                 genres.Periodicals,
             ],
             priority=adult_nonfiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_nonfiction_priority += 1
@@ -911,7 +911,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
         display_name="Kaikki aikuisten tietokirjat",
         fiction=False,
         priority=adult_nonfiction_priority,
-        **adult_common_args
+        **adult_common_args,
     )
     adult_nonfiction.sublanes.append(adult_nonfiction_all)
 
@@ -927,7 +927,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
         genres=[],
         sublanes=[],
         priority=priority,
-        **ya_common_args
+        **ya_common_args,
     )
     priority += 1
     main_lanes.append(ya_books)
@@ -942,7 +942,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
         display_name="Yleinen kaunokirjallisuus",
         fiction=True,
         priority=ya_priority,
-        **ya_common_args
+        **ya_common_args,
     )
     ya_priority += 1
     ya_general.add_genres(
@@ -971,7 +971,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
         display_name="Jännitys",
         fiction=True,
         priority=ya_priority,
-        **ya_common_args
+        **ya_common_args,
     )
     ya_priority += 1
     ya_suspense.add_genres(
@@ -990,7 +990,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
         display_name="Fantasia",
         fiction=True,
         priority=ya_priority,
-        **ya_common_args
+        **ya_common_args,
     )
     ya_priority += 1
     ya_fantasy.add_genre(genres.Fantasy.name)
@@ -1002,7 +1002,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
         display_name="Scifi",
         fiction=True,
         priority=ya_priority,
-        **ya_common_args
+        **ya_common_args,
     )
     ya_priority += 1
     ya_scifi.add_genre(genres.Science_Fiction.name)
@@ -1014,7 +1014,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
         display_name="Kauhu",
         fiction=True,
         priority=ya_priority,
-        **ya_common_args
+        **ya_common_args,
     )
     ya_priority += 1
     ya_horror.add_genre(genres.Horror.name)
@@ -1026,7 +1026,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
         display_name="Romantiikka",
         fiction=True,
         priority=ya_priority,
-        **ya_common_args
+        **ya_common_args,
     )
     ya_priority += 1
     ya_romance.add_genre(genres.Romance.name)
@@ -1038,7 +1038,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
         display_name="Urheilu",
         fiction=True,
         priority=ya_priority,
-        **ya_common_args
+        **ya_common_args,
     )
     ya_priority += 1
     ya_sports.add_genres(
@@ -1059,7 +1059,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
         display_name="Eläimet",
         fiction=True,
         priority=ya_priority,
-        **ya_common_args
+        **ya_common_args,
     )
     ya_priority += 1
     ya_animals.add_genres(
@@ -1073,7 +1073,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
         display_name="Huumori",
         fiction=True,
         priority=ya_priority,
-        **ya_common_args
+        **ya_common_args,
     )
     ya_priority += 1
     ya_humor.add_genres([genres.Humor.name, genres.Humorous_Fiction.name])
@@ -1085,7 +1085,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
         display_name="Sarjakuvat",
         fiction=True,
         priority=ya_priority,
-        **ya_common_args
+        **ya_common_args,
     )
     ya_priority += 1
     ya_comics.add_genre(genres.Comics_Graphic_Novels.name)
@@ -1097,7 +1097,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
         display_name="Runot",
         fiction=True,
         priority=ya_priority,
-        **ya_common_args
+        **ya_common_args,
     )
     ya_priority += 1
     ya_poetry.add_genre(genres.Poetry.name)
@@ -1109,7 +1109,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
         display_name="Vaikeat aiheet",
         fiction=True,
         priority=ya_priority,
-        **ya_common_args
+        **ya_common_args,
     )
     ya_priority += 1
     ya_difficult.add_genres(
@@ -1134,7 +1134,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
         genres=[],
         fiction=False,
         priority=ya_priority,
-        **ya_common_args
+        **ya_common_args,
     )
     ya_priority += 1
     ya_books.sublanes.append(ya_nonfiction)
@@ -1145,7 +1145,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
         display_name="Kaikki nuortenkirjat",
         genres=[],
         priority=ya_priority,
-        **ya_common_args
+        **ya_common_args,
     )
     ya_books.sublanes.append(ya_all)
 
@@ -1163,7 +1163,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
         genres=[],
         sublanes=[],
         priority=priority,
-        **children_common_args
+        **children_common_args,
     )
     priority += 1
     main_lanes.append(childrens_books)
@@ -1178,7 +1178,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
         display_name="Yleinen kaunokirjallisuus",
         fiction=True,
         priority=children_priority,
-        **children_common_args
+        **children_common_args,
     )
     children_priority += 1
     children_general.add_genres(
@@ -1210,7 +1210,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
         display_name="Eläimet",
         fiction=True,
         priority=children_priority,
-        **children_common_args
+        **children_common_args,
     )
     children_priority += 1
     children_animals.add_genres(
@@ -1224,7 +1224,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
         display_name="Huumori",
         fiction=True,
         priority=children_priority,
-        **children_common_args
+        **children_common_args,
     )
     children_priority += 1
     children_humor.add_genres([genres.Humor.name, genres.Humorous_Fiction.name])
@@ -1236,7 +1236,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
         display_name="Jännitys",
         fiction=True,
         priority=children_priority,
-        **children_common_args
+        **children_common_args,
     )
     children_priority += 1
     children_suspense.add_genres(
@@ -1257,7 +1257,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
         display_name="Scifi ja fantasia",
         fiction=True,
         priority=children_priority,
-        **children_common_args
+        **children_common_args,
     )
     children_priority += 1
     children_scifi.add_genres([genres.Science_Fiction.name, genres.Fantasy.name])
@@ -1269,7 +1269,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
         display_name="Kauhu",
         fiction=True,
         priority=children_priority,
-        **children_common_args
+        **children_common_args,
     )
     children_priority += 1
     children_horror.add_genre(genres.Horror.name)
@@ -1293,7 +1293,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
         display_name="Sarjakuvat",
         fiction=True,
         priority=children_priority,
-        **children_common_args
+        **children_common_args,
     )
     children_priority += 1
     children_comics.add_genre(genres.Comics_Graphic_Novels.name)
@@ -1305,7 +1305,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
         display_name="Runot",
         fiction=True,
         priority=children_priority,
-        **children_common_args
+        **children_common_args,
     )
     children_priority += 1
     children_poetry.add_genre(genres.Poetry.name)
@@ -1317,7 +1317,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
         display_name="Vaikeat aiheet",
         fiction=True,
         priority=children_priority,
-        **children_common_args
+        **children_common_args,
     )
     children_priority += 1
     children_difficult.add_genres(
@@ -1342,7 +1342,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
         genres=[],
         fiction=False,
         priority=children_priority,
-        **children_common_args
+        **children_common_args,
     )
     children_priority += 1
     childrens_books.sublanes.append(children_nonfiction)
@@ -1353,7 +1353,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
         display_name="Kaikki lastenkirjat",
         genres=[],
         priority=children_priority,
-        **children_common_args
+        **children_common_args,
     )
     childrens_books.sublanes.append(children_all)
     logging.getLogger().info(f"Created lanes for {language}")
@@ -1393,7 +1393,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
         genres=[],
         sublanes=[],
         priority=priority,
-        **adult_common_args
+        **adult_common_args,
     )
     priority += 1
     main_lanes.append(all_swedish)
@@ -1407,7 +1407,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
         fiction=True,
         sublanes=[],
         priority=1,
-        **adult_common_args
+        **adult_common_args,
     )
     all_swedish.sublanes.append(adult_fiction)
 
@@ -1428,7 +1428,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
                 genres.Humorous_Fiction,
             ],
             priority=adult_fiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_fiction_priority += 1
@@ -1446,7 +1446,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
                 genres.Historical_Thriller,
             ],
             priority=adult_fiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_fiction_priority += 1
@@ -1467,7 +1467,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
                 genres.Cozy_Mystery,
             ],
             priority=adult_fiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_fiction_priority += 1
@@ -1489,7 +1489,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
                 genres.Adventure,
             ],
             priority=adult_fiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_fiction_priority += 1
@@ -1510,7 +1510,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
                 genres.Romantic_SF,
             ],
             priority=adult_fiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_fiction_priority += 1
@@ -1527,7 +1527,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
                 genres.Urban_Fantasy,
             ],
             priority=adult_fiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_fiction_priority += 1
@@ -1545,7 +1545,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
                 genres.Occult_Horror,
             ],
             priority=adult_fiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_fiction_priority += 1
@@ -1566,7 +1566,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
                 genres.Media_Tie_in_SF,
             ],
             priority=adult_fiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_fiction_priority += 1
@@ -1577,7 +1577,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
             display_name="Klassiker och folkdikter",
             genres=[genres.Classics, genres.Folklore_Stories],
             priority=adult_fiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_fiction_priority += 1
@@ -1588,7 +1588,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
             display_name="Dikter och skådespel",
             genres=[genres.Poetry, genres.Drama],
             priority=adult_fiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_fiction_priority += 1
@@ -1599,7 +1599,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
             display_name="Tecknade serier",
             genres=[genres.Comics_Graphic_Novels],
             priority=adult_fiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_fiction_priority += 1
@@ -1610,7 +1610,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
             display_name="Noveller",
             genres=[genres.Short_Stories],
             priority=adult_fiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_fiction_priority += 1
@@ -1621,7 +1621,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
         display_name="Alla skönlitteratur för vuxen",
         genres=[],
         priority=adult_fiction_priority,
-        **adult_common_args
+        **adult_common_args,
     )
     adult_fiction.sublanes.append(adult_fiction_all)
 
@@ -1635,7 +1635,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
         sublanes=[],
         fiction=False,
         priority=2,
-        **adult_common_args
+        **adult_common_args,
     )
     all_swedish.sublanes.append(adult_nonfiction)
 
@@ -1649,7 +1649,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
             display_name="Biografier och memoarer",
             genres=[genres.Biography_Memoir],
             priority=adult_nonfiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_nonfiction_priority += 1
@@ -1675,7 +1675,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
                 genres.World_History,
             ],
             priority=adult_nonfiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_nonfiction_priority += 1
@@ -1692,7 +1692,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
                 genres.Philosophy,
             ],
             priority=adult_nonfiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_nonfiction_priority += 1
@@ -1710,7 +1710,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
                 genres.Economics,
             ],
             priority=1,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_nonfiction_priority += 1
@@ -1721,7 +1721,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
             display_name="Psykologi och självhjälpsböcker",
             genres=[genres.Self_Help, genres.Life_Strategies, genres.Psychology],
             priority=1,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_nonfiction_priority += 1
@@ -1740,7 +1740,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
                 genres.Pets,
             ],
             priority=adult_nonfiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_nonfiction_priority += 1
@@ -1757,7 +1757,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
                 genres.Bartending_Cocktails,
             ],
             priority=adult_nonfiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_nonfiction_priority += 1
@@ -1776,7 +1776,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
                 genres.Social_Sciences,
             ],
             priority=1,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_nonfiction.sublanes.append(
@@ -1786,7 +1786,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
             display_name="Idrott",
             genres=[genres.Sports],
             priority=adult_nonfiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_nonfiction_priority += 1
@@ -1797,7 +1797,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
             display_name="Resor",
             genres=[genres.Travel],
             priority=adult_nonfiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_nonfiction_priority += 1
@@ -1839,7 +1839,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
                 genres.Periodicals,
             ],
             priority=adult_nonfiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_nonfiction_priority += 1
@@ -1850,7 +1850,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
         display_name="Alla facklitteratur för vuxen",
         fiction=False,
         priority=adult_nonfiction_priority,
-        **adult_common_args
+        **adult_common_args,
     )
     adult_nonfiction.sublanes.append(adult_nonfiction_all)
 
@@ -1866,7 +1866,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
         genres=[],
         sublanes=[],
         priority=3,
-        **ya_common_args
+        **ya_common_args,
     )
     all_swedish.sublanes.append(ya_books)
 
@@ -1880,7 +1880,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
         display_name="Skönlitteratur allmänt",
         fiction=True,
         priority=ya_priority,
-        **ya_common_args
+        **ya_common_args,
     )
     ya_priority += 1
     ya_general.add_genres(
@@ -1930,7 +1930,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
         display_name="Fantasi",
         fiction=True,
         priority=ya_priority,
-        **ya_common_args
+        **ya_common_args,
     )
     ya_priority += 1
     ya_fantasy.add_genre(genres.Fantasy.name)
@@ -1942,7 +1942,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
         display_name="Äventyr",
         fiction=True,
         priority=ya_priority,
-        **ya_common_args
+        **ya_common_args,
     )
     ya_priority += 1
     ya_adventure.add_genre(genres.Adventure.name)
@@ -1954,7 +1954,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
         display_name="Spänning",
         fiction=True,
         priority=ya_priority,
-        **ya_common_args
+        **ya_common_args,
     )
     ya_priority += 1
     ya_suspense.add_genres(
@@ -1972,7 +1972,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
         display_name="Scifi",
         fiction=True,
         priority=ya_priority,
-        **ya_common_args
+        **ya_common_args,
     )
     ya_priority += 1
     ya_scifi.add_genre(genres.Science_Fiction.name)
@@ -1984,7 +1984,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
         display_name="Skräk",
         fiction=True,
         priority=ya_priority,
-        **ya_common_args
+        **ya_common_args,
     )
     ya_priority += 1
     ya_horror.add_genre(genres.Horror.name)
@@ -1996,7 +1996,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
         display_name="Historiska romaner",
         fiction=True,
         priority=ya_priority,
-        **ya_common_args
+        **ya_common_args,
     )
     ya_priority += 1
     ya_historical.add_genre(genres.Historical_Fiction.name)
@@ -2008,7 +2008,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
         display_name="Romantik",
         fiction=True,
         priority=ya_priority,
-        **ya_common_args
+        **ya_common_args,
     )
     ya_priority += 1
     ya_romance.add_genre(genres.Romance.name)
@@ -2020,7 +2020,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
         display_name="Dikter och skådespel",
         fiction=True,
         priority=ya_priority,
-        **ya_common_args
+        **ya_common_args,
     )
     ya_priority += 1
     ya_poetry.add_genres([genres.Poetry.name, genres.Drama.name])
@@ -2033,7 +2033,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
         genres=[],
         fiction=False,
         priority=ya_priority,
-        **ya_common_args
+        **ya_common_args,
     )
     ya_priority += 1
     ya_books.sublanes.append(ya_nonfiction)
@@ -2044,7 +2044,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
         display_name="Alla böcker för ungdomar",
         genres=[],
         priority=ya_priority,
-        **ya_common_args
+        **ya_common_args,
     )
     ya_books.sublanes.append(ya_all)
 
@@ -2062,7 +2062,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
         genres=[],
         sublanes=[],
         priority=4,
-        **children_common_args
+        **children_common_args,
     )
     all_swedish.sublanes.append(childrens_books)
 
@@ -2076,7 +2076,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
         display_name="Skönlitteratur allmänt",
         fiction=True,
         priority=children_priority,
-        **children_common_args
+        **children_common_args,
     )
     children_priority += 1
     children_general.add_genres(
@@ -2137,7 +2137,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
         display_name="Spänning",
         fiction=True,
         priority=children_priority,
-        **children_common_args
+        **children_common_args,
     )
     children_priority += 1
     children_suspense.add_genres(
@@ -2157,7 +2157,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
         display_name="Äventyr",
         fiction=True,
         priority=children_priority,
-        **children_common_args
+        **children_common_args,
     )
     children_priority += 1
     children_adventure.add_genre(genres.Adventure.name)
@@ -2169,7 +2169,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
         display_name="Humor",
         fiction=True,
         priority=children_priority,
-        **children_common_args
+        **children_common_args,
     )
     children_priority += 1
     children_humor.add_genres([genres.Humor.name, genres.Humorous_Fiction.name])
@@ -2181,7 +2181,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
         display_name="Skräk",
         fiction=True,
         priority=children_priority,
-        **children_common_args
+        **children_common_args,
     )
     children_priority += 1
     children_horror.add_genre(genres.Horror.name)
@@ -2193,7 +2193,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
         display_name="Scifi och fantasi",
         fiction=True,
         priority=children_priority,
-        **children_common_args
+        **children_common_args,
     )
     children_priority += 1
     children_scifi.add_genres([genres.Science_Fiction.name, genres.Fantasy.name])
@@ -2205,7 +2205,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
         display_name="Historiska romaner",
         fiction=True,
         priority=children_priority,
-        **ya_common_args
+        **ya_common_args,
     )
     children_priority += 1
     children_historical.add_genre(genres.Historical_Fiction.name)
@@ -2217,7 +2217,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
         display_name="Dikter och skådespel",
         fiction=True,
         priority=children_priority,
-        **children_common_args
+        **children_common_args,
     )
     children_priority += 1
     children_poetry.add_genres([genres.Poetry.name, genres.Drama.name])
@@ -2230,7 +2230,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
         genres=[],
         fiction=False,
         priority=children_priority,
-        **children_common_args
+        **children_common_args,
     )
     children_priority += 1
     childrens_books.sublanes.append(children_nonfiction)
@@ -2241,7 +2241,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
         display_name="Alla böcker för barn",
         genres=[],
         priority=children_priority,
-        **children_common_args
+        **children_common_args,
     )
     childrens_books.sublanes.append(children_all)
     logging.getLogger().info(f"Created lanes for {language}")
@@ -2280,7 +2280,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
         genres=[],
         sublanes=[],
         priority=priority,
-        **adult_common_args
+        **adult_common_args,
     )
     priority += 1
     main_lanes.append(all_english)
@@ -2294,7 +2294,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
         fiction=True,
         sublanes=[],
         priority=1,
-        **adult_common_args
+        **adult_common_args,
     )
     all_english.sublanes.append(adult_fiction)
 
@@ -2316,7 +2316,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
                 genres.Comics_Graphic_Novels,
             ],
             priority=adult_fiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_fiction_priority += 1
@@ -2329,7 +2329,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
         fiction=True,
         sublanes=[],
         priority=adult_fiction_priority,
-        **adult_common_args
+        **adult_common_args,
     )
     adult_fiction_priority += 1
     adult_suspense.sublanes.append(
@@ -2349,7 +2349,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
                 genres.Military_Thriller,
             ],
             priority=1,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_fiction.sublanes.append(adult_suspense)
@@ -2369,7 +2369,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
                 genres.Women_Detectives,
             ],
             priority=2,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_suspense.sublanes.append(
@@ -2379,7 +2379,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
             display_name="Cozy Crime",
             genres=[genres.Cozy_Mystery],
             priority=3,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_fiction_priority += 1
@@ -2390,7 +2390,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
             display_name="Adventure",
             genres=[genres.Adventure],
             priority=adult_fiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_fiction.sublanes.append(
@@ -2410,7 +2410,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
                 genres.Romantic_SF,
             ],
             priority=adult_fiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_fiction_priority += 1
@@ -2423,7 +2423,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
                 genres.LGBTQ_Fiction,
             ],
             priority=adult_fiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_fiction_priority += 1
@@ -2444,7 +2444,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
                 genres.Media_Tie_in_SF,
             ],
             priority=adult_fiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_fiction_priority += 1
@@ -2460,7 +2460,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
                 genres.Urban_Fantasy,
             ],
             priority=adult_fiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_fiction_priority += 1
@@ -2478,7 +2478,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
                 genres.Occult_Horror,
             ],
             priority=adult_fiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_fiction_priority += 1
@@ -2496,7 +2496,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
                 genres.Historical_Thriller,
             ],
             priority=adult_fiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_fiction_priority += 1
@@ -2508,7 +2508,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
             display_name="Short Stories",
             genres=[genres.Short_Stories],
             priority=adult_fiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_fiction_priority += 1
@@ -2519,7 +2519,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
             display_name="Classics and Folklore",
             genres=[genres.Classics, genres.Folklore_Stories],
             priority=adult_fiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_fiction_priority += 1
@@ -2530,7 +2530,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
             display_name="Poetry and Drama",
             genres=[genres.Poetry, genres.Drama],
             priority=adult_fiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_fiction_priority += 1
@@ -2541,7 +2541,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
         display_name="All Fiction for Adults",
         genres=[],
         priority=adult_fiction_priority,
-        **adult_common_args
+        **adult_common_args,
     )
     adult_fiction.sublanes.append(adult_fiction_all)
 
@@ -2555,7 +2555,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
         sublanes=[],
         fiction=False,
         priority=2,
-        **adult_common_args
+        **adult_common_args,
     )
     all_english.sublanes.append(adult_nonfiction)
 
@@ -2569,7 +2569,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
             display_name="Biography & Memoir",
             genres=[genres.Biography_Memoir],
             priority=adult_nonfiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_nonfiction_priority += 1
@@ -2595,7 +2595,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
                 genres.World_History,
             ],
             priority=adult_nonfiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_nonfiction_priority += 1
@@ -2612,7 +2612,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
                 genres.Philosophy,
             ],
             priority=adult_nonfiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_nonfiction_priority += 1
@@ -2630,7 +2630,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
                 genres.Economics,
             ],
             priority=1,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_nonfiction_priority += 1
@@ -2641,7 +2641,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
             display_name="Psychology & Self-Help",
             genres=[genres.Self_Help, genres.Life_Strategies, genres.Psychology],
             priority=1,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_nonfiction_priority += 1
@@ -2660,7 +2660,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
                 genres.Pets,
             ],
             priority=adult_nonfiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_nonfiction_priority += 1
@@ -2677,7 +2677,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
                 genres.Bartending_Cocktails,
             ],
             priority=adult_nonfiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_nonfiction_priority += 1
@@ -2696,7 +2696,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
                 genres.Social_Sciences,
             ],
             priority=1,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_nonfiction.sublanes.append(
@@ -2706,7 +2706,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
             display_name="Sports",
             genres=[genres.Sports],
             priority=adult_nonfiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_nonfiction_priority += 1
@@ -2717,7 +2717,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
             display_name="Travel",
             genres=[genres.Travel],
             priority=adult_nonfiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_nonfiction_priority += 1
@@ -2740,7 +2740,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
                 genres.Photography,
             ],
             priority=adult_nonfiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_nonfiction_priority += 1
@@ -2771,7 +2771,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
                 genres.Periodicals,
             ],
             priority=adult_nonfiction_priority,
-            **adult_common_args
+            **adult_common_args,
         )
     )
     adult_nonfiction_priority += 1
@@ -2782,7 +2782,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
         display_name="All Nonfiction for Adults",
         fiction=False,
         priority=adult_nonfiction_priority,
-        **adult_common_args
+        **adult_common_args,
     )
     adult_nonfiction.sublanes.append(adult_nonfiction_all)
 
@@ -2798,7 +2798,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
         genres=[],
         sublanes=[],
         priority=3,
-        **ya_common_args
+        **ya_common_args,
     )
     all_english.sublanes.append(ya_books)
 
@@ -2811,7 +2811,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
         display_name="General Fiction",
         fiction=True,
         priority=ya_priority,
-        **ya_common_args
+        **ya_common_args,
     )
     ya_priority += 1
     ya_general.add_genres(
@@ -2863,7 +2863,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
         display_name="Adventure",
         fiction=True,
         priority=ya_priority,
-        **ya_common_args
+        **ya_common_args,
     )
     ya_priority += 1
     ya_adventure.add_genre(genres.Adventure.name)
@@ -2875,7 +2875,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
         display_name="Fantasy",
         fiction=True,
         priority=ya_priority,
-        **ya_common_args
+        **ya_common_args,
     )
     ya_priority += 1
     ya_fantasy.add_genre(genres.Fantasy.name)
@@ -2887,7 +2887,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
         display_name="Suspense",
         fiction=True,
         priority=ya_priority,
-        **ya_common_args
+        **ya_common_args,
     )
     ya_priority += 1
     ya_suspense.add_genres(
@@ -2906,7 +2906,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
         display_name="Science Fiction",
         fiction=True,
         priority=ya_priority,
-        **ya_common_args
+        **ya_common_args,
     )
     ya_priority += 1
     ya_scifi.add_genre(genres.Science_Fiction.name)
@@ -2919,7 +2919,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
         genres=[],
         fiction=False,
         priority=ya_priority,
-        **ya_common_args
+        **ya_common_args,
     )
     ya_priority += 1
     ya_books.sublanes.append(ya_nonfiction)
@@ -2930,7 +2930,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
         display_name="All Books for Young Adults",
         genres=[],
         priority=ya_priority,
-        **ya_common_args
+        **ya_common_args,
     )
     ya_books.sublanes.append(ya_all)
 
@@ -2947,7 +2947,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
         genres=[],
         sublanes=[],
         priority=4,
-        **children_common_args
+        **children_common_args,
     )
     all_english.sublanes.append(childrens_books)
 
@@ -2961,7 +2961,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
         display_name="General Fiction",
         fiction=True,
         priority=children_priority,
-        **children_common_args
+        **children_common_args,
     )
     children_priority += 1
     children_general.add_genres(
@@ -3014,7 +3014,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
         display_name="Adventure",
         fiction=True,
         priority=children_priority,
-        **children_common_args
+        **children_common_args,
     )
     children_priority += 1
     children_adventure.add_genre(genres.Adventure.name)
@@ -3026,7 +3026,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
         display_name="Fantasy",
         fiction=True,
         priority=ya_priority,
-        **ya_common_args
+        **ya_common_args,
     )
     ya_priority += 1
     children_fantasy.add_genre(genres.Fantasy.name)
@@ -3038,7 +3038,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
         display_name="Suspense",
         fiction=True,
         priority=ya_priority,
-        **ya_common_args
+        **ya_common_args,
     )
     ya_priority += 1
     children_suspense.add_genres(
@@ -3070,7 +3070,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
         genres=[],
         fiction=False,
         priority=children_priority,
-        **children_common_args
+        **children_common_args,
     )
     children_priority += 1
     childrens_books.sublanes.append(children_nonfiction)
@@ -3081,7 +3081,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
         display_name="All Books for Children",
         genres=[],
         priority=ya_priority,
-        **ya_common_args
+        **ya_common_args,
     )
     childrens_books.sublanes.append(children_all)
     logging.getLogger().info(f"Created lanes for {language}")
@@ -3156,7 +3156,7 @@ def create_lane_for_small_collection(_db, library, parent, language, priority=0)
         display_name=_("Books for Adults"),
         audiences=ADULT,
         priority=sublane_priority,
-        **common_args
+        **common_args,
     )
     sublane_priority += 1
 
@@ -3167,7 +3167,7 @@ def create_lane_for_small_collection(_db, library, parent, language, priority=0)
         display_name=_("Books for Young Adults"),
         audiences=YA,
         priority=sublane_priority,
-        **common_args
+        **common_args,
     )
     sublane_priority += 1
 
@@ -3178,7 +3178,7 @@ def create_lane_for_small_collection(_db, library, parent, language, priority=0)
         display_name=_("Books for Children"),
         audiences=CHILDREN,
         priority=sublane_priority,
-        **common_args
+        **common_args,
     )
     sublane_priority += 1
 
@@ -3190,7 +3190,7 @@ def create_lane_for_small_collection(_db, library, parent, language, priority=0)
         parent=parent,
         sublanes=[adults, ya, children],
         priority=priority,
-        **common_args
+        **common_args,
     )
     priority += 1
     logging.getLogger().info(f"Created lanes for {language}")
