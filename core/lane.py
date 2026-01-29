@@ -3101,6 +3101,19 @@ class Lane(Base, DatabaseBackedWorkList, HierarchyWorkList):
         self._genre_ids = self._gather_genre_ids()
         return lanegenre, is_new
 
+    def add_genres(self, genre_list, inclusive=True, recursive=True):
+        """Create a list of new LaneGenre objects for the given genres and
+        associate them with this Lane.
+
+        Mainly used in tests.
+        """
+
+        lanegenre_list = []
+        for genre in genre_list:
+            lanegenre, is_new = self.add_genre(genre, inclusive, recursive)
+            lanegenre_list.append((lanegenre, is_new))
+        return lanegenre_list
+
     @property
     def search_target(self):
         """Obtain the WorkList that should be searched when someone
