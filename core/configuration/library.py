@@ -656,10 +656,12 @@ class LibrarySettings(BaseSettings):
             level=Level.SYS_ADMIN_ONLY,
         ),
     )
+    # Large, small and tiny language configurations should be removed.
+    # All is hard-coded to fin, swe, eng and any smaller languages.
     large_collection_languages: list[str] | None = FormField(
         None,
         form=LibraryConfFormItem(
-            label="The primary languages represented in this library's collection",
+            label="The primary languages represented in this library's collection. LEAVE EMPTY.",
             type=ConfigurationFormItemType.LIST,
             format="language-code",
             description="Each value can be either the full name of a language or an "
@@ -673,7 +675,7 @@ class LibrarySettings(BaseSettings):
     small_collection_languages: list[str] | None = FormField(
         None,
         form=LibraryConfFormItem(
-            label="Other major languages represented in this library's collection",
+            label="Other major languages represented in this library's collection. LEAVE EMPTY.",
             type=ConfigurationFormItemType.LIST,
             format="language-code",
             description="Each value can be either the full name of a language or an "
@@ -687,7 +689,7 @@ class LibrarySettings(BaseSettings):
     tiny_collection_languages: list[str] | None = FormField(
         None,
         form=LibraryConfFormItem(
-            label="Other languages in this library's collection",
+            label="Other languages in this library's collection. LEAVE EMPTY.",
             type=ConfigurationFormItemType.LIST,
             format="language-code",
             description="Each value can be either the full name of a language or an "
