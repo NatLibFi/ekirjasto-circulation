@@ -53,36 +53,35 @@ def load_lanes(_db, library):
 
 
 def _lane_configuration_from_collection_sizes(estimates):
-    """Sort a library's collections into 'large', 'small', and 'tiny'
+    """Sort a library's collections into 'large' and 'small'
     subcollections based on language.
 
     :param estimates: A Counter.
 
-    :return: A 3-tuple (large, small, tiny). 'large' will contain the
-    collection with the largest language, and any languages with a
-    collection more than 10% the size of the largest
-    collection. 'small' will contain any languages with a collection
-    more than 1% the size of the largest collection, and 'tiny' will
-    contain all other languages represented in `estimates`.
+    :return: A list.
     """
     if not estimates:
-        # There are no holdings. Assume we have a large English
+        # There are no holdings. Assume we have a large Finnish
         # collection and nothing else.
-        return ["eng"], [], []
+        return ["fin"], []
 
     large = []
     small = []
-    tiny = []
 
-    [(ignore, largest)] = estimates.most_common(1)
-    for language, count in estimates.most_common():
-        if count > largest * 0.1:
+    # E-kirjasto: We don't actually care about the amounts, we're just
+    # interested in the languages in the estimates so that we get all the
+    # smaller languages to make up the "Other Languages" lanes.
+    for language, _ in estimates.most_common():
+        print(language)
+        # We want to be exact with our large languages because we know
+        # what they are.
+        if language in {"fin", "swe", "eng"}:
             large.append(language)
-        elif count > largest * 0.01:
-            small.append(language)
         else:
-            tiny.append(language)
-    return large, small, tiny
+            small.append(language)
+    # Return lists for each category
+    print(large, small)
+    return large, small
 
 
 def create_default_lanes(_db, library):
