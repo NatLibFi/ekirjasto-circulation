@@ -3087,39 +3087,27 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
 
     return priority
 
-
 def create_world_languages_lane(
     _db,
     library,
     small_languages,
-    tiny_languages,
-    priority=0,
+    priority=4000,
 ):
-    """Create a lane called 'World Languages' whose sublanes represent
+    """Create a lane called 'Books in Other Languages' whose sublanes represent
     the non-large language collections available to this library.
     """
-    if not small_languages and not tiny_languages:
+    if not small_languages:
         # All the languages on this system have large collections, so
         # there is no need for a 'World Languages' lane.
         return priority
-
-    complete_language_set = set()
-    for list in (small_languages, tiny_languages):
-        for languageset in list:
-            if isinstance(languageset, str):
-                complete_language_set.add(languageset)
-            else:
-                complete_language_set.update(languageset)
-
     world_languages, ignore = create(
         _db,
         Lane,
         library=library,
-        display_name="World Languages",
+        display_name=_("Books in Other Languages"),
         fiction=None,
         priority=priority,
-        languages=complete_language_set,
-        media=[Edition.BOOK_MEDIUM],
+        languages=small_languages,
         genres=[],
     )
     priority += 1
@@ -3129,11 +3117,6 @@ def create_world_languages_lane(
         # Create a lane (with sublanes) for each small collection.
         language_priority = create_lane_for_small_collection(
             _db, library, world_languages, small, language_priority
-        )
-    for tiny in tiny_languages:
-        # Create a lane (no sublanes) for each tiny collection.
-        language_priority = create_lane_for_tiny_collection(
-            _db, library, world_languages, tiny, language_priority
         )
     return priority
 
