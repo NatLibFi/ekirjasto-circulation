@@ -539,6 +539,8 @@ zza|||Zaza; Dimili; Dimli; Kirdki; Kirmanjki; Zazaki|zaza; dimili; dimli; kirdki
             "nativeName": "español, castellano",
         },
         {"code": "sv", "name": "Swedish", "nativeName": "svenska"},
+        {"code": "uk", "name": "Ukranian", "nativeName": "українська"},
+        {"code": "se", "name": "Northern Sami", "nativeName": "Davvisámegiella"},
     ]
 
     RESERVED_CODES = re.compile("^q[a-t][a-z]$")
