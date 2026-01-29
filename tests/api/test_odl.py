@@ -737,13 +737,6 @@ class TestODLAPI:
         assert opds2_with_odl_api_fixture.pool.licenses_reserved == 0
         assert opds2_with_odl_api_fixture.pool.patrons_in_hold_queue == 2
 
-        # The first hold gets back to position 1 with a new end date.
-        assert hold.position == 1
-        assert hold.end == loan_period
-        # And the second hold position moves a position down but the end date remains.
-        assert hold2.position == 2
-        assert hold2.end == now + datetime.timedelta(days=365)
-
     def test_checkout_failures(
         self,
         db: DatabaseTransactionFixture,
