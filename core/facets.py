@@ -118,11 +118,11 @@ class FacetConstants:
         COLLECTION_FULL: _("Everything"),
         COLLECTION_FEATURED: _("Popular Books"),
         COLLECTION_NAME_ALL: _("All"),
-        LANGUAGE_ALL: _("All"),
-        LANGUAGE_FINNISH: _("Finnish"),
-        LANGUAGE_SWEDISH: _("Swedish"),
-        LANGUAGE_ENGLISH: _("English"),
-        LANGUAGE_OTHERS: _("Others"),
+        # LANGUAGE_ALL: _("All"),
+        # LANGUAGE_FINNISH: _("Finnish"),
+        # LANGUAGE_SWEDISH: _("Swedish"),
+        # LANGUAGE_ENGLISH: _("English"),
+        # LANGUAGE_OTHERS: _("Others"),
     }
 
     # For titles generated based on some runtime value
@@ -143,7 +143,7 @@ class FacetConstants:
         COLLECTION_FACET_GROUP_NAME: [COLLECTION_FULL, COLLECTION_FEATURED],
         DISTRIBUTOR_FACETS_GROUP_NAME: [DISTRIBUTOR_ALL],
         COLLECTION_NAME_FACETS_GROUP_NAME: [COLLECTION_NAME_ALL],
-        LANGUAGE_FACET_GROUP_NAME: LANGUAGE_FACETS,
+        # LANGUAGE_FACET_GROUP_NAME: LANGUAGE_FACETS,
     }
 
     # Unless a library offers an alternate configuration, these
@@ -154,7 +154,7 @@ class FacetConstants:
         COLLECTION_FACET_GROUP_NAME: COLLECTION_FULL,
         DISTRIBUTOR_FACETS_GROUP_NAME: DISTRIBUTOR_ALL,
         COLLECTION_NAME_FACETS_GROUP_NAME: COLLECTION_NAME_ALL,
-        LANGUAGE_FACET_GROUP_NAME: LANGUAGE_ALL,
+        # LANGUAGE_FACET_GROUP_NAME: LANGUAGE_ALL,
     }
 
     SORT_ORDER_TO_OPENSEARCH_FIELD_NAME = {
