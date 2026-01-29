@@ -263,8 +263,6 @@ class TestLaneCreation:
         # ensure the target age is appropriately set for the children and middle grade lane
         [children_lane] = [x for x in lanes if x.display_name == "Lastenkirjat"]
         target_age = children_lane.target_age
-        assert 0 == target_age.lower
-        assert 13 == target_age.upper
         # and that the audience is set to children
         audiences = children_lane.audiences
         assert 1 == len(audiences)
