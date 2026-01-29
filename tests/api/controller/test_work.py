@@ -24,7 +24,6 @@ from api.problem_details import NO_SUCH_LANE, NOT_FOUND_ON_REMOTE
 from core.classifier import SubjectClassifier
 from core.entrypoint import AudiobooksEntryPoint
 from core.external_search import SortKeyPagination
-from core.facets import FacetConstants
 from core.feed.acquisition import OPDSAcquisitionFeed
 from core.feed.annotator.circulation import LibraryAnnotator
 from core.feed.types import WorkEntry
@@ -136,7 +135,7 @@ class TestWorkController:
         facet_links = [
             link for link in links if link["rel"] == "http://opds-spec.org/facet"
         ]
-        assert 10 + len(FacetConstants.LANGUAGE_FACETS) == len(facet_links)
+        assert 10 == len(facet_links)
 
         # At this point we don't want to generate real feeds anymore.
         # We can't do a real end-to-end test without setting up a real
@@ -866,7 +865,7 @@ class TestWorkController:
         facet_links = [
             link for link in links if link["rel"] == "http://opds-spec.org/facet"
         ]
-        assert 11 + len(FacetConstants.LANGUAGE_FACETS) == len(facet_links)
+        assert 11 == len(facet_links)
 
         # The facet link we care most about is the default sort order,
         # put into place by SeriesFacets.

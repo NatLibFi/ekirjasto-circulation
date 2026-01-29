@@ -29,8 +29,9 @@ class TestOPDSFeedController:
     """
 
     _EXTRA_BOOKS = [
-        WorkSpec("english_2", "Totally American", "Uncle Sam", "eng", False),
-        WorkSpec("french_1", "Très Français", "Marianne", "fre", False),
+        WorkSpec("english_2", "Totally American", "Uncle Sam", "fin", False),
+        WorkSpec("french_1", "Très Français", "Marianne", "eng", False),
+        WorkSpec("book", "something", "something2", "swe", True),
     ]
 
     groups_called_with: Any
@@ -307,13 +308,13 @@ class TestOPDSFeedController:
             "/?entrypoint=Audio", headers=auth
         ):
             # In default_config, there are no LARGE_COLLECTION_LANGUAGES,
-            # so the sole top-level lane is "World Languages", which covers the
+            # so the sole top-level lane is "Books in Other Languages", which covers the
             # SMALL and TINY_COLLECTION_LANGUAGES.
             #
             # Thus, when we pass lane=None into groups(), we're asking for a
-            # feed for the sole top-level lane, "World Languages".
+            # feed for the sole top-level lane, "Books in Other Languages".
             expect_lane = circulation_fixture.manager.opds_feeds.load_lane(None)
-            assert "World Languages" == expect_lane.display_name
+            assert "Books in Other Languages" == expect_lane.display_name
 
             # Ask for that feed.
             response = circulation_fixture.manager.opds_feeds.groups(
@@ -410,6 +411,7 @@ class TestOPDSFeedController:
         circulation_fixture.add_works(self._EXTRA_BOOKS)
 
         library = circulation_fixture.db.default_library()
+        lane = circulation_fixture.db.lane()
         lane = circulation_fixture.manager.top_level_lanes[library.id]
         lane = circulation_fixture.db.session.merge(lane)
 
@@ -428,7 +430,7 @@ class TestOPDSFeedController:
 
             feed = feedparser.parse(response.data)
             entries = feed["entries"]
-            # The default top-level lane is "World Languages", which contains
+            # The default top-level lane is "Books in Other Languages", which contains
             # sublanes for English, Spanish, Chinese, and French.
             assert len(lane.sublanes) == len(entries)
 
@@ -500,7 +502,7 @@ class TestOPDSFeedController:
         with circulation_fixture.request_context_with_library(
             "/?q=t&size=99&after=22&media=Music"
         ):
-            # Try the top-level lane, "World Languages"
+            # Try the top-level lane, "Books in Other Languages"
             expect_lane = circulation_fixture.manager.opds_feeds.load_lane(None)
             response = circulation_fixture.manager.opds_feeds.search(
                 None, feed_class=Mock

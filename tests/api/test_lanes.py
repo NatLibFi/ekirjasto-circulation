@@ -1,9 +1,8 @@
 from collections import Counter
-from unittest.mock import MagicMock, create_autospec, patch
+from unittest.mock import MagicMock, create_autospec
 
 import pytest
 
-from api.integration.registry.metadata import MetadataRegistry
 from api.lanes import (
     ContributorFacets,
     ContributorLane,
@@ -22,16 +21,15 @@ from api.lanes import (
     _lane_configuration_from_collection_sizes,
     create_default_lanes,
     create_lane_for_small_collection,
-    create_lane_for_tiny_collection,
-    create_lanes_for_large_collection,
+    create_lanes_for_english_collection,
+    create_lanes_for_finnish_collection,
+    create_lanes_for_swedish_collection,
     create_world_languages_lane,
 )
 from api.metadata.novelist import NoveListAPI
-from api.metadata.nyt import NYTBestSellerAPI
 from core.classifier import SubjectClassifier
 from core.entrypoint import AudiobooksEntryPoint
 from core.external_search import Filter
-from core.integration.goals import Goals
 from core.lane import DefaultSortOrderFacets, Facets, FeaturedFacets, Lane, WorkList
 from core.metadata_layer import ContributorData, Metadata
 from core.model import Contributor, DataSource, Edition, ExternalIntegration, Library
@@ -43,9 +41,8 @@ from tests.fixtures.search import ExternalSearchFixtureFake
 class TestLaneCreation:
     NONEXISTENT_ALPHA3 = "nqq"
 
-    def test_create_lanes_for_large_collection(self, db: DatabaseTransactionFixture):
-        languages = ["eng", "spa"]
-        create_lanes_for_large_collection(db.session, db.default_library(), languages)
+    def test_create_lanes_for_finnish_collection(self, db: DatabaseTransactionFixture):
+        create_lanes_for_finnish_collection(db.session, db.default_library())
         lanes = (
             db.session.query(Lane)
             .filter(Lane.parent_id == None)
@@ -54,72 +51,34 @@ class TestLaneCreation:
         )
 
         # We have five top-level lanes.
-        assert 5 == len(lanes)
+        assert 4 == len(lanes)
         assert [
-            "Fiction",
-            "Nonfiction",
-            "Young Adult Fiction",
-            "Young Adult Nonfiction",
-            "Children and Middle Grade",
+            "Aikuisten kaunokirjat",
+            "Aikuisten tietokirjat",
+            "Nuortenkirjat",
+            "Lastenkirjat",
         ] == [x.display_name for x in lanes]
         for lane in lanes:
             assert db.default_library() == lane.library
-            # They all are restricted to English and Spanish.
-            assert lane.languages == languages
+            # They all are restricted Finnish.
+            assert lane.languages == ["fin"]
 
             # They have no restrictions on media type -- that's handled
             # with entry points.
             assert None == lane.media
 
-        assert [
-            "Fiction",
-            "Nonfiction",
-            "Young Adult Fiction",
-            "Young Adult Nonfiction",
-            "Children and Middle Grade",
-        ] == [x.display_name for x in lanes]
-
-        # The Adult Fiction and Adult Nonfiction lanes reproduce the
-        # genre structure found in the genre definitions.
+        # Spot checks for defined lanes.
         fiction, nonfiction = lanes[0:2]
-        [sf] = [x for x in fiction.sublanes if "Science Fiction" in x.display_name]
-        [periodicals] = [
-            x for x in nonfiction.sublanes if "Periodicals" in x.display_name
-        ]
-        assert True == sf.fiction
-        assert "Science Fiction" == sf.display_name
+        [sf] = [x for x in fiction.sublanes if "Scifi" in x.display_name]
+        assert "Scifi" == sf.display_name
         assert "Science Fiction" in [genre.name for genre in sf.genres]
 
-        [space_opera] = [x for x in sf.sublanes if "Space Opera" in x.display_name]
-        assert True == sf.fiction
-        assert "Space Opera" == space_opera.display_name
-        assert ["Space Opera"] == [genre.name for genre in space_opera.genres]
-
-        [history] = [x for x in nonfiction.sublanes if "History" in x.display_name]
-        assert False == history.fiction
-        assert "History" == history.display_name
+        [history] = [x for x in nonfiction.sublanes if "Historia" in x.display_name]
+        assert "Historia" == history.display_name
         assert "History" in [genre.name for genre in history.genres]
-        [european_history] = [
-            x for x in history.sublanes if "European History" in x.display_name
-        ]
-        assert "European History" in [genre.name for genre in european_history.genres]
 
-        # Delete existing lanes.
-        for lane in db.session.query(Lane).filter(
-            Lane.library_id == db.default_library().id
-        ):
-            db.session.delete(lane)
-
-        # If there's an NYT Best Sellers integration and we create the lanes again...
-        nyt_protocol = MetadataRegistry().get_protocol(NYTBestSellerAPI)
-        assert nyt_protocol is not None
-        db.integration_configuration(
-            nyt_protocol,
-            goal=Goals.METADATA_GOAL,
-            password="foo",
-        )
-
-        create_lanes_for_large_collection(db.session, db.default_library(), languages)
+    def test_create_lanes_for_swedish_collection(self, db: DatabaseTransactionFixture):
+        create_lanes_for_swedish_collection(db.session, db.default_library())
         lanes = (
             db.session.query(Lane)
             .filter(Lane.parent_id == None)
@@ -127,68 +86,110 @@ class TestLaneCreation:
             .all()
         )
 
-        # Now we have six top-level lanes, with best sellers at the beginning.
+        # We have one main lane.
+        assert 1 == len(lanes)
+        assert lanes[0].display_name == "Böcker på svenska"
         assert [
-            "Best Sellers",
-            "Fiction",
-            "Nonfiction",
-            "Young Adult Fiction",
-            "Young Adult Nonfiction",
-            "Children and Middle Grade",
-        ] == [x.display_name for x in lanes]
+            "Skönkitteratur för vuxen",
+            "Facklitteratur för vuxen",
+            "Böcker för ungdomar",
+            "Böcker för barn",
+        ] == [x.display_name for x in lanes[0].sublanes]
+        for lane in lanes:
+            assert db.default_library() == lane.library
+            # They all are restricted Swedish.
+            assert lane.languages == ["swe"]
 
-        # Each sublane other than best sellers also contains a best sellers lane.
-        for sublane in lanes[1:]:
-            best_sellers = sublane.visible_children[0]
-            assert "Best Sellers" == best_sellers.display_name
+            # They have no restrictions on media type -- that's handled
+            # with entry points.
+            assert None == lane.media
 
-        # The best sellers lane has a data source.
-        nyt_data_source = DataSource.lookup(db.session, DataSource.NYT)
-        assert nyt_data_source == lanes[0].list_datasource
+        # Spot checks for defined lanes.
+        fiction, nonfiction = lanes[0].sublanes[0:2]
+        [sf] = [x for x in fiction.sublanes if "Scifi" in x.display_name]
+        assert "Scifi" == sf.display_name
+        assert "Science Fiction" in [genre.name for genre in sf.genres]
+
+        [history] = [x for x in nonfiction.sublanes if "Historia" in x.display_name]
+        assert "Historia" == history.display_name
+        assert "History" in [genre.name for genre in history.genres]
+
+    def test_create_lanes_for_english_collection(self, db: DatabaseTransactionFixture):
+        create_lanes_for_english_collection(db.session, db.default_library())
+        lanes = (
+            db.session.query(Lane)
+            .filter(Lane.parent_id == None)
+            .order_by(Lane.priority)
+            .all()
+        )
+
+        # We have one main lane.
+        assert 1 == len(lanes)
+        assert lanes[0].display_name == "Books in English"
+        assert [
+            "Fiction for Adults",
+            "Nonfiction for Adults",
+            "Books for Young Adults",
+            "Books for Children",
+        ] == [x.display_name for x in lanes[0].sublanes]
+        for lane in lanes:
+            assert db.default_library() == lane.library
+            # They all are restricted English.
+            assert lane.languages == ["eng"]
+
+            # They have no restrictions on media type -- that's handled
+            # with entry points.
+            assert None == lane.media
+
+        # Spot checks for defined lanes.
+        fiction, nonfiction = lanes[0].sublanes[0:2]
+        [sf] = [x for x in fiction.sublanes if "Science Fiction" in x.display_name]
+        assert "Science Fiction" == sf.display_name
+        assert "Science Fiction" in [genre.name for genre in sf.genres]
+
+        [history] = [x for x in nonfiction.sublanes if "History" in x.display_name]
+        assert "History" == history.display_name
+        assert "History" in [genre.name for genre in history.genres]
 
     def test_create_world_languages_lane(self, db: DatabaseTransactionFixture):
         # If there are no small or tiny collections, calling
         # create_world_languages_lane does not create any lanes or change
         # the priority.
-        new_priority = create_world_languages_lane(
-            db.session, db.default_library(), [], [], priority=10
-        )
-        assert 10 == new_priority
+        new_priority = create_world_languages_lane(db.session, db.default_library(), [])
+        assert 4000 == new_priority
         assert [] == db.session.query(Lane).all()
 
         # If there are lanes to be created, create_world_languages_lane
         # creates them.
         new_priority = create_world_languages_lane(
-            db.session, db.default_library(), ["eng"], [["spa", "fre"]], priority=10
+            db.session, db.default_library(), ["eng", "spa"]
         )
 
         # priority has been incremented to make room for the newly
         # created lane.
-        assert 11 == new_priority
+        assert 4001 == new_priority
 
         # One new top-level lane has been created. It contains books
         # from all three languages mentioned in its children.
         top_level = db.session.query(Lane).filter(Lane.parent == None).one()
-        assert "World Languages" == top_level.display_name
-        assert {"spa", "fre", "eng"} == set(top_level.languages)
 
-        # It has two children -- one for the small English collection and
-        # one for the tiny Spanish/French collection.,
-        small, tiny = top_level.visible_children
-        assert "English" == small.display_name
-        assert ["eng"] == small.languages
+        assert "Books in Other Languages" == top_level.display_name
+        assert {"eng", "spa"} == set(top_level.languages)
 
-        assert "espa\xf1ol/fran\xe7ais" == tiny.display_name
-        assert {"spa", "fre"} == set(tiny.languages)
+        small = top_level.visible_children
+        assert "English" == small[0].display_name
+        assert ["eng"] == small[0].languages
+
+        assert "espa\xf1ol" == small[1].display_name
+        assert ["spa"] == small[1].languages
 
         # The tiny collection has no sublanes, but the small one has
         # three.  These lanes are tested in more detail in
         # test_create_lane_for_small_collection.
-        fiction, nonfiction, children = small.sublanes
-        assert [] == tiny.sublanes
-        assert "Fiction" == fiction.display_name
-        assert "Nonfiction" == nonfiction.display_name
-        assert "Children & Young Adult" == children.display_name
+        adults, ya, children = small[0].sublanes
+        assert "Books for Adults" == adults.display_name
+        assert "Books for Young Adults" == ya.display_name
+        assert "Books for Children" == children.display_name
 
     def test_create_lane_for_small_collection(self, db: DatabaseTransactionFixture):
         languages = ["eng", "spa", "chi"]
@@ -199,19 +200,18 @@ class TestLaneCreation:
 
         assert "English/español/Chinese" == lane.display_name
         sublanes = lane.visible_children
-        assert ["Fiction", "Nonfiction", "Children & Young Adult"] == [
+        assert ["Books for Adults", "Books for Young Adults", "Books for Children"] == [
             x.display_name for x in sublanes
         ]
         for x in sublanes:
             assert languages == x.languages
-            assert [Edition.BOOK_MEDIUM] == x.media
 
         assert [
             {"All Ages", "Adults Only", "Adult"},
-            {"All Ages", "Adults Only", "Adult"},
-            {"Young Adult", "Children"},
+            {"Young Adult"},
+            {"Children"},
         ] == [set(x.audiences) for x in sublanes]
-        assert [True, False, None] == [x.fiction for x in sublanes]
+        assert [None, None, None] == [x.fiction for x in sublanes]
 
         # If any language codes do not map to a name, don't create any lanes.
         languages = ["eng", self.NONEXISTENT_ALPHA3, "chi"]
@@ -223,39 +223,12 @@ class TestLaneCreation:
         assert priority == 0
         assert lane.count() == 0
 
-    def test_lane_for_tiny_collection(self, db: DatabaseTransactionFixture):
-        parent = db.lane()
-        new_priority = create_lane_for_tiny_collection(
-            db.session, db.default_library(), parent, "ger", priority=3
-        )
-        assert 4 == new_priority
-        lane = db.session.query(Lane).filter(Lane.parent == parent).one()
-        assert [Edition.BOOK_MEDIUM] == lane.media
-        assert parent == lane.parent
-        assert ["ger"] == lane.languages
-        assert "Deutsch" == lane.display_name
-        assert [] == lane.children
-
-        # No lane should be created when the language has no name.
-        new_parent = db.lane()
-        new_priority = create_lane_for_tiny_collection(
-            db.session,
-            db.default_library(),
-            new_parent,
-            ["spa", self.NONEXISTENT_ALPHA3, "eng"],
-            priority=3,
-        )
-        assert 0 == new_priority
-        lane = db.session.query(Lane).filter(Lane.parent == new_parent)
-        assert lane.count() == 0
-
     def test_create_default_lanes(
         self, db: DatabaseTransactionFixture, library_fixture: LibraryFixture
     ):
         settings = library_fixture.mock_settings()
-        settings.large_collection_languages = ["eng"]
-        settings.small_collection_languages = ["spa", "chi"]
-        settings.tiny_collection_languages = ["ger", "fre", "ita"]
+        settings.large_collection_languages = ["fin", "swe", "eng"]
+        settings.small_collection_languages = ["fre", "ita"]
         library = library_fixture.library(settings=settings)
         library.is_default = True
 
@@ -271,109 +244,46 @@ class TestLaneCreation:
         # a top-level lane for each small collection, and a lane
         # for everything left over.
         assert {
-            "Fiction",
-            "Nonfiction",
-            "Young Adult Fiction",
-            "Young Adult Nonfiction",
-            "Children and Middle Grade",
-            "World Languages",
+            "Aikuisten kaunokirjat",
+            "Aikuisten tietokirjat",
+            "Nuortenkirjat",
+            "Lastenkirjat",
+            "Böcker på svenska",
+            "Books in English",
+            "Books in Other Languages",
         } == {x.display_name for x in lanes}
 
-        [english_fiction_lane] = [x for x in lanes if x.display_name == "Fiction"]
-        assert 1000 == english_fiction_lane.priority
-        [world] = [x for x in lanes if x.display_name == "World Languages"]
-        assert 1005 == world.priority
+        [finnish_fiction_lane] = [
+            x for x in lanes if x.display_name == "Aikuisten kaunokirjat"
+        ]
+        assert 1000 == finnish_fiction_lane.priority
+        [world] = [x for x in lanes if x.display_name == "Books in Other Languages"]
+        assert 4000 == world.priority
 
         # ensure the target age is appropriately set for the children and middle grade lane
-        [children_and_middle_grade_lane] = [
-            x for x in lanes if x.display_name == "Children and Middle Grade"
-        ]
-        target_age = children_and_middle_grade_lane.target_age
+        [children_lane] = [x for x in lanes if x.display_name == "Lastenkirjat"]
+        target_age = children_lane.target_age
         assert 0 == target_age.lower
-        assert 13 == target_age.upper
+        assert 12 == target_age.upper
         # and that the audience is set to children
-        audiences = children_and_middle_grade_lane.audiences
+        audiences = children_lane.audiences
         assert 1 == len(audiences)
         assert SubjectClassifier.AUDIENCE_CHILDREN == audiences[0]
 
-    def test_create_default_when_more_than_one_large_language_is_configured(
-        self, db: DatabaseTransactionFixture, library_fixture: LibraryFixture
-    ):
-        settings = library_fixture.mock_settings()
-        settings.large_collection_languages = ["eng", "fre"]
-        library = library_fixture.library(settings=settings)
-        library.is_default = True
-
-        session = db.session
-        create_default_lanes(session, library)
-        lanes = (
-            session.query(Lane)
-            .filter(Lane.library == library)
-            .filter(Lane.parent_id == None)
-            .all()
-        )
-
-        # We have five top-level lanes for the large collection,
-        # and no world languages lane
-        assert {
-            "Fiction",
-            "Nonfiction",
-            "Young Adult Fiction",
-            "Young Adult Nonfiction",
-            "Children and Middle Grade",
-        } == {x.display_name for x in lanes}
-
-    def test_create_default_when_more_than_one_large_language_is_returned_by_estimation(
-        self, db: DatabaseTransactionFixture
-    ):
-        library = db.default_library()
-        session = db.session
-        with patch(
-            "api.lanes._lane_configuration_from_collection_sizes"
-        ) as mock_lane_config:
-            mock_lane_config.return_value = (["eng", "fre"], [], [])
-            create_default_lanes(session, library)
-            lanes = (
-                session.query(Lane)
-                .filter(Lane.library == library)
-                .filter(Lane.parent_id == None)
-                .all()
-            )
-
-            # We have five top-level lanes for the large collection,
-            # and no world languages lane
-            assert {
-                "Fiction",
-                "Nonfiction",
-                "Young Adult Fiction",
-                "Young Adult Nonfiction",
-                "Children and Middle Grade",
-            } == {x.display_name for x in lanes}
-
     def test_lane_configuration_from_collection_sizes(self):
-        # If the library has no holdings, we assume it has a large English
+        # If the library has no holdings, we assume it has a large Finnish
         # collection.
-        m = _lane_configuration_from_collection_sizes
-        assert (["eng"], [], []) == m(None)
-        assert (["eng"], [], []) == m(Counter())
 
-        # Otherwise, the language with the largest collection, and all
-        # languages more than 10% as large, go into `large`.  All
-        # languages with collections more than 1% as large as the
-        # largest collection go into `small`. All languages with
-        # smaller collections go into `tiny`.
-        base = 10000
         holdings = Counter(
-            large1=base,
-            large2=base * 0.1001,
-            small1=base * 0.1,
-            small2=base * 0.01001,
-            tiny=base * 0.01,
+            fin=5000,
+            swe=2000,
+            eng=2000,
+            small1=500,
+            small2=10,
         )
-        large, small, tiny = m(holdings)
-        assert {"large1", "large2"} == set(large)
+        large, small = _lane_configuration_from_collection_sizes(holdings)
+        # And whatever smaller collections.
         assert {"small1", "small2"} == set(small)
-        assert ["tiny"] == tiny
 
 
 class TestWorkBasedLane:
@@ -896,7 +806,7 @@ class TestCrawlableFacets:
         assert facets.collection == CrawlableFacets.COLLECTION_FULL
         assert facets.availability == CrawlableFacets.AVAILABLE_ALL
         assert facets.order == CrawlableFacets.ORDER_LAST_UPDATE
-        assert facets.language is None
+        # assert facets.language is None
         assert facets.order_ascending is False
 
         [
@@ -905,7 +815,7 @@ class TestCrawlableFacets:
             collection,
             distributor,
             collectionName,
-            language,
+            # language,
         ] = facets.enabled_facets
 
         # The default facets are the only ones enabled.

@@ -312,13 +312,13 @@ class TestFacets:
             Facets.ORDER_TITLE,
             Facets.DISTRIBUTOR_ALL,
             Facets.COLLECTION_NAME_ALL,
-            Facets.LANGUAGE_ALL,
+            # Facets.LANGUAGE_ALL,
         )
         all_groups = list(facets.facet_groups)
 
         # By default, there are 10 facet transitions: two groups of three
         # and one group of two and 2 datasource groups and 2 for collection names
-        assert 12 + len(FacetConstants.LANGUAGE_FACETS) == len(all_groups)
+        assert 12 == len(all_groups)
 
         # available=all, collection=full, and order=title are the selected
         # facets.
@@ -328,7 +328,7 @@ class TestFacets:
             ("collection", "full"),
             ("collectionName", "All"),
             ("distributor", "All"),
-            ("language", "all"),
+            # ("language", "all"),
             ("order", "title"),
         ] == selected
 
@@ -360,11 +360,11 @@ class TestFacets:
             ["collectionName", db.default_collection().name, False],
             ["distributor", "All", True],
             ["distributor", DataSource.AMAZON, False],
-            ["language", "all", False],
-            ["language", "eng", False],
-            ["language", "fin", False],
-            ["language", "others", False],
-            ["language", "swe", False],
+            # ["language", "all", False],
+            # ["language", "eng", False],
+            # ["language", "fin", False],
+            # ["language", "others", False],
+            # ["language", "swe", False],
             ["order", "title", True],
             ["order", "work_id", False],
         ]
@@ -538,7 +538,7 @@ class TestFacets:
             Facets.ORDER_TITLE,
             Facets.DISTRIBUTOR_ALL,
             Facets.COLLECTION_NAME_ALL,
-            Facets.LANGUAGE_ALL,
+            # Facets.LANGUAGE_ALL,
             entrypoint=AudiobooksEntryPoint,
         )
         assert [
@@ -547,7 +547,7 @@ class TestFacets:
             ("collectionName", Facets.COLLECTION_NAME_ALL),
             ("distributor", Facets.DISTRIBUTOR_ALL),
             ("entrypoint", AudiobooksEntryPoint.INTERNAL_NAME),
-            ("language", Facets.LANGUAGE_ALL),
+            # ("language", Facets.LANGUAGE_ALL),
             ("order", Facets.ORDER_TITLE),
         ] == sorted(facets.items())
 
@@ -561,7 +561,7 @@ class TestFacets:
                 order=order,
                 distributor=Facets.DISTRIBUTOR_ALL,
                 collection_name=Facets.COLLECTION_NAME_ALL,
-                language=Facets.LANGUAGE_ALL,
+                # language=Facets.LANGUAGE_ALL,
             )
             assert True == f.order_ascending
 
@@ -578,7 +578,7 @@ class TestFacets:
                 order=order,
                 distributor=Facets.DISTRIBUTOR_ALL,
                 collection_name=Facets.COLLECTION_NAME_ALL,
-                language=Facets.LANGUAGE_ALL,
+                # language=Facets.LANGUAGE_ALL,
             )
             assert False == f.order_ascending
 
@@ -740,7 +740,7 @@ class TestFacets:
                 collection=[Facets.COLLECTION_FULL],
                 distributor=[Facets.DISTRIBUTOR_ALL],
                 collectionName=[Facets.COLLECTION_NAME_ALL],
-                language=[Facets.LANGUAGE_ALL],
+                # language=[Facets.LANGUAGE_ALL],
             )
 
             @classmethod
@@ -762,7 +762,7 @@ class TestFacets:
             collection,
             distributor,
             collection_name,
-            language,
+            # language,
         ) = Mock.available_facets_calls
         # available_facets was called three times, to ask the Mock class what it thinks
         # the options for order, availability, and collection should be.
@@ -771,7 +771,7 @@ class TestFacets:
         assert (library, "collection") == collection
         assert (library, "distributor") == distributor
         assert (library, "collectionName") == collection_name
-        assert (library, "language") == language
+        # assert (library, "language") == language
 
         # default_facet was called three times, to ask the Mock class what it thinks
         # the default order, availability, and collection should be.
@@ -781,14 +781,14 @@ class TestFacets:
             collection_d,
             distributor_d,
             collection_name_d,
-            language_d,
+            # language_d,
         ) = Mock.default_facet_calls
         assert (library, "order") == order_d
         assert (library, "available") == available_d
         assert (library, "collection") == collection_d
         assert (library, "distributor") == distributor_d
         assert (library, "collectionName") == collection_name_d
-        assert (library, "language") == language_d
+        # assert (library, "language") == language_d
 
         # Finally, verify that the return values from the mocked methods were actually used.
 
@@ -802,7 +802,7 @@ class TestFacets:
         assert Facets.COLLECTION_FULL == result.collection
         assert Facets.DISTRIBUTOR_ALL == result.distributor
         assert Facets.COLLECTION_NAME_ALL == result.collection_name
-        assert Facets.LANGUAGE_ALL == result.language
+        # assert Facets.LANGUAGE_ALL == result.language
 
     def test_modify_search_filter(self, db: DatabaseTransactionFixture):
         # Test superclass behavior -- filter is modified by entrypoint.
@@ -1435,9 +1435,7 @@ class TestSearchFacets:
         # The SearchFacets implementation turned the 'Accept-Language'
         # header into a set of language codes.
 
-        # Finland: Language-header usage removed in favor of added language facet
-        # Before: assert ["dan", "eng"] == facets.languages
-        assert None == facets.languages
+        assert ["dan", "eng"] == facets.languages
 
         assert False == facets._language_from_query
 
