@@ -3123,22 +3123,18 @@ def create_world_languages_lane(
 
 def create_lane_for_small_collection(_db, library, parent, languages, priority=0):
     """Create a lane (with sublanes) for a small collection based on language,
-    if the language exists in the lookup table.
+    if the language exists in the lookup table. In E-kirjasto, this consists mainly of Sami language.
 
     :param parent: The parent of the new lane.
     """
     if isinstance(languages, str):
         languages = [languages]
-
     ADULT = SubjectClassifier.AUDIENCES_ADULT
-    YA_CHILDREN = [
-        SubjectClassifier.AUDIENCE_YOUNG_ADULT,
-        SubjectClassifier.AUDIENCE_CHILDREN,
-    ]
+    YA = (SubjectClassifier.AUDIENCE_YOUNG_ADULT,)
+    CHILDREN = (SubjectClassifier.AUDIENCE_CHILDREN,)
 
     common_args = dict(
         languages=languages,
-        media=[Edition.BOOK_MEDIUM],
         genres=[],
     )
 
@@ -3152,37 +3148,34 @@ def create_lane_for_small_collection(_db, library, parent, languages, priority=0
 
     sublane_priority = 0
 
-    adult_fiction, ignore = create(
+    adults, ignore = create(
         _db,
         Lane,
         library=library,
-        display_name="Fiction",
-        fiction=True,
+        display_name=_("Books for Adults"),
         audiences=ADULT,
         priority=sublane_priority,
         **common_args
     )
     sublane_priority += 1
 
-    adult_nonfiction, ignore = create(
+    ya, ignore = create(
         _db,
         Lane,
         library=library,
-        display_name="Nonfiction",
-        fiction=False,
-        audiences=ADULT,
+        display_name=_("Books for Young Adults"),
+        audiences=YA,
         priority=sublane_priority,
         **common_args
     )
     sublane_priority += 1
 
-    ya_children, ignore = create(
+    children, ignore = create(
         _db,
         Lane,
         library=library,
-        display_name="Children & Young Adult",
-        fiction=None,
-        audiences=YA_CHILDREN,
+        display_name=_("Books for Children"),
+        audiences=CHILDREN,
         priority=sublane_priority,
         **common_args
     )
@@ -3194,47 +3187,12 @@ def create_lane_for_small_collection(_db, library, parent, languages, priority=0
         library=library,
         display_name=language_identifier,
         parent=parent,
-        sublanes=[adult_fiction, adult_nonfiction, ya_children],
+        sublanes=[adults, ya, children],
         priority=priority,
         **common_args
     )
     priority += 1
     return priority
-
-
-def create_lane_for_tiny_collection(_db, library, parent, languages, priority=0):
-    """Create a single lane for a tiny collection based on language,
-    if the language exists in the lookup table.
-
-    :param parent: The parent of the new lane.
-    """
-    if not languages:
-        return None
-
-    if isinstance(languages, str):
-        languages = [languages]
-
-    try:
-        name = LanguageCodes.name_for_languageset(languages)
-    except ValueError as e:
-        logging.getLogger().warning(
-            "Could not create a lane for tiny collection with languages %s", languages
-        )
-        return 0
-
-    language_lane, ignore = create(
-        _db,
-        Lane,
-        library=library,
-        display_name=name,
-        parent=parent,
-        genres=[],
-        media=[Edition.BOOK_MEDIUM],
-        fiction=None,
-        priority=priority,
-        languages=languages,
-    )
-    return priority + 1
 
 
 class DynamicLane(WorkList):
