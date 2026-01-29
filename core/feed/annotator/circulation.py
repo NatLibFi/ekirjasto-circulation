@@ -9,12 +9,12 @@ import urllib.request
 from collections import defaultdict
 from typing import Any
 
+import default_lane_names_to_localize
 from dependency_injector.wiring import Provide, inject
 from flask import url_for
 from flask_babel import lazy_gettext as _
 from sqlalchemy.orm import Session
 
-import default_lane_names_to_localize
 from api.adobe_vendor_id import AuthdataUtility
 from api.annotations import AnnotationWriter
 from api.circulation import BaseCirculationAPI, CirculationAPI

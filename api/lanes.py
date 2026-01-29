@@ -122,6 +122,7 @@ def create_default_lanes(_db, library):
         create_lanes_for_english_collection(_db, library)
     create_world_languages_lane(_db, library, small)
 
+
 def lane_from_genres(
     _db,
     library,
@@ -199,6 +200,7 @@ def lane_from_genres(
     for genre in exclude_genres:
         lane.add_genre(genre, inclusive=False)
     return lane
+
 
 def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1000):
     """
@@ -3082,6 +3084,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
     childrens_books.sublanes.append(children_all)
 
     return priority
+
 
 def create_world_languages_lane(
     _db,
