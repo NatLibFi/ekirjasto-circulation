@@ -138,15 +138,6 @@ def lane_from_genres(
 ):
     """Turn genre info into a Lane object."""
 
-    genre_lane_instructions = {
-        "Dystopian SF": dict(display_name="Dystopian"),
-        "Erotica": dict(audiences=[SubjectClassifier.AUDIENCE_ADULTS_ONLY]),
-        "Media Tie-in SF": dict(display_name="Movie and TV Novelizations"),
-        "Suspense/Thriller": dict(display_name="Thriller"),
-        "Political Science": dict(display_name="Politics & Current Events"),
-        "Periodicals": dict(visible=False),
-    }
-
     # Create sublanes first.
     sublanes = []
     for genre in genres:
@@ -191,15 +182,6 @@ def lane_from_genres(
         else:
             genredata = GenreData(genres[0], False)
         fiction = genredata.is_fiction
-
-        if genres[0] in list(genre_lane_instructions.keys()):
-            instructions = genre_lane_instructions[genres[0]]
-            if not display_name and "display_name" in instructions:
-                display_name = instructions.get("display_name")
-            if "audiences" in instructions:
-                audiences = instructions.get("audiences")
-            if "visible" in instructions:
-                visible = instructions.get("visible")
 
     if not display_name:
         display_name = ", ".join(sorted(genres))
