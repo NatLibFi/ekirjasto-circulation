@@ -3109,6 +3109,7 @@ def create_world_languages_lane(
         fiction=None,
         priority=priority,
         languages=small_languages,
+        sublanes=[],
         genres=[],
     )
     priority += 1
@@ -3119,6 +3120,17 @@ def create_world_languages_lane(
         language_priority = create_lane_for_small_collection(
             _db, library, world_languages, small, language_priority
         )
+    language_priority += 1
+    all, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name=_("All Books in Other Languages"),
+        priority=language_priority,
+        languages=small_languages,
+    )
+    world_languages.sublanes.append(all)
+
     return priority
 
 

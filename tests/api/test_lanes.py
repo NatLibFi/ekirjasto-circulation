@@ -182,6 +182,7 @@ class TestLaneCreation:
 
         assert "espa\xf1ol" == small[1].display_name
         assert ["spa"] == small[1].languages
+        assert "All Books in Other Languages" == small[2].display_name
 
         # The tiny collection has no sublanes, but the small one has
         # three.  These lanes are tested in more detail in
