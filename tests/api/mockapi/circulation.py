@@ -159,9 +159,7 @@ class MockCirculationAPI(CirculationAPI):
         return mock._queue(method, response)
 
     def api_for_license_pool(self, licensepool):
-        print("HERE")
         source = licensepool.data_source.name
-        print(self.remotes, source)
         if source not in self.remotes:
             set_delivery_mechanism_at = BaseCirculationAPI.FULFILL_STEP
             can_revoke_hold_when_reserved = True
@@ -172,7 +170,6 @@ class MockCirculationAPI(CirculationAPI):
                 can_revoke_hold_when_reserved,
             )
             self.remotes[source] = remote
-            print(self.remotes, self.remotes[source])
         return self.remotes[source]
 
 

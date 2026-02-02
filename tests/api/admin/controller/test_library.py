@@ -536,12 +536,11 @@ class TestLibrarySettings:
         # two lanes were created: "Other Languages" and then "German"
         # underneath it.
         def get_display_name(lane):
-            print(lane.display_name)
             return lane.display_name
 
         # Assuming 'library' is your object with lanes. Since it's a small language,
-        # "Books in Other Languages" lane with children lnes are created
-        [adults, children, ya, other_lang, deutsch] = sorted(
+        # "Books in Other Languages" lane with children lanes are created
+        [adults, all_books, children, ya, other_lang, deutsch] = sorted(
             library.lanes, key=get_display_name
         )
         assert None == other_lang.parent
