@@ -481,51 +481,51 @@ msgstr "Äventyr"
 
 #: core/classifier/localized_names.py:8
 msgid "Animal Stories"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:9
 msgid "Horse Stories"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:10
 msgid "Pet Stories"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:11
 msgid "Difficult Topics"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:12
 msgid "Bullying"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:13
 msgid "Death"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:14
 msgid "Multicultural Stories"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:15
 msgid "Disabilities"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:16
 msgid "War"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:17
 msgid "Drugs"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:18
 msgid "Eating Disorders & Self-Image"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:19
 msgid "Mental Health"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:20
 msgid "Classics"
@@ -537,7 +537,7 @@ msgstr "Serier och grafiska romaner"
 
 #: core/classifier/localized_names.py:22
 msgid "Diary Stories"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:23
 msgid "Drama"
@@ -549,23 +549,23 @@ msgstr "Erotik"
 
 #: core/classifier/localized_names.py:25
 msgid "Family Stories"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:26
 msgid "Festivities & Holidays"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:27
 msgid "Easter Stories"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:28
 msgid "Christmas Stories"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:29
 msgid "Halloween Stories"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:30
 msgid "Fantasy"
@@ -585,11 +585,11 @@ msgstr "Urban fantasy"
 
 #: core/classifier/localized_names.py:34
 msgid "Folklore Stories"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:35
 msgid "Growing Up"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:36
 msgid "Historical Fiction"
@@ -625,7 +625,7 @@ msgstr "Humor"
 
 #: core/classifier/localized_names.py:44
 msgid "Humorous Fiction"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:45
 msgid "General Fiction"
@@ -705,7 +705,7 @@ msgstr "Romantisk spänning"
 
 #: core/classifier/localized_names.py:64
 msgid "School & Study"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:65
 msgid "Science Fiction"
@@ -749,31 +749,31 @@ msgstr "Noveller"
 
 #: core/classifier/localized_names.py:75
 msgid "Sports Stories"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:76
 msgid "Football Stories"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:77
 msgid "Hockey Stories"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:78
 msgid "Dance Stories"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:79
 msgid "Riding Stories"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:80
 msgid "Skating Stories"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:81
 msgid "Superheroes"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:82
 msgid "Suspense/Thriller"
@@ -821,19 +821,19 @@ msgstr "Urban Fiction"
 
 #: core/classifier/localized_names.py:93
 msgid "Vehicles & Technology"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:94
 msgid "Cars"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:95
 msgid "Trains"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:96
 msgid "Airplanes"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:97
 msgid "Westerns"
@@ -841,23 +841,23 @@ msgstr "Västernskildringar"
 
 #: core/classifier/localized_names.py:98
 msgid "Animals"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:99
 msgid "Horses & Riding"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:100
 msgid "Pet Animals"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:101
 msgid "Dinosaurs"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:102
 msgid "Art & Culture"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:103
 msgid "Film & TV"
@@ -873,7 +873,7 @@ msgstr "Scenkonst"
 
 #: core/classifier/localized_names.py:106
 msgid "Drawing"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:107
 msgid "Architecture"
@@ -909,35 +909,35 @@ msgstr "Biografier och memoarer"
 
 #: core/classifier/localized_names.py:115
 msgid "Athletes"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:116
 msgid "Musicians"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:117
 msgid "Careers"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:118
 msgid "Computers & Digital Skills"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:119
 msgid "Cooking & Baking"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:120
 msgid "Climate & Sustainability"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:121
 msgid "Continents & Countries"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:122
 msgid "Diversity & Multicultural"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:123
 msgid "Education"
@@ -945,15 +945,15 @@ msgstr "Utbildning"
 
 #: core/classifier/localized_names.py:124
 msgid "Encyclopedias"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:125
 msgid "Family"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:126
 msgid "Fashion & Looks"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:127
 msgid "Folklore"
@@ -965,11 +965,11 @@ msgstr "Spel"
 
 #: core/classifier/localized_names.py:129
 msgid "Video Games"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:130
 msgid "Board Games & Strategic Games"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:131
 msgid "Food & Health"
@@ -993,11 +993,11 @@ msgstr "Vegetariskt och vegant"
 
 #: core/classifier/localized_names.py:136
 msgid "General Nonfiction"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:137
 msgid "Health & Wellness"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:138
 msgid "History"
@@ -1073,7 +1073,7 @@ msgstr "Trädgårdsskötsel"
 
 #: core/classifier/localized_names.py:156
 msgid "Games & Activities"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:157
 msgid "House & Home"
@@ -1085,19 +1085,19 @@ msgstr "Sällskapsdjur"
 
 #: core/classifier/localized_names.py:159
 msgid "Holidays & Celebrations"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:160
 msgid "Christmas"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:161
 msgid "Birthdays"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:162
 msgid "Humorous Nonfiction"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:163
 msgid "Life Strategies"
@@ -1109,15 +1109,15 @@ msgstr "Litteraturkritik"
 
 #: core/classifier/localized_names.py:165
 msgid "Machinery & Equipment"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:166
 msgid "Robots"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:167
 msgid "Vehicles"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:168
 msgid "Parenting & Family"
@@ -1165,19 +1165,19 @@ msgstr "Filosofi"
 
 #: core/classifier/localized_names.py:179
 msgid "Play & Hobbies"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:180
 msgid "Toys"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:181
 msgid "Crafts"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:182
 msgid "Camping"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:183
 msgid "Political Science"
@@ -1269,19 +1269,19 @@ msgstr "Teknik"
 
 #: core/classifier/localized_names.py:205
 msgid "Plants"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:206
 msgid "Physics & Chemistry"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:207
 msgid "Geography"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:208
 msgid "Stars & Space"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:209
 msgid "Self-Help"
@@ -1289,15 +1289,15 @@ msgstr "Själv-hjälp"
 
 #: core/classifier/localized_names.py:210
 msgid "Society"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:211
 msgid "Antiracism"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:212
 msgid "Human Rights"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:213
 msgid "Sports"
@@ -1305,27 +1305,27 @@ msgstr "Idrott"
 
 #: core/classifier/localized_names.py:214
 msgid "Football"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:215
 msgid "Hockey"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:216
 msgid "Dance"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:217
 msgid "Riding"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:218
 msgid "Skating"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:219
 msgid "Supernatural"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/classifier/localized_names.py:220
 msgid "Travel"
@@ -1337,7 +1337,7 @@ msgstr "True Crime"
 
 #: core/classifier/localized_names.py:222
 msgid "World Record Books"
-msgstr "TRANSLATE"
+msgstr "TRANSLATE!"
 
 #: core/data_conversion/accessibility_mapper.py:35
 msgid "This publication meets minimum accessibility standards"
@@ -1480,7 +1480,7 @@ msgstr ""
 #~ msgstr "Feministisk litteratur"
 
 #~ msgid "Boardgames & Strategic Games"
-#~ msgstr "TRANSLATE"
+#~ msgstr "TRANSLATE!"
 
 #~ msgid "Biography"
 #~ msgstr "Biografi"
