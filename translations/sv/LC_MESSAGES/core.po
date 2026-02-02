@@ -10,7 +10,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2025-12-04 09:12+0200\n"
+"POT-Creation-Date: 2026-02-02 12:45+0200\n"
 "PO-Revision-Date: 2025-10-16 10:07+0000\n"
 "Last-Translator: Kaisa Kuivalahti, 2025\n"
 "Language: sv\n"
@@ -21,938 +21,6 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.13.0\n"
-
-#: core/classifier/localized_names.py:7 default_lane_names_to_localize.py:7
-msgid "Adventure"
-msgstr "Äventyr"
-
-#: core/classifier/localized_names.py:139 default_lane_names_to_localize.py:8
-msgid "African History"
-msgstr "Afrikansk historia"
-
-#: core/classifier/localized_names.py:96 default_lane_names_to_localize.py:9
-msgid "Airplanes"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:70 default_lane_names_to_localize.py:10
-msgid "Alternative History"
-msgstr "Alternativ historia"
-
-#: core/classifier/localized_names.py:140 default_lane_names_to_localize.py:11
-msgid "Ancient History"
-msgstr "Fornhistoria"
-
-#: core/classifier/localized_names.py:98 default_lane_names_to_localize.py:12
-msgid "Animals"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:8 default_lane_names_to_localize.py:13
-msgid "Animal Stories"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:153 default_lane_names_to_localize.py:14
-msgid "Antiques & Collectibles"
-msgstr "Antikviteter och samlarföremål"
-
-#: core/classifier/localized_names.py:211 default_lane_names_to_localize.py:15
-msgid "Antiracism"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:107 default_lane_names_to_localize.py:16
-msgid "Architecture"
-msgstr "Arkitektur"
-
-#: core/classifier/localized_names.py:108 default_lane_names_to_localize.py:17
-msgid "Art"
-msgstr "Konst"
-
-#: core/classifier/localized_names.py:109 default_lane_names_to_localize.py:18
-msgid "Art Criticism & Theory"
-msgstr "Konstkritik och konstteori"
-
-#: core/classifier/localized_names.py:102 default_lane_names_to_localize.py:19
-msgid "Art & Culture"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:110 default_lane_names_to_localize.py:20
-msgid "Art History"
-msgstr "Konsthistoria"
-
-#: core/classifier/localized_names.py:141 default_lane_names_to_localize.py:21
-msgid "Asian History"
-msgstr "Asiatisk historia"
-
-#: core/classifier/localized_names.py:115 default_lane_names_to_localize.py:22
-msgid "Athletes"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:132 default_lane_names_to_localize.py:23
-msgid "Bartending & Cocktails"
-msgstr "Bartendning och cocktails"
-
-#: default_lane_names_to_localize.py:24
-msgid "Biography"
-msgstr "Biografi"
-
-#: core/classifier/localized_names.py:114 default_lane_names_to_localize.py:25
-msgid "Biography & Memoir"
-msgstr "Biografier och memoarer"
-
-#: core/classifier/localized_names.py:161 default_lane_names_to_localize.py:26
-msgid "Birthdays"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:130 default_lane_names_to_localize.py:27
-msgid "Board Games & Strategic Games"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:190 default_lane_names_to_localize.py:28
-msgid "Body, Mind & Spirit"
-msgstr "Kroppen, psyket och anden"
-
-#: core/classifier/localized_names.py:191 default_lane_names_to_localize.py:29
-msgid "Buddhism"
-msgstr "Buddhism"
-
-#: core/classifier/localized_names.py:12 default_lane_names_to_localize.py:30
-msgid "Bullying"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:173 default_lane_names_to_localize.py:31
-msgid "Business"
-msgstr "Företagande"
-
-#: core/classifier/localized_names.py:182 default_lane_names_to_localize.py:32
-msgid "Camping"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:117 default_lane_names_to_localize.py:33
-msgid "Careers"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:94 default_lane_names_to_localize.py:34
-msgid "Cars"
-msgstr "TRANSLATE"
-
-#: default_lane_names_to_localize.py:35
-msgid "Chapter Books"
-msgstr "Kapitelböcker"
-
-#: default_lane_names_to_localize.py:36
-msgid "Children and Middle Grade"
-msgstr "Barn och skolbarn"
-
-#: default_lane_names_to_localize.py:37
-msgid "Children & Young Adult"
-msgstr "Barn och ung vuxen"
-
-#: core/classifier/localized_names.py:192 default_lane_names_to_localize.py:38
-msgid "Christianity"
-msgstr "Kristendom"
-
-#: core/classifier/localized_names.py:160 default_lane_names_to_localize.py:39
-msgid "Christmas"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:28 default_lane_names_to_localize.py:40
-msgid "Christmas Stories"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:142 default_lane_names_to_localize.py:41
-msgid "Civil War History"
-msgstr "Inbördeskrigens historia"
-
-#: core/classifier/localized_names.py:20 default_lane_names_to_localize.py:42
-msgid "Classics"
-msgstr "Klassiker"
-
-#: core/classifier/localized_names.py:120 default_lane_names_to_localize.py:43
-msgid "Climate & Sustainability"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:21 default_lane_names_to_localize.py:44
-msgid "Comics & Graphic Novels"
-msgstr "Serier och grafiska romaner"
-
-#: core/classifier/localized_names.py:197 default_lane_names_to_localize.py:45
-msgid "Computers"
-msgstr "Datorer"
-
-#: core/classifier/localized_names.py:118 default_lane_names_to_localize.py:46
-msgid "Computers & Digital Skills"
-msgstr "TRANSLATE"
-
-#: default_lane_names_to_localize.py:47
-msgid "Contemporary Fiction"
-msgstr "Samtida skönlitteratur"
-
-#: core/classifier/localized_names.py:58 default_lane_names_to_localize.py:48
-msgid "Contemporary Romance"
-msgstr "Samtida romantik"
-
-#: core/classifier/localized_names.py:121 default_lane_names_to_localize.py:49
-msgid "Continents & Countries"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:133 default_lane_names_to_localize.py:50
-msgid "Cooking"
-msgstr "Matlagning"
-
-#: core/classifier/localized_names.py:119 default_lane_names_to_localize.py:51
-msgid "Cooking & Baking"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:51 default_lane_names_to_localize.py:52
-msgid "Cozy Mystery"
-msgstr "Mysdeckare"
-
-#: core/classifier/localized_names.py:181 default_lane_names_to_localize.py:53
-msgid "Crafts"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:154 default_lane_names_to_localize.py:54
-msgid "Crafts & Hobbies"
-msgstr "Handarbete och hobbyer"
-
-#: core/classifier/localized_names.py:48 default_lane_names_to_localize.py:55
-msgid "Crime & Detective Stories"
-msgstr "Deckare & Kriminalromaner"
-
-#: core/classifier/localized_names.py:68 default_lane_names_to_localize.py:56
-msgid "Cyberpunk"
-msgstr "Cyberpunk"
-
-#: core/classifier/localized_names.py:216 default_lane_names_to_localize.py:57
-msgid "Dance"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:78 default_lane_names_to_localize.py:58
-msgid "Dance Stories"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:13 default_lane_names_to_localize.py:59
-msgid "Death"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:111 default_lane_names_to_localize.py:60
-msgid "Design"
-msgstr "Formgivning"
-
-#: core/classifier/localized_names.py:22 default_lane_names_to_localize.py:61
-msgid "Diary Stories"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:185 default_lane_names_to_localize.py:62
-msgid "Dictionaries"
-msgstr "Ordböcker"
-
-#: core/classifier/localized_names.py:11 default_lane_names_to_localize.py:63
-msgid "Difficult Topics"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:101 default_lane_names_to_localize.py:64
-msgid "Dinosaurs"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:15 default_lane_names_to_localize.py:65
-msgid "Disabilities"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:122 default_lane_names_to_localize.py:66
-msgid "Diversity & Multicultural"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:23 default_lane_names_to_localize.py:67
-msgid "Drama"
-msgstr "Drama"
-
-#: core/classifier/localized_names.py:106 default_lane_names_to_localize.py:68
-msgid "Drawing"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:17 default_lane_names_to_localize.py:69
-msgid "Drugs"
-msgstr "TRANSLATE"
-
-#: default_lane_names_to_localize.py:70
-msgid "Dystopian"
-msgstr "Dystopi"
-
-#: default_lane_names_to_localize.py:71
-msgid "Early Readers"
-msgstr "Tidiga läsare"
-
-#: core/classifier/localized_names.py:27 default_lane_names_to_localize.py:72
-msgid "Easter Stories"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:18 default_lane_names_to_localize.py:73
-msgid "Eating Disorders & Self-Image"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:174 default_lane_names_to_localize.py:74
-msgid "Economics"
-msgstr "Ekonomi"
-
-#: core/classifier/localized_names.py:123 default_lane_names_to_localize.py:75
-msgid "Education"
-msgstr "Utbildning"
-
-#: core/classifier/localized_names.py:124 default_lane_names_to_localize.py:76
-msgid "Encyclopedias"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:31 default_lane_names_to_localize.py:77
-msgid "Epic Fantasy"
-msgstr "Episk fantasy"
-
-#: core/classifier/localized_names.py:24 default_lane_names_to_localize.py:78
-msgid "Erotica"
-msgstr "Erotik"
-
-#: core/classifier/localized_names.py:84 default_lane_names_to_localize.py:79
-msgid "Espionage"
-msgstr "Spionromaner"
-
-#: core/classifier/localized_names.py:143 default_lane_names_to_localize.py:80
-msgid "European History"
-msgstr "Europeisk historia"
-
-#: core/classifier/localized_names.py:125 default_lane_names_to_localize.py:81
-msgid "Family"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:169 default_lane_names_to_localize.py:82
-msgid "Family & Relationships"
-msgstr "Familj och relationer"
-
-#: core/classifier/localized_names.py:25 default_lane_names_to_localize.py:83
-msgid "Family Stories"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:30 default_lane_names_to_localize.py:84
-msgid "Fantasy"
-msgstr "Fantasy"
-
-#: core/classifier/localized_names.py:112 default_lane_names_to_localize.py:85
-msgid "Fashion"
-msgstr "Mode"
-
-#: core/classifier/localized_names.py:126 default_lane_names_to_localize.py:86
-msgid "Fashion & Looks"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:26 default_lane_names_to_localize.py:87
-msgid "Festivities & Holidays"
-msgstr "TRANSLATE"
-
-#: default_lane_names_to_localize.py:88
-msgid "Fiction"
-msgstr "Fiktion"
-
-#: core/classifier/localized_names.py:103 default_lane_names_to_localize.py:89
-msgid "Film & TV"
-msgstr "Film och TV"
-
-#: core/classifier/localized_names.py:127 default_lane_names_to_localize.py:90
-msgid "Folklore"
-msgstr "Folklore"
-
-#: core/classifier/localized_names.py:34 default_lane_names_to_localize.py:91
-msgid "Folklore Stories"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:131 default_lane_names_to_localize.py:92
-msgid "Food & Health"
-msgstr "Mat och hälsa"
-
-#: core/classifier/localized_names.py:214 default_lane_names_to_localize.py:93
-msgid "Football"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:76 default_lane_names_to_localize.py:94
-msgid "Football Stories"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:186 default_lane_names_to_localize.py:95
-msgid "Foreign Language Study"
-msgstr "Studier i främmande språk"
-
-#: core/classifier/localized_names.py:128 default_lane_names_to_localize.py:96
-msgid "Games"
-msgstr "Spel"
-
-#: core/classifier/localized_names.py:156 default_lane_names_to_localize.py:97
-msgid "Games & Activities"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:155 default_lane_names_to_localize.py:98
-msgid "Gardening"
-msgstr "Trädgårdsskötsel"
-
-#: core/classifier/localized_names.py:45 default_lane_names_to_localize.py:99
-msgid "General Fiction"
-msgstr "Allmän skönlitteratur"
-
-#: core/classifier/localized_names.py:136 default_lane_names_to_localize.py:100
-msgid "General Nonfiction"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:207 default_lane_names_to_localize.py:101
-msgid "Geography"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:39 default_lane_names_to_localize.py:102
-msgid "Ghost Stories"
-msgstr "Spökhistorier"
-
-#: core/classifier/localized_names.py:38 default_lane_names_to_localize.py:103
-msgid "Gothic Horror"
-msgstr "Gotisk skräcklitteratur"
-
-#: core/classifier/localized_names.py:59 default_lane_names_to_localize.py:104
-msgid "Gothic Romance"
-msgstr "Gotisk romantik"
-
-#: core/classifier/localized_names.py:35 default_lane_names_to_localize.py:105
-msgid "Growing up"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:29 default_lane_names_to_localize.py:106
-msgid "Halloween Stories"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:49 default_lane_names_to_localize.py:107
-msgid "Hard-Boiled Mystery"
-msgstr "Hårdkokta deckare"
-
-#: core/classifier/localized_names.py:134 default_lane_names_to_localize.py:108
-msgid "Health & Diet"
-msgstr "Hälsa och dieter"
-
-#: core/classifier/localized_names.py:137 default_lane_names_to_localize.py:109
-msgid "Health & Wellness"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:193 default_lane_names_to_localize.py:110
-msgid "Hinduism"
-msgstr "Hinduism"
-
-#: core/classifier/localized_names.py:32 default_lane_names_to_localize.py:111
-msgid "Historical Fantasy"
-msgstr "Historisk fantasy"
-
-#: core/classifier/localized_names.py:36 default_lane_names_to_localize.py:112
-msgid "Historical Fiction"
-msgstr "Historisk fiktion"
-
-#: core/classifier/localized_names.py:52 default_lane_names_to_localize.py:113
-msgid "Historical Mystery"
-msgstr "Historiska deckare"
-
-#: core/classifier/localized_names.py:60 default_lane_names_to_localize.py:114
-msgid "Historical Romance"
-msgstr "Historisk romantik"
-
-#: core/classifier/localized_names.py:83 default_lane_names_to_localize.py:115
-msgid "Historical Thriller"
-msgstr "Historisk thriller"
-
-#: core/classifier/localized_names.py:138 default_lane_names_to_localize.py:116
-msgid "History"
-msgstr "Historia"
-
-#: default_lane_names_to_localize.py:117
-msgid "History & Sociology"
-msgstr "Historia och sociologi"
-
-#: core/classifier/localized_names.py:152 default_lane_names_to_localize.py:118
-msgid "Hobbies & Home"
-msgstr "Hobbyer och hem"
-
-#: core/classifier/localized_names.py:215 default_lane_names_to_localize.py:119
-msgid "Hockey"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:77 default_lane_names_to_localize.py:120
-msgid "Hockey Stories"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:159 default_lane_names_to_localize.py:121
-msgid "Holidays & Celebrations"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:37 default_lane_names_to_localize.py:122
-msgid "Horror"
-msgstr "Skräcklitteratur"
-
-#: core/classifier/localized_names.py:99 default_lane_names_to_localize.py:123
-msgid "Horses & Riding"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:9 default_lane_names_to_localize.py:124
-msgid "Horse Stories"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:157 default_lane_names_to_localize.py:125
-msgid "House & Home"
-msgstr "Hus och hem"
-
-#: core/classifier/localized_names.py:212 default_lane_names_to_localize.py:126
-msgid "Human Rights"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:43 default_lane_names_to_localize.py:127
-msgid "Humor"
-msgstr "Humor"
-
-#: core/classifier/localized_names.py:44 default_lane_names_to_localize.py:128
-msgid "Humorous Fiction"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:162 default_lane_names_to_localize.py:129
-msgid "Humorous Nonfiction"
-msgstr "TRANSLATE"
-
-#: default_lane_names_to_localize.py:130
-msgid "Informational Books"
-msgstr "Informativ"
-
-#: core/classifier/localized_names.py:194 default_lane_names_to_localize.py:131
-msgid "Islam"
-msgstr "Islam"
-
-#: core/classifier/localized_names.py:195 default_lane_names_to_localize.py:132
-msgid "Judaism"
-msgstr "Judendom"
-
-#: core/classifier/localized_names.py:144 default_lane_names_to_localize.py:133
-msgid "Latin American History"
-msgstr "Latinamerikansk historia"
-
-#: core/classifier/localized_names.py:187 default_lane_names_to_localize.py:134
-msgid "Law"
-msgstr "Juridik"
-
-#: core/classifier/localized_names.py:90 default_lane_names_to_localize.py:135
-msgid "Legal Thriller"
-msgstr "Rättegångsthriller"
-
-#: core/classifier/localized_names.py:46 default_lane_names_to_localize.py:136
-msgid "LGBTQ Fiction"
-msgstr "HBTQI skönlitteratur"
-
-#: core/classifier/localized_names.py:163 default_lane_names_to_localize.py:137
-msgid "Life Strategies"
-msgstr "Livsstrategier"
-
-#: core/classifier/localized_names.py:164 default_lane_names_to_localize.py:138
-msgid "Literary Criticism"
-msgstr "Litteraturkritik"
-
-#: core/classifier/localized_names.py:165 default_lane_names_to_localize.py:139
-msgid "Machinery & Equipment"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:175 default_lane_names_to_localize.py:140
-msgid "Management & Leadership"
-msgstr "Förvaltning och ledarskap"
-
-#: core/classifier/localized_names.py:198 default_lane_names_to_localize.py:141
-msgid "Mathematics"
-msgstr "Matematik"
-
-#: core/classifier/localized_names.py:199 default_lane_names_to_localize.py:142
-msgid "Medical"
-msgstr "Medicin"
-
-#: core/classifier/localized_names.py:86 default_lane_names_to_localize.py:143
-msgid "Medical Thriller"
-msgstr "Medicinsk thriller"
-
-#: core/classifier/localized_names.py:145 default_lane_names_to_localize.py:144
-msgid "Medieval History"
-msgstr "Medeltidshistoria"
-
-#: core/classifier/localized_names.py:19 default_lane_names_to_localize.py:145
-msgid "Mental Health"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:146 default_lane_names_to_localize.py:146
-msgid "Middle East History"
-msgstr "Mellanösterns historia"
-
-#: core/classifier/localized_names.py:147 default_lane_names_to_localize.py:147
-msgid "Military History"
-msgstr "Militärhistoria"
-
-#: core/classifier/localized_names.py:69 default_lane_names_to_localize.py:148
-msgid "Military SF"
-msgstr "Militär-science fiction"
-
-#: core/classifier/localized_names.py:91 default_lane_names_to_localize.py:149
-msgid "Military Thriller"
-msgstr "Militär thriller"
-
-#: core/classifier/localized_names.py:148 default_lane_names_to_localize.py:150
-msgid "Modern History"
-msgstr "Modern historia"
-
-#: default_lane_names_to_localize.py:151
-msgid "Movie and TV Novelizations"
-msgstr "Baserad på film eller TV-serie"
-
-#: core/classifier/localized_names.py:14 default_lane_names_to_localize.py:152
-msgid "Multicultural Stories"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:104 default_lane_names_to_localize.py:153
-msgid "Music"
-msgstr "Musik"
-
-#: core/classifier/localized_names.py:116 default_lane_names_to_localize.py:154
-msgid "Musicians"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:47 default_lane_names_to_localize.py:155
-msgid "Mystery"
-msgstr "Mystik"
-
-#: default_lane_names_to_localize.py:156
-msgid "Mystery & Thriller"
-msgstr "Deckare och thriller"
-
-#: core/classifier/localized_names.py:200 default_lane_names_to_localize.py:157
-msgid "Nature"
-msgstr "Natur"
-
-#: default_lane_names_to_localize.py:158
-msgid "Nonfiction"
-msgstr "Facklitteratur"
-
-#: core/classifier/localized_names.py:42 default_lane_names_to_localize.py:159
-msgid "Occult Horror"
-msgstr "Ockult skräck"
-
-#: core/classifier/localized_names.py:53 default_lane_names_to_localize.py:160
-msgid "Paranormal Mystery"
-msgstr "Paranormala deckare"
-
-#: core/classifier/localized_names.py:61 default_lane_names_to_localize.py:161
-msgid "Paranormal Romance"
-msgstr "Paranormal romantik"
-
-#: core/classifier/localized_names.py:170 default_lane_names_to_localize.py:162
-msgid "Parenting"
-msgstr "Föräldrskap"
-
-#: core/classifier/localized_names.py:168 default_lane_names_to_localize.py:163
-msgid "Parenting & Family"
-msgstr "Föräldraskap och familj"
-
-#: core/classifier/localized_names.py:105 default_lane_names_to_localize.py:164
-msgid "Performing Arts"
-msgstr "Scenkonst"
-
-#: core/classifier/localized_names.py:171 default_lane_names_to_localize.py:165
-msgid "Periodicals"
-msgstr "Tidsskrifter"
-
-#: core/classifier/localized_names.py:172 default_lane_names_to_localize.py:166
-msgid "Personal Finance & Business"
-msgstr "Personlig ekonomi och företagande"
-
-#: core/classifier/localized_names.py:176 default_lane_names_to_localize.py:167
-msgid "Personal Finance & Investing"
-msgstr "Personlig ekonomi och investering"
-
-#: core/classifier/localized_names.py:100 default_lane_names_to_localize.py:168
-msgid "Pet Animals"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:158 default_lane_names_to_localize.py:169
-msgid "Pets"
-msgstr "Sällskapsdjur"
-
-#: core/classifier/localized_names.py:10 default_lane_names_to_localize.py:170
-msgid "Pet Stories"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:178 default_lane_names_to_localize.py:171
-msgid "Philosophy"
-msgstr "Filosofi"
-
-#: core/classifier/localized_names.py:113 default_lane_names_to_localize.py:172
-msgid "Photography"
-msgstr "Fotografering"
-
-#: core/classifier/localized_names.py:206 default_lane_names_to_localize.py:173
-msgid "Physics & Chemistry"
-msgstr "TRANSLATE"
-
-#: default_lane_names_to_localize.py:174
-msgid "Picture Books"
-msgstr "Bilderböcker"
-
-#: core/classifier/localized_names.py:205 default_lane_names_to_localize.py:175
-msgid "Plants"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:179 default_lane_names_to_localize.py:176
-msgid "Play & Hobbies"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:55 default_lane_names_to_localize.py:177
-msgid "Poetry"
-msgstr "Poesi"
-
-#: default_lane_names_to_localize.py:178
-msgid "Poetry Books"
-msgstr "Poesi"
-
-#: core/classifier/localized_names.py:50 default_lane_names_to_localize.py:179
-msgid "Police Procedural"
-msgstr "Procedurdeckare"
-
-#: core/classifier/localized_names.py:87 default_lane_names_to_localize.py:180
-msgid "Political Thriller"
-msgstr "Politisk thriller"
-
-#: default_lane_names_to_localize.py:181
-msgid "Politics & Current Events"
-msgstr "Politik och aktualiteter"
-
-#: core/classifier/localized_names.py:88 default_lane_names_to_localize.py:182
-msgid "Psychological Thriller"
-msgstr "Psykologisk thriller"
-
-#: core/classifier/localized_names.py:201 default_lane_names_to_localize.py:183
-msgid "Psychology"
-msgstr "Psykologi"
-
-#: core/classifier/localized_names.py:177 default_lane_names_to_localize.py:184
-msgid "Real Estate"
-msgstr "Fastigheter"
-
-#: default_lane_names_to_localize.py:185
-msgid "Realistic Fiction"
-msgstr "Realistisk fiktion"
-
-#: core/classifier/localized_names.py:184 default_lane_names_to_localize.py:186
-msgid "Reference & Study Aids"
-msgstr "Faktaböcker och studiehjälp"
-
-#: core/classifier/localized_names.py:189 default_lane_names_to_localize.py:187
-msgid "Religion & Spirituality"
-msgstr "Religion och andlighet"
-
-#: core/classifier/localized_names.py:56 default_lane_names_to_localize.py:188
-msgid "Religious Fiction"
-msgstr "Religiös skönlitteratur"
-
-#: core/classifier/localized_names.py:149 default_lane_names_to_localize.py:189
-msgid "Renaissance & Early Modern History"
-msgstr "Renässansen och tidigmodern historia"
-
-#: core/classifier/localized_names.py:217 default_lane_names_to_localize.py:190
-msgid "Riding"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:79 default_lane_names_to_localize.py:191
-msgid "Riding Stories"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:166 default_lane_names_to_localize.py:192
-msgid "Robots"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:57 default_lane_names_to_localize.py:193
-msgid "Romance"
-msgstr "Romantik"
-
-#: core/classifier/localized_names.py:72 default_lane_names_to_localize.py:194
-msgid "Romantic SF"
-msgstr "Romantisk science fiction"
-
-#: core/classifier/localized_names.py:63 default_lane_names_to_localize.py:195
-msgid "Romantic Suspense"
-msgstr "Romantisk spänning"
-
-#: core/classifier/localized_names.py:64 default_lane_names_to_localize.py:196
-msgid "School & Study"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:202 default_lane_names_to_localize.py:197
-msgid "Science"
-msgstr "Vetenskap"
-
-#: core/classifier/localized_names.py:65 default_lane_names_to_localize.py:198
-msgid "Science Fiction"
-msgstr "Science fiction"
-
-#: core/classifier/localized_names.py:196 default_lane_names_to_localize.py:199
-msgid "Science & Technology"
-msgstr "Vetenskap och teknik"
-
-#: core/classifier/localized_names.py:209 default_lane_names_to_localize.py:200
-msgid "Self-Help"
-msgstr "Själv-hjälp"
-
-#: core/classifier/localized_names.py:74 default_lane_names_to_localize.py:201
-msgid "Short Stories"
-msgstr "Noveller"
-
-#: core/classifier/localized_names.py:218 default_lane_names_to_localize.py:202
-msgid "Skating"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:80 default_lane_names_to_localize.py:203
-msgid "Skating Stories"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:203 default_lane_names_to_localize.py:204
-msgid "Social Sciences"
-msgstr "Samhällsvetenskap"
-
-#: core/classifier/localized_names.py:210 default_lane_names_to_localize.py:205
-msgid "Society"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:67 default_lane_names_to_localize.py:206
-msgid "Space Opera"
-msgstr "Rymdopera"
-
-#: core/classifier/localized_names.py:213 default_lane_names_to_localize.py:207
-msgid "Sports"
-msgstr "Idrott"
-
-#: core/classifier/localized_names.py:75 default_lane_names_to_localize.py:208
-msgid "Sports Stories"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:208 default_lane_names_to_localize.py:209
-msgid "Stars & Space"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:71 default_lane_names_to_localize.py:210
-msgid "Steampunk"
-msgstr "Steampunk"
-
-#: core/classifier/localized_names.py:188 default_lane_names_to_localize.py:211
-msgid "Study Aids"
-msgstr "Studiehjälp"
-
-#: core/classifier/localized_names.py:81 default_lane_names_to_localize.py:212
-msgid "Superheroes"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:219 default_lane_names_to_localize.py:213
-msgid "Supernatural"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:85 default_lane_names_to_localize.py:214
-msgid "Supernatural Thriller"
-msgstr "Övernaturlig thriller"
-
-#: core/classifier/localized_names.py:204 default_lane_names_to_localize.py:215
-msgid "Technology"
-msgstr "Teknik"
-
-#: core/classifier/localized_names.py:89 default_lane_names_to_localize.py:216
-msgid "Technothriller"
-msgstr "Teknothriller"
-
-#: default_lane_names_to_localize.py:217
-msgid "Thriller"
-msgstr "Thriller"
-
-#: core/classifier/localized_names.py:180 default_lane_names_to_localize.py:218
-msgid "Toys"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:95 default_lane_names_to_localize.py:219
-msgid "Trains"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:220 default_lane_names_to_localize.py:220
-msgid "Travel"
-msgstr "Resor"
-
-#: core/classifier/localized_names.py:221 default_lane_names_to_localize.py:221
-msgid "True Crime"
-msgstr "True Crime"
-
-#: core/classifier/localized_names.py:150 default_lane_names_to_localize.py:222
-msgid "United States History"
-msgstr "USA:s historia"
-
-#: core/classifier/localized_names.py:33 default_lane_names_to_localize.py:223
-msgid "Urban Fantasy"
-msgstr "Urban fantasy"
-
-#: core/classifier/localized_names.py:92 default_lane_names_to_localize.py:224
-msgid "Urban Fiction"
-msgstr "Urban Fiction"
-
-#: core/classifier/localized_names.py:40 default_lane_names_to_localize.py:225
-msgid "Vampires"
-msgstr "Vampyrer"
-
-#: core/classifier/localized_names.py:135 default_lane_names_to_localize.py:226
-msgid "Vegetarian & Vegan"
-msgstr "Vegetariskt och vegant"
-
-#: core/classifier/localized_names.py:167 default_lane_names_to_localize.py:227
-msgid "Vehicles"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:93 default_lane_names_to_localize.py:228
-msgid "Vehicles & Technology"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:129 default_lane_names_to_localize.py:229
-msgid "Video Games"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:16 default_lane_names_to_localize.py:230
-msgid "War"
-msgstr "TRANSLATE"
-
-#: core/classifier/localized_names.py:41 default_lane_names_to_localize.py:231
-msgid "Werewolves"
-msgstr "Varulvar"
-
-#: core/classifier/localized_names.py:62 default_lane_names_to_localize.py:232
-msgid "Western Romance"
-msgstr "Västerländsk romantik"
-
-#: core/classifier/localized_names.py:97 default_lane_names_to_localize.py:233
-msgid "Westerns"
-msgstr "Västernskildringar"
-
-#: core/classifier/localized_names.py:54 default_lane_names_to_localize.py:234
-msgid "Women Detectives"
-msgstr "Kvinnliga detektiver"
-
-#: core/classifier/localized_names.py:151 default_lane_names_to_localize.py:235
-msgid "World History"
-msgstr "Världshistoria"
-
-#: default_lane_names_to_localize.py:236
-msgid "World Languages"
-msgstr "Världens språk"
-
-#: core/classifier/localized_names.py:222 default_lane_names_to_localize.py:237
-msgid "World Record Books"
-msgstr "TRANSLATE"
-
-#: default_lane_names_to_localize.py:238
-msgid "Young Adult Fiction"
-msgstr "Fiktion för unga vuxna"
-
-#: default_lane_names_to_localize.py:239
-msgid "Young Adult Nonfiction"
-msgstr "Facklitteratur för unga vuxna"
 
 #: core/config.py:95
 msgid "Debug"
@@ -1067,7 +135,6 @@ msgstr ""
 "anslutningsrelaterade fel på nytt."
 
 #: core/entrypoint.py:107 core/facets.py:116 core/facets.py:120
-#: core/facets.py:121
 msgid "All"
 msgstr "Alla"
 
@@ -1079,7 +146,7 @@ msgstr "E-böcker"
 msgid "Audiobooks"
 msgstr "Ljudböcker"
 
-#: core/external_search.py:2451
+#: core/external_search.py:2452
 #, python-format
 msgid "Invalid page key: %(key)s"
 msgstr "Ogiltig sidnyckel: %(key)s"
@@ -1172,58 +239,42 @@ msgstr "Allt"
 msgid "Popular Books"
 msgstr "Populära böcker"
 
-#: core/facets.py:122
-msgid "Finnish"
-msgstr "finska"
-
-#: core/facets.py:123
-msgid "Swedish"
-msgstr "svenska"
-
-#: core/facets.py:124
-msgid "English"
-msgstr "engelska"
-
-#: core/facets.py:125
-msgid "Others"
-msgstr "Annat"
-
-#: core/lane.py:385
+#: core/lane.py:386
 #, python-format
 msgid "I don't know how to order a feed by '%(order)s'"
 msgstr "Jag vet inte hur man sortera ett flöde efter '%(order)s'"
 
-#: core/lane.py:393
+#: core/lane.py:394
 #, python-format
 msgid "I don't understand the availability term '%(availability)s'"
 msgstr "Jag förstår inte tillgänglighetstiden '%(availability)s'"
 
-#: core/lane.py:405
+#: core/lane.py:406
 #, python-format
 msgid "I don't understand what '%(collection)s' refers to."
 msgstr "Jag förstår inte vad '%(collection)s' hänför sig till."
 
-#: core/lane.py:421
+#: core/lane.py:422
 #, python-format
 msgid "I don't understand which distributor '%(distributor)s' refers to."
 msgstr "Jag förstår inte vilken distributör '%(distributor)s' hänför sig till."
 
-#: core/lane.py:437
+#: core/lane.py:438
 #, python-format
 msgid "I don't understand which collection '%(collection_name)s' refers to."
 msgstr "Jag förstår inte vilken samling '%(collection_name)s' hänför sig till."
 
-#: core/lane.py:1249
+#: core/lane.py:1255
 #, python-format
 msgid "Invalid page size: %(size)s"
 msgstr "Ogiltig sidstorlek: %(size)s"
 
-#: core/lane.py:1267
+#: core/lane.py:1273
 #, python-format
 msgid "Invalid offset: %(offset)s"
 msgstr "Ogiltigt offset: %(offset)s"
 
-#: core/lane.py:1591
+#: core/lane.py:1597
 #, python-format
 msgid "All %(worklist)s"
 msgstr "Alla %(worklist)s"
@@ -1424,21 +475,869 @@ msgstr "Det inlämnade profildokumentet var inte ett giltigt JSON-objekt."
 msgid "\"%s\" is not a writable setting."
 msgstr "\"%s\" är inte en skrivbar inställning."
 
+#: core/classifier/localized_names.py:7
+msgid "Adventure"
+msgstr "Äventyr"
+
+#: core/classifier/localized_names.py:8
+msgid "Animal Stories"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:9
+msgid "Horse Stories"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:10
+msgid "Pet Stories"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:11
+msgid "Difficult Topics"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:12
+msgid "Bullying"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:13
+msgid "Death"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:14
+msgid "Multicultural Stories"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:15
+msgid "Disabilities"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:16
+msgid "War"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:17
+msgid "Drugs"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:18
+msgid "Eating Disorders & Self-Image"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:19
+msgid "Mental Health"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:20
+msgid "Classics"
+msgstr "Klassiker"
+
+#: core/classifier/localized_names.py:21
+msgid "Comics & Graphic Novels"
+msgstr "Serier och grafiska romaner"
+
+#: core/classifier/localized_names.py:22
+msgid "Diary Stories"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:23
+msgid "Drama"
+msgstr "Drama"
+
+#: core/classifier/localized_names.py:24
+msgid "Erotica"
+msgstr "Erotik"
+
+#: core/classifier/localized_names.py:25
+msgid "Family Stories"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:26
+msgid "Festivities & Holidays"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:27
+msgid "Easter Stories"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:28
+msgid "Christmas Stories"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:29
+msgid "Halloween Stories"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:30
+msgid "Fantasy"
+msgstr "Fantasi"
+
+#: core/classifier/localized_names.py:31
+msgid "Epic Fantasy"
+msgstr "Episk fantasy"
+
+#: core/classifier/localized_names.py:32
+msgid "Historical Fantasy"
+msgstr "Historisk fantasy"
+
+#: core/classifier/localized_names.py:33
+msgid "Urban Fantasy"
+msgstr "Urban fantasy"
+
+#: core/classifier/localized_names.py:34
+msgid "Folklore Stories"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:35
+msgid "Growing Up"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:36
+msgid "Historical Fiction"
+msgstr "Historisk fiktion"
+
+#: core/classifier/localized_names.py:37
+msgid "Horror"
+msgstr "Skräcklitteratur"
+
+#: core/classifier/localized_names.py:38
+msgid "Gothic Horror"
+msgstr "Gotisk skräcklitteratur"
+
+#: core/classifier/localized_names.py:39
+msgid "Ghost Stories"
+msgstr "Spökhistorier"
+
+#: core/classifier/localized_names.py:40
+msgid "Vampires"
+msgstr "Vampyrer"
+
+#: core/classifier/localized_names.py:41
+msgid "Werewolves"
+msgstr "Varulvar"
+
+#: core/classifier/localized_names.py:42
+msgid "Occult Horror"
+msgstr "Ockult skräck"
+
+#: core/classifier/localized_names.py:43
+msgid "Humor"
+msgstr "Humor"
+
+#: core/classifier/localized_names.py:44
+msgid "Humorous Fiction"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:45
+msgid "General Fiction"
+msgstr "Allmän skönlitteratur"
+
+#: core/classifier/localized_names.py:46
+msgid "LGBTQ Fiction"
+msgstr "HBTQI"
+
+#: core/classifier/localized_names.py:47
+msgid "Mystery"
+msgstr "Mystik"
+
+#: core/classifier/localized_names.py:48
+msgid "Crime & Detective Stories"
+msgstr "Deckare & Kriminalromaner"
+
+#: core/classifier/localized_names.py:49
+msgid "Hard-Boiled Mystery"
+msgstr "Hårdkokta deckare"
+
+#: core/classifier/localized_names.py:50
+msgid "Police Procedural"
+msgstr "Procedurdeckare"
+
+#: core/classifier/localized_names.py:51
+msgid "Cozy Mystery"
+msgstr "Mysdeckare"
+
+#: core/classifier/localized_names.py:52
+msgid "Historical Mystery"
+msgstr "Historiska deckare"
+
+#: core/classifier/localized_names.py:53
+msgid "Paranormal Mystery"
+msgstr "Paranormala deckare"
+
+#: core/classifier/localized_names.py:54
+msgid "Women Detectives"
+msgstr "Kvinnliga detektiver"
+
+#: core/classifier/localized_names.py:55
+msgid "Poetry"
+msgstr "Poesi"
+
+#: core/classifier/localized_names.py:56
+msgid "Religious Fiction"
+msgstr "Religiös skönlitteratur"
+
+#: core/classifier/localized_names.py:57
+msgid "Romance"
+msgstr "Romantik"
+
+#: core/classifier/localized_names.py:58
+msgid "Contemporary Romance"
+msgstr "Samtida romantik"
+
+#: core/classifier/localized_names.py:59
+msgid "Gothic Romance"
+msgstr "Gotisk romantik"
+
+#: core/classifier/localized_names.py:60
+msgid "Historical Romance"
+msgstr "Historisk romantik"
+
+#: core/classifier/localized_names.py:61
+msgid "Paranormal Romance"
+msgstr "Paranormal romantik"
+
+#: core/classifier/localized_names.py:62
+msgid "Western Romance"
+msgstr "Västerländsk romantik"
+
+#: core/classifier/localized_names.py:63
+msgid "Romantic Suspense"
+msgstr "Romantisk spänning"
+
+#: core/classifier/localized_names.py:64
+msgid "School & Study"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:65
+msgid "Science Fiction"
+msgstr "Science fiction"
+
 #: core/classifier/localized_names.py:66
 msgid "Dystopian SF"
 msgstr "Dystopisk science fiction"
+
+#: core/classifier/localized_names.py:67
+msgid "Space Opera"
+msgstr "Rymdopera"
+
+#: core/classifier/localized_names.py:68
+msgid "Cyberpunk"
+msgstr "Cyberpunk"
+
+#: core/classifier/localized_names.py:69
+msgid "Military SF"
+msgstr "Militär-science fiction"
+
+#: core/classifier/localized_names.py:70
+msgid "Alternative History"
+msgstr "Alternativ historia"
+
+#: core/classifier/localized_names.py:71
+msgid "Steampunk"
+msgstr "Steampunk"
+
+#: core/classifier/localized_names.py:72
+msgid "Romantic SF"
+msgstr "Romantisk science fiction"
 
 #: core/classifier/localized_names.py:73
 msgid "Media Tie-in SF"
 msgstr "Science fiction från TV"
 
+#: core/classifier/localized_names.py:74
+msgid "Short Stories"
+msgstr "Noveller"
+
+#: core/classifier/localized_names.py:75
+msgid "Sports Stories"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:76
+msgid "Football Stories"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:77
+msgid "Hockey Stories"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:78
+msgid "Dance Stories"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:79
+msgid "Riding Stories"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:80
+msgid "Skating Stories"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:81
+msgid "Superheroes"
+msgstr "TRANSLATE"
+
 #: core/classifier/localized_names.py:82
 msgid "Suspense/Thriller"
 msgstr "Rysare/Thriller"
 
+#: core/classifier/localized_names.py:83
+msgid "Historical Thriller"
+msgstr "Historisk thriller"
+
+#: core/classifier/localized_names.py:84
+msgid "Espionage"
+msgstr "Spionromaner"
+
+#: core/classifier/localized_names.py:85
+msgid "Supernatural Thriller"
+msgstr "Övernaturlig thriller"
+
+#: core/classifier/localized_names.py:86
+msgid "Medical Thriller"
+msgstr "Medicinsk thriller"
+
+#: core/classifier/localized_names.py:87
+msgid "Political Thriller"
+msgstr "Politisk thriller"
+
+#: core/classifier/localized_names.py:88
+msgid "Psychological Thriller"
+msgstr "Psykologisk thriller"
+
+#: core/classifier/localized_names.py:89
+msgid "Technothriller"
+msgstr "Teknothriller"
+
+#: core/classifier/localized_names.py:90
+msgid "Legal Thriller"
+msgstr "Rättegångsthriller"
+
+#: core/classifier/localized_names.py:91
+msgid "Military Thriller"
+msgstr "Militär thriller"
+
+#: core/classifier/localized_names.py:92
+msgid "Urban Fiction"
+msgstr "Urban Fiction"
+
+#: core/classifier/localized_names.py:93
+msgid "Vehicles & Technology"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:94
+msgid "Cars"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:95
+msgid "Trains"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:96
+msgid "Airplanes"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:97
+msgid "Westerns"
+msgstr "Västernskildringar"
+
+#: core/classifier/localized_names.py:98
+msgid "Animals"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:99
+msgid "Horses & Riding"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:100
+msgid "Pet Animals"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:101
+msgid "Dinosaurs"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:102
+msgid "Art & Culture"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:103
+msgid "Film & TV"
+msgstr "Film och TV"
+
+#: core/classifier/localized_names.py:104
+msgid "Music"
+msgstr "Musik"
+
+#: core/classifier/localized_names.py:105
+msgid "Performing Arts"
+msgstr "Scenkonst"
+
+#: core/classifier/localized_names.py:106
+msgid "Drawing"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:107
+msgid "Architecture"
+msgstr "Arkitektur"
+
+#: core/classifier/localized_names.py:108
+msgid "Art"
+msgstr "Konst"
+
+#: core/classifier/localized_names.py:109
+msgid "Art Criticism & Theory"
+msgstr "Konstkritik och konstteori"
+
+#: core/classifier/localized_names.py:110
+msgid "Art History"
+msgstr "Konsthistoria"
+
+#: core/classifier/localized_names.py:111
+msgid "Design"
+msgstr "Formgivning"
+
+#: core/classifier/localized_names.py:112
+msgid "Fashion"
+msgstr "Mode"
+
+#: core/classifier/localized_names.py:113
+msgid "Photography"
+msgstr "Fotografering"
+
+#: core/classifier/localized_names.py:114
+msgid "Biography & Memoir"
+msgstr "Biografier och memoarer"
+
+#: core/classifier/localized_names.py:115
+msgid "Athletes"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:116
+msgid "Musicians"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:117
+msgid "Careers"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:118
+msgid "Computers & Digital Skills"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:119
+msgid "Cooking & Baking"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:120
+msgid "Climate & Sustainability"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:121
+msgid "Continents & Countries"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:122
+msgid "Diversity & Multicultural"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:123
+msgid "Education"
+msgstr "Utbildning"
+
+#: core/classifier/localized_names.py:124
+msgid "Encyclopedias"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:125
+msgid "Family"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:126
+msgid "Fashion & Looks"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:127
+msgid "Folklore"
+msgstr "Folklore"
+
+#: core/classifier/localized_names.py:128
+msgid "Games"
+msgstr "Spel"
+
+#: core/classifier/localized_names.py:129
+msgid "Video Games"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:130
+msgid "Board Games & Strategic Games"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:131
+msgid "Food & Health"
+msgstr "Mat och hälsa"
+
+#: core/classifier/localized_names.py:132
+msgid "Bartending & Cocktails"
+msgstr "Bartendning och cocktails"
+
+#: core/classifier/localized_names.py:133
+msgid "Cooking"
+msgstr "Matlagning"
+
+#: core/classifier/localized_names.py:134
+msgid "Health & Diet"
+msgstr "Hälsa och dieter"
+
+#: core/classifier/localized_names.py:135
+msgid "Vegetarian & Vegan"
+msgstr "Vegetariskt och vegant"
+
+#: core/classifier/localized_names.py:136
+msgid "General Nonfiction"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:137
+msgid "Health & Wellness"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:138
+msgid "History"
+msgstr "Historia"
+
+#: core/classifier/localized_names.py:139
+msgid "African History"
+msgstr "Afrikansk historia"
+
+#: core/classifier/localized_names.py:140
+msgid "Ancient History"
+msgstr "Fornhistoria"
+
+#: core/classifier/localized_names.py:141
+msgid "Asian History"
+msgstr "Asiatisk historia"
+
+#: core/classifier/localized_names.py:142
+msgid "Civil War History"
+msgstr "Inbördeskrigens historia"
+
+#: core/classifier/localized_names.py:143
+msgid "European History"
+msgstr "Europeisk historia"
+
+#: core/classifier/localized_names.py:144
+msgid "Latin American History"
+msgstr "Latinamerikansk historia"
+
+#: core/classifier/localized_names.py:145
+msgid "Medieval History"
+msgstr "Medeltidshistoria"
+
+#: core/classifier/localized_names.py:146
+msgid "Middle East History"
+msgstr "Mellanösterns historia"
+
+#: core/classifier/localized_names.py:147
+msgid "Military History"
+msgstr "Militärhistoria"
+
+#: core/classifier/localized_names.py:148
+msgid "Modern History"
+msgstr "Modern historia"
+
+#: core/classifier/localized_names.py:149
+msgid "Renaissance & Early Modern History"
+msgstr "Renässansen och tidigmodern historia"
+
+#: core/classifier/localized_names.py:150
+msgid "United States History"
+msgstr "USA:s historia"
+
+#: core/classifier/localized_names.py:151
+msgid "World History"
+msgstr "Världshistoria"
+
+#: core/classifier/localized_names.py:152
+msgid "Hobbies & Home"
+msgstr "Hobbyer och hem"
+
+#: core/classifier/localized_names.py:153
+msgid "Antiques & Collectibles"
+msgstr "Antikviteter och samlarföremål"
+
+#: core/classifier/localized_names.py:154
+msgid "Crafts & Hobbies"
+msgstr "Handarbete och hobbyer"
+
+#: core/classifier/localized_names.py:155
+msgid "Gardening"
+msgstr "Trädgårdsskötsel"
+
+#: core/classifier/localized_names.py:156
+msgid "Games & Activities"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:157
+msgid "House & Home"
+msgstr "Hus och hem"
+
+#: core/classifier/localized_names.py:158
+msgid "Pets"
+msgstr "Sällskapsdjur"
+
+#: core/classifier/localized_names.py:159
+msgid "Holidays & Celebrations"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:160
+msgid "Christmas"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:161
+msgid "Birthdays"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:162
+msgid "Humorous Nonfiction"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:163
+msgid "Life Strategies"
+msgstr "Livsstrategier"
+
+#: core/classifier/localized_names.py:164
+msgid "Literary Criticism"
+msgstr "Litteraturkritik"
+
+#: core/classifier/localized_names.py:165
+msgid "Machinery & Equipment"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:166
+msgid "Robots"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:167
+msgid "Vehicles"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:168
+msgid "Parenting & Family"
+msgstr "Föräldraskap och familj"
+
+#: core/classifier/localized_names.py:169
+msgid "Family & Relationships"
+msgstr "Familj och relationer"
+
+#: core/classifier/localized_names.py:170
+msgid "Parenting"
+msgstr "Föräldrskap"
+
+#: core/classifier/localized_names.py:171
+msgid "Periodicals"
+msgstr "Tidsskrifter"
+
+#: core/classifier/localized_names.py:172
+msgid "Personal Finance & Business"
+msgstr "Personlig ekonomi och företagande"
+
+#: core/classifier/localized_names.py:173
+msgid "Business"
+msgstr "Företagande"
+
+#: core/classifier/localized_names.py:174
+msgid "Economics"
+msgstr "Ekonomi"
+
+#: core/classifier/localized_names.py:175
+msgid "Management & Leadership"
+msgstr "Förvaltning och ledarskap"
+
+#: core/classifier/localized_names.py:176
+msgid "Personal Finance & Investing"
+msgstr "Personlig ekonomi och investering"
+
+#: core/classifier/localized_names.py:177
+msgid "Real Estate"
+msgstr "Fastigheter"
+
+#: core/classifier/localized_names.py:178
+msgid "Philosophy"
+msgstr "Filosofi"
+
+#: core/classifier/localized_names.py:179
+msgid "Play & Hobbies"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:180
+msgid "Toys"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:181
+msgid "Crafts"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:182
+msgid "Camping"
+msgstr "TRANSLATE"
+
 #: core/classifier/localized_names.py:183
 msgid "Political Science"
 msgstr "Statsvetenskap"
+
+#: core/classifier/localized_names.py:184
+msgid "Reference & Study Aids"
+msgstr "Faktaböcker och studiehjälp"
+
+#: core/classifier/localized_names.py:185
+msgid "Dictionaries"
+msgstr "Ordböcker"
+
+#: core/classifier/localized_names.py:186
+msgid "Foreign Language Study"
+msgstr "Studier i främmande språk"
+
+#: core/classifier/localized_names.py:187
+msgid "Law"
+msgstr "Juridik"
+
+#: core/classifier/localized_names.py:188
+msgid "Study Aids"
+msgstr "Studiehjälp"
+
+#: core/classifier/localized_names.py:189
+msgid "Religion & Spirituality"
+msgstr "Religion och andlighet"
+
+#: core/classifier/localized_names.py:190
+msgid "Body, Mind & Spirit"
+msgstr "Kroppen, psyket och anden"
+
+#: core/classifier/localized_names.py:191
+msgid "Buddhism"
+msgstr "Buddhism"
+
+#: core/classifier/localized_names.py:192
+msgid "Christianity"
+msgstr "Kristendom"
+
+#: core/classifier/localized_names.py:193
+msgid "Hinduism"
+msgstr "Hinduism"
+
+#: core/classifier/localized_names.py:194
+msgid "Islam"
+msgstr "Islam"
+
+#: core/classifier/localized_names.py:195
+msgid "Judaism"
+msgstr "Judendom"
+
+#: core/classifier/localized_names.py:196
+msgid "Science & Technology"
+msgstr "Vetenskap och teknik"
+
+#: core/classifier/localized_names.py:197
+msgid "Computers"
+msgstr "Datorer"
+
+#: core/classifier/localized_names.py:198
+msgid "Mathematics"
+msgstr "Matematik"
+
+#: core/classifier/localized_names.py:199
+msgid "Medical"
+msgstr "Medicin"
+
+#: core/classifier/localized_names.py:200
+msgid "Nature"
+msgstr "Natur"
+
+#: core/classifier/localized_names.py:201
+msgid "Psychology"
+msgstr "Psykologi"
+
+#: core/classifier/localized_names.py:202
+msgid "Science"
+msgstr "Vetenskap"
+
+#: core/classifier/localized_names.py:203
+msgid "Social Sciences"
+msgstr "Samhällsvetenskap"
+
+#: core/classifier/localized_names.py:204
+msgid "Technology"
+msgstr "Teknik"
+
+#: core/classifier/localized_names.py:205
+msgid "Plants"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:206
+msgid "Physics & Chemistry"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:207
+msgid "Geography"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:208
+msgid "Stars & Space"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:209
+msgid "Self-Help"
+msgstr "Själv-hjälp"
+
+#: core/classifier/localized_names.py:210
+msgid "Society"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:211
+msgid "Antiracism"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:212
+msgid "Human Rights"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:213
+msgid "Sports"
+msgstr "Idrott"
+
+#: core/classifier/localized_names.py:214
+msgid "Football"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:215
+msgid "Hockey"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:216
+msgid "Dance"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:217
+msgid "Riding"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:218
+msgid "Skating"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:219
+msgid "Supernatural"
+msgstr "TRANSLATE"
+
+#: core/classifier/localized_names.py:220
+msgid "Travel"
+msgstr "Resor"
+
+#: core/classifier/localized_names.py:221
+msgid "True Crime"
+msgstr "True Crime"
+
+#: core/classifier/localized_names.py:222
+msgid "World Record Books"
+msgstr "TRANSLATE"
 
 #: core/data_conversion/accessibility_mapper.py:35
 msgid "This publication meets minimum accessibility standards"
@@ -1582,4 +1481,79 @@ msgstr ""
 
 #~ msgid "Boardgames & Strategic Games"
 #~ msgstr ""
+
+#~ msgid "Biography"
+#~ msgstr "Biografi"
+
+#~ msgid "Chapter Books"
+#~ msgstr "Kapitelböcker"
+
+#~ msgid "Children and Middle Grade"
+#~ msgstr "Barn och skolbarn"
+
+#~ msgid "Children & Young Adult"
+#~ msgstr "Barn och ung vuxen"
+
+#~ msgid "Contemporary Fiction"
+#~ msgstr "Samtida skönlitteratur"
+
+#~ msgid "Dystopian"
+#~ msgstr "Dystopi"
+
+#~ msgid "Early Readers"
+#~ msgstr "Tidiga läsare"
+
+#~ msgid "Fiction"
+#~ msgstr "Fiktion"
+
+#~ msgid "History & Sociology"
+#~ msgstr "Historia och sociologi"
+
+#~ msgid "Informational Books"
+#~ msgstr "Informativ"
+
+#~ msgid "Movie and TV Novelizations"
+#~ msgstr "Baserad på film eller TV-serie"
+
+#~ msgid "Mystery & Thriller"
+#~ msgstr "Deckare och thriller"
+
+#~ msgid "Nonfiction"
+#~ msgstr "Facklitteratur"
+
+#~ msgid "Picture Books"
+#~ msgstr "Bilderböcker"
+
+#~ msgid "Poetry Books"
+#~ msgstr "Poesi"
+
+#~ msgid "Politics & Current Events"
+#~ msgstr "Politik och aktualiteter"
+
+#~ msgid "Realistic Fiction"
+#~ msgstr "Realistisk fiktion"
+
+#~ msgid "Thriller"
+#~ msgstr "Thriller"
+
+#~ msgid "World Languages"
+#~ msgstr "Världens språk"
+
+#~ msgid "Young Adult Fiction"
+#~ msgstr "Fiktion för unga vuxna"
+
+#~ msgid "Young Adult Nonfiction"
+#~ msgstr "Facklitteratur för unga vuxna"
+
+#~ msgid "Finnish"
+#~ msgstr "finska"
+
+#~ msgid "Swedish"
+#~ msgstr "svenska"
+
+#~ msgid "English"
+#~ msgstr "engelska"
+
+#~ msgid "Others"
+#~ msgstr "Annat"
 

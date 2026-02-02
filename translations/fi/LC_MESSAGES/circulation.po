@@ -10,7 +10,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2025-12-04 09:12+0200\n"
+"POT-Creation-Date: 2026-02-02 12:45+0200\n"
 "PO-Revision-Date: 2025-08-20 09:06+0000\n"
 "Last-Translator: Kaisa Kuivalahti, 2025\n"
 "Language: fi\n"
@@ -22,7 +22,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.13.0\n"
 
-#: api/authenticator.py:324
+#: api/authenticator.py:329
 msgid ""
 "SAML providers are configured, but secret for signing bearer tokens is "
 "not."
@@ -30,16 +30,16 @@ msgstr ""
 "SAML-palveluntarjoajat on määritetty, mutta salauskoodia bearer tokenien "
 "allekirjoittamista varten ei ole."
 
-#: api/authenticator.py:563
+#: api/authenticator.py:571
 msgid "No SAML providers are configured."
 msgstr "SAML-palveluntarjoajia ei ole määritetty."
 
-#: api/authenticator.py:572
+#: api/authenticator.py:580
 #, python-format
 msgid " The known providers are: %s"
 msgstr " Tunnetut palveluntarjoajat ovat seuraavat: %s"
 
-#: api/authenticator.py:766
+#: api/authenticator.py:774
 msgid "Library"
 msgstr "Kirjasto"
 
@@ -280,27 +280,27 @@ msgstr "Alle 13-vuotiaiden asiakkaiden kaistan tunnus"
 msgid "Send patrons to the lane with this ID."
 msgstr "Lähetä asiakkaat kaistalle tällä tunnuksella."
 
-#: api/ekirjasto_authentication.py:74
+#: api/ekirjasto_authentication.py:76
 msgid "E-kirjasto API environment"
 msgstr "E-kirjaston API-ympäristö"
 
-#: api/ekirjasto_authentication.py:75
+#: api/ekirjasto_authentication.py:77
 msgid "Select what environment of E-kirjasto accounts should be used."
 msgstr "Valitse, mitä e-kirjaston ympäristöä tilien tulisi käyttää."
 
-#: api/ekirjasto_authentication.py:92
+#: api/ekirjasto_authentication.py:94
 msgid "E-magazines environment"
 msgstr "E-aikakauslehtien ympäristö"
 
-#: api/ekirjasto_authentication.py:93
+#: api/ekirjasto_authentication.py:95
 msgid "Select what environment of e-magazines service should be used."
 msgstr "Valitse, mitä e-aikakauslehtien ympäristöä tulisi käyttää."
 
-#: api/ekirjasto_authentication.py:109
+#: api/ekirjasto_authentication.py:111
 msgid "Delegate token expire time in seconds"
 msgstr "Valtuutustunnuksen vanhenemisaika sekunteina"
 
-#: api/ekirjasto_authentication.py:110
+#: api/ekirjasto_authentication.py:112
 msgid ""
 "Expire time for a delegate token to authorize in behalf of a ekirjasto "
 "token. This should be less than the expire time for ekirjasto token, so "
@@ -317,6 +317,26 @@ msgstr "URL-osoite"
 #: api/enki.py:104
 msgid "Integrate an Enki collection."
 msgstr "Integroi Enki-kokoelma."
+
+#: api/lanes.py:3108
+msgid "Books in Other Languages"
+msgstr "Muut kielet"
+
+#: api/lanes.py:3128
+msgid "All Books in Other Languages"
+msgstr "Kaikki muiden kielten kirjat"
+
+#: api/lanes.py:3168
+msgid "Books for Adults"
+msgstr "Aikuisten kirjat"
+
+#: api/lanes.py:3179
+msgid "Books for Young Adults"
+msgstr "Nuortenkirjat"
+
+#: api/lanes.py:3190
+msgid "Books for Children"
+msgstr "Lastenkirjat"
 
 #: api/millenium_patron.py:178
 msgid "III Millenium Patron API"
@@ -372,31 +392,31 @@ msgstr "Salalauseen salausalgoritmi"
 msgid "Algorithm used for encrypting the passphrase."
 msgstr "Salalauseen salaukseen käytettävä algoritmi."
 
-#: api/odl2.py:42
+#: api/odl2.py:43
 msgid "Skipped license formats"
 msgstr "Ohitetut lisenssimuodot"
 
-#: api/odl2.py:43
+#: api/odl2.py:44
 msgid ""
 "List of license formats that will NOT be imported into Circulation "
 "Manager."
 msgstr "Luettelo lisenssimuodoista, joita EI tuoda lainauksen hallintaan."
 
-#: api/odl2.py:55
+#: api/odl2.py:56
 msgid "Loan limit per patron"
 msgstr "Asiakaskohtainen lainaraja"
 
-#: api/odl2.py:56
+#: api/odl2.py:57
 msgid ""
 "The maximum number of books a patron can have loaned out at any given "
 "time."
 msgstr "Asiakkaalla voi olla enintään näin monta kirjaa lainattuna kerrallaan."
 
-#: api/odl2.py:68
+#: api/odl2.py:69
 msgid "Hold limit per patron"
 msgstr "Asiakaskohtainen varausraja"
 
-#: api/odl2.py:69
+#: api/odl2.py:70
 msgid "The maximum number of books a patron can have on hold at any given time."
 msgstr "Asiakkaalla voi olla enintään näin monta kirjaa varattuna kerrallaan."
 

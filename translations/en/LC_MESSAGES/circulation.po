@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2025-12-04 09:12+0200\n"
+"POT-Creation-Date: 2026-02-02 12:45+0200\n"
 "PO-Revision-Date: 2024-02-19 22:15+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -18,7 +18,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.13.0\n"
 
-#: api/authenticator.py:324
+#: api/authenticator.py:329
 msgid ""
 "SAML providers are configured, but secret for signing bearer tokens is "
 "not."
@@ -26,16 +26,16 @@ msgstr ""
 "SAML providers are configured, but secret for signing bearer tokens is "
 "not."
 
-#: api/authenticator.py:563
+#: api/authenticator.py:571
 msgid "No SAML providers are configured."
 msgstr "No SAML providers are configured."
 
-#: api/authenticator.py:572
+#: api/authenticator.py:580
 #, python-format
 msgid " The known providers are: %s"
 msgstr " The known providers are: %s"
 
-#: api/authenticator.py:766
+#: api/authenticator.py:774
 msgid "Library"
 msgstr "Library"
 
@@ -271,27 +271,27 @@ msgstr "ID of lane for patrons who are under 13"
 msgid "Send patrons to the lane with this ID."
 msgstr "Send patrons to the lane with this ID."
 
-#: api/ekirjasto_authentication.py:74
+#: api/ekirjasto_authentication.py:76
 msgid "E-kirjasto API environment"
 msgstr "E-kirjasto API environment"
 
-#: api/ekirjasto_authentication.py:75
+#: api/ekirjasto_authentication.py:77
 msgid "Select what environment of E-kirjasto accounts should be used."
 msgstr "Select what environment of E-kirjasto accounts should be used."
 
-#: api/ekirjasto_authentication.py:92
+#: api/ekirjasto_authentication.py:94
 msgid "E-magazines environment"
 msgstr "E-magazines environment"
 
-#: api/ekirjasto_authentication.py:93
+#: api/ekirjasto_authentication.py:95
 msgid "Select what environment of e-magazines service should be used."
 msgstr "Select what environment of e-magazines service should be used."
 
-#: api/ekirjasto_authentication.py:109
+#: api/ekirjasto_authentication.py:111
 msgid "Delegate token expire time in seconds"
 msgstr "Delegate token expire time in seconds"
 
-#: api/ekirjasto_authentication.py:110
+#: api/ekirjasto_authentication.py:112
 msgid ""
 "Expire time for a delegate token to authorize in behalf of a ekirjasto "
 "token. This should be less than the expire time for ekirjasto token, so "
@@ -308,6 +308,26 @@ msgstr "URL"
 #: api/enki.py:104
 msgid "Integrate an Enki collection."
 msgstr "Integrate an Enki collection."
+
+#: api/lanes.py:3108
+msgid "Books in Other Languages"
+msgstr "Books in Other Languages"
+
+#: api/lanes.py:3128
+msgid "All Books in Other Languages"
+msgstr "All Books in Other Languages"
+
+#: api/lanes.py:3168
+msgid "Books for Adults"
+msgstr "Books for Adults"
+
+#: api/lanes.py:3179
+msgid "Books for Young Adults"
+msgstr "Books for Young Adults"
+
+#: api/lanes.py:3190
+msgid "Books for Children"
+msgstr "Books for Children"
 
 #: api/millenium_patron.py:178
 msgid "III Millenium Patron API"
@@ -361,11 +381,11 @@ msgstr "Passphrase encryption algorithm"
 msgid "Algorithm used for encrypting the passphrase."
 msgstr "Algorithm used for encrypting the passphrase."
 
-#: api/odl2.py:42
+#: api/odl2.py:43
 msgid "Skipped license formats"
 msgstr "Skipped license formats"
 
-#: api/odl2.py:43
+#: api/odl2.py:44
 msgid ""
 "List of license formats that will NOT be imported into Circulation "
 "Manager."
@@ -373,11 +393,11 @@ msgstr ""
 "List of license formats that will NOT be imported into Circulation "
 "Manager."
 
-#: api/odl2.py:55
+#: api/odl2.py:56
 msgid "Loan limit per patron"
 msgstr "Loan limit per patron"
 
-#: api/odl2.py:56
+#: api/odl2.py:57
 msgid ""
 "The maximum number of books a patron can have loaned out at any given "
 "time."
@@ -385,11 +405,11 @@ msgstr ""
 "The maximum number of books a patron can have loaned out at any given "
 "time."
 
-#: api/odl2.py:68
+#: api/odl2.py:69
 msgid "Hold limit per patron"
 msgstr "Hold limit per patron"
 
-#: api/odl2.py:69
+#: api/odl2.py:70
 msgid "The maximum number of books a patron can have on hold at any given time."
 msgstr "The maximum number of books a patron can have on hold at any given time."
 
