@@ -1480,7 +1480,7 @@ msgstr ""
 #~ msgstr "Feministisk litteratur"
 
 #~ msgid "Boardgames & Strategic Games"
-#~ msgstr ""
+#~ msgstr "TRANSLATE"
 
 #~ msgid "Biography"
 #~ msgstr "Biografi"
