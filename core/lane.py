@@ -65,6 +65,7 @@ from core.model.hybrid import hybrid_property
 from core.model.listeners import site_configuration_has_changed
 from core.problem_details import *
 from core.util import LanguageCodes
+from core.util.accept_language import parse_accept_language
 from core.util.datetime_helpers import utc_now
 from core.util.opds_writer import OPDSFeed
 from core.util.problem_detail import ProblemDetail
@@ -442,9 +443,9 @@ class Facets(FacetsWithEntryPoint):
             )
 
         # Finland
-        g = Facets.LANGUAGE_FACET_GROUP_NAME
-        language: str = get_argument(g, cls.default_facet(config, g))
-        language_facets = cls.available_facets(config, g)
+        # g = Facets.LANGUAGE_FACET_GROUP_NAME
+        # language: str = get_argument(g, cls.default_facet(config, g))
+        # language_facets = cls.available_facets(config, g)
         # In the case of language, don't want to limit the input to only the
         # available facet values as we might get searches from elsewhere with
         # other languages.
@@ -455,7 +456,7 @@ class Facets(FacetsWithEntryPoint):
             Facets.COLLECTION_FACET_GROUP_NAME: collection_facets,
             Facets.DISTRIBUTOR_FACETS_GROUP_NAME: distributor_facets,
             Facets.COLLECTION_NAME_FACETS_GROUP_NAME: collection_name_facets,
-            Facets.LANGUAGE_FACET_GROUP_NAME: language_facets,  # Finland
+            # Facets.LANGUAGE_FACET_GROUP_NAME: language_facets,  # Finland
         }
 
         return dict(
@@ -465,7 +466,7 @@ class Facets(FacetsWithEntryPoint):
             distributor=distributor,
             collection_name=collection_name,
             enabled_facets=enabled,
-            language=language,  # Finland
+            # language=language,  # Finland
         )
 
     @classmethod
@@ -499,7 +500,7 @@ class Facets(FacetsWithEntryPoint):
         order,
         distributor,
         collection_name,
-        language,
+        # language,
         order_ascending=None,
         enabled_facets=None,
         entrypoint=None,
@@ -552,7 +553,7 @@ class Facets(FacetsWithEntryPoint):
         self.collection_name = collection_name or self.default_facet(
             library, self.COLLECTION_NAME_FACETS_GROUP_NAME
         )
-        self.language: str = language
+        # self.language: str = language
         if order_ascending == self.ORDER_ASCENDING:
             order_ascending = True
         elif order_ascending == self.ORDER_DESCENDING:
@@ -578,7 +579,7 @@ class Facets(FacetsWithEntryPoint):
             order=order or self.order,
             distributor=distributor or self.distributor,
             collection_name=collection_name or self.collection_name,
-            language=language or self.language,
+            # language=language or self.language,
             enabled_facets=self.facets_enabled_at_init,
             entrypoint=(entrypoint or self.entrypoint),
             entrypoint_is_default=False,
@@ -596,8 +597,8 @@ class Facets(FacetsWithEntryPoint):
             yield (self.DISTRIBUTOR_FACETS_GROUP_NAME, self.distributor)
         if self.collection_name:
             yield (self.COLLECTION_NAME_FACETS_GROUP_NAME, self.collection_name)
-        if self.language:
-            yield (self.LANGUAGE_FACET_GROUP_NAME, self.language)
+        # if self.language:
+        #     yield (self.LANGUAGE_FACET_GROUP_NAME, self.language)
 
     @property
     def enabled_facets(self):
@@ -616,7 +617,7 @@ class Facets(FacetsWithEntryPoint):
                 self.COLLECTION_FACET_GROUP_NAME,
                 self.DISTRIBUTOR_FACETS_GROUP_NAME,
                 self.COLLECTION_NAME_FACETS_GROUP_NAME,
-                self.LANGUAGE_FACET_GROUP_NAME,
+                # self.LANGUAGE_FACET_GROUP_NAME,
             ]
             for facet_type in facet_types:
                 yield self.facets_enabled_at_init.get(facet_type, [])
@@ -628,7 +629,7 @@ class Facets(FacetsWithEntryPoint):
                 Facets.COLLECTION_FACET_GROUP_NAME,
                 Facets.DISTRIBUTOR_FACETS_GROUP_NAME,
                 Facets.COLLECTION_NAME_FACETS_GROUP_NAME,
-                Facets.LANGUAGE_FACET_GROUP_NAME,
+                # Facets.LANGUAGE_FACET_GROUP_NAME,
             ):
                 yield self.available_facets(self.library, group_name)
 
@@ -648,7 +649,7 @@ class Facets(FacetsWithEntryPoint):
             collection_facets,
             distributor_facets,
             collection_name_facets,
-            language_facets,
+            # language_facets,
         ) = self.enabled_facets
 
         def dy(new_value):
@@ -698,12 +699,12 @@ class Facets(FacetsWithEntryPoint):
                 facets = self.navigate(collection_name=facet)
                 yield (group, facet, facets, facet == current_value)
 
-        if len(language_facets) > 1:
-            for facet in language_facets:
-                group = self.LANGUAGE_FACET_GROUP_NAME
-                current_value = self.language
-                facets = self.navigate(language=facet)
-                yield (group, facet, facets, facet == current_value)
+        # if len(language_facets) > 1:
+        #     for facet in language_facets:
+        #         group = self.LANGUAGE_FACET_GROUP_NAME
+        #         current_value = self.language
+        #         facets = self.navigate(language=facet)
+        #         yield (group, facet, facets, facet == current_value)
 
     def modify_search_filter(self, filter):
         """Modify the given external_search.Filter object
@@ -724,10 +725,10 @@ class Facets(FacetsWithEntryPoint):
         filter.subcollection = self.collection
 
         # Finland
-        if self.language == self.LANGUAGE_ALL:
-            filter.languages = []
-        elif self.language:
-            filter.languages = [self.language]
+        # if self.language == self.LANGUAGE_ALL:
+        #     filter.languages = []
+        # elif self.language:
+        #     filter.languages = [self.language]
 
         # We can only have distributor and collection name facets if we have a library
         if self.library:
@@ -1009,7 +1010,7 @@ class SearchFacets(Facets):
         kwargs.setdefault("availability", None)
         kwargs.setdefault("distributor", None)
         kwargs.setdefault("collection_name", None)
-        kwargs.setdefault("language", None)
+        # kwargs.setdefault("language", None)
         order = kwargs.setdefault("order", None)
 
         if order in (None, self.ORDER_BY_RELEVANCE):
@@ -1080,11 +1081,16 @@ class SearchFacets(Facets):
         # languages allowed by the WorkList and the languages found in
         # the client's Accept-Language header.
 
-        # Finland: Accept-Language header usage removed from here
-        # in favor of the added language facet
-
+        language_header = get_header("Accept-Language")
         languages = get_argument("language") or None
         extra["language_from_query"] = languages is not None
+        if not languages:
+            if language_header:
+                languages = parse_accept_language(language_header)
+                languages = [l[0] for l in languages]
+                languages = list(map(LanguageCodes.iso_639_2_for_locale, languages))
+                languages = [l for l in languages if l]
+            languages = languages or None
         extra["languages"] = languages
 
         # The client can request a minimum score for search results.
@@ -3011,8 +3017,7 @@ class Lane(Base, DatabaseBackedWorkList, HierarchyWorkList):
                 and self.fiction != genre.default_fiction
             ):
                 logging.error(
-                    "Lane %s has a genre %s that does not match its fiction restriction.",
-                    (self.full_identifier, genre.name),
+                    f"Lane {self.full_identifier}:{self.display_name} with parent {self.parent} has a genre {genre.name} that does not match its fiction restriction."
                 )
             bucket.add(genre.id)
             if lanegenre.recursive:
@@ -3094,12 +3099,25 @@ class Lane(Base, DatabaseBackedWorkList, HierarchyWorkList):
         """
         _db = Session.object_session(self)
         if isinstance(genre, (bytes, str)):
-            genre, ignore = Genre.lookup(_db, genre)
+            genre, ignore = Genre.lookup(_db, genre, True)
         lanegenre, is_new = get_one_or_create(_db, LaneGenre, lane=self, genre=genre)
         lanegenre.inclusive = inclusive
         lanegenre.recursive = recursive
         self._genre_ids = self._gather_genre_ids()
         return lanegenre, is_new
+
+    def add_genres(self, genre_list, inclusive=True, recursive=True):
+        """Create a list of new LaneGenre objects for the given genres and
+        associate them with this Lane.
+
+        Mainly used in tests.
+        """
+
+        lanegenre_list = []
+        for genre in genre_list:
+            lanegenre, is_new = self.add_genre(genre, inclusive, recursive)
+            lanegenre_list.append((lanegenre, is_new))
+        return lanegenre_list
 
     @property
     def search_target(self):

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2025-10-15 11:56+0300\n"
+"POT-Creation-Date: 2025-12-04 09:12+0200\n"
 "PO-Revision-Date: 2024-02-19 22:15+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -39,28 +39,28 @@ msgstr " The known providers are: %s"
 msgid "Library"
 msgstr "Library"
 
-#: api/axis.py:98
+#: api/axis.py:96
 msgid "Username"
 msgstr "Username"
 
-#: api/axis.py:101
+#: api/axis.py:99
 msgid "Password"
 msgstr "Password"
 
-#: api/axis.py:105 api/bibliotheca.py:101 api/enki.py:81 api/overdrive.py:134
-#: api/overdrive.py:195
+#: api/axis.py:103 api/bibliotheca.py:99 api/enki.py:79 api/overdrive.py:132
+#: api/overdrive.py:193
 msgid "Library ID"
 msgstr "Library ID"
 
-#: api/axis.py:112
+#: api/axis.py:110
 msgid "Server"
 msgstr "Server"
 
-#: api/axis.py:119
+#: api/axis.py:117
 msgid "Verify SSL Certificate"
 msgstr "Verify SSL Certificate"
 
-#: api/axis.py:120
+#: api/axis.py:118
 msgid ""
 "This should always be True in production, it may need to be set to False "
 "to use theAxis 360 QA Environment."
@@ -68,35 +68,35 @@ msgstr ""
 "This should always be True in production, it may need to be set to False "
 "to use theAxis 360 QA Environment."
 
-#: api/axis.py:126
+#: api/axis.py:124
 msgid "True"
 msgstr "True"
 
-#: api/axis.py:127
+#: api/axis.py:125
 msgid "False"
 msgstr "False"
 
-#: api/bibliotheca.py:89
+#: api/bibliotheca.py:87
 msgid "Account ID"
 msgstr "Account ID"
 
-#: api/bibliotheca.py:95
+#: api/bibliotheca.py:93
 msgid "Account Key"
 msgstr "Account Key"
 
-#: api/bibliotheca.py:110 api/enki.py:86
+#: api/bibliotheca.py:108 api/enki.py:84
 msgid "Show/Hide Titles with No Available Loans"
 msgstr "Show/Hide Titles with No Available Loans"
 
-#: api/bibliotheca.py:112 api/enki.py:88
+#: api/bibliotheca.py:110 api/enki.py:86
 msgid "Titles with no available loans will not be displayed in the Catalog view."
 msgstr "Titles with no available loans will not be displayed in the Catalog view."
 
-#: api/circulation.py:733
+#: api/circulation.py:728
 msgid "Ebook Loan Duration (in Days)"
 msgstr "Ebook Loan Duration (in Days)"
 
-#: api/circulation.py:735
+#: api/circulation.py:730
 msgid ""
 "When a patron uses SimplyE to borrow an ebook from this collection, "
 "SimplyE will ask for a loan that lasts this number of days. This must be "
@@ -108,11 +108,11 @@ msgstr ""
 "equal to or less than the maximum loan duration negotiated with the "
 "distributor."
 
-#: api/circulation.py:748
+#: api/circulation.py:743
 msgid "Default Loan Period (in Days)"
 msgstr "Default Loan Period (in Days)"
 
-#: api/circulation.py:750
+#: api/circulation.py:745
 msgid ""
 "Until it hears otherwise from the distributor, this server will assume "
 "that any given loan for this library from this collection will last this "
@@ -126,7 +126,7 @@ msgstr ""
 "library and the distributor. This only affects estimates&mdash;it cannot "
 "affect the actual length of loans."
 
-#: api/circulation.py:780
+#: api/circulation.py:775
 #, python-format
 msgid ""
 "Could not map delivery mechanism %(mechanism_name)s to internal delivery "
@@ -135,15 +135,15 @@ msgstr ""
 "Could not map delivery mechanism %(mechanism_name)s to internal delivery "
 "mechanism!"
 
-#: api/circulation.py:1271
+#: api/circulation.py:1242
 msgid "You cannot renew a loan if other patrons have the work on hold."
 msgstr "You cannot renew a loan if other patrons have the work on hold."
 
-#: api/circulation.py:1539
+#: api/circulation.py:1510
 msgid "Cannot find your active loan for this work."
 msgstr "Cannot find your active loan for this work."
 
-#: api/circulation.py:1547
+#: api/circulation.py:1518
 #, python-format
 msgid ""
 "You already fulfilled this loan as %(loan_delivery_mechanism)s, you can't"
@@ -301,11 +301,11 @@ msgstr ""
 "token. This should be less than the expire time for ekirjasto token, so "
 "it can be refreshed."
 
-#: api/enki.py:74 api/kansas_patron.py:20
+#: api/enki.py:72 api/kansas_patron.py:20
 msgid "URL"
 msgstr "URL"
 
-#: api/enki.py:106
+#: api/enki.py:104
 msgid "Integrate an Enki collection."
 msgstr "Integrate an Enki collection."
 
@@ -313,23 +313,23 @@ msgstr "Integrate an Enki collection."
 msgid "III Millenium Patron API"
 msgstr "III Millenium Patron API"
 
-#: api/odl.py:95
+#: api/odl.py:93
 msgid "ODL feed URL"
 msgstr "ODL feed URL"
 
-#: api/odl.py:102
+#: api/odl.py:100
 msgid "Library's API username"
 msgstr "Library's API username"
 
-#: api/odl.py:109
+#: api/odl.py:107
 msgid "Library's API password"
 msgstr "Library's API password"
 
-#: api/odl.py:117
+#: api/odl.py:115
 msgid "Default Reservation Period (in Days)"
 msgstr "Default Reservation Period (in Days)"
 
-#: api/odl.py:118
+#: api/odl.py:116
 msgid ""
 "The number of days a patron has to check out a book after a hold becomes "
 "available."
@@ -337,27 +337,27 @@ msgstr ""
 "The number of days a patron has to check out a book after a hold becomes "
 "available."
 
-#: api/odl.py:129
+#: api/odl.py:127
 msgid "Passphrase hint"
 msgstr "Passphrase hint"
 
-#: api/odl.py:130
+#: api/odl.py:128
 msgid "Hint displayed to the user when opening an LCP protected publication."
 msgstr "Hint displayed to the user when opening an LCP protected publication."
 
-#: api/odl.py:141
+#: api/odl.py:139
 msgid "Passphrase hint URL"
 msgstr "Passphrase hint URL"
 
-#: api/odl.py:142
+#: api/odl.py:140
 msgid "Hint URL available to the user when opening an LCP protected publication."
 msgstr "Hint URL available to the user when opening an LCP protected publication."
 
-#: api/odl.py:153
+#: api/odl.py:151
 msgid "Passphrase encryption algorithm"
 msgstr "Passphrase encryption algorithm"
 
-#: api/odl.py:154
+#: api/odl.py:152
 msgid "Algorithm used for encrypting the passphrase."
 msgstr "Algorithm used for encrypting the passphrase."
 
@@ -401,31 +401,31 @@ msgstr "Library's username or access key"
 msgid "Library's password or secret key"
 msgstr "Library's password or secret key"
 
-#: api/overdrive.py:142
+#: api/overdrive.py:140
 msgid "Website ID"
 msgstr "Website ID"
 
-#: api/overdrive.py:150
+#: api/overdrive.py:148
 msgid "Client Key"
 msgstr "Client Key"
 
-#: api/overdrive.py:158
+#: api/overdrive.py:156
 msgid "Client Secret"
 msgstr "Client Secret"
 
-#: api/overdrive.py:168
+#: api/overdrive.py:166
 msgid "Server family"
 msgstr "Server family"
 
-#: api/overdrive.py:174
+#: api/overdrive.py:172
 msgid "Testing"
 msgstr "Testing"
 
-#: api/overdrive.py:184
+#: api/overdrive.py:182
 msgid "ILS Name"
 msgstr "ILS Name"
 
-#: api/overdrive.py:185
+#: api/overdrive.py:183
 msgid ""
 "When multiple libraries share an Overdrive account, Overdrive uses a "
 "setting called 'ILS Name' to determine which ILS to check when validating"

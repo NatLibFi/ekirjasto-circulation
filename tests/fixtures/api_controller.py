@@ -68,7 +68,7 @@ class ControllerFixture:
     db: DatabaseTransactionFixture
     default_patron: Patron
     default_patrons: dict[Any, Any]
-    english_adult_fiction: Lane
+    finnish_adult_fiction: Lane
     libraries: list[Library]
     library: Library
     manager: MockCirculationManager
@@ -194,7 +194,7 @@ class ControllerFixture:
             [self.english_adult_fiction] = [
                 x
                 for x in self.db.default_library().lanes
-                if x.display_name == "Fiction" and x.languages == ["eng"]
+                if x.display_name == "Books for Adults" and x.languages == ["eng"]
             ]
 
         return self.manager

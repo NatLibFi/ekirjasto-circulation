@@ -762,21 +762,8 @@ class OPDSAcquisitionFeed(BaseOPDSFeed):
         all_works = []
         for work, sublane in works_and_lanes:
             if sublane == worklist:
-                # We are looking at the groups feed for (e.g.)
-                # "Science Fiction", and we're seeing a book
-                # that is featured within "Science Fiction" itself
-                # rather than one of the sublanes.
-                #
-                # We want to assign this work to a group called "All
-                # Science Fiction" and point its 'group URI' to
-                # the linear feed of the "Science Fiction" lane
-                # (as opposed to the groups feed, which is where we
-                # are now).
-                v = dict(
-                    lane=worklist,
-                    label=worklist.display_name_for_all,
-                    link_to_list_feed=True,
-                )
+                # Pass to avoid creating the "All" lanes.
+                pass
             else:
                 # We are looking at the groups feed for (e.g.)
                 # "Science Fiction", and we're seeing a book

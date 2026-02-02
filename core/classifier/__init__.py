@@ -558,12 +558,35 @@ class AgeClassifier(SubjectClassifier):
 
 COMICS_AND_GRAPHIC_NOVELS = "Comics & Graphic Novels"
 
+# E-kirjasto does not utilize the genre structure here anymore to
+# build default lanes in the main page. The structure is left as
+# is for clarity.
 fiction_genres = [
     "Adventure",
+    dict(name="Animal Stories", subgenres=["Horse Stories", "Pet Stories"]),
+    dict(
+        name="Difficult Topics",
+        subgenres=[
+            "Bullying",
+            "Death",
+            "Multicultural Stories",
+            "Disabilities",
+            "War",
+            "Drugs",
+            "Eating Disorders & Self-Image",
+            "Mental Health",
+        ],
+    ),
     "Classics",
     COMICS_AND_GRAPHIC_NOVELS,
+    "Diary Stories",
     "Drama",
     dict(name="Erotica", audiences=SubjectClassifier.AUDIENCE_ADULTS_ONLY),
+    "Family Stories",
+    dict(
+        name="Festivities & Holidays",
+        subgenres=["Easter Stories", "Christmas Stories", "Halloween Stories"],
+    ),
     dict(
         name="Fantasy",
         subgenres=[
@@ -572,7 +595,8 @@ fiction_genres = [
             "Urban Fantasy",
         ],
     ),
-    "Folklore",
+    "Folklore Stories",
+    "Growing Up",
     "Historical Fiction",
     dict(
         name="Horror",
@@ -584,6 +608,7 @@ fiction_genres = [
             "Occult Horror",
         ],
     ),
+    "Humor",
     "Humorous Fiction",
     "General Fiction",
     "LGBTQ Fiction",
@@ -612,6 +637,7 @@ fiction_genres = [
             "Romantic Suspense",
         ],
     ),
+    "School & Study",
     dict(
         name="Science Fiction",
         subgenres=[
@@ -627,6 +653,17 @@ fiction_genres = [
     ),
     "Short Stories",
     dict(
+        name="Sports Stories",
+        subgenres=[
+            "Football Stories",
+            "Hockey Stories",
+            "Dance Stories",
+            "Riding Stories",
+            "Skating Stories",
+        ],
+    ),
+    "Superheroes",
+    dict(
         name="Suspense/Thriller",
         subgenres=[
             "Historical Thriller",
@@ -641,14 +678,19 @@ fiction_genres = [
         ],
     ),
     "Urban Fiction",
+    dict(name="Vehicles & Technology", subgenres=["Cars", "Trains", "Airplanes"]),
     "Westerns",
-    "Women's Fiction",
 ]
 
 nonfiction_genres = [
+    dict(name="Animals", subgenres=["Horses & Riding", "Pet Animals", "Dinosaurs"]),
     dict(
-        name="Art & Design",
+        name="Art & Culture",
         subgenres=[
+            "Film & TV",
+            "Music",
+            "Performing Arts",
+            "Drawing",
             "Architecture",
             "Art",
             "Art Criticism & Theory",
@@ -658,25 +700,19 @@ nonfiction_genres = [
             "Photography",
         ],
     ),
-    "Biography & Memoir",
+    dict(name="Biography & Memoir", subgenres=["Athletes", "Musicians"]),
+    "Careers",
+    "Computers & Digital Skills",
+    "Cooking & Baking",
+    "Climate & Sustainability",
+    "Continents & Countries",
+    "Diversity & Multicultural",
     "Education",
-    dict(
-        name="Personal Finance & Business",
-        subgenres=[
-            "Business",
-            "Economics",
-            "Management & Leadership",
-            "Personal Finance & Investing",
-            "Real Estate",
-        ],
-    ),
-    dict(
-        name="Parenting & Family",
-        subgenres=[
-            "Family & Relationships",
-            "Parenting",
-        ],
-    ),
+    "Encyclopedias",
+    "Family",
+    "Fashion & Looks",
+    "Folklore",
+    dict(name="Games", subgenres=["Video Games", "Board Games & Strategic Games"]),
     dict(
         name="Food & Health",
         subgenres=[
@@ -686,6 +722,8 @@ nonfiction_genres = [
             "Vegetarian & Vegan",
         ],
     ),
+    "General Nonfiction",
+    "Health & Wellness",
     dict(
         name="History",
         subgenres=[
@@ -710,24 +748,36 @@ nonfiction_genres = [
             "Antiques & Collectibles",
             "Crafts & Hobbies",
             "Gardening",
-            "Games",
+            "Games & Activities",
             "House & Home",
             "Pets",
         ],
     ),
+    dict(name="Holidays & Celebrations", subgenres=["Christmas", "Birthdays"]),
     "Humorous Nonfiction",
-    dict(
-        name="Entertainment",
-        subgenres=[
-            "Film & TV",
-            "Music",
-            "Performing Arts",
-        ],
-    ),
     "Life Strategies",
     "Literary Criticism",
+    dict(name="Machinery & Equipment", subgenres=["Robots", "Vehicles"]),
+    dict(
+        name="Parenting & Family",
+        subgenres=[
+            "Family & Relationships",
+            "Parenting",
+        ],
+    ),
     "Periodicals",
+    dict(
+        name="Personal Finance & Business",
+        subgenres=[
+            "Business",
+            "Economics",
+            "Management & Leadership",
+            "Personal Finance & Investing",
+            "Real Estate",
+        ],
+    ),
     "Philosophy",
+    dict(name="Play & Hobbies", subgenres=["Toys", "Crafts", "Camping"]),
     "Political Science",
     dict(
         name="Reference & Study Aids",
@@ -760,12 +810,19 @@ nonfiction_genres = [
             "Science",
             "Social Sciences",
             "Technology",
+            "Plants",
+            "Physics & Chemistry",
+            "Geography",
+            "Stars & Space",
         ],
     ),
     "Self-Help",
-    "Sports",
+    dict(name="Society", subgenres=["Antiracism", "Human Rights"]),
+    dict(name="Sports", subgenres=["Football", "Hockey", "Dance", "Riding", "Skating"]),
+    "Supernatural",
     "Travel",
     "True Crime",
+    "World Record Books",
 ]
 
 

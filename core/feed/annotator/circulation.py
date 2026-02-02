@@ -11,10 +11,8 @@ from typing import Any
 
 from dependency_injector.wiring import Provide, inject
 from flask import url_for
-from flask_babel import lazy_gettext as _
 from sqlalchemy.orm import Session
 
-import default_lane_names_to_localize
 from api.adobe_vendor_id import AuthdataUtility
 from api.annotations import AnnotationWriter
 from api.circulation import BaseCirculationAPI, CirculationAPI
@@ -23,7 +21,6 @@ from api.lanes import DynamicLane
 from api.metadata.novelist import NoveListAPI
 from core.analytics import Analytics
 from core.classifier import SubjectClassifier
-from core.classifier.localized_names import genres as localized_genre_names
 from core.config import CannotLoadConfiguration
 from core.entrypoint import EverythingEntryPoint
 from core.external_search import WorkSearchResult
@@ -959,14 +956,6 @@ class LibraryAnnotator(CirculationManagerAnnotator):
             entry.work, entry.license_pool, entry.identifier
         )
         if group_uri:
-            # Finland
-            # Attempt to translate the group title if it is to be localized.
-            if (
-                group_title in default_lane_names_to_localize.lanes.keys()
-                or group_title in localized_genre_names.keys()
-            ):
-                group_title = _(group_title)
-
             entry.computed.other_links.append(
                 Link(href=group_uri, rel=OPDSFeed.GROUP_REL, title=str(group_title))
             )

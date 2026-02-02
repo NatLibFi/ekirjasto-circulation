@@ -532,7 +532,7 @@ class CollectTranslationsScript(Script):
 
     def run(self):
         self._collect_genres()
-        self._collect_lanes()
+        # self._collect_lanes()
 
         subprocess.run(["./bin/util/generate_translation_template"], check=True)
         subprocess.run(
@@ -1151,7 +1151,7 @@ You'll get another chance to back out before the database session is committed."
         output.write(new_lane_output)
 
         if self.reset:
-            self.log.warn("All done. Sleeping for five seconds before committing.")
+            self.log.warning("All done. Sleeping for five seconds before committing.")
             time.sleep(5)
             self._db.commit()
 

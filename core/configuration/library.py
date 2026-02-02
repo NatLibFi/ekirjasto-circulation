@@ -353,36 +353,36 @@ class LibrarySettings(BaseSettings):
             default_library_only=True,
         ),
     )
-    # Finland
-    facets_enabled_language: list[str] = FormField(
-        FacetConstants.DEFAULT_ENABLED_FACETS[FacetConstants.LANGUAGE_FACET_GROUP_NAME],
-        form=LibraryConfFormItem(
-            label="Allow patrons to filter language to",
-            type=ConfigurationFormItemType.MENU,
-            options={
-                facet: FacetConstants.FACET_DISPLAY_TITLES[facet]
-                for facet in FacetConstants.LANGUAGE_FACETS
-            },
-            category="Lanes & Filters",
-            paired="facets_default_language",
-            level=Level.SYS_ADMIN_OR_MANAGER,
-            default_library_only=True,
-        ),
-    )
-    facets_default_language: str = FormField(
-        FacetConstants.LANGUAGE_ALL,
-        form=LibraryConfFormItem(
-            label="Default Language",
-            type=ConfigurationFormItemType.SELECT,
-            options={
-                facet: FacetConstants.FACET_DISPLAY_TITLES[facet]
-                for facet in FacetConstants.LANGUAGE_FACETS
-            },
-            category="Lanes & Filters",
-            skip=True,
-            default_library_only=True,
-        ),
-    )
+    # # Finland
+    # facets_enabled_language: list[str] = FormField(
+    #     FacetConstants.DEFAULT_ENABLED_FACETS[FacetConstants.LANGUAGE_FACET_GROUP_NAME],
+    #     form=LibraryConfFormItem(
+    #         label="Allow patrons to filter language to",
+    #         type=ConfigurationFormItemType.MENU,
+    #         options={
+    #             facet: FacetConstants.FACET_DISPLAY_TITLES[facet]
+    #             for facet in FacetConstants.LANGUAGE_FACETS
+    #         },
+    #         category="Lanes & Filters",
+    #         paired="facets_default_language",
+    #         level=Level.SYS_ADMIN_OR_MANAGER,
+    #         default_library_only=True,
+    #     ),
+    # )
+    # facets_default_language: str = FormField(
+    #     FacetConstants.LANGUAGE_ALL,
+    #     form=LibraryConfFormItem(
+    #         label="Default Language",
+    #         type=ConfigurationFormItemType.SELECT,
+    #         options={
+    #             facet: FacetConstants.FACET_DISPLAY_TITLES[facet]
+    #             for facet in FacetConstants.LANGUAGE_FACETS
+    #         },
+    #         category="Lanes & Filters",
+    #         skip=True,
+    #         default_library_only=True,
+    #     ),
+    # )
     facets_enabled_dynamic: list[str] = FormField(
         list(FacetConstants.FACET_DISPLAY_TITLES_DYNAMIC.keys()),
         form=LibraryConfFormItem(
@@ -656,10 +656,12 @@ class LibrarySettings(BaseSettings):
             level=Level.SYS_ADMIN_ONLY,
         ),
     )
+    # Large, small and tiny language configurations should be removed.
+    # All is hard-coded to fin, swe, eng and any smaller languages.
     large_collection_languages: list[str] | None = FormField(
         None,
         form=LibraryConfFormItem(
-            label="The primary languages represented in this library's collection",
+            label="The primary languages represented in this library's collection. LEAVE EMPTY.",
             type=ConfigurationFormItemType.LIST,
             format="language-code",
             description="Each value can be either the full name of a language or an "
@@ -673,7 +675,7 @@ class LibrarySettings(BaseSettings):
     small_collection_languages: list[str] | None = FormField(
         None,
         form=LibraryConfFormItem(
-            label="Other major languages represented in this library's collection",
+            label="Other major languages represented in this library's collection. LEAVE EMPTY.",
             type=ConfigurationFormItemType.LIST,
             format="language-code",
             description="Each value can be either the full name of a language or an "
@@ -687,7 +689,7 @@ class LibrarySettings(BaseSettings):
     tiny_collection_languages: list[str] | None = FormField(
         None,
         form=LibraryConfFormItem(
-            label="Other languages in this library's collection",
+            label="Other languages in this library's collection. LEAVE EMPTY.",
             type=ConfigurationFormItemType.LIST,
             format="language-code",
             description="Each value can be either the full name of a language or an "
