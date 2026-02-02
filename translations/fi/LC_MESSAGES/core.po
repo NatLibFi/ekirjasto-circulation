@@ -1483,7 +1483,7 @@ msgstr "Palvelin teki pyynnön palveluun %(service)s, ja pyyntö aikakatkaistiin
 #~ msgstr "Viihdekirjallisuus"
 
 #~ msgid "Boardgames & Strategic Games"
-#~ msgstr ""
+#~ msgstr "Lauta- ja strategiapelit"
 
 #~ msgid "Biography"
 #~ msgstr "Elämäkerrat"
