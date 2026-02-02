@@ -586,7 +586,7 @@ msgstr "Urbaani fantasia"
 
 #: core/classifier/localized_names.py:34
 msgid "Folklore Stories"
-msgstr "Kansanperinne"
+msgstr "Kansanperinnetarinat"
 
 #: core/classifier/localized_names.py:35
 msgid "Growing Up"
