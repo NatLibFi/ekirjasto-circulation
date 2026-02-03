@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-02-02 12:45+0200\n"
+"POT-Creation-Date: 2026-02-03 13:51+0200\n"
 "PO-Revision-Date: 2024-02-19 22:14+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -470,6 +470,34 @@ msgstr "Submitted profile document was not a JSON object."
 #, python-format
 msgid "\"%s\" is not a writable setting."
 msgstr "\"%s\" is not a writable setting."
+
+#: core/classifier/__init__.py:47
+msgid "Adult"
+msgstr "Adult"
+
+#: core/classifier/__init__.py:48
+msgid "Adults Only"
+msgstr "Adults Only"
+
+#: core/classifier/__init__.py:49
+msgid "Young Adult"
+msgstr "Young Adult"
+
+#: core/classifier/__init__.py:50
+msgid "Children"
+msgstr "Children"
+
+#: core/classifier/__init__.py:51
+msgid "All Ages"
+msgstr "All Ages"
+
+#: core/classifier/__init__.py:78
+msgid "Fiction"
+msgstr "Fiction"
+
+#: core/classifier/__init__.py:79
+msgid "Nonfiction"
+msgstr "Nonfiction"
 
 #: core/classifier/localized_names.py:7
 msgid "Adventure"

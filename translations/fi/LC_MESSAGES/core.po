@@ -10,7 +10,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-02-02 12:45+0200\n"
+"POT-Creation-Date: 2026-02-03 13:51+0200\n"
 "PO-Revision-Date: 2025-10-16 10:07+0000\n"
 "Last-Translator: Kaisa Kuivalahti, 2025\n"
 "Language: fi\n"
@@ -475,6 +475,34 @@ msgstr "Annettu profiilidokumentti ei ollut JSON-objekti."
 #, python-format
 msgid "\"%s\" is not a writable setting."
 msgstr "%s ei ole kirjoitettava asetus."
+
+#: core/classifier/__init__.py:47
+msgid "Adult"
+msgstr "Aikuiset"
+
+#: core/classifier/__init__.py:48
+msgid "Adults Only"
+msgstr "Vain aikuiset"
+
+#: core/classifier/__init__.py:49
+msgid "Young Adult"
+msgstr "Nuoret"
+
+#: core/classifier/__init__.py:50
+msgid "Children"
+msgstr "Lapset"
+
+#: core/classifier/__init__.py:51
+msgid "All Ages"
+msgstr "Kaikki ikäryhmät"
+
+#: core/classifier/__init__.py:78
+msgid "Fiction"
+msgstr "Kaunokirjallisuus"
+
+#: core/classifier/__init__.py:79
+msgid "Nonfiction"
+msgstr "Tietokirjallisuus"
 
 #: core/classifier/localized_names.py:7
 msgid "Adventure"

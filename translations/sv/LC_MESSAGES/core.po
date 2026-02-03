@@ -10,7 +10,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-02-02 12:45+0200\n"
+"POT-Creation-Date: 2026-02-03 13:51+0200\n"
 "PO-Revision-Date: 2025-10-16 10:07+0000\n"
 "Last-Translator: Kaisa Kuivalahti, 2025\n"
 "Language: sv\n"
@@ -474,6 +474,34 @@ msgstr "Det inlämnade profildokumentet var inte ett giltigt JSON-objekt."
 #, python-format
 msgid "\"%s\" is not a writable setting."
 msgstr "\"%s\" är inte en skrivbar inställning."
+
+#: core/classifier/__init__.py:47
+msgid "Adult"
+msgstr "Vuxen"
+
+#: core/classifier/__init__.py:48
+msgid "Adults Only"
+msgstr "Bara vuxen"
+
+#: core/classifier/__init__.py:49
+msgid "Young Adult"
+msgstr "Ungdomar"
+
+#: core/classifier/__init__.py:50
+msgid "Children"
+msgstr "Barn"
+
+#: core/classifier/__init__.py:51
+msgid "All Ages"
+msgstr "Alla åldrar"
+
+#: core/classifier/__init__.py:78
+msgid "Fiction"
+msgstr "Skönlitteratur"
+
+#: core/classifier/__init__.py:79
+msgid "Nonfiction"
+msgstr "Facklitteratur"
 
 #: core/classifier/localized_names.py:7
 msgid "Adventure"
