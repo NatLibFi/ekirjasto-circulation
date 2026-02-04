@@ -323,6 +323,7 @@ class TestURNLookupController:
             # We got an OPDS feed that includes an entry for the work.
             assert 200 == response.status_code
             assert OPDSFeed.ACQUISITION_FEED_TYPE == response.headers["Content-Type"]
+
     # This test began failing when core/feed/annotater/base.py uses babel to
     # get translations for "fiction/nonfiction" and audience. The function
     # itself is used and correctly fetches details to produce an OPDS response with the expected details. Disabling these asserts for now.
