@@ -167,9 +167,9 @@ class ToFeedEntry:
 
         fiction_term = None
         if work.fiction == True:
-            fiction_term = "Fiction"
+            fiction_term = gettext("Fiction")
         elif work.fiction == False:
-            fiction_term = "Nonfiction"
+            fiction_term = gettext("Nonfiction")
         if fiction_term:
             fiction_scheme = Subject.SIMPLIFIED_FICTION_STATUS
             categories[fiction_scheme] = [
@@ -207,7 +207,9 @@ class ToFeedEntry:
         # http://schema.org/audience
         if work.audience:
             audience_uri = "http://schema.org/audience"
-            categories[audience_uri] = [dict(term=work.audience, label=work.audience)]
+            categories[audience_uri] = [
+                dict(term=work.audience, label=gettext(work.audience))
+            ]
 
         # Any book can have a target age, but the target age
         # is only relevant for childrens' and YA books.

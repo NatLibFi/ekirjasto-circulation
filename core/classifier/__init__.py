@@ -23,6 +23,7 @@ import re
 from collections import Counter, defaultdict
 from urllib.parse import urlparse
 
+from flask_babel import gettext
 from sqlalchemy.orm.session import Session
 from sqlalchemy.sql.expression import and_
 
@@ -44,11 +45,11 @@ class ClassifierConstants:
     GRADE_LEVEL = "Grade level"  # "1-2", "Grade 4", "Kindergarten", etc.
 
     # Audience related constants
-    AUDIENCE_ADULT = "Adult"
-    AUDIENCE_ADULTS_ONLY = "Adults Only"
-    AUDIENCE_YOUNG_ADULT = "Young Adult"
-    AUDIENCE_CHILDREN = "Children"
-    AUDIENCE_ALL_AGES = "All Ages"
+    AUDIENCE_ADULT = gettext("Adult")
+    AUDIENCE_ADULTS_ONLY = gettext("Adults Only")
+    AUDIENCE_YOUNG_ADULT = gettext("Young Adult")
+    AUDIENCE_CHILDREN = gettext("Children")
+    AUDIENCE_ALL_AGES = gettext("All Ages")
     AUDIENCE_RESEARCH = "Research"
 
     # A book for a child younger than 14 is a children's book.
