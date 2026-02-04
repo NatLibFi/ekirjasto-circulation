@@ -10,7 +10,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-02-03 13:51+0200\n"
+"POT-Creation-Date: 2026-02-03 14:43+0200\n"
 "PO-Revision-Date: 2025-10-16 10:07+0000\n"
 "Last-Translator: Kaisa Kuivalahti, 2025\n"
 "Language: fi\n"
@@ -495,14 +495,6 @@ msgstr "Lapset"
 #: core/classifier/__init__.py:51
 msgid "All Ages"
 msgstr "Kaikki ikäryhmät"
-
-#: core/classifier/__init__.py:78
-msgid "Fiction"
-msgstr "Kaunokirjallisuus"
-
-#: core/classifier/__init__.py:79
-msgid "Nonfiction"
-msgstr "Tietokirjallisuus"
 
 #: core/classifier/localized_names.py:7
 msgid "Adventure"
@@ -1445,6 +1437,14 @@ msgstr "Ei tietoa vaaratekijöistä"
 #: core/data_conversion/accessibility_mapper.py:67
 msgid "No information is available"
 msgstr "Tietoa ei ole saatavilla"
+
+#: core/feed/annotator/base.py:170
+msgid "Fiction"
+msgstr "Kaunokirjallisuus"
+
+#: core/feed/annotator/base.py:172
+msgid "Nonfiction"
+msgstr "Tietokirjallisuus"
 
 #: core/util/http.py:34
 msgid "Failure contacting external service"

@@ -76,9 +76,6 @@ class ClassifierConstants:
     SIMPLIFIED_GENRE = "http://librarysimplified.org/terms/genres/Simplified/"
     SIMPLIFIED_FICTION_STATUS = "http://librarysimplified.org/terms/fiction/"
 
-    FICTION = gettext("Fiction")
-    NONFICTION = gettext("Nonfiction")
-
 
 class SubjectClassifier(ClassifierConstants):
     """

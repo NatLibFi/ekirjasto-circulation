@@ -10,7 +10,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-02-03 13:51+0200\n"
+"POT-Creation-Date: 2026-02-03 14:43+0200\n"
 "PO-Revision-Date: 2025-10-16 10:07+0000\n"
 "Last-Translator: Kaisa Kuivalahti, 2025\n"
 "Language: sv\n"
@@ -494,14 +494,6 @@ msgstr "Barn"
 #: core/classifier/__init__.py:51
 msgid "All Ages"
 msgstr "Alla åldrar"
-
-#: core/classifier/__init__.py:78
-msgid "Fiction"
-msgstr "Skönlitteratur"
-
-#: core/classifier/__init__.py:79
-msgid "Nonfiction"
-msgstr "Facklitteratur"
 
 #: core/classifier/localized_names.py:7
 msgid "Adventure"
@@ -1442,6 +1434,14 @@ msgstr "Förekomst av ljud som kan orsaka obehag är okänd"
 #: core/data_conversion/accessibility_mapper.py:67
 msgid "No information is available"
 msgstr "Information saknas"
+
+#: core/feed/annotator/base.py:170
+msgid "Fiction"
+msgstr "Skönlitteratur"
+
+#: core/feed/annotator/base.py:172
+msgid "Nonfiction"
+msgstr "Facklitteratur"
 
 #: core/util/http.py:34
 msgid "Failure contacting external service"

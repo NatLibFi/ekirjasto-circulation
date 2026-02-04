@@ -10,7 +10,7 @@ from urllib.parse import quote
 from flask_babel import gettext
 from sqlalchemy.orm import Session, joinedload
 
-from core.classifier import ClassifierConstants, SubjectClassifier
+from core.classifier import SubjectClassifier
 from core.feed.types import (
     AccessibilityType,
     Author,
@@ -167,9 +167,9 @@ class ToFeedEntry:
 
         fiction_term = None
         if work.fiction == True:
-            fiction_term = gettext(ClassifierConstants.FICTION)
+            fiction_term = gettext("Fiction")
         elif work.fiction == False:
-            fiction_term = gettext(ClassifierConstants.NONFICTION)
+            fiction_term = gettext("Nonfiction")
         if fiction_term:
             fiction_scheme = Subject.SIMPLIFIED_FICTION_STATUS
             categories[fiction_scheme] = [
