@@ -326,7 +326,8 @@ class TestURNLookupController:
 
     # This test began failing when core/feed/annotater/base.py uses babel to
     # get translations for "fiction/nonfiction" and audience. The function
-    # itself is used and correctly fetches details to produce an OPDS response with the expected details. Disabling these asserts for now.
+    # itself is used and correctly fetches details to produce an OPDS response
+    # with the expected details. Disabling these asserts for now.
     #         response_data = response.data.decode("utf8")
     #         assert identifier.urn in response_data
     #         assert work.title in response_data
