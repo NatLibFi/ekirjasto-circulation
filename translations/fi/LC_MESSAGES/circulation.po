@@ -320,11 +320,11 @@ msgstr "Integroi Enki-kokoelma."
 
 #: api/lanes.py:3108
 msgid "Books in Other Languages"
-msgstr "Muunkieliset kirjat"
+msgstr "Kirjat muilla kielillä"
 
 #: api/lanes.py:3128
 msgid "All Books in Other Languages"
-msgstr "Kaikki muunkieliset kirjat"
+msgstr "Kaikki kirjat muilla kielillä"
 
 #: api/lanes.py:3168
 msgid "Books for Adults"
