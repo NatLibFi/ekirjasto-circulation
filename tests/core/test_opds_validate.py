@@ -53,7 +53,7 @@ class TestOPDS2WithODLValidation:
     @pytest.mark.parametrize(
         "feed_name, fail",
         [
-            ("feed.json", True),
+            ("demarque_feed.json", True),
             ("feed2.json", False),
         ],
     )
