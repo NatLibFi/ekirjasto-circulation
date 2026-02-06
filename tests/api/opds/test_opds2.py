@@ -9,7 +9,7 @@ from tests.fixtures.files import OPDS2FilesFixture
     "filename, publication_identifiers",
     [
         pytest.param(
-            "feed.json",
+            "demarque_feed.json",
             [
                 "urn:isbn:978-3-16-148410-0",
                 "http://example.org/huckleberry-finn",
@@ -17,7 +17,7 @@ from tests.fixtures.files import OPDS2FilesFixture
                 "urn:isbn:9789523565593",
                 "urn:isbn:978-0-06-112008-4",
             ],
-            id="feed.json",
+            id="demarque_feed.json",
         ),
         pytest.param(
             "feed2.json",
