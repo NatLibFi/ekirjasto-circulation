@@ -89,7 +89,7 @@ class TestODL2Importer:
         )
 
         odl_mock_get.add(moby_dick_license)
-        feed = api_odl_files_fixture.sample_text("feed.json")
+        feed = api_odl_files_fixture.sample_text("demarque_feed.json")
 
         config = odl2_importer.collection.integration_configuration
         odl2_importer.ignored_identifier_types = [IdentifierConstants.URI]
@@ -529,7 +529,7 @@ class TestODL2Importer:
         odl_mock_get: MockGet,
         api_odl_files_fixture: ODLAPIFilesFixture,
     ) -> None:
-        feed_json = json.loads(api_odl_files_fixture.sample_text("feed.json"))
+        feed_json = json.loads(api_odl_files_fixture.sample_text("demarque_feed.json"))
 
         moby_dick_license_dict = feed_json["publications"][0]["licenses"][0]
         test_book_license_dict = feed_json["publications"][2]["licenses"][0]
