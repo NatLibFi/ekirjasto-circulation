@@ -1173,8 +1173,6 @@ class SearchFacets(Facets):
         #
         # We should only modify the langauges when we've not been asked to
         # display "all" the languages
-
-        # Disabling this block as well so there's no filtering by language.
         # if self.languages != ["all"]:
         #     all_languages = set()
         #     for language_list in (self.languages, filter.languages):

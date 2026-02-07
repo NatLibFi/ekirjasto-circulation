@@ -1615,26 +1615,26 @@ class TestSearchFacets:
         facets = SearchFacets(languages=["eng", "spa"])
         filter = Filter(languages="spa")
         facets.modify_search_filter(filter)
-        assert "spa" == filter.languages
+        assert ["eng", "spa"] == filter.languages
 
         # It doesn't override those values.
         facets = SearchFacets(languages="eng")
         filter = Filter(languages="spa")
         facets.modify_search_filter(filter)
-        assert "spa" == filter.languages
+        assert ["eng", "spa"] == filter.languages
 
         # This may result in modify_search_filter being a no-op.
         facets = SearchFacets(languages="eng")
         filter = Filter(languages="eng")
         facets.modify_search_filter(filter)
-        assert "eng" == filter.languages
+        assert ["eng"] == filter.languages
 
         # If no languages are specified in the SearchFacets, the value
         # set by the filter is used by itself.
         facets = SearchFacets(languages=None)
         filter = Filter(languages="spa")
         facets.modify_search_filter(filter)
-        assert "spa" == filter.languages
+        assert ["spa"] == filter.languages
 
         # If neither facets nor filter includes any languages, there
         # is no language filter.
@@ -2589,7 +2589,7 @@ class TestWorkList:
             SubjectClassifier.AUDIENCE_CHILDREN,
             SubjectClassifier.AUDIENCE_ALL_AGES,
         ] == filter.audiences
-        assert not filter.languages
+        assert ["chi"] == filter.languages
 
     def test_search_failures(self, db: DatabaseTransactionFixture):
         # Test reasons why WorkList.search() might not work.
