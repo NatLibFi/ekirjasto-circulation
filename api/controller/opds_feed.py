@@ -291,7 +291,10 @@ class OPDSFeedController(CirculationManagerController):
 
     def search(self, lane_identifier, feed_class=OPDSAcquisitionFeed):
         """Search for books."""
-        lane = self.load_lane(lane_identifier)
+        # Setting lane_identifier to None so that all searches are queried
+        # against the entire collection and not only the lane the query is
+        # made in.
+        lane = self.load_lane(None)
         if isinstance(lane, ProblemDetail):
             return lane
 

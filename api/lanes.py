@@ -2244,6 +2244,16 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
         **children_common_args,
     )
     childrens_books.sublanes.append(children_all)
+    all, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="Alla böcker på svenska",
+        genres=[],
+        priority=5,
+        **common_args,
+    )
+    all_swedish.sublanes.append(all)
     logging.getLogger().info(f"Created lanes for {language}")
     return priority
 
@@ -3026,7 +3036,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
         display_name="Fantasy",
         fiction=True,
         priority=ya_priority,
-        **ya_common_args,
+        **children_common_args,
     )
     ya_priority += 1
     children_fantasy.add_genre(genres.Fantasy.name)
@@ -3038,7 +3048,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
         display_name="Suspense",
         fiction=True,
         priority=ya_priority,
-        **ya_common_args,
+        **children_common_args,
     )
     ya_priority += 1
     children_suspense.add_genres(
@@ -3059,6 +3069,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
         genres=[],
         fiction=None,
         priority=children_priority,
+        **common_args,  # can't have two target ages
     )
     children_priority += 1
     childrens_books.sublanes.append(picture_books)
@@ -3081,9 +3092,20 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
         display_name="All Books for Children",
         genres=[],
         priority=ya_priority,
-        **ya_common_args,
+        **children_common_args,
     )
     childrens_books.sublanes.append(children_all)
+
+    all, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name="All Books in English",
+        genres=[],
+        priority=5,
+        **common_args,
+    )
+    all_english.sublanes.append(all)
     logging.getLogger().info(f"Created lanes for {language}")
     return priority
 

@@ -65,7 +65,6 @@ from core.model.hybrid import hybrid_property
 from core.model.listeners import site_configuration_has_changed
 from core.problem_details import *
 from core.util import LanguageCodes
-from core.util.accept_language import parse_accept_language
 from core.util.datetime_helpers import utc_now
 from core.util.opds_writer import OPDSFeed
 from core.util.problem_detail import ProblemDetail
@@ -1081,16 +1080,19 @@ class SearchFacets(Facets):
         # languages allowed by the WorkList and the languages found in
         # the client's Accept-Language header.
 
-        language_header = get_header("Accept-Language")
+        # This is disbaled so that patrons' queries are not restricted by
+        # their app's language settings.
+
+        # language_header = get_header("Accept-Language")
         languages = get_argument("language") or None
         extra["language_from_query"] = languages is not None
-        if not languages:
-            if language_header:
-                languages = parse_accept_language(language_header)
-                languages = [l[0] for l in languages]
-                languages = list(map(LanguageCodes.iso_639_2_for_locale, languages))
-                languages = [l for l in languages if l]
-            languages = languages or None
+        # if not languages:
+        #     if language_header:
+        #         languages = parse_accept_language(language_header)
+        #         languages = [l[0] for l in languages]
+        #         languages = list(map(LanguageCodes.iso_639_2_for_locale, languages))
+        #         languages = [l for l in languages if l]
+        #     languages = languages or None
         extra["languages"] = languages
 
         # The client can request a minimum score for search results.
@@ -1101,7 +1103,8 @@ class SearchFacets(Facets):
             except ValueError as e:
                 min_score = None
         if min_score is not None:
-            extra["min_score"] = min_score
+            # set to None so we don't restrict results
+            extra["min_score"] = None
 
         # The client can request an additional restriction on
         # the media types to be returned by searches.

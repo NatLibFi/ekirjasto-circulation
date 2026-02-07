@@ -94,6 +94,7 @@ class TestLaneCreation:
             "Facklitteratur för vuxen",
             "Böcker för ungdomar",
             "Böcker för barn",
+            "Alla böcker på svenska",
         ] == [x.display_name for x in lanes[0].sublanes]
         for lane in lanes:
             assert db.default_library() == lane.library
@@ -131,6 +132,7 @@ class TestLaneCreation:
             "Nonfiction for Adults",
             "Books for Young Adults",
             "Books for Children",
+            "All Books in English",
         ] == [x.display_name for x in lanes[0].sublanes]
         for lane in lanes:
             assert db.default_library() == lane.library
