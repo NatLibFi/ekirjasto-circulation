@@ -1430,7 +1430,7 @@ class TestSearchFacets:
 
         # The SearchFacets implementation turned the 'min_score'
         # argument into a numeric minimum score.
-        assert 123 == facets.min_score
+        assert not facets.min_score
 
         # The SearchFacets implementation turned the 'Accept-Language'
         # header into a set of language codes.

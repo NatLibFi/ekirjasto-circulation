@@ -1103,7 +1103,8 @@ class SearchFacets(Facets):
             except ValueError as e:
                 min_score = None
         if min_score is not None:
-            extra["min_score"] = min_score
+            # set to None so we don't restrict results
+            extra["min_score"] = None
 
         # The client can request an additional restriction on
         # the media types to be returned by searches.
