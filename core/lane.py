@@ -1084,8 +1084,8 @@ class SearchFacets(Facets):
         # their app's language settings.
 
         # language_header = get_header("Accept-Language")
-        # languages = get_argument("language") or None
-        # extra["language_from_query"] = languages is not None
+        languages = get_argument("language") or None
+        extra["language_from_query"] = languages is not None
         # if not languages:
         #     if language_header:
         #         languages = parse_accept_language(language_header)
@@ -1093,7 +1093,7 @@ class SearchFacets(Facets):
         #         languages = list(map(LanguageCodes.iso_639_2_for_locale, languages))
         #         languages = [l for l in languages if l]
         #     languages = languages or None
-        # extra["languages"] = languages
+        extra["languages"] = languages
 
         # The client can request a minimum score for search results.
         min_score = get_argument("min_score", None)
@@ -1173,12 +1173,12 @@ class SearchFacets(Facets):
         #
         # We should only modify the langauges when we've not been asked to
         # display "all" the languages
-        # if self.languages != ["all"]:
-        #     all_languages = set()
-        #     for language_list in (self.languages, filter.languages):
-        #         for language in self._ensure_list(language_list) or []:
-        #             all_languages.add(language)
-        #     filter.languages = sorted(all_languages) or None
+        if self.languages != ["all"]:
+            all_languages = set()
+            for language_list in (self.languages, filter.languages):
+                for language in self._ensure_list(language_list) or []:
+                    all_languages.add(language)
+            filter.languages = sorted(all_languages) or None
 
     def items(self):
         """Yields a 2-tuple for every active facet setting.

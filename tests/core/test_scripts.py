@@ -2293,7 +2293,7 @@ class TestCustomListUpdateEntriesScript:
         assert filter.sort_order[0] == {
             "sort_title": "asc"
         }  # since we asked for title ordering this should come up first
-        assert filter.languages == None
+        assert filter.languages == ["fr"]
         assert filter.media == ["book", "audio"]
 
     @freeze_time("2022-01-01", as_kwarg="frozen_time")
