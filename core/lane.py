@@ -65,7 +65,6 @@ from core.model.hybrid import hybrid_property
 from core.model.listeners import site_configuration_has_changed
 from core.problem_details import *
 from core.util import LanguageCodes
-from core.util.accept_language import parse_accept_language
 from core.util.datetime_helpers import utc_now
 from core.util.opds_writer import OPDSFeed
 from core.util.problem_detail import ProblemDetail
@@ -1081,17 +1080,20 @@ class SearchFacets(Facets):
         # languages allowed by the WorkList and the languages found in
         # the client's Accept-Language header.
 
-        language_header = get_header("Accept-Language")
-        languages = get_argument("language") or None
-        extra["language_from_query"] = languages is not None
-        if not languages:
-            if language_header:
-                languages = parse_accept_language(language_header)
-                languages = [l[0] for l in languages]
-                languages = list(map(LanguageCodes.iso_639_2_for_locale, languages))
-                languages = [l for l in languages if l]
-            languages = languages or None
-        extra["languages"] = languages
+        # This is disbaled so that patrons' queries are not restricted by
+        # their app's language settings.
+
+        # language_header = get_header("Accept-Language")
+        # languages = get_argument("language") or None
+        # extra["language_from_query"] = languages is not None
+        # if not languages:
+        #     if language_header:
+        #         languages = parse_accept_language(language_header)
+        #         languages = [l[0] for l in languages]
+        #         languages = list(map(LanguageCodes.iso_639_2_for_locale, languages))
+        #         languages = [l for l in languages if l]
+        #     languages = languages or None
+        # extra["languages"] = languages
 
         # The client can request a minimum score for search results.
         min_score = get_argument("min_score", None)
@@ -1171,12 +1173,14 @@ class SearchFacets(Facets):
         #
         # We should only modify the langauges when we've not been asked to
         # display "all" the languages
-        if self.languages != ["all"]:
-            all_languages = set()
-            for language_list in (self.languages, filter.languages):
-                for language in self._ensure_list(language_list) or []:
-                    all_languages.add(language)
-            filter.languages = sorted(all_languages) or None
+
+        # Disabling this block as well so there's no filtering by language.
+        # if self.languages != ["all"]:
+        #     all_languages = set()
+        #     for language_list in (self.languages, filter.languages):
+        #         for language in self._ensure_list(language_list) or []:
+        #             all_languages.add(language)
+        #     filter.languages = sorted(all_languages) or None
 
     def items(self):
         """Yields a 2-tuple for every active facet setting.
