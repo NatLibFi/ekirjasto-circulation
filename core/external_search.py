@@ -1889,6 +1889,7 @@ class Filter(SearchBase):
         #     )
         #     f = chain(f, exclusion_query)
         # elif self.languages:
+
         if self.languages:
             f = chain(f, Terms(language=scrub_list(self.languages)))
 

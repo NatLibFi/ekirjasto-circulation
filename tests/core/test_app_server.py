@@ -404,7 +404,7 @@ class TestLoadMethods:
         ):
             flask.request.library = data.default_library()  # type: ignore[attr-defined]
             facets = load_facets_from_request(base_class=SearchFacets)
-            assert ["eng"] == facets.languages
+            assert facets.languages == ["eng"]
 
     def test_load_facets_from_request_class_instantiation(
         self, load_methods_fixture: LoadMethodsFixture
