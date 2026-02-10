@@ -826,12 +826,6 @@ class Edition(Base, EditionConstants):
                     )
                 else:
                     rep = best_cover.representation
-                    if not rep.thumbnails:
-                        logging.warning(
-                            "Best cover for %r (%s) was never thumbnailed!",
-                            self.primary_identifier,
-                            rep.public_url,
-                        )
                 self.set_cover(best_cover)
                 break
         else:
