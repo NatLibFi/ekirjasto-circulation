@@ -203,9 +203,12 @@ class TestLaneCreation:
 
         assert "English/español/Chinese" == lane.display_name
         sublanes = lane.visible_children
-        assert ["Books for Adults", "Books for Young Adults", "Books for Children", "All Books"] == [
-            x.display_name for x in sublanes
-        ]
+        assert [
+            "Books for Adults",
+            "Books for Young Adults",
+            "Books for Children",
+            "All Books",
+        ] == [x.display_name for x in sublanes]
         for x in sublanes:
             assert languages == x.languages
 
@@ -213,7 +216,7 @@ class TestLaneCreation:
             {"All Ages", "Adults Only", "Adult"},
             {"Young Adult"},
             {"Children"},
-            set()
+            set(),
         ] == [set(x.audiences) for x in sublanes]
         assert [None, None, None, None] == [x.fiction for x in sublanes]
 
