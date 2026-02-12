@@ -146,39 +146,6 @@ class PushNotifications(LoggerMixin):
         return responses
 
     @classmethod
-    def send_activity_sync_message(cls, patrons: list[Patron]) -> list[str]:
-        """Send notifications to the given patrons to sync their bookshelves.
-        Enough information needs to be sent to identify a patron on the mobile Apps,
-        and make the loans api request with the right authentication"""
-        if not patrons:
-            return []
-
-        responses = []
-        _db = Session.object_session(patrons[0])
-        url = cls.base_url(_db)
-        for patron in patrons:
-            tokens = cls.notifiable_tokens(patron)
-            loans_api = f"{url}/{patron.library.short_name}/loans"
-            data = dict(
-                event_type=NotificationConstants.ACTIVITY_SYNC_TYPE,
-                loans_endpoint=loans_api,
-            )
-            if patron.external_identifier:
-                data["external_identifier"] = patron.external_identifier
-            if patron.authorization_identifier:
-                data["authorization_identifier"] = patron.authorization_identifier
-
-            cls.logger().info(
-                f"Must sync patron activity for {patron.authorization_identifier}, has {len(tokens)} device tokens. "
-                f"Sending activity sync notification(s)."
-            )
-
-            resp = cls.send_messages(tokens, None, data)
-            responses.extend(resp)
-
-        return responses
-
-    @classmethod
     def send_holds_notifications(cls, holds: list[Hold]) -> list[str]:
         """Send out notifications to all patron devices that their hold is ready for checkout."""
         if not holds:
@@ -219,6 +186,36 @@ class PushNotifications(LoggerMixin):
                 # Atleast one notification succeeded
                 hold.patron_last_notified = utc_now().date()
 
+            responses.extend(resp)
+
+        return responses
+
+    @classmethod
+    def send_user_survey_message(cls, patrons: list[Patron]) -> list[str]:
+        """
+        Send notifications to the given patrons about a new user survey.
+        """
+        responses = []
+        for patron in patrons:
+            tokens = cls.notifiable_tokens(patron)
+
+            if not tokens:
+                return []
+            title = "Vastaa E-kirjaston käyttäjäkyselyyn!"
+            body = "Katso Asetuksista Käyttäjäkyselyt. Besvara användarenkäten! Se Inställningar. Take a user survey! See Settings."
+            data = dict(
+                event_type=NotificationConstants.USER_SURVEY_TYPE,
+                title=title,
+                body=body,
+            )
+            if patron.external_identifier:
+                data["external_identifier"] = patron.external_identifier
+            if patron.authorization_identifier:
+                data["authorization_identifier"] = patron.authorization_identifier
+
+            resp = cls.send_messages(
+                tokens, messaging.Notification(title=title, body=body), data
+            )
             responses.extend(resp)
 
         return responses

@@ -378,6 +378,6 @@ class MediaTypes:
 
 
 class NotificationConstants:
-    ACTIVITY_SYNC_TYPE = "ActivitySync"
     LOAN_EXPIRY_TYPE = "LoanExpiry"
     HOLD_AVAILABLE_TYPE = "HoldAvailable"
+    USER_SURVEY_TYPE = "UserSurvey"
