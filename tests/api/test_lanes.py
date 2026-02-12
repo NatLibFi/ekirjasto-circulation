@@ -189,7 +189,7 @@ class TestLaneCreation:
         # The tiny collection has no sublanes, but the small one has
         # three.  These lanes are tested in more detail in
         # test_create_lane_for_small_collection.
-        adults, ya, children = small[0].sublanes
+        adults, ya, children, all = small[0].sublanes
         assert "Books for Adults" == adults.display_name
         assert "Books for Young Adults" == ya.display_name
         assert "Books for Children" == children.display_name
@@ -203,9 +203,12 @@ class TestLaneCreation:
 
         assert "English/español/Chinese" == lane.display_name
         sublanes = lane.visible_children
-        assert ["Books for Adults", "Books for Young Adults", "Books for Children"] == [
-            x.display_name for x in sublanes
-        ]
+        assert [
+            "Books for Adults",
+            "Books for Young Adults",
+            "Books for Children",
+            "All Books",
+        ] == [x.display_name for x in sublanes]
         for x in sublanes:
             assert languages == x.languages
 
@@ -213,8 +216,9 @@ class TestLaneCreation:
             {"All Ages", "Adults Only", "Adult"},
             {"Young Adult"},
             {"Children"},
+            set(),
         ] == [set(x.audiences) for x in sublanes]
-        assert [None, None, None] == [x.fiction for x in sublanes]
+        assert [None, None, None, None] == [x.fiction for x in sublanes]
 
         # If any language codes do not map to a name, don't create any lanes.
         languages = ["eng", self.NONEXISTENT_ALPHA3, "chi"]

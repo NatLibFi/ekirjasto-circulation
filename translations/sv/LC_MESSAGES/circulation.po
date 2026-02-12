@@ -10,7 +10,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-02-02 12:45+0200\n"
+"POT-Creation-Date: 2026-02-12 17:45+0200\n"
 "PO-Revision-Date: 2025-08-20 09:06+0000\n"
 "Last-Translator: Kaisa Kuivalahti, 2025\n"
 "Language: sv\n"
@@ -165,7 +165,7 @@ msgstr "Integrationsfel vid kommunikation med %(service_name)s"
 msgid "Lane does not exist"
 msgstr "Bandet finns inte"
 
-#: api/circulation_manager.py:381
+#: api/circulation_manager.py:381 api/lanes.py:3476
 msgid "All Books"
 msgstr "Alla böcker"
 
@@ -313,23 +313,23 @@ msgstr "URL"
 msgid "Integrate an Enki collection."
 msgstr "Integrera en Enki-samling"
 
-#: api/lanes.py:3108
+#: api/lanes.py:3383
 msgid "Books in Other Languages"
 msgstr "Böcker för andra språk"
 
-#: api/lanes.py:3128
+#: api/lanes.py:3403
 msgid "All Books in Other Languages"
 msgstr "Alla böcker för andra spräk"
 
-#: api/lanes.py:3168
+#: api/lanes.py:3443
 msgid "Books for Adults"
 msgstr "Böcker för vuxen"
 
-#: api/lanes.py:3179
+#: api/lanes.py:3454
 msgid "Books for Young Adults"
 msgstr "Böcker för ungdomar"
 
-#: api/lanes.py:3190
+#: api/lanes.py:3465
 msgid "Books for Children"
 msgstr "Böcker för barn"
 
