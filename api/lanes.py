@@ -3339,13 +3339,24 @@ def create_lane_for_small_collection(_db, library, parent, language, priority=0)
     )
     sublane_priority += 1
 
+    all, ignore = create(
+        _db,
+        Lane,
+        library=library,
+        display_name=_("All Books"),
+        priority=sublane_priority,
+        **common_args,
+    )
+
+    sublane_priority += 1
+
     lane, ignore = create(
         _db,
         Lane,
         library=library,
         display_name=language_identifier,
         parent=parent,
-        sublanes=[adults, ya, children],
+        sublanes=[adults, ya, children, all],
         priority=priority,
         **common_args,
     )
