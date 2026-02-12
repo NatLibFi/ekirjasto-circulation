@@ -136,23 +136,6 @@ def lane_from_genres(
 ):
     """Turn genre info into a Lane object."""
 
-    # Create sublanes first.
-    sublanes = []
-    for genre in genres:
-        if isinstance(genre, dict):
-            sublane_priority = 0
-            for subgenre in genre.get("subgenres", []):
-                sublanes.append(
-                    lane_from_genres(
-                        _db,
-                        library,
-                        [subgenre],
-                        priority=sublane_priority,
-                        **extra_args,
-                    )
-                )
-                sublane_priority += 1
-
     # Now that we have sublanes we don't care about subgenres anymore.
     genres = [
         genre.get("name")
@@ -191,7 +174,6 @@ def lane_from_genres(
         display_name=display_name,
         fiction=fiction,
         audiences=audiences,
-        sublanes=sublanes,
         priority=priority,
         **extra_args,
     )
