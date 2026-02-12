@@ -10,7 +10,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-02-03 14:43+0200\n"
+"POT-Creation-Date: 2026-02-12 17:17+0200\n"
 "PO-Revision-Date: 2025-10-16 10:07+0000\n"
 "Last-Translator: Kaisa Kuivalahti, 2025\n"
 "Language: fi\n"
@@ -146,7 +146,7 @@ msgstr "E-kirjat"
 msgid "Audiobooks"
 msgstr "Äänikirjat"
 
-#: core/external_search.py:2452
+#: core/external_search.py:2453
 #, python-format
 msgid "Invalid page key: %(key)s"
 msgstr "Virheellinen sivuavain: %(key)s"
@@ -239,42 +239,42 @@ msgstr "Kaikki"
 msgid "Popular Books"
 msgstr "Suositut kirjat"
 
-#: core/lane.py:386
+#: core/lane.py:385
 #, python-format
 msgid "I don't know how to order a feed by '%(order)s'"
 msgstr "En tiedä, miten syöte järjestetään seuraavan mukaan: %(order)s"
 
-#: core/lane.py:394
+#: core/lane.py:393
 #, python-format
 msgid "I don't understand the availability term '%(availability)s'"
 msgstr "En ymmärrä saatavuustermiä %(availability)s"
 
-#: core/lane.py:406
+#: core/lane.py:405
 #, python-format
 msgid "I don't understand what '%(collection)s' refers to."
 msgstr "En ymmärrä, mitä %(collection)s tarkoittaa."
 
-#: core/lane.py:422
+#: core/lane.py:421
 #, python-format
 msgid "I don't understand which distributor '%(distributor)s' refers to."
 msgstr "En ymmärrä, mihin jakelijaan %(distributor)s viittaa."
 
-#: core/lane.py:438
+#: core/lane.py:437
 #, python-format
 msgid "I don't understand which collection '%(collection_name)s' refers to."
 msgstr "En ymmärrä, mihin kokoelmaan %(collection_name)s viittaa."
 
-#: core/lane.py:1255
+#: core/lane.py:1258
 #, python-format
 msgid "Invalid page size: %(size)s"
 msgstr "Virheellinen sivukoko: %(size)s"
 
-#: core/lane.py:1273
+#: core/lane.py:1276
 #, python-format
 msgid "Invalid offset: %(offset)s"
 msgstr "Virheellinen offset: %(offset)s"
 
-#: core/lane.py:1597
+#: core/lane.py:1600
 #, python-format
 msgid "All %(worklist)s"
 msgstr "Kaikki %(worklist)s"
@@ -476,23 +476,23 @@ msgstr "Annettu profiilidokumentti ei ollut JSON-objekti."
 msgid "\"%s\" is not a writable setting."
 msgstr "%s ei ole kirjoitettava asetus."
 
-#: core/classifier/__init__.py:47
+#: core/classifier/__init__.py:48
 msgid "Adult"
 msgstr "Aikuiset"
 
-#: core/classifier/__init__.py:48
+#: core/classifier/__init__.py:49
 msgid "Adults Only"
 msgstr "Vain aikuiset"
 
-#: core/classifier/__init__.py:49
+#: core/classifier/__init__.py:50
 msgid "Young Adult"
 msgstr "Nuoret"
 
-#: core/classifier/__init__.py:50
+#: core/classifier/__init__.py:51
 msgid "Children"
 msgstr "Lapset"
 
-#: core/classifier/__init__.py:51
+#: core/classifier/__init__.py:52
 msgid "All Ages"
 msgstr "Kaikki ikäryhmät"
 

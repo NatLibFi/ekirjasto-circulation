@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-02-03 14:43+0200\n"
+"POT-Creation-Date: 2026-02-12 17:17+0200\n"
 "PO-Revision-Date: 2024-02-19 22:14+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -142,7 +142,7 @@ msgstr "eBooks"
 msgid "Audiobooks"
 msgstr "Audiobooks"
 
-#: core/external_search.py:2452
+#: core/external_search.py:2453
 #, python-format
 msgid "Invalid page key: %(key)s"
 msgstr "Invalid page key: %(key)s"
@@ -235,42 +235,42 @@ msgstr "Everything"
 msgid "Popular Books"
 msgstr "Popular Books"
 
-#: core/lane.py:386
+#: core/lane.py:385
 #, python-format
 msgid "I don't know how to order a feed by '%(order)s'"
 msgstr "I don't know how to order a feed by '%(order)s'"
 
-#: core/lane.py:394
+#: core/lane.py:393
 #, python-format
 msgid "I don't understand the availability term '%(availability)s'"
 msgstr "I don't understand the availability term '%(availability)s'"
 
-#: core/lane.py:406
+#: core/lane.py:405
 #, python-format
 msgid "I don't understand what '%(collection)s' refers to."
 msgstr "I don't understand what '%(collection)s' refers to."
 
-#: core/lane.py:422
+#: core/lane.py:421
 #, python-format
 msgid "I don't understand which distributor '%(distributor)s' refers to."
 msgstr "I don't understand which distributor '%(distributor)s' refers to."
 
-#: core/lane.py:438
+#: core/lane.py:437
 #, python-format
 msgid "I don't understand which collection '%(collection_name)s' refers to."
 msgstr "I don't understand which collection '%(collection_name)s' refers to."
 
-#: core/lane.py:1255
+#: core/lane.py:1258
 #, python-format
 msgid "Invalid page size: %(size)s"
 msgstr "Invalid page size: %(size)s"
 
-#: core/lane.py:1273
+#: core/lane.py:1276
 #, python-format
 msgid "Invalid offset: %(offset)s"
 msgstr "Invalid offset: %(offset)s"
 
-#: core/lane.py:1597
+#: core/lane.py:1600
 #, python-format
 msgid "All %(worklist)s"
 msgstr "All %(worklist)s"
@@ -471,23 +471,23 @@ msgstr "Submitted profile document was not a JSON object."
 msgid "\"%s\" is not a writable setting."
 msgstr "\"%s\" is not a writable setting."
 
-#: core/classifier/__init__.py:47
+#: core/classifier/__init__.py:48
 msgid "Adult"
 msgstr "Adult"
 
-#: core/classifier/__init__.py:48
+#: core/classifier/__init__.py:49
 msgid "Adults Only"
 msgstr "Adults Only"
 
-#: core/classifier/__init__.py:49
+#: core/classifier/__init__.py:50
 msgid "Young Adult"
 msgstr "Young Adult"
 
-#: core/classifier/__init__.py:50
+#: core/classifier/__init__.py:51
 msgid "Children"
 msgstr "Children"
 
-#: core/classifier/__init__.py:51
+#: core/classifier/__init__.py:52
 msgid "All Ages"
 msgstr "All Ages"
 
