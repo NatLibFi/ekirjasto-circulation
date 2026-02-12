@@ -10,7 +10,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-02-03 14:43+0200\n"
+"POT-Creation-Date: 2026-02-12 17:17+0200\n"
 "PO-Revision-Date: 2025-08-20 09:06+0000\n"
 "Last-Translator: Kaisa Kuivalahti, 2025\n"
 "Language: fi\n"
@@ -167,7 +167,7 @@ msgstr "Integrointivirhe kommunikoinnissa palvelun %(service_name)s kanssa"
 msgid "Lane does not exist"
 msgstr "Kaistaa ei ole olemassa"
 
-#: api/circulation_manager.py:381
+#: api/circulation_manager.py:381 api/lanes.py:3328
 msgid "All Books"
 msgstr "Kaikki kirjat"
 
@@ -318,23 +318,23 @@ msgstr "URL-osoite"
 msgid "Integrate an Enki collection."
 msgstr "Integroi Enki-kokoelma."
 
-#: api/lanes.py:3108
+#: api/lanes.py:3235
 msgid "Books in Other Languages"
 msgstr "Kirjat muilla kielillä"
 
-#: api/lanes.py:3128
+#: api/lanes.py:3255
 msgid "All Books in Other Languages"
 msgstr "Kaikki kirjat muilla kielillä"
 
-#: api/lanes.py:3168
+#: api/lanes.py:3295
 msgid "Books for Adults"
 msgstr "Aikuisten kirjat"
 
-#: api/lanes.py:3179
+#: api/lanes.py:3306
 msgid "Books for Young Adults"
 msgstr "Nuortenkirjat"
 
-#: api/lanes.py:3190
+#: api/lanes.py:3317
 msgid "Books for Children"
 msgstr "Lastenkirjat"
 
