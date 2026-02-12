@@ -181,80 +181,6 @@ class TestPushNotifications:
             assert responses == ["mock-mid"]
             assert hold.patron_last_notified == datetime(2020, 1, 1).date()
 
-    def test_send_activity_sync(self, push_notf_fixture: PushNotificationsFixture):
-        db = push_notf_fixture.db
-        # Only patron 1 will get authorization identifiers
-        patron1 = db.patron()
-        patron1.authorization_identifier = "auth1"
-        patron2 = db.patron()
-        patron3 = db.patron()
-
-        tokens = []
-        for patron in (patron1, patron2, patron3):
-            t, _ = create(
-                db.session,
-                DeviceToken,
-                patron=patron,
-                device_token=f"ios-token-{patron.id}",
-                token_type=DeviceTokenTypes.FCM_IOS,
-            )
-            tokens.append(t)
-            t, _ = create(
-                db.session,
-                DeviceToken,
-                patron=patron,
-                device_token=f"android-token-{patron.id}",
-                token_type=DeviceTokenTypes.FCM_ANDROID,
-            )
-            tokens.append(t)
-
-        with mock.patch("core.util.notifications.messaging") as messaging:
-            # Notify 2 patrons of 3 total
-            PushNotifications.send_activity_sync_message([patron1, patron2])
-            assert messaging.Message.call_count == 4
-            assert messaging.Message.call_args_list == [
-                mock.call(
-                    token=tokens[0].device_token,
-                    notification=None,
-                    data=dict(
-                        event_type=NotificationConstants.ACTIVITY_SYNC_TYPE,
-                        loans_endpoint="http://localhost/default/loans",
-                        external_identifier=patron1.external_identifier,
-                        authorization_identifier=patron1.authorization_identifier,
-                    ),
-                ),
-                mock.call(
-                    token=tokens[1].device_token,
-                    notification=None,
-                    data=dict(
-                        event_type=NotificationConstants.ACTIVITY_SYNC_TYPE,
-                        loans_endpoint="http://localhost/default/loans",
-                        external_identifier=patron1.external_identifier,
-                        authorization_identifier=patron1.authorization_identifier,
-                    ),
-                ),
-                mock.call(
-                    token=tokens[2].device_token,
-                    notification=None,
-                    data=dict(
-                        event_type=NotificationConstants.ACTIVITY_SYNC_TYPE,
-                        loans_endpoint="http://localhost/default/loans",
-                        external_identifier=patron2.external_identifier,
-                    ),
-                ),
-                mock.call(
-                    token=tokens[3].device_token,
-                    notification=None,
-                    data=dict(
-                        event_type=NotificationConstants.ACTIVITY_SYNC_TYPE,
-                        loans_endpoint="http://localhost/default/loans",
-                        external_identifier=patron2.external_identifier,
-                    ),
-                ),
-            ]
-
-            assert messaging.send.call_count == 4
-
     @freeze_time()
     def test_holds_notification(self, push_notf_fixture: PushNotificationsFixture):
         db = push_notf_fixture.db
@@ -343,6 +269,94 @@ class TestPushNotifications:
         assert_message_call(
             message_call3, "test-token-3", work2, hold2, include_auth_id=False
         )
+
+    def test_send_user_survey_message(
+        self, push_notf_fixture: PushNotificationsFixture
+    ):
+        """Test that a user survey message is sent to patrons' devices with the expected data."""
+        db = push_notf_fixture.db
+        patron1 = db.patron()
+        patron2 = db.patron()
+
+        tokens = []
+        for patron in (patron1, patron2):
+            t, _ = create(
+                db.session,
+                DeviceToken,
+                patron=patron,
+                device_token=f"ios-token-{patron.id}",
+                token_type=DeviceTokenTypes.FCM_IOS,
+            )
+            tokens.append(t)
+            t, _ = create(
+                db.session,
+                DeviceToken,
+                patron=patron,
+                device_token=f"android-token-{patron.id}",
+                token_type=DeviceTokenTypes.FCM_ANDROID,
+            )
+            tokens.append(t)
+
+        with mock.patch("core.util.notifications.messaging") as messaging:
+            # Notify 2 patrons 2 devices
+            PushNotifications.send_user_survey_message([patron1, patron2])
+            assert messaging.Message.call_count == 4
+            assert messaging.Message.call_args_list == [
+                mock.call(
+                    token=tokens[0].device_token,
+                    notification=messaging.Notification(
+                        title="Vastaa E-kirjaston käyttäjäkyselyyn!",
+                        body="Katso Asetuksista Käyttäjäkyselyt. Besvara användarenkäten! Se Inställningar. Take a user survey! See Settings.",
+                    ),
+                    data=dict(
+                        event_type=NotificationConstants.USER_SURVEY_TYPE,
+                        title="Vastaa E-kirjaston käyttäjäkyselyyn!",
+                        body="Katso Asetuksista Käyttäjäkyselyt. Besvara användarenkäten! Se Inställningar. Take a user survey! See Settings.",
+                        external_identifier=patron1.external_identifier,
+                    ),
+                ),
+                mock.call(
+                    token=tokens[1].device_token,
+                    notification=messaging.Notification(
+                        title="Vastaa E-kirjaston käyttäjäkyselyyn!",
+                        body="Katso Asetuksista Käyttäjäkyselyt. Besvara användarenkäten! Se Inställningar. Take a user survey! See Settings.",
+                    ),
+                    data=dict(
+                        event_type=NotificationConstants.USER_SURVEY_TYPE,
+                        title="Vastaa E-kirjaston käyttäjäkyselyyn!",
+                        body="Katso Asetuksista Käyttäjäkyselyt. Besvara användarenkäten! Se Inställningar. Take a user survey! See Settings.",
+                        external_identifier=patron1.external_identifier,
+                    ),
+                ),
+                mock.call(
+                    token=tokens[2].device_token,
+                    notification=messaging.Notification(
+                        title="Vastaa E-kirjaston käyttäjäkyselyyn!",
+                        body="Katso Asetuksista Käyttäjäkyselyt. Besvara användarenkäten! Se Inställningar. Take a user survey! See Settings.",
+                    ),
+                    data=dict(
+                        event_type=NotificationConstants.USER_SURVEY_TYPE,
+                        title="Vastaa E-kirjaston käyttäjäkyselyyn!",
+                        body="Katso Asetuksista Käyttäjäkyselyt. Besvara användarenkäten! Se Inställningar. Take a user survey! See Settings.",
+                        external_identifier=patron2.external_identifier,
+                    ),
+                ),
+                mock.call(
+                    token=tokens[3].device_token,
+                    notification=messaging.Notification(
+                        title="Vastaa E-kirjaston käyttäjäkyselyyn!",
+                        body="Katso Asetuksista Käyttäjäkyselyt. Besvara användarenkäten! Se Inställningar. Take a user survey! See Settings.",
+                    ),
+                    data=dict(
+                        event_type=NotificationConstants.USER_SURVEY_TYPE,
+                        title="Vastaa E-kirjaston käyttäjäkyselyyn!",
+                        body="Katso Asetuksista Käyttäjäkyselyt. Besvara användarenkäten! Se Inställningar. Take a user survey! See Settings.",
+                        external_identifier=patron2.external_identifier,
+                    ),
+                ),
+            ]
+
+            assert messaging.send.call_count == 4
 
     def test_send_messages(
         self,
