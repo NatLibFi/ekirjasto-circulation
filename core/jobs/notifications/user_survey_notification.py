@@ -1,20 +1,20 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from sqlalchemy.orm import Query
+
 from core.config import Configuration, ConfigurationConstants
-from core.model import Base
+from core.model.collection import Collection
 from core.model.configuration import ConfigurationSetting
 from core.model.patron import Patron
-from core.model.collection import Collection
-from core.util.notifications import PushNotifications
 from core.monitor import PatronSweepMonitor
+from core.util.notifications import PushNotifications
+
 
 class UserSurveyNotificationScript(PatronSweepMonitor):
     """
     Send notifications to all users about a new user survey.
     """
+
     SERVICE_NAME: str | None = "User Survey Notification"
 
     def run_once(self, *ignore):
@@ -33,11 +33,11 @@ class UserSurveyNotificationScript(PatronSweepMonitor):
         query: Query = super().item_query()
         query = self._db.query(Patron).order_by(Patron.id)
         return query
-    
+
     def scope_to_collection(self, qu: Query, collection: Collection) -> Query:
         """Do not scope to collection"""
         return qu
-    
+
     def process_items(self, items: list[Patron]) -> None:
         """Send notifications to patrons"""
         PushNotifications.send_user_survey_message(items)

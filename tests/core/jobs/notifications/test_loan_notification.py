@@ -3,23 +3,15 @@ from __future__ import annotations
 import datetime
 from unittest.mock import MagicMock, call, patch
 
-from freezegun import freeze_time
-from sqlalchemy.exc import InvalidRequestError
-from sqlalchemy.orm import Session
-
 from core.config import Configuration, ConfigurationConstants
-from core.model import (
-    ConfigurationSetting,
-    Work,
-    get_one_or_create,
-)
+from core.jobs.notifications.loan_expiration_notification import LoanNotificationsScript
+from core.model import ConfigurationSetting, Work, get_one_or_create
 from core.model.devicetokens import DeviceToken, DeviceTokenTypes
 from core.model.patron import Patron
-from core.jobs.notifications.loan_expiration_notification import LoanNotificationsScript
-
 from core.util.datetime_helpers import utc_now
 from core.util.notifications import PushNotifications
 from tests.fixtures.database import DatabaseTransactionFixture
+
 
 class TestLoanNotificationsScript:
     def _setup_method(self, db: DatabaseTransactionFixture):
@@ -52,7 +44,9 @@ class TestLoanNotificationsScript:
             utc_now() + datetime.timedelta(days=2, hours=1),
         )  # Should not get notified
 
-        with patch("core.jobs.notifications.loan_expiration_notification.PushNotifications") as mock_notf:
+        with patch(
+            "core.jobs.notifications.loan_expiration_notification.PushNotifications"
+        ) as mock_notf:
             self.script.process_loan(loan)
             self.script.process_loan(loan2)
 
@@ -66,7 +60,7 @@ class TestLoanNotificationsScript:
     def test_do_run(self, db: DatabaseTransactionFixture):
         now = utc_now()
         self._setup_method(db)
-        loan, _ = self.work.active_license_pool().loan_to( # type: ignore
+        loan, _ = self.work.active_license_pool().loan_to(  # type: ignore
             self.patron,
             now,
             now + datetime.timedelta(days=1, hours=1),

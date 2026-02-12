@@ -1,9 +1,11 @@
-from unittest.mock import call, patch
+from unittest.mock import patch
 
 import pytest
 
 from core.config import Configuration, ConfigurationConstants
-from core.jobs.notifications.user_survey_notification import UserSurveyNotificationScript
+from core.jobs.notifications.user_survey_notification import (
+    UserSurveyNotificationScript,
+)
 from core.model.configuration import ConfigurationSetting
 from tests.fixtures.database import DatabaseTransactionFixture
 
@@ -33,7 +35,9 @@ class TestUserSurveyNotification:
         # Create a list of 1000 patrons
         patrons = [db.patron() for _ in range(1000)]
 
-        with patch("core.jobs.notifications.user_survey_notification.PushNotifications") as mock_notf:
+        with patch(
+            "core.jobs.notifications.user_survey_notification.PushNotifications"
+        ) as mock_notf:
             survey_fixture.monitor.run()
             # The patrons are handled in batches of 100
             assert mock_notf.send_user_survey_message.call_count == 10

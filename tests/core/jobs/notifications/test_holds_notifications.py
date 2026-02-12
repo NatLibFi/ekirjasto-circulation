@@ -49,7 +49,9 @@ class TestHoldsNotifications:
         hold1, _ = work1.active_license_pool().on_hold_to(patron1, position=0)
         hold2, _ = work2.active_license_pool().on_hold_to(patron1, position=0)
 
-        with patch("core.jobs.notifications.holds_notification.PushNotifications") as mock_notf:
+        with patch(
+            "core.jobs.notifications.holds_notification.PushNotifications"
+        ) as mock_notf:
             holds_fixture.monitor.run()
             assert mock_notf.send_holds_notifications.call_count == 1
             assert mock_notf.send_holds_notifications.call_args_list == [

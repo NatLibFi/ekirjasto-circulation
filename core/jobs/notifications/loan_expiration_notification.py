@@ -1,28 +1,16 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import datetime
 
 from sqlalchemy import or_
 
 from core.config import Configuration, ConfigurationConstants
-from core.model import Base
 from core.model.configuration import ConfigurationSetting
-from core.model.patron import Patron, Loan
-from core.model.devicetokens import DeviceTokenTypes
-from core.util.notifications import PushNotifications
+from core.model.devicetokens import DeviceToken, DeviceTokenTypes
+from core.model.patron import Loan, Patron
 from core.scripts import Script
 from core.util.datetime_helpers import utc_now
-
-import datetime
-
-from sqlalchemy import and_, exists, or_, select, tuple_
-from sqlalchemy.orm import Query, Session, defer
-from sqlalchemy.orm.attributes import flag_modified
-from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
-
-from core.config import Configuration, ConfigurationConstants
-from core.model.devicetokens import DeviceToken, DeviceTokenTypes
-from core.model.patron import Loan
+from core.util.notifications import PushNotifications
 
 
 class LoanNotificationsScript(Script):
