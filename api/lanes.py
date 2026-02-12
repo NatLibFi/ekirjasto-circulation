@@ -339,6 +339,36 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
             **adult_common_args,
         )
     )
+    adult_fiction_suspense.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Kaikki jännityskirjat",
+            genres=[
+                genres.Suspense_Thriller,
+                genres.Historical_Thriller,
+                genres.Espionage,
+                genres.Supernatural_Thriller,
+                genres.Medical_Thriller,
+                genres.Political_Thriller,
+                genres.Technothriller,
+                genres.Legal_Thriller,
+                genres.Military_Thriller,
+                genres.Mystery,
+                genres.Crime_Detective_Stories,
+                genres.Hard_Boiled_Mystery,
+                genres.Police_Procedural,
+                genres.Cozy_Mystery,
+                genres.Historical_Mystery,
+                genres.Paranormal_Mystery,
+                genres.Women_Detectives,
+                genres.Cozy_Mystery,
+                genres.Adventure,
+            ],
+            priority=5,
+            **adult_common_args,
+        )
+    )
 
     adult_fiction.sublanes.append(
         lane_from_genres(
@@ -613,6 +643,22 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
             **adult_common_args,
         )
     )
+    adult_society.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Kaikki yhteiskuntakirjat",
+            genres=[
+                genres.Social_Sciences,
+                genres.Political_Science,
+                genres.Law,
+                genres.Study_Aids,
+                genres.Philosophy,
+            ],
+            priority=3,
+            **adult_common_args,
+        )
+    )
 
     adult_economics, ignore = create(
         _db,
@@ -670,6 +716,24 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
             **adult_common_args,
         )
     )
+    adult_economics.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Kaikki talous ja johtaminen",
+            genres=[
+                genres.Economics,
+                genres.Personal_Finance_Business,
+                genres.Personal_Finance_Investing,
+                genres.Real_Estate,
+                genres.Business,
+                genres.Management_Leadership,
+                genres.Economics,
+            ],
+            priority=4,
+            **adult_common_args,
+        )
+    )
 
     adult_psychology, ignore = create(
         _db,
@@ -718,6 +782,22 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
             display_name="Filosofia",
             genres=[genres.Philosophy],
             priority=3,
+            **adult_common_args,
+        )
+    )
+    adult_psychology.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Kaikki psykologia ja elämäntaito",
+            genres=[
+                genres.Philosophy,
+                genres.Self_Help,
+                genres.Life_Strategies,
+                genres.Psychology,
+                genres.Philosophy,
+            ],
+            priority=4,
             **adult_common_args,
         )
     )
@@ -781,6 +861,24 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
                 genres.Judaism,
             ],
             priority=2,
+            **adult_common_args,
+        )
+    )
+    adult_spirit.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Kaikki uskonto ja hengellisyys",
+            genres=[
+                genres.Religion_Spirituality,
+                genres.Buddhism,
+                genres.Christianity,
+                genres.Hinduism,
+                genres.Islam,
+                genres.Judaism,
+                genres.Body_Mind_Spirit,
+            ],
+            priority=3,
             **adult_common_args,
         )
     )
@@ -928,6 +1026,25 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
                 genres.Literary_Criticism,
             ],
             priority=4,
+            **adult_common_args,
+        )
+    )
+    adult_science.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="Kaikki tiede ja teknologia",
+            genres=[
+                genres.Dictionaries,
+                genres.Foreign_Language_Study,
+                genres.Literary_Criticism,
+                genres.Medical,
+                genres.Mathematics,
+                genres.Science,
+                genres.Technology,
+                genres.Computers,
+            ],
+            priority=5,
             **adult_common_args,
         )
     )
@@ -2508,6 +2625,37 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
             **adult_common_args,
         )
     )
+    adult_suspense.sublanes.append(
+        lane_from_genres(
+            _db,
+            library,
+            display_name="All Suspense",
+            genres=[
+                genres.Suspense_Thriller,
+                genres.Historical_Thriller,
+                genres.Espionage,
+                genres.Supernatural_Thriller,
+                genres.Medical_Thriller,
+                genres.Political_Thriller,
+                genres.Technothriller,
+                genres.Legal_Thriller,
+                genres.Military_Thriller,
+                genres.Mystery,
+                genres.Crime_Detective_Stories,
+                genres.Hard_Boiled_Mystery,
+                genres.Police_Procedural,
+                genres.Cozy_Mystery,
+                genres.Historical_Mystery,
+                genres.Paranormal_Mystery,
+                genres.Women_Detectives,
+                genres.Cozy_Mystery,
+                genres.Adventure,
+            ],
+            priority=adult_fiction_priority,
+            **adult_common_args,
+        )
+    )
+
     adult_fiction.sublanes.append(
         lane_from_genres(
             _db,
