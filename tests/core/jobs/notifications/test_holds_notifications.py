@@ -4,7 +4,7 @@ from unittest.mock import call, patch
 import pytest
 
 from core.config import Configuration, ConfigurationConstants
-from core.jobs.holds_notification import HoldsNotificationMonitor
+from core.jobs.notifications.holds_notification import HoldsNotificationMonitor
 from core.model.configuration import ConfigurationSetting
 from core.util.datetime_helpers import utc_now
 from tests.fixtures.database import DatabaseTransactionFixture
@@ -49,7 +49,9 @@ class TestHoldsNotifications:
         hold1, _ = work1.active_license_pool().on_hold_to(patron1, position=0)
         hold2, _ = work2.active_license_pool().on_hold_to(patron1, position=0)
 
-        with patch("core.jobs.holds_notification.PushNotifications") as mock_notf:
+        with patch(
+            "core.jobs.notifications.holds_notification.PushNotifications"
+        ) as mock_notf:
             holds_fixture.monitor.run()
             assert mock_notf.send_holds_notifications.call_count == 1
             assert mock_notf.send_holds_notifications.call_args_list == [
