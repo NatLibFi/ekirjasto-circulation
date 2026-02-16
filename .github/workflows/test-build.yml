@@ -105,6 +105,8 @@ jobs:
 
       - name: Run Migration Tests
         run: tox -e "migration-docker"
+        env:
+          TOX_DOCKER_GATEWAY: "0.0.0.0"
 
       - name: Upload coverage to Codecov
         if: false # Disable temporarily
