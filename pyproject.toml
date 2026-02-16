@@ -224,7 +224,7 @@ openpyxl = "3.1.2"  # Finland
 opensearch-dsl = "~1.0"
 opensearch-py = "~1.1"
 pillow = "^10.0"
-protobuf = "4.25.8"
+protobuf = "6.33.5"
 pycountry = "^24.6.1"
 pycryptodome = "^3.18"
 pydantic = {version = "^2.11.7", extras = ["email"]}
