@@ -53,6 +53,8 @@ jobs:
       - name: Run Tests
         run: tox
         env:
+          # Fixes KeyError: 'Gateway'
+          TOX_DOCKER_GATEWAY: "0.0.0.0"
           MODULE: ${{ matrix.module }}
 
       - name: Upload coverage to Codecov
@@ -103,6 +105,8 @@ jobs:
 
       - name: Run Migration Tests
         run: tox -e "migration-docker"
+        env:
+          TOX_DOCKER_GATEWAY: "0.0.0.0"
 
       - name: Upload coverage to Codecov
         if: false # Disable temporarily
