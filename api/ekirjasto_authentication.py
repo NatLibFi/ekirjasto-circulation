@@ -60,8 +60,8 @@ class EkirjastoEnvironment(Enum):
 
 
 class MagazineEnvironment(Enum):
-    DEVELOPMENT = "https://e-kirjasto-playground.epaper.fi/"
-    PRODUCTION = "https://e-kirjasto.ewl.epress.fi/"
+    DEVELOPMENT = "https://lehdet-testing.e-kirjasto.fi/"
+    PRODUCTION = "https://lehdet.e-kirjasto.fi/"
 
 
 class EkirjastoAuthAPISettings(AuthProviderSettings):
