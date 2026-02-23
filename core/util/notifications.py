@@ -79,6 +79,7 @@ class PushNotifications(LoggerMixin):
 
         for token in tokens:
             try:
+                cls.logger().info(f"Trying device token {token.device_token}")
                 msg = messaging.Message(
                     token=token.device_token,
                     notification=notification,
@@ -198,9 +199,11 @@ class PushNotifications(LoggerMixin):
         responses = []
         for patron in patrons:
             tokens = cls.notifiable_tokens(patron)
-
             if not tokens:
                 return []
+            cls.logger().info(
+                f"Notifying patron {patron.id} has {len(tokens)} device tokens."
+            )
             title = "Vastaa E-kirjaston käyttäjäkyselyyn!"
             body = "Katso Asetuksista Käyttäjäkyselyt. Besvara användarenkäten! Se Inställningar. Take a user survey! See Settings."
             data = dict(
