@@ -540,9 +540,15 @@ class TestLibrarySettings:
 
         # Assuming 'library' is your object with lanes. Since it's a small language,
         # "Books in Other Languages" lane with children lanes are created
-        [adults, all_books, children, ya, other_lang, deutsch] = sorted(
-            library.lanes, key=get_display_name
-        )
+        [
+            all_books,
+            all_books_deutsche,
+            adults,
+            children,
+            ya,
+            other_lang,
+            deutsch,
+        ] = sorted(library.lanes, key=get_display_name)
         assert None == other_lang.parent
         assert ["ger"] == deutsch.languages
         assert other_lang == deutsch.parent
