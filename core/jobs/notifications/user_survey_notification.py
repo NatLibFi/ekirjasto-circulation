@@ -31,12 +31,7 @@ class UserSurveyNotificationScript(PatronSweepMonitor):
     def item_query(self):
         """Query all patrons"""
         query: Query = super().item_query()
-        query = self._db.query(Patron).order_by(Patron.id)
         return query
-
-    def scope_to_collection(self, qu: Query, collection: Collection) -> Query:
-        """Do not scope to collection"""
-        return qu
 
     def process_items(self, items: list[Patron]) -> None:
         """Send notifications to patrons"""
