@@ -3,7 +3,6 @@ from __future__ import annotations
 from sqlalchemy.orm import Query
 
 from core.config import Configuration, ConfigurationConstants
-from core.model.collection import Collection
 from core.model.configuration import ConfigurationSetting
 from core.model.patron import Patron
 from core.monitor import PatronSweepMonitor
@@ -26,18 +25,16 @@ class UserSurveyNotificationScript(PatronSweepMonitor):
                 "Push notifications have been turned off in the sitewide settings, skipping this job"
             )
             return
+        self.log.info("Starting User Survey Notification Job")
         return super().run_once(*ignore)
 
     def item_query(self):
         """Query all patrons"""
         query: Query = super().item_query()
-        query = self._db.query(Patron).order_by(Patron.id)
+        self.log.info(f"{query.count()} patrons found")
         return query
-
-    def scope_to_collection(self, qu: Query, collection: Collection) -> Query:
-        """Do not scope to collection"""
-        return qu
 
     def process_items(self, items: list[Patron]) -> None:
         """Send notifications to patrons"""
+        self.log.info(f"Processing {len(items)} patrons.")
         PushNotifications.send_user_survey_message(items)
