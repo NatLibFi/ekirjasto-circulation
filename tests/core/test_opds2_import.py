@@ -461,7 +461,6 @@ class TestOPDS2Importer(OPDS2Test):
         data.importer.ignored_identifier_types = [
             t.value for t in ignore_identifier_type
         ]
-        print(data.importer.ignored_identifier_types)
         content_server_feed = opds2_files_fixture.sample_text("feed.json")
 
         # Act
