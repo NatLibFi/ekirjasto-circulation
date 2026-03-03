@@ -50,18 +50,8 @@ from core.model.library import Library
 from core.util.datetime_helpers import from_timestamp, utc_now
 from core.util.log import elapsed_time_logging
 from core.util.problem_detail import ProblemDetail
+from core.util.pydantic import HttpUrl
 
-
-class EkirjastoEnvironment(Enum):
-    FAKE = "http://localhost"
-    DEVELOPMENT = "https://tunnistus-dev.e-kirjasto.fi"
-    PRODUCTION = "https://tunnistus.e-kirjasto.fi"
-    OLD_DEV = "https://e-kirjasto.loikka.dev"
-
-
-class MagazineEnvironment(Enum):
-    DEVELOPMENT = "https://lehdet-testing.e-kirjasto.fi/"
-    PRODUCTION = "https://lehdet.e-kirjasto.fi/"
 
 
 class EkirjastoAuthAPISettings(AuthProviderSettings):
@@ -70,36 +60,20 @@ class EkirjastoAuthAPISettings(AuthProviderSettings):
     _DEFAULT_DELEGATE_EXPIRE_SECONDS = datetime.timedelta(hours=12).seconds
 
     # API environment form field, choose between dev and prod.
-    ekirjasto_environment: EkirjastoEnvironment = FormField(
-        EkirjastoEnvironment.FAKE,
+    ekirjasto_environment: HttpUrl = FormField(
         form=ConfigurationFormItem(
-            label=_("E-kirjasto API environment"),
-            description=_(
-                "Select what environment of E-kirjasto accounts should be used."
-            ),
-            type=ConfigurationFormItemType.SELECT,
-            options={
-                EkirjastoEnvironment.FAKE: "Fake",
-                EkirjastoEnvironment.DEVELOPMENT: "Development",
-                EkirjastoEnvironment.PRODUCTION: "Production",
-            },
+            label=_("Authentication URL (DEV or PROD)"),
+            type=ConfigurationFormItemType.TEXT,
             required=True,
             weight=10,
         ),
+
     )
 
-    magazine_service: MagazineEnvironment = FormField(
-        MagazineEnvironment.DEVELOPMENT,
+    magazine_service: HttpUrl = FormField(
         form=ConfigurationFormItem(
-            label=_("E-magazines environment"),
-            description=_(
-                "Select what environment of e-magazines service should be used."
-            ),
-            type=ConfigurationFormItemType.SELECT,
-            options={
-                MagazineEnvironment.DEVELOPMENT: "Development",
-                MagazineEnvironment.PRODUCTION: "Production",
-            },
+            label=_("Magazine service URL"),
+            type=ConfigurationFormItemType.TEXT,
             required=True,
             weight=10,
         ),
@@ -116,12 +90,6 @@ class EkirjastoAuthAPISettings(AuthProviderSettings):
         ),
     )
 
-    @field_validator("ekirjasto_environment", mode="before")
-    def validate_url(cls, value):
-        """Handle the previous dev url."""
-        if value == EkirjastoEnvironment.OLD_DEV.value:
-            value = EkirjastoEnvironment.DEVELOPMENT.value
-        return value
 
 
 class EkirjastoAuthAPILibrarySettings(AuthProviderLibrarySettings):
