@@ -368,9 +368,6 @@ class LibraryAuthenticator(LoggerMixin):
             )
         try:
             settings = impl_cls.settings_load(integration.parent)
-            # Update settings in case anything has changed.
-            if isinstance(settings, EkirjastoAuthAPISettings):
-                impl_cls.settings_update(integration.parent, settings)
             library_settings = impl_cls.library_settings_load(integration)
             provider = impl_cls(
                 self.library_id,  # type: ignore[arg-type]

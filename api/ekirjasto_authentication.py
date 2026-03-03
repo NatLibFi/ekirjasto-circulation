@@ -4,7 +4,6 @@ import datetime
 import uuid
 from abc import ABC
 from base64 import b64decode, b64encode
-from enum import Enum
 from typing import Any, TypeVar
 
 import flask_babel
@@ -13,7 +12,6 @@ import requests
 from cryptography.fernet import Fernet, InvalidToken
 from flask import url_for
 from flask_babel import lazy_gettext as _
-from pydantic import field_validator
 from sqlalchemy.orm import Session
 from werkzeug.datastructures import Authorization
 
@@ -53,7 +51,6 @@ from core.util.problem_detail import ProblemDetail
 from core.util.pydantic import HttpUrl
 
 
-
 class EkirjastoAuthAPISettings(AuthProviderSettings):
     """Settings for the EkirjastoAuthenticationAPI."""
 
@@ -68,7 +65,6 @@ class EkirjastoAuthAPISettings(AuthProviderSettings):
             required=True,
             weight=10,
         ),
-
     )
 
     magazine_service: HttpUrl = FormField(
@@ -91,7 +87,6 @@ class EkirjastoAuthAPISettings(AuthProviderSettings):
             required=True,
         ),
     )
-
 
 
 class EkirjastoAuthAPILibrarySettings(AuthProviderLibrarySettings):
