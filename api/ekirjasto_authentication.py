@@ -61,6 +61,7 @@ class EkirjastoAuthAPISettings(AuthProviderSettings):
 
     # API environment form field, choose between dev and prod.
     ekirjasto_environment: HttpUrl = FormField(
+        default="https://",
         form=ConfigurationFormItem(
             label=_("Authentication URL (DEV or PROD)"),
             type=ConfigurationFormItemType.TEXT,
@@ -71,8 +72,9 @@ class EkirjastoAuthAPISettings(AuthProviderSettings):
     )
 
     magazine_service: HttpUrl = FormField(
+        default="https://",
         form=ConfigurationFormItem(
-            label=_("Magazine service URL"),
+            label=_("Magazine service URL (DEV or PROD)"),
             type=ConfigurationFormItemType.TEXT,
             required=True,
             weight=10,
