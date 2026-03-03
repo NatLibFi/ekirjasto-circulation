@@ -131,11 +131,8 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
             "4d2i2w3o1f6t3e1y0d46655q114q4d37200o3s6q5f1z2r4i1z0q1o5d3f695g1g"
         )
 
-        self._ekirjasto_api_url = self.ekirjasto_environment.value
-        if self.ekirjasto_environment == EkirjastoEnvironment.FAKE:
-            self._ekirjasto_api_url = EkirjastoEnvironment.DEVELOPMENT.value
-
-        self._magazine_service_url = self.magazine_service.value
+        self._ekirjasto_api_url = self.ekirjasto_environment
+        self._magazine_service_url = self.magazine_service
 
     @property
     def flow_type(self) -> str:
@@ -493,11 +490,6 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
         :return: token and expire timestamp if refresh was succesfull or None | ProblemDetail otherwise.
         """
 
-        if self.ekirjasto_environment == EkirjastoEnvironment.FAKE:
-            fake_token = self.fake_ekirjasto_token
-            expire_date = utc_now() + datetime.timedelta(days=1)
-            return fake_token, int(expire_date.timestamp())
-
         url = self._ekirjasto_api_url + "/v1/auth/refresh"
 
         try:
@@ -532,18 +524,6 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
         Otherwise, return a PatronData object with the complete property set to True.
         """
 
-        if self.ekirjasto_environment == EkirjastoEnvironment.FAKE:
-            if ekirjasto_token == self.fake_ekirjasto_token:
-                # Fake authentication successful, return fake patron data.
-                return PatronData(
-                    permanent_id="34637274574578",
-                    authorization_identifier="test_34637274574578",
-                    external_type="user",
-                    personal_name="Fake User",
-                    complete=True,
-                )
-            else:
-                return None
         url = self._ekirjasto_api_url + "/v1/auth/userinfo"
         try:
             response = self.requests_get(url, ekirjasto_token)
