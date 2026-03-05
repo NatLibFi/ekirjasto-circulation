@@ -16,7 +16,6 @@ from api.ekirjasto_authentication import (
     EkirjastoAuthAPILibrarySettings,
     EkirjastoAuthAPISettings,
     EkirjastoAuthenticationAPI,
-    EkirjastoEnvironment,
 )
 from api.util.patron import PatronUtility
 from core.model import Credential, DataSource, Patron
@@ -209,7 +208,7 @@ def mock_integration_id() -> int:
 @pytest.fixture
 def create_settings() -> Callable[..., EkirjastoAuthAPISettings]:
     return partial(
-        EkirjastoAuthAPISettings, ekirjasto_environment=EkirjastoEnvironment.DEVELOPMENT
+        EkirjastoAuthAPISettings, ekirjasto_environment="http://testitunnistus.fi"
     )
 
 
@@ -267,14 +266,15 @@ class TestEkirjastoAuthentication:
         create_provider: Callable[..., MockEkirjastoAuthenticationAPI],
     ):
         settings = create_settings(
-            ekirjasto_environment=EkirjastoEnvironment.FAKE,
+            ekirjasto_environment="https://testitunnistus.fi",
             delegate_expire_time=537457,
         )
         provider = create_provider(settings=settings)
 
         # Verify that the configuration details were stored properly.
-        assert EkirjastoEnvironment.FAKE == provider.ekirjasto_environment
+        assert "https://testitunnistus.fi" == provider.ekirjasto_environment
         assert 537457 == provider.delegate_expire_timemestamp
+        assert "https://" == provider.magazine_service
 
     def test_persistent_patron_delegate_id(
         self,

@@ -42,7 +42,6 @@ from api.authenticator import (
 )
 from api.config import CannotLoadConfiguration, Configuration
 from api.custom_patron_catalog import CustomPatronCatalog
-from api.ekirjasto_authentication import EkirjastoEnvironment
 from api.integration.registry.patron_auth import PatronAuthRegistry
 from api.millenium_patron import MilleniumPatronAPI
 from api.problem_details import *
@@ -794,13 +793,11 @@ class TestLibraryAuthenticator:
         library = db.default_library()
         protocol = patron_auth_registry.get_protocol(EkirjastoAuthenticationAPI, "")
 
-        # 1. Test that when E-kirjasto auth integration has the old dev url,
-        # it's changed to the current dev url.
         _, integration = create_auth_integration_configuration(
             protocol,
             library,
             settings_dict={
-                "ekirjasto_environment": EkirjastoEnvironment.OLD_DEV.value,
+                "ekirjasto_environment": "https://testitunnistus.fi",
             },
         )
         assert isinstance(integration, IntegrationLibraryConfiguration)
@@ -808,49 +805,15 @@ class TestLibraryAuthenticator:
         auth.register_provider(integration)
         # The dev url has changed.
         assert (
-            auth.ekirjasto_provider.ekirjasto_environment.value  # type: ignore[union-attr]
-            == EkirjastoEnvironment.DEVELOPMENT.value
+            auth.ekirjasto_provider.ekirjasto_environment  # type: ignore[union-attr]
+            == "https://testitunnistus.fi"
         )
-        assert auth.ekirjasto_provider is not None
-        assert isinstance(auth.ekirjasto_provider, EkirjastoAuthenticationAPI)
-
-        # 2. Test that the current dev url does not change.
-        protocol = patron_auth_registry.get_protocol(EkirjastoAuthenticationAPI, "")
-        _, integration = create_auth_integration_configuration(
-            protocol,
-            library,
-            settings_dict={
-                "ekirjasto_environment": EkirjastoEnvironment.DEVELOPMENT.value,
-            },
-        )
-        assert isinstance(integration, IntegrationLibraryConfiguration)
-        auth = LibraryAuthenticator(_db=db.session, library=library)
-        auth.register_provider(integration)
-        # The dev url has not changed.
+        # If no magazine url is given, the default is used.
         assert (
-            auth.ekirjasto_provider.ekirjasto_environment.value  # type: ignore[union-attr]
-            == EkirjastoEnvironment.DEVELOPMENT.value
+            auth.ekirjasto_provider.magazine_service  # type: ignore[union-attr]
+            == "https://"
         )
-        assert auth.ekirjasto_provider is not None
-        assert isinstance(auth.ekirjasto_provider, EkirjastoAuthenticationAPI)
 
-        # 3. Test that the production url does not change.
-        protocol = patron_auth_registry.get_protocol(EkirjastoAuthenticationAPI, "")
-        _, integration = create_auth_integration_configuration(
-            protocol,
-            library,
-            settings_dict={
-                "ekirjasto_environment": EkirjastoEnvironment.PRODUCTION.value,
-            },
-        )
-        assert isinstance(integration, IntegrationLibraryConfiguration)
-        auth = LibraryAuthenticator(_db=db.session, library=library)
-        auth.register_provider(integration)
-        # The production url has not changed.
-        assert (
-            auth.ekirjasto_provider.ekirjasto_environment.value  # type: ignore[union-attr]
-            == EkirjastoEnvironment.PRODUCTION.value
-        )
         assert auth.ekirjasto_provider is not None
         assert isinstance(auth.ekirjasto_provider, EkirjastoAuthenticationAPI)
 

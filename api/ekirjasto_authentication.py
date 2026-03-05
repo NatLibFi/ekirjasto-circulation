@@ -4,7 +4,6 @@ import datetime
 import uuid
 from abc import ABC
 from base64 import b64decode, b64encode
-from enum import Enum
 from typing import Any, TypeVar
 
 import flask_babel
@@ -13,7 +12,6 @@ import requests
 from cryptography.fernet import Fernet, InvalidToken
 from flask import url_for
 from flask_babel import lazy_gettext as _
-from pydantic import field_validator
 from sqlalchemy.orm import Session
 from werkzeug.datastructures import Authorization
 
@@ -50,18 +48,7 @@ from core.model.library import Library
 from core.util.datetime_helpers import from_timestamp, utc_now
 from core.util.log import elapsed_time_logging
 from core.util.problem_detail import ProblemDetail
-
-
-class EkirjastoEnvironment(Enum):
-    FAKE = "http://localhost"
-    DEVELOPMENT = "https://tunnistus-dev.e-kirjasto.fi"
-    PRODUCTION = "https://tunnistus.e-kirjasto.fi"
-    OLD_DEV = "https://e-kirjasto.loikka.dev"
-
-
-class MagazineEnvironment(Enum):
-    DEVELOPMENT = "https://lehdet-testing.e-kirjasto.fi/"
-    PRODUCTION = "https://lehdet.e-kirjasto.fi/"
+from core.util.pydantic import HttpUrl
 
 
 class EkirjastoAuthAPISettings(AuthProviderSettings):
@@ -70,36 +57,21 @@ class EkirjastoAuthAPISettings(AuthProviderSettings):
     _DEFAULT_DELEGATE_EXPIRE_SECONDS = datetime.timedelta(hours=12).seconds
 
     # API environment form field, choose between dev and prod.
-    ekirjasto_environment: EkirjastoEnvironment = FormField(
-        EkirjastoEnvironment.FAKE,
+    ekirjasto_environment: HttpUrl = FormField(
+        default="https://",
         form=ConfigurationFormItem(
-            label=_("E-kirjasto API environment"),
-            description=_(
-                "Select what environment of E-kirjasto accounts should be used."
-            ),
-            type=ConfigurationFormItemType.SELECT,
-            options={
-                EkirjastoEnvironment.FAKE: "Fake",
-                EkirjastoEnvironment.DEVELOPMENT: "Development",
-                EkirjastoEnvironment.PRODUCTION: "Production",
-            },
+            label=_("Authentication URL (DEV or PROD)"),
+            type=ConfigurationFormItemType.TEXT,
             required=True,
             weight=10,
         ),
     )
 
-    magazine_service: MagazineEnvironment = FormField(
-        MagazineEnvironment.DEVELOPMENT,
+    magazine_service: HttpUrl = FormField(
+        default="https://",
         form=ConfigurationFormItem(
-            label=_("E-magazines environment"),
-            description=_(
-                "Select what environment of e-magazines service should be used."
-            ),
-            type=ConfigurationFormItemType.SELECT,
-            options={
-                MagazineEnvironment.DEVELOPMENT: "Development",
-                MagazineEnvironment.PRODUCTION: "Production",
-            },
+            label=_("Magazine service URL (DEV or PROD)"),
+            type=ConfigurationFormItemType.TEXT,
             required=True,
             weight=10,
         ),
@@ -115,13 +87,6 @@ class EkirjastoAuthAPISettings(AuthProviderSettings):
             required=True,
         ),
     )
-
-    @field_validator("ekirjasto_environment", mode="before")
-    def validate_url(cls, value):
-        """Handle the previous dev url."""
-        if value == EkirjastoEnvironment.OLD_DEV.value:
-            value = EkirjastoEnvironment.DEVELOPMENT.value
-        return value
 
 
 class EkirjastoAuthAPILibrarySettings(AuthProviderLibrarySettings):
@@ -163,11 +128,8 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
             "4d2i2w3o1f6t3e1y0d46655q114q4d37200o3s6q5f1z2r4i1z0q1o5d3f695g1g"
         )
 
-        self._ekirjasto_api_url = self.ekirjasto_environment.value
-        if self.ekirjasto_environment == EkirjastoEnvironment.FAKE:
-            self._ekirjasto_api_url = EkirjastoEnvironment.DEVELOPMENT.value
-
-        self._magazine_service_url = self.magazine_service.value
+        self._ekirjasto_api_url = self.ekirjasto_environment
+        self._magazine_service_url = self.magazine_service
 
     @property
     def flow_type(self) -> str:
@@ -525,11 +487,6 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
         :return: token and expire timestamp if refresh was succesfull or None | ProblemDetail otherwise.
         """
 
-        if self.ekirjasto_environment == EkirjastoEnvironment.FAKE:
-            fake_token = self.fake_ekirjasto_token
-            expire_date = utc_now() + datetime.timedelta(days=1)
-            return fake_token, int(expire_date.timestamp())
-
         url = self._ekirjasto_api_url + "/v1/auth/refresh"
 
         try:
@@ -564,18 +521,6 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
         Otherwise, return a PatronData object with the complete property set to True.
         """
 
-        if self.ekirjasto_environment == EkirjastoEnvironment.FAKE:
-            if ekirjasto_token == self.fake_ekirjasto_token:
-                # Fake authentication successful, return fake patron data.
-                return PatronData(
-                    permanent_id="34637274574578",
-                    authorization_identifier="test_34637274574578",
-                    external_type="user",
-                    personal_name="Fake User",
-                    complete=True,
-                )
-            else:
-                return None
         url = self._ekirjasto_api_url + "/v1/auth/userinfo"
         try:
             response = self.requests_get(url, ekirjasto_token)
