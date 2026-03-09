@@ -48,7 +48,6 @@ from core.model.library import Library
 from core.util.datetime_helpers import from_timestamp, utc_now
 from core.util.log import elapsed_time_logging
 from core.util.problem_detail import ProblemDetail
-from core.util.pydantic import HttpUrl
 
 
 class EkirjastoAuthAPISettings(AuthProviderSettings):
@@ -57,7 +56,7 @@ class EkirjastoAuthAPISettings(AuthProviderSettings):
     _DEFAULT_DELEGATE_EXPIRE_SECONDS = datetime.timedelta(hours=12).seconds
 
     # API environment form field, choose between dev and prod.
-    ekirjasto_environment: HttpUrl = FormField(
+    ekirjasto_environment: str = FormField(
         default="https://",
         form=ConfigurationFormItem(
             label=_("Authentication URL (DEV or PROD)"),
@@ -67,7 +66,7 @@ class EkirjastoAuthAPISettings(AuthProviderSettings):
         ),
     )
 
-    magazine_service: HttpUrl = FormField(
+    magazine_service: str = FormField(
         default="https://",
         form=ConfigurationFormItem(
             label=_("Magazine service URL (DEV or PROD)"),
