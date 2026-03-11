@@ -13,38 +13,30 @@
 
 <!-- List all changes -->
 
-### Testing
-
-- **How was this tested?**
+## How was this tested?
 
 <!--- Describe the testing strategy used (unit tests, integration tests, manual testing, etc.). -->
 <!--- Include any relevant test cases or scenarios that were tested. -->
 
-### QA Testing
+## QA Testing
 
 - **How should QA test this change?**
 
     - **Environment Setup:**
 
-<!--- Any specific environment configurations needed. -->
-<!--- Instructions for setting up the local or testing environment. -->
-
     - **Test Cases:**
+
       1. **Test case 1:**
 
       2. **Test case 2:**
 
     - **Edge Cases:**
 
-<!--- Mention any edge cases or scenarios that should be tested. -->
-
     - **Regression Testing:**
 
-### Documentation
+## Is there any relevant documentation updated?
 
-- **Is there any relevant documentation updated?**
-
-<!--- Link to any updated or new documentation (e.g., Kupoli, README, etc.). -->
+<!--- Link or describe if there's any updated or new documentation (e.g., Kupoli, README, etc.). -->
 
 ### Checklist
 
