@@ -1,23 +1,51 @@
+
 ## Description
 
-<!--- Describe your changes -->
+- **What does this PR do?**
 
-## Motivation and Context
+<!--- Provide a brief summary of the changes made in this PR. -->
 
-<!--- Why is this change required? What problem does it solve? -->
-<!--- If it fixes an open issue, please link to the issue here. -->
+- **Why is this change necessary?**
 
-## How Has This Been Tested?
+<!--- Explain the rationale behind the changes. What problem does it solve or what feature does it add? -->
 
-<!--- Please describe in detail how you tested your changes. -->
-<!--- Include details of your testing environment, and the tests you ran to -->
-<!--- see how your change affects other areas of the code, etc. -->
+## Changes Made
 
-## Checklist
+<!-- List all changes -->
 
-<!--- Go over all the following points, and put an `x` in all the boxes that apply. -->
-<!--- If you're unsure about any of these, don't hesitate to ask. We're here to help! -->
+### Testing
 
-- [ ] I have updated the documentation accordingly.
-- [ ] All new and existing tests passed.
-- [ ] Transifex translators have been notified.
+- **How was this tested?**
+
+<!--- Describe the testing strategy used (unit tests, integration tests, manual testing, etc.). -->
+<!--- Include any relevant test cases or scenarios that were tested. -->
+
+### QA Testing
+
+- **How should QA test this change?**
+
+    - **Environment Setup:**
+
+<!--- Any specific environment configurations needed. -->
+<!--- Instructions for setting up the local or testing environment. -->
+
+    - **Test Cases:**
+      1. **Test case 1:**
+
+      2. **Test case 2:**
+
+    - **Edge Cases:**
+
+<!--- Mention any edge cases or scenarios that should be tested. -->
+
+    - **Regression Testing:**
+
+### Documentation
+
+- **Is there any relevant documentation updated?**
+
+<!--- Link to any updated or new documentation (e.g., Kupoli, README, etc.). -->
+
+### Checklist
+
+- [ ] Translations updated / Translators notified if applicable
