@@ -244,19 +244,26 @@ class TestEkirjastoAuthentication:
             assert provider.flow_type == doc["type"]
 
             assert (
-                doc["links"][0]["href"]
+                doc["links"][0]["rel"] == "authenticate"
+                and doc["links"][0]["href"]
                 == "http://localhost/test-library/ekirjasto_authenticate?provider=E-kirjasto+provider+for+circulation+manager"
             )
 
             assert (
-                doc["links"][10]["rel"] == "passkey_register_start"
-                and doc["links"][10]["href"]
+                doc["links"][6]["rel"] == "logout"
+                and doc["links"][6]["href"]
+                == "http://testitunnistus.fi/v1/auth/logout/start?locale=en"
+            )
+
+            assert (
+                doc["links"][11]["rel"] == "passkey_register_start"
+                and doc["links"][11]["href"]
                 == "http://localhost/test-library/ekirjasto/passkey/register/start?provider=E-kirjasto+provider+for+circulation+manager"
             )
 
             assert (
-                doc["links"][11]["rel"] == "passkey_register_finish"
-                and doc["links"][11]["href"]
+                doc["links"][12]["rel"] == "passkey_register_finish"
+                and doc["links"][12]["href"]
                 == "http://localhost/test-library/ekirjasto/passkey/register/finish?provider=E-kirjasto+provider+for+circulation+manager"
             )
 
