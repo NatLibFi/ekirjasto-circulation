@@ -174,7 +174,7 @@ jobs:
       # characters are escaped, and the repo owner string is lowercase.
       - name: Generate tags for base image
         id: baseimage-meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ghcr.io/${{ github.repository_owner }}/ekirjasto-circ-baseimage
           tags: |
@@ -185,7 +185,7 @@ jobs:
       # We are using docker/metadata-action here for the same reason as above.
       - name: Generate tag for latest
         id: baseimage-latest
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ghcr.io/${{ github.repository_owner }}/ekirjasto-circ-baseimage
           tags: |
@@ -370,7 +370,7 @@ jobs:
 
       - name: Generate tags for image
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ghcr.io/${{ github.repository_owner }}/ekirjasto-circ-${{ matrix.image }}
           tags: |
