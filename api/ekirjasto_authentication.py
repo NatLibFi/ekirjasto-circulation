@@ -208,6 +208,10 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
                     "href": f"{self._ekirjasto_api_url}/v1/auth/tunnistus/finish",
                 },
                 {
+                    "rel": "logout",
+                    "href": f"{self._ekirjasto_api_url}/v1/auth/logout/start?locale={flask_babel.get_locale()}",
+                },
+                {
                     "rel": "passkey_login_start",
                     "href": f"{self._ekirjasto_api_url}/v1/auth/passkey/login/start",
                 },
