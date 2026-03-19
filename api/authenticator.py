@@ -9,7 +9,7 @@ from typing import cast
 
 import flask
 import jwt
-from flask import url_for
+from flask import request, url_for
 from flask_babel import lazy_gettext as _
 from sqlalchemy.orm import Session
 from werkzeug.datastructures import Authorization, Headers
@@ -708,6 +708,7 @@ class LibraryAuthenticator(LoggerMixin):
         profile_url = url_for(
             "patron_profile", _external=True, library_short_name=self.library_short_name
         )
+        feedback_url = self._create_feedback_link("palaute/")
 
         links.append(
             dict(rel="start", href=index_url, type=OPDSFeed.ACQUISITION_FEED_TYPE)
@@ -733,6 +734,7 @@ class LibraryAuthenticator(LoggerMixin):
                 type=ProfileController.MEDIA_TYPE,
             )
         )
+        links.append(dict(rel="feedback", href=feedback_url, type="text/html"))
 
         # If there is a Designated Agent email address, add it as a
         # link.
@@ -871,6 +873,16 @@ class LibraryAuthenticator(LoggerMixin):
         # any apps like that yet.
 
         return headers
+
+    def _create_feedback_link(self, endpoint):
+        """Returns a link to E-kirjasto feedback form which shares the same host as
+        the circulation manager. This is because the feedback form is not
+        library-specific eventhough we add it to the authentication document a library.
+
+        :param endpoint: The endpoint of the feedback form "palaute/"
+        """
+
+        return request.host_url + endpoint
 
 
 class BearerTokenSigner:

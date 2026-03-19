@@ -1209,6 +1209,7 @@ class TestLibraryAuthenticator:
                 about,
                 alternate,
                 copyright,
+                feedback,
                 help_web,
                 help_email,
                 copyright_agent,
@@ -1227,6 +1228,7 @@ class TestLibraryAuthenticator:
             assert "http://terms.com" == terms_of_service["href"]
             assert "http://privacy.com" == privacy_policy["href"]
             assert "http://copyright.com" == copyright["href"]
+            assert "http://localhost/palaute/" == feedback["href"]
             assert "http://about.io" == about["href"]
             assert "http://license.ca" == license["href"]  # Trailing slash is stripped
             assert "data:image/png;base64,image data" == logo["href"]
