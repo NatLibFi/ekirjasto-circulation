@@ -632,6 +632,7 @@ def saml_callback():
 # Finland
 # Authenticate with the ekirjasto token.
 @library_route("/ekirjasto_authenticate", methods=["POST"])
+@allows_patron_web
 @has_library
 @returns_problem_detail
 def ekirjasto_authenticate():
@@ -641,6 +642,7 @@ def ekirjasto_authenticate():
 # Finland
 # Get decrypted ekirjasto token from the circulation token.
 @library_route("/ekirjasto_token", methods=["GET"])
+@allows_patron_web
 @has_library
 @returns_problem_detail
 @disable_cache
@@ -652,6 +654,7 @@ def ekirjasto_token():
 # Call E-kirjasto API's /passkey/register/start endpoint.
 @library_route("/ekirjasto/passkey/register/start", methods=["POST"])
 @has_library
+@allows_patron_web
 @returns_problem_detail
 @disable_cache
 def ekirjasto_passkey_register_start():
@@ -664,6 +667,7 @@ def ekirjasto_passkey_register_start():
 # Call E-kirjasto API's /passkey/register/finish endpoint.
 @library_route("/ekirjasto/passkey/register/finish", methods=["POST"])
 @has_library
+@allows_patron_web
 @returns_problem_detail
 def ekirjasto_passkey_register_finish():
     return app.manager.ekirjasto_controller.call_remote_endpoint(
