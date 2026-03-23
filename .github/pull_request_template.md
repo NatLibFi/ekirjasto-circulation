@@ -18,6 +18,10 @@
 <!--- Describe the testing strategy used (unit tests, integration tests, manual testing, etc.). -->
 <!--- Include any relevant test cases or scenarios that were tested. -->
 
+## Was AI used in the process of making this pr?
+
+<!--- If AI was used during the process, describe how. -->
+
 ## QA Testing
 
 - **How should QA test this change?**
