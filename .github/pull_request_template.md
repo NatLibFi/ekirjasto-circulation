@@ -45,3 +45,4 @@
 ### Checklist
 
 - [ ] Translations updated / Translators notified if applicable
+- [ ] AI was used during the process and I have described above how.
