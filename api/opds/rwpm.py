@@ -325,6 +325,8 @@ class AccessibilityFeature(str, Enum):
     vertical_writing = "verticalWriting"
     with_additional_word_segmentation = "withAdditionalWordSegmentation"
     without_additional_word_segmentation = "withoutAdditionalWordSegmentation"
+    none: str = "none"
+    unknown = "unknown"
 
 
 class Hazard(str, Enum):

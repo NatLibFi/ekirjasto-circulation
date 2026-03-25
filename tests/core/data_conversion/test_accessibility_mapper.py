@@ -194,7 +194,7 @@ class TestAccessibilityDataMapper:
             pytest.param(
                 None,
                 ["textual"],
-                None,
+                ["none"],
                 ["all_necessary_content_textual"],
                 id="some sufficient text",
             ),
