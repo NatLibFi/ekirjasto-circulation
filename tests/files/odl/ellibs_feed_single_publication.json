@@ -69,7 +69,8 @@
                         "tableOfContents",
                         "alternativeText",
                         "displayTransformability",
-                        "readingOrder"
+                        "readingOrder",
+                        "ARIA"
                     ],
                     "hazard": [
                         "none"
