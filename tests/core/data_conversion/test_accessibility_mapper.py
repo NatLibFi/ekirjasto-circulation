@@ -71,6 +71,11 @@ class TestAccessibilityDataMapper:
                 [W3CDisplayTexts.aaa],
                 id="wcag-aaa-link",
             ),
+            pytest.param(
+                ["EPUB Accessibility 1.0 - WCAG 2.2 Level AAA"],
+                [W3CDisplayTexts.aaa],
+                id="1.0-wcag-aaa",
+            ),
             pytest.param(None, None, id="no data"),
         ],
     )
@@ -82,7 +87,7 @@ class TestAccessibilityDataMapper:
         [
             pytest.param(["flashing"], ["Flashing content"], id="flashing"),
             pytest.param(
-                ["noFlashingHazard", "noSoundHazard", "noMotionSimulationHazard"],
+                ["noflashinghazard", "nosoundhazard", "nomotionsimulationhazard"],
                 ["No hazards"],
                 id="no hazards",
             ),
@@ -101,7 +106,7 @@ class TestAccessibilityDataMapper:
             pytest.param(
                 ["textual"],
                 ["textual"],
-                ["longDescription"],
+                ["longdescription"],
                 [
                     "Has alternative text",
                     "Readable in read aloud or dynamic braille",
@@ -118,7 +123,7 @@ class TestAccessibilityDataMapper:
             pytest.param(
                 None,
                 ["textual, visual"],
-                ["tableOfContents", "displayTransformability"],
+                ["tableofcontents", "displaytransformability"],
                 [
                     "Appearance can be modified",
                     "Not fully readable in read aloud or dynamic braille",
@@ -128,7 +133,7 @@ class TestAccessibilityDataMapper:
             pytest.param(
                 ["auditory"],
                 None,
-                ["synchronizedAudioText"],
+                ["synchronizedaudiotext"],
                 [
                     "Not readable in read aloud or dynamic braille",
                     "Prerecorded audio synchronized with text",
@@ -138,7 +143,7 @@ class TestAccessibilityDataMapper:
             pytest.param(
                 ["textual"],
                 ["textual, visual", "textual"],
-                ["displayTransformability", "alternativeText"],
+                ["displaytransformability", "alternativetext"],
                 [
                     "Appearance can be modified",
                     "Has alternative text",
@@ -156,7 +161,7 @@ class TestAccessibilityDataMapper:
             pytest.param(
                 None,
                 ["textual"],
-                ["longDescription"],
+                ["longdescription"],
                 [
                     "Has alternative text",
                     "Readable in read aloud or dynamic braille",
@@ -194,28 +199,28 @@ class TestAccessibilityDataMapper:
             pytest.param(
                 None,
                 ["textual"],
-                None,
+                ["none"],
                 ["all_necessary_content_textual"],
                 id="some sufficient text",
             ),
             pytest.param(
                 ["textual"],
                 None,
-                ["longDescription", "alternativeText", "describedMath", "transcript"],
+                ["longdescription", "alternativetext", "describedmath", "transcript"],
                 ["all_necessary_content_textual", "textual_alternatives"],
                 id="text alternatives, all textual",
             ),
             pytest.param(
                 None,
                 None,
-                ["longDescription", "alternativeText", "describedMath", "transcript"],
+                ["longdescription", "alternativetext", "describedmath", "transcript"],
                 ["textual_alternatives"],
                 id="text alternatives",
             ),
             pytest.param(
                 None,
                 ["textual, visual"],
-                ["longDescription", "alternativeText"],
+                ["longdescription", "alternativetext"],
                 ["some_sufficient_text", "textual_alternatives"],
                 id="some text alternatives",
             ),

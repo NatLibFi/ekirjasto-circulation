@@ -281,50 +281,52 @@ class AccessibilityFeature(str, Enum):
     https://github.com/readium/webpub-manifest/tree/master/contexts/default#features-and-hazards
     """
 
-    structural_navigation = "structuralNavigation"
-    table_of_contents = "tableOfContents"
-    alternative_text = "alternativeText"
-    display_transformability = "displayTransformability"
-    reading_order = "readingOrder"
-    is_fixed_layout = "isFixedLayout"
-    long_description = "longDescription"
-    long_descriptions = "longDescriptions"  # ?
-    described_math = "describedMath"
+    structural_navigation = "structuralnavigation"
+    table_of_contents = "tableofcontents"
+    alternative_text = "alternativetext"
+    display_transformability = "displaytransformability"
+    reading_order = "readingorder"
+    is_fixed_layout = "isfixedlayout"
+    long_description = "longdescription"
+    long_descriptions = "longdescriptions"  # ?
+    described_math = "describedmath"
     transcript = "transcript"
     index_name = "index"
-    print_page_numbers = "printPageNumbers"
-    page_break_markers = "pageBreakMarkers"  # previously printPageNumbers https://www.w3.org/community/reports/a11y-discov-vocab/CG-FINAL-vocabulary-20241209/#pageBreakMarkers
-    audio_description = "audioDescription"
-    open_captions = "openCaptions"
-    page_break_source = "pageBreakSource"
-    page_navigation = "pageNavigation"
-    sign_language = "signLanguage"
-    synchronized_audio_text = "synchronizedAudioText"
-    tactile_graphic = "tactileGraphic"
-    tactile_object = "tactileObject"
-    large_print = "largePrint"
-    high_contrast_audio = "highContrastAudio"
-    high_contrast_display = "highContrastDisplay"
+    print_page_numbers = "printpagenumbers"
+    page_break_markers = "pagebreakmarkers"  # previously printPageNumbers https://www.w3.org/community/reports/a11y-discov-vocab/CG-FINAL-vocabulary-20241209/#pageBreakMarkers
+    audio_description = "audiodescription"
+    open_captions = "opencaptions"
+    page_break_source = "pagebreaksource"
+    page_navigation = "pagenavigation"
+    sign_language = "signlanguage"
+    synchronized_audio_text = "synchronizedaudiotext"
+    tactile_graphic = "tactilegraphic"
+    tactile_object = "tactileobject"
+    large_print = "largeprint"
+    high_contrast_audio = "highcontrastaudio"
+    high_contrast_display = "highcontrastdisplay"
     braille = "braille"
-    closed_captions = "closedCaptions"
-    tts_markup = "ttsMarkup"
-    tagged_pdf = "taggedPDF"
-    math_ml = "MathML"
-    ruby_annotations = "rubyAnnotations"
-    full_ruby_annotations = "fullRubyAnnotations"
-    aria = "ARIA"
+    closed_captions = "closedcaptions"
+    tts_markup = "ttsmarkup"
+    tagged_pdf = "taggedpdf"
+    math_ml = "mathml"
+    ruby_annotations = "rubyannotations"
+    full_ruby_annotations = "fullrubyannotations"
+    aria = "aria"
     bookmarks = "bookmarks"
     captions = "captions"
-    chem_ml = "ChemML"
-    horizontal_writing = "horizontalWriting"
+    chem_ml = "chemml"
+    horizontal_writing = "horizontalwriting"
     latex = "latex"
     latex_chemistry = "latex-chemistry"
-    math_ml_chemistry = "MathML-chemistry"
-    timing_control = "timingControl"
+    math_ml_chemistry = "mathml-chemistry"
+    timing_control = "timingcontrol"
     unlocked = "unlocked"
-    vertical_writing = "verticalWriting"
-    with_additional_word_segmentation = "withAdditionalWordSegmentation"
-    without_additional_word_segmentation = "withoutAdditionalWordSegmentation"
+    vertical_writing = "verticalwriting"
+    with_additional_word_segmentation = "withadditionalwordsegmentation"
+    without_additional_word_segmentation = "withoutadditionalwordsegmentation"
+    none: str = "none"
+    unknown = "unknown"
 
 
 class Hazard(str, Enum):
@@ -333,14 +335,14 @@ class Hazard(str, Enum):
     """
 
     flashing = "flashing"
-    no_flashing_hazard = "noFlashingHazard"
-    unknown_flashing_hazard = "unknownFlashingHazard"
-    motion_simulation = "motionSimulation"
-    no_motion_simulation_hazard = "noMotionSimulationHazard"
-    unknown_motion_simulation_hazard = "unknownMotionSimulationHazard"
+    no_flashing_hazard = "noflashinghazard"
+    unknown_flashing_hazard = "unknownflashinghazard"
+    motion_simulation = "motionsimulation"
+    no_motion_simulation_hazard = "nomotionsimulationhazard"
+    unknown_motion_simulation_hazard = "unknownmotionsimulationhazard"
     sound = "sound"
-    no_sound_hazard = "noSoundHazard"
-    unknown_sound_hazard = "unknownSoundHazard"
+    no_sound_hazard = "nosoundhazard"
+    unknown_sound_hazard = "unknownsoundhazard"
     none: str = "none"
     unknown = "unknown"
 
@@ -369,12 +371,15 @@ class ConformsTo(str, Enum):
     epub_1_0_wcag_2_0_level_aaa = (
         "http://www.idpf.org/epub/a11y/accessibility-20170105.html#wcag-aaa"
     )
+
     epub_1_1_wcag_2_0_level_a = "https://www.w3.org/TR/epub-a11y-11#wcag-2.0-a"
     epub_1_1_wcag_2_0_level_aa = "https://www.w3.org/TR/epub-a11y-11#wcag-2.0-aa"
     epub_1_1_wcag_2_0_level_aaa = "https://www.w3.org/TR/epub-a11y-11#wcag-2.0-aaa"
+
     epub_1_1_wcag_2_1_level_a = "https://www.w3.org/TR/epub-a11y-11#wcag-2.1-a"
     epub_1_1_wcag_2_1_level_aa = "https://www.w3.org/TR/epub-a11y-11#wcag-2.1-aa"
     epub_1_1_wcag_2_1_level_aaa = "https://www.w3.org/TR/epub-a11y-11#wcag-2.1-aaa"
+
     epub_1_1_wcag_2_2_level_a = "https://www.w3.org/TR/epub-a11y-11#wcag-2.2-a"
     epub_1_1_wcag_2_2_level_aa = "https://www.w3.org/TR/epub-a11y-11#wcag-2.2-aa"
     epub_1_1_wcag_2_2_level_aaa = "https://www.w3.org/TR/epub-a11y-11#wcag-2.2-aaa"
@@ -382,15 +387,23 @@ class ConformsTo(str, Enum):
     epub_1_0_wcag_2_0_level_a_text = "EPUB Accessibility 1.0 - WCAG 2.0 Level A"
     epub_1_0_wcag_2_0_level_aa_text = "EPUB Accessibility 1.0 - WCAG 2.0 Level AA"
     epub_1_0_wcag_2_0_level_aaa_text = "EPUB Accessibility 1.0 - WCAG 2.0 Level AAA"
+
     epub_1_0_wcag_2_1_level_a = "EPUB Accessibility 1.0 - WCAG 2.1 Level A"
     epub_1_0_wcag_2_1_level_aa = "EPUB Accessibility 1.0 - WCAG 2.1 Level AA"
     epub_1_0_wcag_2_1_level_aaa = "EPUB Accessibility 1.0 - WCAG 2.1 Level AAA"
+
+    epub_1_0_wcag_2_2_level_a = "EPUB Accessibility 1.0 - WCAG 2.2 Level A"
+    epub_1_0_wcag_2_2_level_aa = "EPUB Accessibility 1.0 - WCAG 2.2 Level AA"
+    epub_1_0_wcag_2_2_level_aaa = "EPUB Accessibility 1.0 - WCAG 2.2 Level AAA"
+
     epub_1_1_wcag_2_0_level_a_text = "EPUB Accessibility 1.1 - WCAG 2.0 Level A"
     epub_1_1_wcag_2_0_level_aa_text = "EPUB Accessibility 1.1 - WCAG 2.0 Level AA"
     epub_1_1_wcag_2_0_level_aaa_text = "EPUB Accessibility 1.1 - WCAG 2.0 Level AAA"
+
     epub_1_1_wcag_2_1_level_a_text = "EPUB Accessibility 1.1 - WCAG 2.1 Level A"
     epub_1_1_wcag_2_1_level_aa_text = "EPUB Accessibility 1.1 - WCAG 2.1 Level AA"
     epub_1_1_wcag_2_1_level_aaa_text = "EPUB Accessibility 1.1 - WCAG 2.1 Level AAA"
+
     epub_1_1_wcag_2_2_level_a_text = "EPUB Accessibility 1.1 - WCAG 2.2 Level A"
     epub_1_1_wcag_2_2_level_aa_text = "EPUB Accessibility 1.1 - WCAG 2.2 Level AA"
     epub_1_1_wcag_2_2_level_aaa_text = "EPUB Accessibility 1.1 - WCAG 2.2 Level AAA"
@@ -434,6 +447,13 @@ class Accessibility(BaseOpdsModel):
             return [ConformsTo(value)]
         elif isinstance(value, list):
             return [ConformsTo(v) for v in value]
+
+    @field_validator("feature", "hazard", mode="before")
+    def to_lower(cls, values: list[str] | None) -> list[str] | None:
+        """Convert all feature strings to lowercase to ensure consistent mapping."""
+        if values is not None:
+            return [v.lower() for v in values]
+        return values
 
 
 class Metadata(BaseOpdsModel):

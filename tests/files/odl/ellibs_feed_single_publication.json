@@ -58,6 +58,7 @@
                 },
                 "accessibility": {
                     "summary": "Tämä sähkökirja täyttää WCAG 2.1 AA-tason EPUB-saavutettavuusvaatimukset.",
+                    "conformsTo": "EPUB Accessibility 1.0 - WCAG 2.2 Level AAA",
                     "accessMode": [
                         "textual"
                     ],
@@ -69,7 +70,8 @@
                         "tableOfContents",
                         "alternativeText",
                         "displayTransformability",
-                        "readingOrder"
+                        "readingOrder",
+                        "ARIA"
                     ],
                     "hazard": [
                         "none"
