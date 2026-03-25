@@ -71,6 +71,11 @@ class TestAccessibilityDataMapper:
                 [W3CDisplayTexts.aaa],
                 id="wcag-aaa-link",
             ),
+            pytest.param(
+                ["EPUB Accessibility 1.0 - WCAG 2.2 Level AAA"],
+                [W3CDisplayTexts.aaa],
+                id="1.0-wcag-aaa",
+            ),
             pytest.param(None, None, id="no data"),
         ],
     )
