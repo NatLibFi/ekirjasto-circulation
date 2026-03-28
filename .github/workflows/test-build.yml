@@ -276,7 +276,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build and Load Docker Compose Images for Testing
-        uses: docker/bake-action@v6
+        uses: docker/bake-action@v7
         with:
           files: docker-compose.yml
           load: true # CRITICAL: Load images into Docker daemon for 'docker compose up'
