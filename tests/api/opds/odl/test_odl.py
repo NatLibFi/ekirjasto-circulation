@@ -21,7 +21,7 @@ def test__get_publication_type() -> None:
 @pytest.mark.parametrize(
     "filename",
     [
-        "feed.json",
+        "demarque_feed.json",
         "feed2.json",
         "auth_token_feed.json",
     ],
@@ -50,7 +50,9 @@ def test_feed_odl_failure(
     The ODL parser should fail to parse an OPDS2 feed with an ODL publication.
     """
     with pytest.raises(ValidationError) as exc_info:
-        Feed.model_validate_json(opds2_with_odl_files_fixture.sample_data("feed.json"))
+        Feed.model_validate_json(
+            opds2_with_odl_files_fixture.sample_data("demarque_feed.json")
+        )
 
     errors = exc_info.value.errors()
     assert len(errors) == 2
