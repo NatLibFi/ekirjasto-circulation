@@ -1,0 +1,15 @@
+{
+    "name": "Ekirjasto Circulation Dev",
+    "dockerComposeFile": [
+        "../docker-compose-dev.yml"
+    ],
+    "service": "devcontainer",
+    "workspaceFolder": "/workspace",
+    "forwardPorts": [6500, 5432, 5050, 9000, 9001, 9200, 5601, 8000],
+    "features": {
+        "ghcr.io/devcontainers/features/common-utils:2": {
+            "installZsh": true
+        },
+        "ghcr.io/devcontainers/features/git:1": {}
+    }
+}
