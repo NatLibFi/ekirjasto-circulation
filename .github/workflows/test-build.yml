@@ -153,7 +153,7 @@ jobs:
         run: sudo ethtool -K eth0 tx off rx off
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -270,7 +270,7 @@ jobs:
         run: sudo ethtool -K eth0 tx off rx off
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -337,7 +337,7 @@ jobs:
         run: sudo ethtool -K eth0 tx off rx off
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
