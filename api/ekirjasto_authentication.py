@@ -425,20 +425,18 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
                 "Error decoding delegate token, signing secret missing"
             )
 
-        options = dict(
-            verify_signature=True,
-            require=["token", "iss", "sub", "iat", "exp"],
-            verify_iss=True,
-            verify_exp=validate_expire,
-            verify_iat=True,
-        )
-
         decoded_payload = jwt.decode(
             delegate_token,
             self.delegate_token_signing_secret,
             algorithms=["HS256"],
-            options=options,
             issuer=self.label(),
+            options={
+                "verify_signature": True,
+                "verify_exp": validate_expire,
+                "verify_iat": True,
+                "verify_iss": True,
+            },
+            required_claims=["token", "iss", "sub", "iat", "exp"],
         )
 
         if decrypt_ekirjasto_token:
