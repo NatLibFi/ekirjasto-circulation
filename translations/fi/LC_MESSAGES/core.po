@@ -10,7 +10,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-02-12 17:17+0200\n"
+"POT-Creation-Date: 2026-04-16 15:01+0300\n"
 "PO-Revision-Date: 2025-10-16 10:07+0000\n"
 "Last-Translator: Kaisa Kuivalahti, 2025\n"
 "Language: fi\n"
@@ -203,7 +203,7 @@ msgstr "Salli asiakkaiden suodattaa kielen mukaan"
 msgid "Title"
 msgstr "Nimi"
 
-#: core/facets.py:110
+#: core/facets.py:110 core/model/contributor.py:64
 msgid "Author"
 msgstr "Tekijä"
 
@@ -1445,6 +1445,46 @@ msgstr "Kaunokirjallisuus"
 #: core/feed/annotator/base.py:172
 msgid "Nonfiction"
 msgstr "Tietokirjallisuus"
+
+#: core/model/contributor.py:65
+msgid "Primary Author"
+msgstr "Päätekijä"
+
+#: core/model/contributor.py:66
+msgid "Editor"
+msgstr "Toimittaja"
+
+#: core/model/contributor.py:67
+msgid "Artist"
+msgstr "Artisti"
+
+#: core/model/contributor.py:68
+msgid "Photographer"
+msgstr "Valokuvaaja"
+
+#: core/model/contributor.py:69
+msgid "Translator"
+msgstr "Kääntäjä"
+
+#: core/model/contributor.py:70
+msgid "Illustrator"
+msgstr "Kuvittaja"
+
+#: core/model/contributor.py:79
+msgid "Unknown"
+msgstr "Tuntematon"
+
+#: core/model/contributor.py:85
+msgid "Contributor"
+msgstr "Muu tekijä"
+
+#: core/model/contributor.py:87
+msgid "Narrator"
+msgstr "Lukija"
+
+#: core/model/contributor.py:93
+msgid "Collaborator"
+msgstr "Yhteistyökumppani"
 
 #: core/util/http.py:34
 msgid "Failure contacting external service"
