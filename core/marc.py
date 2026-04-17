@@ -476,9 +476,9 @@ class Annotator(LoggerMixin):
 
     @classmethod
     def add_audience(cls, record: Record, work: Work) -> None:
-        audience = _(work.audience) or _(
+        audience = _(work.audience) or _( # type:ignore[arg-type]
             SubjectClassifier.AUDIENCE_ADULT
-        )  # type:ignore[arg-type]
+        )
         record.add_field(
             Field(
                 tag="385",
