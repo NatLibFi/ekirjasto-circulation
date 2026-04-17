@@ -136,8 +136,6 @@ class Annotator(LoggerMixin):
         self.add_physical_description(record, edition)
         self.add_audience(record, work)
         self.add_series(record, edition)
-        self.add_system_details(record)
-        self.add_ebooks_subject(record)
         self.add_distributor(record, active_license_pool)
         self.add_formats(record, active_license_pool)
 
@@ -505,16 +503,6 @@ class Annotator(LoggerMixin):
             )
 
     @classmethod
-    def add_system_details(cls, record: Record) -> None:
-        record.add_field(
-            Field(
-                tag="538",
-                indicators=[" ", " "],
-                subfields=[Subfield("a", "Mode of access: World Wide Web.")],
-            )
-        )
-
-    @classmethod
     def add_formats(cls, record: Record, pool: LicensePool) -> None:
         for lpdm in pool.delivery_mechanisms:
             dm = lpdm.delivery_mechanism
@@ -558,19 +546,6 @@ class Annotator(LoggerMixin):
                     ],
                 )
             )
-
-    @classmethod
-    def add_ebooks_subject(cls, record: Record) -> None:
-        # This is a general subject that can be added to all records.
-        record.add_field(
-            Field(
-                tag="655",
-                indicators=[" ", "0"],
-                subfields=[
-                    Subfield("a", "Electronic books."),
-                ],
-            )
-        )
 
     @classmethod
     def add_web_client_urls(
