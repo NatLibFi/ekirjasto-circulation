@@ -50,7 +50,7 @@ try:
     _ = fi.gettext
 except FileNotFoundError:
     # Fallback: use the default (no translation)
-    _ = lambda x: x
+    _ = lambda x: x  # type: ignore[assignment]
 
 
 class Annotator(LoggerMixin):
@@ -476,7 +476,9 @@ class Annotator(LoggerMixin):
 
     @classmethod
     def add_audience(cls, record: Record, work: Work) -> None:
-        audience = _(work.audience) or _(SubjectClassifier.AUDIENCE_ADULT)
+        audience = _(work.audience) or _(
+            SubjectClassifier.AUDIENCE_ADULT
+        )  # type:ignore[arg-type]
         record.add_field(
             Field(
                 tag="385",
@@ -535,14 +537,14 @@ class Annotator(LoggerMixin):
     @classmethod
     def add_genres(cls, record: Record, work: Work) -> None:
         """Create genre fields for this work."""
-        genre_names = [_(wg.genre.name) for wg in work.work_genres]
-        for genre in genre_names:
+        genres = work.genres
+        for genre in genres:
             record.add_field(
                 Field(
                     tag="655",
                     indicators=[" ", "0"],
                     subfields=[
-                        Subfield("a", genre),
+                        Subfield("a", _(genre.name)),
                     ],
                 )
             )
