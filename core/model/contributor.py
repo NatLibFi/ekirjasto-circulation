@@ -6,6 +6,7 @@ import re
 from enum import Enum
 from typing import TYPE_CHECKING
 
+from flask_babel import gettext as _
 from sqlalchemy import Column, ForeignKey, Integer, Unicode, UniqueConstraint
 from sqlalchemy.dialects.postgresql import ARRAY, JSON
 from sqlalchemy.exc import IntegrityError
@@ -61,13 +62,13 @@ class Contributor(Base):
 
     # Types of roles
     class Role(str, Enum):
-        AUTHOR = "Author"
-        PRIMARY_AUTHOR = "Primary Author"
-        EDITOR = "Editor"
-        ARTIST = "Artist"
-        PHOTOGRAPHER = "Photographer"
-        TRANSLATOR = "Translator"
-        ILLUSTRATOR = "Illustrator"
+        AUTHOR = _("Author")
+        PRIMARY_AUTHOR = _("Primary Author")
+        EDITOR = _("Editor")
+        ARTIST = _("Artist")
+        PHOTOGRAPHER = _("Photographer")
+        TRANSLATOR = _("Translator")
+        ILLUSTRATOR = _("Illustrator")
         LETTERER = "Letterer"
         PENCILER = "Penciler"
         COLORIST = "Colorist"
@@ -76,21 +77,21 @@ class Contributor(Base):
         FOREWORD = "Foreword Author"
         AFTERWORD = "Afterword Author"
         COLOPHON = "Colophon Author"
-        UNKNOWN = "Unknown"
+        UNKNOWN = _("Unknown")
         DIRECTOR = "Director"
         PRODUCER = "Producer"
         EXECUTIVE_PRODUCER = "Executive Producer"
         ACTOR = "Actor"
         LYRICIST = "Lyricist"
-        CONTRIBUTOR = "Contributor"
+        CONTRIBUTOR = _("Contributor")
         COMPOSER = "Composer"
-        NARRATOR = "Narrator"
+        NARRATOR = _("Narrator")
         COMPILER = "Compiler"
         ADAPTER = "Adapter"
         PERFORMER = "Performer"
         MUSICIAN = "Musician"
         ASSOCIATED = "Associated name"
-        COLLABORATOR = "Collaborator"
+        COLLABORATOR = _("Collaborator")
         ENGINEER = "Engineer"
         COPYRIGHT_HOLDER = "Copyright holder"
         TRANSCRIBER = "Transcriber"

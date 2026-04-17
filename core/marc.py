@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import gettext
+import os
 import re
 import urllib.parse
 from collections.abc import Mapping
@@ -40,6 +42,16 @@ from core.util.datetime_helpers import utc_now
 from core.util.log import LoggerMixin
 from core.util.uuid import uuid_encode
 
+# Finna needs Finnish data.
+localedir = os.path.join(os.path.dirname(__file__), "../translations")
+try:
+    fi = gettext.translation("messages", localedir=localedir, languages=["fi"])
+    fi.install()
+    _ = fi.gettext
+except FileNotFoundError:
+    # Fallback: use the default (no translation)
+    _ = lambda x: x
+
 
 class Annotator(LoggerMixin):
     """The Annotator knows how to add information about a Work to
@@ -47,10 +59,14 @@ class Annotator(LoggerMixin):
 
     # From https://www.loc.gov/standards/valuelist/marctarget.html
     AUDIENCE_TERMS: Mapping[str, str] = {
-        SubjectClassifier.AUDIENCE_CHILDREN: "Juvenile",
-        SubjectClassifier.AUDIENCE_YOUNG_ADULT: "Adolescent",
-        SubjectClassifier.AUDIENCE_ADULTS_ONLY: "Adult",
-        SubjectClassifier.AUDIENCE_ADULT: "General",
+        SubjectClassifier.AUDIENCE_CHILDREN: _(SubjectClassifier.AUDIENCE_CHILDREN),
+        SubjectClassifier.AUDIENCE_YOUNG_ADULT: _(
+            SubjectClassifier.AUDIENCE_YOUNG_ADULT
+        ),
+        SubjectClassifier.AUDIENCE_ADULTS_ONLY: _(
+            SubjectClassifier.AUDIENCE_ADULTS_ONLY
+        ),
+        SubjectClassifier.AUDIENCE_ADULT: _(SubjectClassifier.AUDIENCE_ADULT),
     }
 
     # TODO: Add remaining formats. Maybe there's a better place to
@@ -313,7 +329,7 @@ class Annotator(LoggerMixin):
                             indicators=["1", " "],
                             subfields=[
                                 Subfield("a", str(contributor.sort_name)),
-                                Subfield("e", contribution.role),
+                                Subfield("e", _(contribution.role)),
                             ],
                         )
                     )
@@ -459,8 +475,7 @@ class Annotator(LoggerMixin):
 
     @classmethod
     def add_audience(cls, record: Record, work: Work) -> None:
-        work_audience = work.audience or SubjectClassifier.AUDIENCE_ADULT
-        audience = cls.AUDIENCE_TERMS.get(work_audience, "General")
+        audience = _(work.audience) or _(SubjectClassifier.AUDIENCE_ADULT)
         record.add_field(
             Field(
                 tag="385",
@@ -527,17 +542,15 @@ class Annotator(LoggerMixin):
 
     @classmethod
     def add_genres(cls, record: Record, work: Work) -> None:
-        """Create subject fields for this work."""
-        genres = work.genres
-
-        for genre in genres:
+        """Create genre fields for this work."""
+        genre_names = [_(wg.genre.name) for wg in work.work_genres]
+        for genre in genre_names:
             record.add_field(
                 Field(
-                    tag="650",
-                    indicators=["0", "7"],
+                    tag="655",
+                    indicators=[" ", "0"],
                     subfields=[
-                        Subfield("a", genre.name),
-                        Subfield("2", "Library Simplified"),
+                        Subfield("a", genre),
                     ],
                 )
             )
