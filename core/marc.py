@@ -73,13 +73,16 @@ class Annotator(LoggerMixin):
     # store this so it's easier to keep up-to-date.
     # There doesn't seem to be any particular vocabulary for this.
     FORMAT_TERMS: Mapping[tuple[str | None, str | None], str] = {
-        (Representation.EPUB_MEDIA_TYPE, DeliveryMechanism.NO_DRM): "EPUB eBook",
+        (Representation.EPUB_MEDIA_TYPE, DeliveryMechanism.LCP_DRM): "LCP EPUB e-kirja",
+        (Representation.PDF_MEDIA_TYPE, DeliveryMechanism.LCP_DRM): "LCP PDF e-kirja",
         (
-            Representation.EPUB_MEDIA_TYPE,
-            DeliveryMechanism.ADOBE_DRM,
-        ): "Adobe EPUB eBook",
-        (Representation.PDF_MEDIA_TYPE, DeliveryMechanism.NO_DRM): "PDF eBook",
-        (Representation.PDF_MEDIA_TYPE, DeliveryMechanism.ADOBE_DRM): "Adobe PDF eBook",
+            Representation.AUDIOBOOK_PACKAGE_LCP_MEDIA_TYPE,
+            DeliveryMechanism.LCP_DRM,
+        ): "LCP äänikirja",
+        (
+            DeliveryMechanism.EKIRJASTO_STREAMING_PROFILE,
+            DeliveryMechanism.LCP_DRM,
+        ): "LCP EPUB striimattava e-kirja",
     }
 
     def __init__(
@@ -346,7 +349,7 @@ class Annotator(LoggerMixin):
                     tag="264",
                     indicators=[" ", "1"],
                     subfields=[
-                        Subfield("a", "[Place of publication not identified]"),
+                        Subfield("a", "[Kustannuspaikka tuntematon]"),
                         Subfield("b", str(edition.publisher or "")),
                         Subfield("c", year),
                     ],
@@ -373,7 +376,7 @@ class Annotator(LoggerMixin):
                     tag="300",
                     indicators=[" ", " "],
                     subfields=[
-                        Subfield("a", "1 online resource"),
+                        Subfield("a", "verkkoaineisto"),
                     ],
                 )
             )
@@ -383,7 +386,7 @@ class Annotator(LoggerMixin):
                     tag="336",
                     indicators=[" ", " "],
                     subfields=[
-                        Subfield("a", "text"),
+                        Subfield("a", "teksti"),
                         Subfield("b", "txt"),
                         Subfield("2", "rdacontent"),
                     ],
@@ -395,8 +398,8 @@ class Annotator(LoggerMixin):
                     tag="300",
                     indicators=[" ", " "],
                     subfields=[
-                        Subfield("a", "1 sound file"),
-                        Subfield("b", "digital"),
+                        Subfield("a", "äänitiedosto"),
+                        Subfield("b", "digitaalinen"),
                     ],
                 )
             )
@@ -406,7 +409,7 @@ class Annotator(LoggerMixin):
                     tag="336",
                     indicators=[" ", " "],
                     subfields=[
-                        Subfield("a", "spoken word"),
+                        Subfield("a", "puhuttu sana"),
                         Subfield("b", "spw"),
                         Subfield("2", "rdacontent"),
                     ],
@@ -418,7 +421,7 @@ class Annotator(LoggerMixin):
                 tag="337",
                 indicators=[" ", " "],
                 subfields=[
-                    Subfield("a", "computer"),
+                    Subfield("a", "tietokone"),
                     Subfield("b", "c"),
                     Subfield("2", "rdamedia"),
                 ],
@@ -430,7 +433,7 @@ class Annotator(LoggerMixin):
                 tag="338",
                 indicators=[" ", " "],
                 subfields=[
-                    Subfield("a", "online resource"),
+                    Subfield("a", "verkkoaineisto"),
                     Subfield("b", "cr"),
                     Subfield("2", "rdacarrier"),
                 ],
@@ -439,9 +442,9 @@ class Annotator(LoggerMixin):
 
         file_type = None
         if edition.medium == Edition.BOOK_MEDIUM:
-            file_type = "text file"
+            file_type = "tekstitiedosto"
         elif edition.medium == Edition.AUDIO_MEDIUM:
-            file_type = "audio file"
+            file_type = "äänitiedosto"
         if file_type:
             record.add_field(
                 Field(
@@ -531,6 +534,7 @@ class Annotator(LoggerMixin):
     def add_summary(cls, record: Record, work: Work) -> None:
         summary = work.summary_text
         if summary:
+            # E.g. De Marque summaries include html tags.
             stripped = re.sub("<[^>]+?>", " ", summary)
             record.add_field(
                 Field(
