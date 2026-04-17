@@ -406,6 +406,8 @@ Make PR, and when it's merged to main, the translations will be uploaded to Tran
 Once all strings have been translated and reviewed in Transifex, Transifex will automatically create a PR in Github and
 commit the updated files.
 
+Compiled `.mo` files are generated when Docker containers are initialized.
+
 ## Technology overview
 
 E-kirjasto backend - though gone through many changes since being forked from the Palace project - is based on the
