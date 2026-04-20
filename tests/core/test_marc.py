@@ -11,6 +11,7 @@ import pytest
 from _pytest.logging import LogCaptureFixture
 from pymarc import MARCReader, Record
 
+from core.classifier import ClassifierConstants
 from core.marc import Annotator, MARCExporter
 from core.model import (
     Contributor,
@@ -73,15 +74,9 @@ class AnnotateWorkRecordFixture:
         )
         self.mock_add_audience = create_autospec(self.annotator.add_audience)
         self.mock_add_series = create_autospec(self.annotator.add_series)
-        self.mock_add_system_details = create_autospec(
-            self.annotator.add_system_details
-        )
         self.mock_add_formats = create_autospec(self.annotator.add_formats)
         self.mock_add_summary = create_autospec(self.annotator.add_summary)
         self.mock_add_genres = create_autospec(self.annotator.add_genres)
-        self.mock_add_ebooks_subject = create_autospec(
-            self.annotator.add_ebooks_subject
-        )
         self.mock_add_web_client_urls = create_autospec(
             self.annotator.add_web_client_urls
         )
@@ -97,11 +92,9 @@ class AnnotateWorkRecordFixture:
         self.annotator.add_physical_description = self.mock_add_physical_description
         self.annotator.add_audience = self.mock_add_audience
         self.annotator.add_series = self.mock_add_series
-        self.annotator.add_system_details = self.mock_add_system_details
         self.annotator.add_formats = self.mock_add_formats
         self.annotator.add_summary = self.mock_add_summary
         self.annotator.add_genres = self.mock_add_genres
-        self.annotator.add_ebooks_subject = self.mock_add_ebooks_subject
         self.annotator.add_web_client_urls = self.mock_add_web_client_urls
 
         self.annotate_work_record = functools.partial(
@@ -125,7 +118,8 @@ class TestAnnotator:
     ) -> None:
         fixture = annotate_work_record_fixture
         with patch("core.marc.Record") as mock_record:
-            fixture.annotate_work_record()
+            d = fixture.annotate_work_record()
+            print(d)
 
         mock_record.assert_called_once_with(
             force_utf8=True, leader=fixture.mock_leader.return_value
@@ -148,11 +142,9 @@ class TestAnnotator:
         )
         fixture.mock_add_audience.assert_called_once_with(record, fixture.work)
         fixture.mock_add_series.assert_called_once_with(record, fixture.edition)
-        fixture.mock_add_system_details.assert_called_once_with(record)
         fixture.mock_add_formats.assert_called_once_with(record, fixture.pool)
         fixture.mock_add_summary.assert_called_once_with(record, fixture.work)
         fixture.mock_add_genres.assert_called_once_with(record, fixture.work)
-        fixture.mock_add_ebooks_subject.assert_called_once_with(record)
         fixture.mock_add_web_client_urls.assert_called_once_with(
             record,
             fixture.identifier,
@@ -360,7 +352,7 @@ class TestAnnotator:
             record,
             "264",
             {
-                "a": "[Place of publication not identified]",
+                "a": "[Kustannuspaikka tuntematon]",
                 "b": edition.publisher,
                 "c": "1894",
             },
@@ -387,12 +379,12 @@ class TestAnnotator:
 
         record = Record()
         Annotator.add_physical_description(record, book)
-        self._check_field(record, "300", {"a": "1 online resource"})
+        self._check_field(record, "300", {"a": "verkkoaineisto"})
         self._check_field(
             record,
             "336",
             {
-                "a": "text",
+                "a": "teksti",
                 "b": "txt",
                 "2": "rdacontent",
             },
@@ -401,7 +393,7 @@ class TestAnnotator:
             record,
             "337",
             {
-                "a": "computer",
+                "a": "tietokone",
                 "b": "c",
                 "2": "rdamedia",
             },
@@ -410,7 +402,7 @@ class TestAnnotator:
             record,
             "338",
             {
-                "a": "online resource",
+                "a": "verkkoaineisto",
                 "b": "cr",
                 "2": "rdacarrier",
             },
@@ -419,7 +411,7 @@ class TestAnnotator:
             record,
             "347",
             {
-                "a": "text file",
+                "a": "tekstitiedosto",
                 "2": "rda",
             },
         )
@@ -438,15 +430,15 @@ class TestAnnotator:
             record,
             "300",
             {
-                "a": "1 sound file",
-                "b": "digital",
+                "a": "äänitiedosto",
+                "b": "digitaalinen",
             },
         )
         self._check_field(
             record,
             "336",
             {
-                "a": "spoken word",
+                "a": "puhuttu sana",
                 "b": "spw",
                 "2": "rdacontent",
             },
@@ -455,7 +447,7 @@ class TestAnnotator:
             record,
             "337",
             {
-                "a": "computer",
+                "a": "tietokone",
                 "b": "c",
                 "2": "rdamedia",
             },
@@ -464,7 +456,7 @@ class TestAnnotator:
             record,
             "338",
             {
-                "a": "online resource",
+                "a": "verkkoaineisto",
                 "b": "cr",
                 "2": "rdacarrier",
             },
@@ -473,7 +465,7 @@ class TestAnnotator:
             record,
             "347",
             {
-                "a": "audio file",
+                "a": "äänitiedosto",
                 "2": "rda",
             },
         )
@@ -531,22 +523,17 @@ class TestAnnotator:
         Annotator.add_series(record, edition)
         assert [] == record.get_fields("490")
 
-    def test_add_system_details(self):
-        record = Record()
-        Annotator.add_system_details(record)
-        self._check_field(record, "538", {"a": "Mode of access: World Wide Web."})
-
     def test_add_formats(self, db: DatabaseTransactionFixture):
         edition, pool = db.edition(with_license_pool=True)
-        epub_no_drm, ignore = DeliveryMechanism.lookup(
-            db.session, Representation.EPUB_MEDIA_TYPE, DeliveryMechanism.NO_DRM
+        epub_lcp_drm, ignore = DeliveryMechanism.lookup(
+            db.session, Representation.EPUB_MEDIA_TYPE, DeliveryMechanism.LCP_DRM
         )
-        pool.delivery_mechanisms[0].delivery_mechanism = epub_no_drm
+        pool.delivery_mechanisms[0].delivery_mechanism = epub_lcp_drm
         LicensePoolDeliveryMechanism.set(
             pool.data_source,
             pool.identifier,
             Representation.PDF_MEDIA_TYPE,
-            DeliveryMechanism.ADOBE_DRM,
+            DeliveryMechanism.LCP_DRM,
             RightsStatus.IN_COPYRIGHT,
         )
 
@@ -555,9 +542,9 @@ class TestAnnotator:
         fields = record.get_fields("538")
         assert 2 == len(fields)
         [pdf, epub] = sorted(fields, key=lambda x: x.get_subfields("a")[0])
-        assert "Adobe PDF eBook" == pdf.get_subfields("a")[0]
+        assert "LCP EPUB e-kirja" == pdf.get_subfields("a")[0]
         assert [" ", " "] == pdf.indicators
-        assert "EPUB eBook" == epub.get_subfields("a")[0]
+        assert "LCP PDF e-kirja" == epub.get_subfields("a")[0]
         assert [" ", " "] == epub.indicators
 
     def test_add_summary(self, db: DatabaseTransactionFixture):
@@ -583,21 +570,14 @@ class TestAnnotator:
 
         record = Record()
         Annotator.add_genres(record, work)
-        fields = record.get_fields("650")
+        fields = record.get_fields("655")
         [fantasy_field, romance_field] = sorted(
             fields, key=lambda x: x.get_subfields("a")[0]
         )
-        assert ["0", "7"] == fantasy_field.indicators
+        assert [" ", "0"] == fantasy_field.indicators
         assert "Fantasy" == fantasy_field.get_subfields("a")[0]
-        assert "Library Simplified" == fantasy_field.get_subfields("2")[0]
-        assert ["0", "7"] == romance_field.indicators
+        assert [" ", "0"] == romance_field.indicators
         assert "Romance" == romance_field.get_subfields("a")[0]
-        assert "Library Simplified" == romance_field.get_subfields("2")[0]
-
-    def test_add_ebooks_subject(self):
-        record = Record()
-        Annotator.add_ebooks_subject(record)
-        self._check_field(record, "655", {"a": "Electronic books."}, [" ", "0"])
 
     def test_add_web_client_urls_empty(self):
         record = MagicMock(spec=Record)
@@ -715,6 +695,7 @@ class TestMARCExporter:
             title="old title",
             authors=["old author"],
             data_source_name=DataSource.OVERDRIVE,
+            audience=ClassifierConstants.AUDIENCE_ADULT,
         )
 
         mock_revised = MagicMock()

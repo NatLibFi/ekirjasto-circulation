@@ -10,7 +10,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-02-12 17:17+0200\n"
+"POT-Creation-Date: 2026-04-16 15:01+0300\n"
 "PO-Revision-Date: 2025-10-16 10:07+0000\n"
 "Last-Translator: Kaisa Kuivalahti, 2025\n"
 "Language: sv\n"
@@ -203,7 +203,7 @@ msgstr "Tillåt kunder att filtrera enligt språk"
 msgid "Title"
 msgstr "Titel"
 
-#: core/facets.py:110
+#: core/facets.py:110 core/model/contributor.py:64
 msgid "Author"
 msgstr "Författare"
 
@@ -1443,6 +1443,54 @@ msgstr "Skönlitteratur"
 msgid "Nonfiction"
 msgstr "Facklitteratur"
 
+#: core/model/contributor.py:65
+#, fuzzy
+msgid "Primary Author"
+msgstr ""
+
+#: core/model/contributor.py:66
+#, fuzzy
+msgid "Editor"
+msgstr ""
+
+#: core/model/contributor.py:67
+#, fuzzy
+msgid "Artist"
+msgstr ""
+
+#: core/model/contributor.py:68
+#, fuzzy
+msgid "Photographer"
+msgstr ""
+
+#: core/model/contributor.py:69
+#, fuzzy
+msgid "Translator"
+msgstr ""
+
+#: core/model/contributor.py:70
+#, fuzzy
+msgid "Illustrator"
+msgstr ""
+
+#: core/model/contributor.py:79
+msgid "Unknown"
+msgstr ""
+
+#: core/model/contributor.py:85
+#, fuzzy
+msgid "Contributor"
+msgstr ""
+
+#: core/model/contributor.py:87
+#, fuzzy
+msgid "Narrator"
+msgstr ""
+
+#: core/model/contributor.py:93
+msgid "Collaborator"
+msgstr ""
+
 #: core/util/http.py:34
 msgid "Failure contacting external service"
 msgstr "Det gick inte att kontakta den externa tjänsten"
@@ -1488,100 +1536,3 @@ msgid "The server made a request to %(service)s, and that request timed out."
 msgstr ""
 "Servern skickade en begäran till %(service)s och tidsgränsen för begäran "
 "överskreds."
-
-#~ msgid "Literary Fiction"
-#~ msgstr "Allmän skönlitteratur"
-
-#~ msgid "(Default) Use <id>"
-#~ msgstr "(Standard) Använd <id>"
-
-#~ msgid "Use <dcterms:identifier> first, if not exist use <id>"
-#~ msgstr "Använd först <dcterms:identifier>, om den inte finns, använd <id>"
-
-#~ msgid "Art & Design"
-#~ msgstr "Konst och formgivning"
-
-#~ msgid "Entertainment"
-#~ msgstr "Underhållning"
-
-#~ msgid "Women's Fiction"
-#~ msgstr "Feministisk litteratur"
-
-#~ msgid "Boardgames & Strategic Games"
-#~ msgstr "TRANSLATE!"
-
-#~ msgid "Biography"
-#~ msgstr "Biografi"
-
-#~ msgid "Chapter Books"
-#~ msgstr "Kapitelböcker"
-
-#~ msgid "Children and Middle Grade"
-#~ msgstr "Barn och skolbarn"
-
-#~ msgid "Children & Young Adult"
-#~ msgstr "Barn och ung vuxen"
-
-#~ msgid "Contemporary Fiction"
-#~ msgstr "Samtida skönlitteratur"
-
-#~ msgid "Dystopian"
-#~ msgstr "Dystopi"
-
-#~ msgid "Early Readers"
-#~ msgstr "Tidiga läsare"
-
-#~ msgid "Fiction"
-#~ msgstr "Fiktion"
-
-#~ msgid "History & Sociology"
-#~ msgstr "Historia och sociologi"
-
-#~ msgid "Informational Books"
-#~ msgstr "Informativ"
-
-#~ msgid "Movie and TV Novelizations"
-#~ msgstr "Baserad på film eller TV-serie"
-
-#~ msgid "Mystery & Thriller"
-#~ msgstr "Deckare och thriller"
-
-#~ msgid "Nonfiction"
-#~ msgstr "Facklitteratur"
-
-#~ msgid "Picture Books"
-#~ msgstr "Bilderböcker"
-
-#~ msgid "Poetry Books"
-#~ msgstr "Poesi"
-
-#~ msgid "Politics & Current Events"
-#~ msgstr "Politik och aktualiteter"
-
-#~ msgid "Realistic Fiction"
-#~ msgstr "Realistisk fiktion"
-
-#~ msgid "Thriller"
-#~ msgstr "Thriller"
-
-#~ msgid "World Languages"
-#~ msgstr "Världens språk"
-
-#~ msgid "Young Adult Fiction"
-#~ msgstr "Fiktion för unga vuxna"
-
-#~ msgid "Young Adult Nonfiction"
-#~ msgstr "Facklitteratur för unga vuxna"
-
-#~ msgid "Finnish"
-#~ msgstr "finska"
-
-#~ msgid "Swedish"
-#~ msgstr "svenska"
-
-#~ msgid "English"
-#~ msgstr "engelska"
-
-#~ msgid "Others"
-#~ msgstr "Annat"
-

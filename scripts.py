@@ -579,7 +579,7 @@ class CompileTranslationsScript(Script):
         for language in languages:
             base_path = "translations/%s/LC_MESSAGES" % language
             if not os.path.exists(base_path):
-                logging.warn("No translations for configured language %s" % language)
+                logging.warning("No translations for configured language %s" % language)
                 continue
 
             os.system("rm %(path)s/messages.po" % dict(path=base_path))

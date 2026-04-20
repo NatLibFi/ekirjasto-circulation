@@ -12,7 +12,7 @@ x-cm-variables: &cm
     PALACE_STORAGE_ENDPOINT_URL: "http://minio:9000"
     PALACE_STORAGE_PUBLIC_ACCESS_BUCKET: "public"
     PALACE_STORAGE_ANALYTICS_BUCKET: "analytics"
-    PALACE_STORAGE_URL_TEMPLATE: "http://minio:9000/{bucket}/{key}"
+    PALACE_STORAGE_URL_TEMPLATE: "http://localhost:9000/{bucket}/{key}"
     PALACE_REPORTING_NAME: "TEST CM"
     PALACE_OPENSEARCH_ANALYTICS_ENABLED: true
     PALACE_OPENSEARCH_ANALYTICS_URL: "http://opensearch:9200/"
@@ -57,7 +57,7 @@ services:
       target: scripts
 
   pg:
-    image: "postgres:12"
+    image: "postgres:16"
     container_name: postgres
     environment:
       POSTGRES_USER: palace

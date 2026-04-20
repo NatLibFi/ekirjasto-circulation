@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-02-12 17:17+0200\n"
+"POT-Creation-Date: 2026-04-16 15:01+0300\n"
 "PO-Revision-Date: 2024-02-19 22:14+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -199,7 +199,7 @@ msgstr "Allow patrons to filter by language"
 msgid "Title"
 msgstr "Title"
 
-#: core/facets.py:110
+#: core/facets.py:110 core/model/contributor.py:64
 msgid "Author"
 msgstr "Author"
 
@@ -1439,6 +1439,46 @@ msgstr "Fiction"
 msgid "Nonfiction"
 msgstr "Nonfiction"
 
+#: core/model/contributor.py:65
+msgid "Primary Author"
+msgstr "Primary Author"
+
+#: core/model/contributor.py:66
+msgid "Editor"
+msgstr "Editor"
+
+#: core/model/contributor.py:67
+msgid "Artist"
+msgstr "Artist"
+
+#: core/model/contributor.py:68
+msgid "Photographer"
+msgstr "Photographer"
+
+#: core/model/contributor.py:69
+msgid "Translator"
+msgstr "Translator"
+
+#: core/model/contributor.py:70
+msgid "Illustrator"
+msgstr "Illustrator"
+
+#: core/model/contributor.py:79
+msgid "Unknown"
+msgstr "Unknown"
+
+#: core/model/contributor.py:85
+msgid "Contributor"
+msgstr "Contributor"
+
+#: core/model/contributor.py:87
+msgid "Narrator"
+msgstr "Narrator"
+
+#: core/model/contributor.py:93
+msgid "Collaborator"
+msgstr "Collaborator"
+
 #: core/util/http.py:34
 msgid "Failure contacting external service"
 msgstr "Failure contacting external service"
@@ -1482,100 +1522,3 @@ msgstr "Timeout"
 #, python-format
 msgid "The server made a request to %(service)s, and that request timed out."
 msgstr "The server made a request to %(service)s, and that request timed out."
-
-#~ msgid "Literary Fiction"
-#~ msgstr "Literary Fiction"
-
-#~ msgid "(Default) Use <id>"
-#~ msgstr "(Default) Use <id>"
-
-#~ msgid "Use <dcterms:identifier> first, if not exist use <id>"
-#~ msgstr "Use <dcterms:identifier> first, if not exist use <id>"
-
-#~ msgid "Art & Design"
-#~ msgstr "Art & Design"
-
-#~ msgid "Entertainment"
-#~ msgstr "Entertainment"
-
-#~ msgid "Women's Fiction"
-#~ msgstr "Women's Fiction"
-
-#~ msgid "Boardgames & Strategic Games"
-#~ msgstr ""
-
-#~ msgid "Biography"
-#~ msgstr "Biography"
-
-#~ msgid "Chapter Books"
-#~ msgstr "Chapter Books"
-
-#~ msgid "Children and Middle Grade"
-#~ msgstr "Children and Middle Grade"
-
-#~ msgid "Children & Young Adult"
-#~ msgstr "Children & Young Adult"
-
-#~ msgid "Contemporary Fiction"
-#~ msgstr "Contemporary Fiction"
-
-#~ msgid "Dystopian"
-#~ msgstr "Dystopian"
-
-#~ msgid "Early Readers"
-#~ msgstr "Early Readers"
-
-#~ msgid "Fiction"
-#~ msgstr "Fiction"
-
-#~ msgid "History & Sociology"
-#~ msgstr "History & Sociology"
-
-#~ msgid "Informational Books"
-#~ msgstr "Informational Books"
-
-#~ msgid "Movie and TV Novelizations"
-#~ msgstr "Movie and TV Novelizations"
-
-#~ msgid "Mystery & Thriller"
-#~ msgstr "Mystery & Thriller"
-
-#~ msgid "Nonfiction"
-#~ msgstr "Nonfiction"
-
-#~ msgid "Picture Books"
-#~ msgstr "Picture Books"
-
-#~ msgid "Poetry Books"
-#~ msgstr "Poetry Books"
-
-#~ msgid "Politics & Current Events"
-#~ msgstr "Politics & Current Events"
-
-#~ msgid "Realistic Fiction"
-#~ msgstr "Realistic Fiction"
-
-#~ msgid "Thriller"
-#~ msgstr "Thriller"
-
-#~ msgid "World Languages"
-#~ msgstr "World Languages"
-
-#~ msgid "Young Adult Fiction"
-#~ msgstr "Young Adult Fiction"
-
-#~ msgid "Young Adult Nonfiction"
-#~ msgstr "Young Adult Nonfiction"
-
-#~ msgid "Finnish"
-#~ msgstr "Finnish"
-
-#~ msgid "Swedish"
-#~ msgstr "Swedish"
-
-#~ msgid "English"
-#~ msgstr "English"
-
-#~ msgid "Others"
-#~ msgstr "Others"
-

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import gettext
+import os
 import re
 import urllib.parse
 from collections.abc import Mapping
@@ -40,6 +42,16 @@ from core.util.datetime_helpers import utc_now
 from core.util.log import LoggerMixin
 from core.util.uuid import uuid_encode
 
+# Finna needs Finnish data.
+localedir = os.path.join(os.path.dirname(__file__), "../translations")
+try:
+    fi = gettext.translation("messages", localedir=localedir, languages=["fi"])
+    fi.install()
+    _ = fi.gettext
+except FileNotFoundError:
+    # Fallback: use the default (no translation)
+    _ = lambda x: x  # type: ignore[assignment]
+
 
 class Annotator(LoggerMixin):
     """The Annotator knows how to add information about a Work to
@@ -47,23 +59,30 @@ class Annotator(LoggerMixin):
 
     # From https://www.loc.gov/standards/valuelist/marctarget.html
     AUDIENCE_TERMS: Mapping[str, str] = {
-        SubjectClassifier.AUDIENCE_CHILDREN: "Juvenile",
-        SubjectClassifier.AUDIENCE_YOUNG_ADULT: "Adolescent",
-        SubjectClassifier.AUDIENCE_ADULTS_ONLY: "Adult",
-        SubjectClassifier.AUDIENCE_ADULT: "General",
+        SubjectClassifier.AUDIENCE_CHILDREN: _(SubjectClassifier.AUDIENCE_CHILDREN),
+        SubjectClassifier.AUDIENCE_YOUNG_ADULT: _(
+            SubjectClassifier.AUDIENCE_YOUNG_ADULT
+        ),
+        SubjectClassifier.AUDIENCE_ADULTS_ONLY: _(
+            SubjectClassifier.AUDIENCE_ADULTS_ONLY
+        ),
+        SubjectClassifier.AUDIENCE_ADULT: _(SubjectClassifier.AUDIENCE_ADULT),
     }
 
     # TODO: Add remaining formats. Maybe there's a better place to
     # store this so it's easier to keep up-to-date.
     # There doesn't seem to be any particular vocabulary for this.
     FORMAT_TERMS: Mapping[tuple[str | None, str | None], str] = {
-        (Representation.EPUB_MEDIA_TYPE, DeliveryMechanism.NO_DRM): "EPUB eBook",
+        (Representation.EPUB_MEDIA_TYPE, DeliveryMechanism.LCP_DRM): "LCP EPUB e-kirja",
+        (Representation.PDF_MEDIA_TYPE, DeliveryMechanism.LCP_DRM): "LCP PDF e-kirja",
         (
-            Representation.EPUB_MEDIA_TYPE,
-            DeliveryMechanism.ADOBE_DRM,
-        ): "Adobe EPUB eBook",
-        (Representation.PDF_MEDIA_TYPE, DeliveryMechanism.NO_DRM): "PDF eBook",
-        (Representation.PDF_MEDIA_TYPE, DeliveryMechanism.ADOBE_DRM): "Adobe PDF eBook",
+            Representation.AUDIOBOOK_PACKAGE_LCP_MEDIA_TYPE,
+            DeliveryMechanism.LCP_DRM,
+        ): "LCP äänikirja",
+        (
+            DeliveryMechanism.EKIRJASTO_STREAMING_PROFILE,
+            DeliveryMechanism.LCP_DRM,
+        ): "LCP EPUB striimattava e-kirja",
     }
 
     def __init__(
@@ -117,8 +136,6 @@ class Annotator(LoggerMixin):
         self.add_physical_description(record, edition)
         self.add_audience(record, work)
         self.add_series(record, edition)
-        self.add_system_details(record)
-        self.add_ebooks_subject(record)
         self.add_distributor(record, active_license_pool)
         self.add_formats(record, active_license_pool)
 
@@ -313,7 +330,7 @@ class Annotator(LoggerMixin):
                             indicators=["1", " "],
                             subfields=[
                                 Subfield("a", str(contributor.sort_name)),
-                                Subfield("e", contribution.role),
+                                Subfield("e", _(contribution.role)),
                             ],
                         )
                     )
@@ -330,7 +347,7 @@ class Annotator(LoggerMixin):
                     tag="264",
                     indicators=[" ", "1"],
                     subfields=[
-                        Subfield("a", "[Place of publication not identified]"),
+                        Subfield("a", "[Kustannuspaikka tuntematon]"),
                         Subfield("b", str(edition.publisher or "")),
                         Subfield("c", year),
                     ],
@@ -357,7 +374,7 @@ class Annotator(LoggerMixin):
                     tag="300",
                     indicators=[" ", " "],
                     subfields=[
-                        Subfield("a", "1 online resource"),
+                        Subfield("a", "verkkoaineisto"),
                     ],
                 )
             )
@@ -367,7 +384,7 @@ class Annotator(LoggerMixin):
                     tag="336",
                     indicators=[" ", " "],
                     subfields=[
-                        Subfield("a", "text"),
+                        Subfield("a", "teksti"),
                         Subfield("b", "txt"),
                         Subfield("2", "rdacontent"),
                     ],
@@ -379,8 +396,8 @@ class Annotator(LoggerMixin):
                     tag="300",
                     indicators=[" ", " "],
                     subfields=[
-                        Subfield("a", "1 sound file"),
-                        Subfield("b", "digital"),
+                        Subfield("a", "äänitiedosto"),
+                        Subfield("b", "digitaalinen"),
                     ],
                 )
             )
@@ -390,7 +407,7 @@ class Annotator(LoggerMixin):
                     tag="336",
                     indicators=[" ", " "],
                     subfields=[
-                        Subfield("a", "spoken word"),
+                        Subfield("a", "puhuttu sana"),
                         Subfield("b", "spw"),
                         Subfield("2", "rdacontent"),
                     ],
@@ -402,7 +419,7 @@ class Annotator(LoggerMixin):
                 tag="337",
                 indicators=[" ", " "],
                 subfields=[
-                    Subfield("a", "computer"),
+                    Subfield("a", "tietokone"),
                     Subfield("b", "c"),
                     Subfield("2", "rdamedia"),
                 ],
@@ -414,7 +431,7 @@ class Annotator(LoggerMixin):
                 tag="338",
                 indicators=[" ", " "],
                 subfields=[
-                    Subfield("a", "online resource"),
+                    Subfield("a", "verkkoaineisto"),
                     Subfield("b", "cr"),
                     Subfield("2", "rdacarrier"),
                 ],
@@ -423,9 +440,9 @@ class Annotator(LoggerMixin):
 
         file_type = None
         if edition.medium == Edition.BOOK_MEDIUM:
-            file_type = "text file"
+            file_type = "tekstitiedosto"
         elif edition.medium == Edition.AUDIO_MEDIUM:
-            file_type = "audio file"
+            file_type = "äänitiedosto"
         if file_type:
             record.add_field(
                 Field(
@@ -459,8 +476,9 @@ class Annotator(LoggerMixin):
 
     @classmethod
     def add_audience(cls, record: Record, work: Work) -> None:
-        work_audience = work.audience or SubjectClassifier.AUDIENCE_ADULT
-        audience = cls.AUDIENCE_TERMS.get(work_audience, "General")
+        audience = _(work.audience) or _(  # type:ignore[arg-type]
+            SubjectClassifier.AUDIENCE_ADULT
+        )
         record.add_field(
             Field(
                 tag="385",
@@ -487,16 +505,6 @@ class Annotator(LoggerMixin):
             )
 
     @classmethod
-    def add_system_details(cls, record: Record) -> None:
-        record.add_field(
-            Field(
-                tag="538",
-                indicators=[" ", " "],
-                subfields=[Subfield("a", "Mode of access: World Wide Web.")],
-            )
-        )
-
-    @classmethod
     def add_formats(cls, record: Record, pool: LicensePool) -> None:
         for lpdm in pool.delivery_mechanisms:
             dm = lpdm.delivery_mechanism
@@ -516,6 +524,7 @@ class Annotator(LoggerMixin):
     def add_summary(cls, record: Record, work: Work) -> None:
         summary = work.summary_text
         if summary:
+            # E.g. De Marque summaries include html tags.
             stripped = re.sub("<[^>]+?>", " ", summary)
             record.add_field(
                 Field(
@@ -527,33 +536,18 @@ class Annotator(LoggerMixin):
 
     @classmethod
     def add_genres(cls, record: Record, work: Work) -> None:
-        """Create subject fields for this work."""
+        """Create genre fields for this work."""
         genres = work.genres
-
         for genre in genres:
             record.add_field(
                 Field(
-                    tag="650",
-                    indicators=["0", "7"],
+                    tag="655",
+                    indicators=[" ", "0"],
                     subfields=[
-                        Subfield("a", genre.name),
-                        Subfield("2", "Library Simplified"),
+                        Subfield("a", _(genre.name)),
                     ],
                 )
             )
-
-    @classmethod
-    def add_ebooks_subject(cls, record: Record) -> None:
-        # This is a general subject that can be added to all records.
-        record.add_field(
-            Field(
-                tag="655",
-                indicators=[" ", "0"],
-                subfields=[
-                    Subfield("a", "Electronic books."),
-                ],
-            )
-        )
 
     @classmethod
     def add_web_client_urls(

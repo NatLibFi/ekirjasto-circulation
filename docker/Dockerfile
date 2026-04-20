@@ -22,6 +22,7 @@ RUN . env/bin/activate && \
     poetry install --only main,pg --sync --no-root
 
 COPY --chown=simplified:simplified . /var/www/circulation
+RUN PALACE_SEARCH_URL=http://localhost:9200 core/bin/run util/compile_translations
 
 ###############################################################################
 ## Circ-exec Image
@@ -72,9 +73,7 @@ COPY docker/services/uwsgi /etc/
 RUN mkdir -p /var/log/uwsgi && \
     chown -RHh simplified:simplified /var/log/uwsgi && \
     mkdir /var/run/uwsgi && \
-    chown simplified:simplified /var/run/uwsgi && \
-    # Search url not used but script fails if not set
-    PALACE_SEARCH_URL=http://localhost:9200 core/bin/run util/compile_translations
+    chown simplified:simplified /var/run/uwsgi
 
 # Setup runit
 COPY docker/runit /etc/service/
