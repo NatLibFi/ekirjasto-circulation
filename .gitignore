@@ -72,14 +72,6 @@ messages.po
 .git
 .pyre
 
-# Sphinx documentation
-# Only need to have three files to build the documentation.
-docs/**/
-!docs/source
-docs/source/*
-!docs/source/conf.py
-!docs/source/index.rst
-
 # Mac OS
 .DS_Store
 
