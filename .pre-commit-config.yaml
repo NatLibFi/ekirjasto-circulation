@@ -73,8 +73,10 @@ repos:
 
 # Exclude test files, since they may be intentionally malformed
 # Exclude transaltions, since they are generated.
+# Exclude diagrams.
 exclude: >
   (?x)(
+      ^docs/diagrams/|
       ^tests/(core|api)/files/|
       ^translations/
   )

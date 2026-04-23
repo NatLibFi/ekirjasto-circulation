@@ -56,7 +56,7 @@ title Borrow Flow
             ODLAPI-->>CirculationAPI: Error: NoLicenses
                 CirculationAPI->>LoanController: Error: NoLicenses
                 LoanController-->>Patron: Error: "No licenses. The library currently has no licenses for this book."
-            end 
+            end
         end
     end
 end
