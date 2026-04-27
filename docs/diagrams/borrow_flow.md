@@ -35,7 +35,7 @@ title Borrow Flow
                 CirculationAPI->>LoanController: Loan
                 LoanController-->>Patron: OPDS feed entry (loan)
             ODLServer-->>ODLAPI: Loan status response 4xx or no checkouts
-            ODLAPI ->> ODLAPI: No licenses or loan status none
+            ODLAPI ->> ODLAPI: No licenses or loan status none or did not change to active
             else ERROR No available licenses
                 ODLAPI->>ODLAPI: Update license pool and holds queue
                 alt Patron has existing hold in position 0
