@@ -21,9 +21,12 @@ title Borrow Flow
         CirculationAPI->>ODLAPI: checkout(...)
         ODLAPI->>ODLAPI: Check for inactive licenses in LicensePool
         alt Active license(s)
+            ODLAPI->>ODLAPI: Update license pool and holds queue
             ODLAPI->>ODLServer: HTTP checkout request
             ODLServer-->>ODLAPI: Loan status response (success)
             alt SUCCESS Response 2xx
+                ODLAPI->>ODLAPI: Update license accounting
+                ODLAPI->>ODLAPI: Update license pool and holds queue
                 ODLAPI-->>CirculationAPI: LoanInfo
                 alt Existing hold
                     CirculationAPI->>CirculationAPI: Delete hold in DB
@@ -34,8 +37,10 @@ title Borrow Flow
             ODLServer-->>ODLAPI: Loan status response 4xx or no checkouts
             ODLAPI ->> ODLAPI: No licenses or loan status none
             else ERROR No available licenses
+                ODLAPI->>ODLAPI: Update license pool and holds queue
                 alt Patron has existing hold in position 0
                     ODLAPI->>ODLAPI: Set hold position to 1
+                    ODLAPI->>ODLAPI: Update hold queue
                     ODLAPI-->>CirculationAPI: Error: NoAvailableCopiesWhenReserved
                     CirculationAPI->>LoanController: Error: NoAvailableCopiesWhenReserved
                     LoanController-->>Patron: Error: "Could not issue loan. No copies available to check out, you are still next in line."
