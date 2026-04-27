@@ -201,7 +201,7 @@ jobs:
 
       # Build the base image, only if needed.
       - name: Build base image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./docker/Dockerfile.baseimage
@@ -237,7 +237,7 @@ jobs:
           echo tag="$tag" >> "$GITHUB_OUTPUT"
 
       - name: Build common image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./docker/Dockerfile
@@ -380,7 +380,7 @@ jobs:
             type=sha,priority=40
 
       - name: Push image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./docker/Dockerfile
