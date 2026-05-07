@@ -36,13 +36,12 @@ from core.model import (
     get_one_or_create,
 )
 from core.model.classification import Classification, Subject
-from core.model.constants import IdentifierConstants, LinkRelations
+from core.model.constants import IdentifierConstants
 from core.model.coverage import CoverageRecord
 from core.model.datasource import DataSource
 from core.model.licensing import LicensePoolDeliveryMechanism, RightsStatus
 from core.model.measurement import Measurement
 from core.util.datetime_helpers import utc_now
-from core.util.summary import SummaryEvaluator
 
 if TYPE_CHECKING:
     from core.model import (  # noqa: autoflake
@@ -977,61 +976,6 @@ class Identifier(Base, IdentifierConstants):
             champion = random.choice(champions)
 
         return champion, images
-
-    @classmethod
-    def evaluate_summary_quality(
-        cls, _db, identifier_ids, privileged_data_sources=None
-    ):
-        """Evaluate the summaries for the given group of Identifier IDs.
-        This is an automatic evaluation based solely on the content of
-        the summaries. It will be combined with human-entered ratings
-        to form an overall quality score.
-        We need to evaluate summaries from a set of Identifiers
-        (typically those associated with a single work) because we
-        need to see which noun phrases are most frequently used to
-        describe the underlying work.
-        :param privileged_data_sources: If present, a summary from one
-        of these data source will be instantly chosen, short-circuiting the
-        decision process. Data sources are in order of priority.
-        :return: The single highest-rated summary Resource.
-        """
-        evaluator = SummaryEvaluator()
-
-        if privileged_data_sources and len(privileged_data_sources) > 0:
-            privileged_data_source = privileged_data_sources[0]
-        else:
-            privileged_data_source = None
-
-        # Find all rel="description" resources associated with any of
-        # these records.
-        rels = [LinkRelations.DESCRIPTION, LinkRelations.SHORT_DESCRIPTION]
-        descriptions = cls.resources_for_identifier_ids(
-            _db, identifier_ids, rels, privileged_data_source
-        ).all()
-
-        champion = None
-        # Add each resource's content to the evaluator's corpus.
-        for r in descriptions:
-            if r.representation and r.representation.content:
-                evaluator.add(r.representation.content)
-        evaluator.ready()
-
-        # Then have the evaluator rank each resource.
-        for r in descriptions:
-            if r.representation and r.representation.content:
-                content = r.representation.content
-                quality = evaluator.score(content)
-                r.set_estimated_quality(quality)
-            if not champion or r.quality > champion.quality:
-                champion = r
-
-        if privileged_data_source and not champion:
-            # We could not find any descriptions from the privileged
-            # data source. Try relaxing that restriction.
-            return cls.evaluate_summary_quality(
-                _db, identifier_ids, privileged_data_sources[1:]
-            )
-        return champion, descriptions
 
     @classmethod
     def missing_coverage_from(

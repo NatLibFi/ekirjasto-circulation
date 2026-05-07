@@ -1061,13 +1061,6 @@ class Work(Base):
         staff_data_source = DataSource.lookup(_db, DataSourceConstants.LIBRARY_STAFF)
         data_sources = [staff_data_source, licensed_data_sources]
         summary = None
-        for id_set in (direct_identifier_ids, all_identifier_ids):
-            summary, summaries = Identifier.evaluate_summary_quality(
-                _db, id_set, data_sources
-            )
-            if summary:
-                # We found a summary.
-                break
         self.set_summary(summary)
 
     @property
