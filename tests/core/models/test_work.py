@@ -419,7 +419,6 @@ class TestWork:
         m = w._choose_summary
 
         # If no summaries are available, any old summary is cleared out.
-        print("test1")
         m([], [], [])
         assert None == w.summary_text
 
