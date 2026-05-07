@@ -41,7 +41,7 @@ from core.model import (
     tuple_to_numericrange,
 )
 from core.model.classification import Classification, Subject
-from core.model.constants import DataSourceConstants
+from core.model.constants import DataSourceConstants, LinkRelations
 from core.model.contributor import Contribution, Contributor
 from core.model.coverage import CoverageRecord, WorkCoverageRecord
 from core.model.datasource import DataSource
@@ -1040,8 +1040,9 @@ class Work(Base):
         """Helper method for choosing a summary as part of presentation
         calculation.
 
-        Summaries closer to a LicensePool, or from a more trusted source
-        will be preferred.
+        Summaries written by staff always precede summaries from other sources.
+        If there are no staff-written summaries, summaries from other sources are
+        used, with preference given to the first summary found.
 
         :param direct_identifier_ids: All IDs of Identifiers of LicensePools
             directly associated with this Work. Summaries associated with
@@ -1059,8 +1060,31 @@ class Work(Base):
         """
         _db = Session.object_session(self)
         staff_data_source = DataSource.lookup(_db, DataSourceConstants.LIBRARY_STAFF)
-        data_sources = [staff_data_source, licensed_data_sources]
+
+        # Find all rel="description" resources associated with any of
+        # these records.
+        rels = [LinkRelations.DESCRIPTION, LinkRelations.SHORT_DESCRIPTION]
+
+        # E-kirjasto: We will only have one license pool, so this set will only contain
+        # one ID. But, theoretically, there could be more but we don't care about their
+        # origin.
+        ids = set(direct_identifier_ids) | set(all_identifier_ids)
+        staff_descriptions = Identifier.resources_for_identifier_ids(
+            _db, ids, rels, staff_data_source
+        ).all()
         summary = None
+
+        # Check if staff has modified the summary. If so, use the latest one (though there
+        # should only be one at a time since the previous is deleted upon modification in
+        # work_editor.py).
+        if staff_descriptions:
+            summary = staff_descriptions[len(staff_descriptions) - 1]
+        # Otherwise, use the first summary we find from any other source.
+        else:
+            descriptions = Identifier.resources_for_identifier_ids(
+                _db, ids, rels, licensed_data_sources
+            ).all()
+            summary = descriptions[0] if descriptions else None
         self.set_summary(summary)
 
     @property
@@ -1129,7 +1153,7 @@ class Work(Base):
 
         if self.summary and self.summary.representation:
             snippet = _ensure(self.summary.representation.content)[:100]
-            d = f" Description ({self.summary.quality:.2f}) {snippet}"
+            d = f" Description {snippet}"
             l.append(d)
 
         l = [_ensure(s) for s in l]
