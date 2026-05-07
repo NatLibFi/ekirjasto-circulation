@@ -399,8 +399,10 @@ class TestWork:
         assert default_audience == work.audience
 
     def test__choose_summary(self, db: DatabaseTransactionFixture):
-        # Test the _choose_summary helper method, called by
-        # calculate_presentation().
+        """Test the _choose_summary helper method, called by
+        calculate_presentation(). If staff has edited a summary, it always wins.
+        Otherwise, the original description from the distributor is chosen.
+        """
 
         class Mock(Work):
             the_summary: str
@@ -422,50 +424,49 @@ class TestWork:
 
         # Create three summaries on two identifiers.
         source1 = DataSource.lookup(db.session, DataSource.OVERDRIVE)
-        source2 = DataSource.lookup(db.session, DataSource.BIBLIOTHECA)
-
+        source2 = DataSource.lookup(db.session, DataSource.LIBRARY_STAFF)
+        # First identifier has one summary from the distributor.
         i1 = db.identifier()
         l1, ignore = i1.add_link(
-            Hyperlink.DESCRIPTION, None, source1, content="ok summary"
+            Hyperlink.DESCRIPTION, None, source1, content="original summary"
         )
-        good_summary = "This summary is great! It's more than one sentence long and features some noun phrases."
-        i1.add_link(Hyperlink.DESCRIPTION, None, source2, content=good_summary)
-
+        # ...and one recently edited by staff
+        latest_summary = "latest summary"
+        l2, ignore = i1.add_link(
+            Hyperlink.DESCRIPTION, None, source2, content=latest_summary
+        )
+        # Then we have a second identifier with a summary. In E-kirjasto, this is not
+        # possible since we only have one distributor per book identifier, but we want
+        # to make sure that even if it were possible, we cover that situation.
         i2 = db.identifier()
-        i2.add_link(Hyperlink.DESCRIPTION, None, source2, content="not too bad")
+        i2.add_link(
+            Hyperlink.DESCRIPTION, None, source1, content="another fine summary"
+        )
 
         # Now we can test out the rules for choosing summaries.
-
-        # In a choice between all three summaries, good_summary is
-        # chosen based on textual characteristics.
+        # In a choice between all three summaries, latest_summary is
+        # chosen because it's written by staff. The ids are in one set: we don't treat
+        # direct ids differently from all ids.
         m([], [i1.id, i2.id], [])
-        assert good_summary == w.summary_text
-
+        assert latest_summary == w.summary_text
         m([i1.id, i2.id], [], [])
-        assert good_summary == w.summary_text
+        assert latest_summary == w.summary_text
 
-        # If an identifier is associated directly with the work, its
-        # summaries are considered first, and the other identifiers
-        # are not considered at all.
-        m([i2.id], [object(), i1.id], [])
-        assert "not too bad" == w.summary_text
+        # If we don't have any descriptions written by staff, we go with the distributor's summaries' earliest description.
+        l2.data_source = DataSource.lookup(db.session, DataSource.AXIS_360)
+        m([i1.id, i2.id], [], [])
+        assert (
+            l1.resource.representation.content.decode("utf-8") == w.summary_text
+        )  # "original summary"
 
-        # A summary that comes from a preferred data source will be
-        # chosen over some other summary.
-        m([i1.id, i2.id], [], [source1])
-        assert "ok summary" == w.summary_text
-
-        # But if there is no summary from a preferred data source, the
-        # normal rules apply.
-        source3 = DataSource.lookup(db.session, DataSource.AXIS_360)
-        m([i1.id], [], [source3])
-        assert good_summary == w.summary_text
-
-        # LIBRARY_STAFF is always considered a good source of
-        # descriptions.
+        # Or if there's more than one staff written summary, we go with the latest one (though
+        # the previous one is deleted in work_editor.py, so this is a theoretical test).
         l1.data_source = DataSource.lookup(db.session, DataSource.LIBRARY_STAFF)
+        l2.data_source = DataSource.lookup(db.session, DataSource.LIBRARY_STAFF)
         m([i1.id, i2.id], [], [])
-        assert l1.resource.representation.content.decode("utf-8") == w.summary_text
+        assert (
+            l2.resource.representation.content.decode("utf-8") == w.summary_text
+        )  # "latest summary"
 
     def test_set_presentation_ready_based_on_content(
         self,
