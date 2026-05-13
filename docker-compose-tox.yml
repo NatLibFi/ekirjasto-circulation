@@ -18,7 +18,6 @@ services:
       PYTHONIOENCODING: UTF-8
       LC_ALL: C.UTF-8
       TOX_WORK_DIR: /workspace/.tox
-      TOX_SKIP_ENV: py310-*
       DOCKER_HOST: unix:///var/run/docker.sock
       TOX_SERVICE_HOST: host.docker.internal
     extra_hosts:

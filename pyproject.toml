@@ -235,7 +235,7 @@ pymarc = "5.1.1"
 pyOpenSSL = "^26.0"
 pyparsing = "3.1.1"
 pyspellchecker = "0.8.1"
-python = ">=3.10,<4"
+python = ">=3.11,<4"
 python-dateutil = "2.8.2"
 python3-saml = "^1.16"  # python-saml is required for SAML authentication
 pytz = "^2023.3"
@@ -245,9 +245,7 @@ requests = "^2.29"
 sqlalchemy = {version = "^1.4", extras = ["mypy"]}
 types-pyopenssl = "^24.0.0.20240130"
 types-pyyaml = "^6.0.12.9"
-# We import typing_extensions, so we can use new annotation features.
-# - Self (Python 3.11)
-typing_extensions = {version = "^4.5.0", python = "<3.11"}
+typing_extensions = "^4.5.0"
 unicodecsv = "0.14.1"  # this is used, but can probably be removed on py3
 uritemplate = "4.1.1"
 urllib3 = "^1.26.19"
