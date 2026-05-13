@@ -54,10 +54,10 @@ source venv/bin/activate
 
 This project uses [poetry](https://python-poetry.org/) for dependency management.
 
-Poetry can be installed using the command `curl -sSL https://install.python-poetry.org | python3 -`. Install version 2.1.1:
+Install Poetry 2.2.1 using the official installer:
 
 ```sh
-brew install poetry@2.1.1
+curl -sSL https://install.python-poetry.org | python3 - --version 2.2.1
 ```
 
 Run `poetry debug info` to check that Python 3.11 is used in Poetry and the envirnoment.
