@@ -17,6 +17,7 @@ from core.model.identifier import Identifier
 from core.model.patron import Hold, Loan, Patron
 from core.model.work import Work
 from core.util.datetime_helpers import utc_now
+
 from core.util.log import LoggerMixin
 
 
@@ -79,14 +80,14 @@ class PushNotifications(LoggerMixin):
 
         for token in tokens:
             try:
-                cls.logger().info(f"Trying device token {token.device_token}")
+                cls.logger().debug(f"Trying device token {token.device_token}")
                 msg = messaging.Message(
                     token=token.device_token,
                     notification=notification,
                     data=data_typed,
                 )
                 resp = messaging.send(msg, dry_run=cls.TESTING_MODE, app=cls.fcm_app())
-                cls.logger().info(
+                cls.logger().debug(
                     f"Sent notification for patron {token.patron.authorization_identifier} "
                     f"notification ID: {resp}"
                 )
@@ -102,6 +103,8 @@ class PushNotifications(LoggerMixin):
                 cls.logger().exception(
                     f"Failed to send notification for patron {token.patron.authorization_identifier}"
                 )
+        if responses:
+            cls.logger().info(f"Sent {len(responses)} notifications in batch.")
         return responses
 
     @classmethod
@@ -141,9 +144,9 @@ class PushNotifications(LoggerMixin):
         responses = cls.send_messages(
             tokens, messaging.Notification(title=title, body=body), data
         )
-        if len(responses) > 0:
-            # Atleast one notification succeeded
-            loan.patron_last_notified = utc_now().date()
+        # Phase 4: update unconditionally so a transient FCM failure does not
+        # cause the same patron to be re-notified on the next run.
+        loan.patron_last_notified = utc_now().date()
         return responses
 
     @classmethod
@@ -183,9 +186,9 @@ class PushNotifications(LoggerMixin):
             resp = cls.send_messages(
                 tokens, messaging.Notification(title=title, body=body), data
             )
-            if len(resp) > 0:
-                # Atleast one notification succeeded
-                hold.patron_last_notified = utc_now().date()
+            # Phase 4: update unconditionally so a transient FCM failure does not
+            # cause the same patron to be re-notified on the next run.
+            hold.patron_last_notified = utc_now().date()
 
             responses.extend(resp)
 
@@ -200,7 +203,7 @@ class PushNotifications(LoggerMixin):
         for patron in patrons:
             tokens = cls.notifiable_tokens(patron)
             if not tokens:
-                return []
+                continue
             cls.logger().info(
                 f"Notifying patron {patron.id} has {len(tokens)} device tokens."
             )
