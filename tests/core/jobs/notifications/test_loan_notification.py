@@ -92,9 +92,7 @@ class TestLoanNotificationsMonitor:
         results = set(loan_fixture.monitor.item_query().all())
         assert results == {loan_1d, loan_3d, loan_yesterday}
 
-    def test_run_sends_notifications(
-        self, loan_fixture: LoanNotificationsFixture
-    ):
+    def test_run_sends_notifications(self, loan_fixture: LoanNotificationsFixture):
         """The monitor's run() should invoke PushNotifications once per
         eligible loan with the correct (loan, days, tokens) arguments."""
         db = loan_fixture.db

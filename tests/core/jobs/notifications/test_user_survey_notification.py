@@ -83,4 +83,3 @@ class TestUserSurveyNotification:
             ).value = ConfigurationConstants.FALSE
             survey_fixture.monitor.run()
             assert mock_notf.send_user_survey_message.call_count == 0
-

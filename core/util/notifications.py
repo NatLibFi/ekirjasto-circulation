@@ -17,7 +17,6 @@ from core.model.identifier import Identifier
 from core.model.patron import Hold, Loan, Patron
 from core.model.work import Work
 from core.util.datetime_helpers import utc_now
-
 from core.util.log import LoggerMixin
 
 
