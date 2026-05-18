@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import exists
+from sqlalchemy import and_, exists
 from sqlalchemy.orm import Query, selectinload
 
 from core.config import Configuration, ConfigurationConstants
@@ -39,11 +39,15 @@ class UserSurveyNotificationScript(PatronSweepMonitor):
         # Correlated EXISTS: lets the planner skip patrons with no token in a
         # single index lookup, rather than scanning the patrons table and
         # filtering in Python.
+        # `exists().where(...)` only accepts a single criterion in the
+        # typed stubs we use, so combine via and_().
         has_fcm_token = exists().where(
-            DeviceToken.patron_id == Patron.id,
-            DeviceToken.token_type.in_(
-                (DeviceTokenTypes.FCM_ANDROID, DeviceTokenTypes.FCM_IOS)
-            ),
+            and_(
+                DeviceToken.patron_id == Patron.id,
+                DeviceToken.token_type.in_(
+                    (DeviceTokenTypes.FCM_ANDROID, DeviceTokenTypes.FCM_IOS)
+                ),
+            )
         )
         query: Query = (
             super()

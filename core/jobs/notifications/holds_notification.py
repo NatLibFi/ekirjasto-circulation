@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import exists, or_
+from sqlalchemy import and_, exists, or_
 from sqlalchemy.orm import joinedload
 
 from core.config import Configuration, ConfigurationConstants
@@ -51,11 +51,15 @@ class HoldsNotificationMonitor(SweepMonitor):
         # least one FCM-eligible device token. Using EXISTS instead of
         # JOIN+DISTINCT gives the planner a clear hint and avoids duplicate
         # rows that would otherwise need de-duplication.
+        # `exists().where(...)` only accepts a single criterion in the
+        # typed stubs we use, so combine via and_().
         has_fcm_token = exists().where(
-            DeviceToken.patron_id == Patron.id,
-            DeviceToken.token_type.in_(
-                (DeviceTokenTypes.FCM_ANDROID, DeviceTokenTypes.FCM_IOS)
-            ),
+            and_(
+                DeviceToken.patron_id == Patron.id,
+                DeviceToken.token_type.in_(
+                    (DeviceTokenTypes.FCM_ANDROID, DeviceTokenTypes.FCM_IOS)
+                ),
+            )
         )
         query = (
             super()

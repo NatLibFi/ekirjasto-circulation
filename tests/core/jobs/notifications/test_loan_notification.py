@@ -23,6 +23,13 @@ class LoanNotificationsFixture:
         self.monitor = LoanNotificationsMonitor(self.db.session)
         self.patron: Patron = db.patron()
         self.work: Work = db.work(with_license_pool=True)
+        # Cache the LicensePool to avoid `Optional` typing fights at each
+        # call site: `Work.active_license_pool()` is typed as
+        # `LicensePool | None`, but we know it exists because we just
+        # created the work with `with_license_pool=True`.
+        pool = self.work.active_license_pool()
+        assert pool is not None
+        self.pool = pool
         # process_items() skips loans whose patron has no FCM-eligible
         # device tokens, so the default test patron is given one here.
         self.device_token, _ = get_one_or_create(
@@ -49,7 +56,7 @@ class TestLoanNotificationsMonitor:
         now = utc_now()
 
         # Inside the 1-day window → selected.
-        loan_1d, _ = loan_fixture.work.active_license_pool().loan_to(
+        loan_1d, _ = loan_fixture.pool.loan_to(
             loan_fixture.patron,
             now,
             now + datetime.timedelta(hours=23),
@@ -97,7 +104,7 @@ class TestLoanNotificationsMonitor:
         eligible loan with the correct (loan, days, tokens) arguments."""
         db = loan_fixture.db
         now = utc_now()
-        loan_1d, _ = loan_fixture.work.active_license_pool().loan_to(
+        loan_1d, _ = loan_fixture.pool.loan_to(
             loan_fixture.patron,
             now,
             now + datetime.timedelta(hours=23),
@@ -130,7 +137,7 @@ class TestLoanNotificationsMonitor:
         before any loan processing happens."""
         db = loan_fixture.db
         now = utc_now()
-        loan_fixture.work.active_license_pool().loan_to(
+        loan_fixture.pool.loan_to(
             loan_fixture.patron,
             now,
             now + datetime.timedelta(hours=23),
