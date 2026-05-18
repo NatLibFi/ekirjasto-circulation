@@ -74,12 +74,14 @@ class HoldsNotificationMonitor(SweepMonitor):
             )
             # Eager-load every relationship that PushNotifications dereferences
             # while building the message. Without this we'd issue ~4 extra
-            # SELECTs per hold (classic N+1).
+            # SELECTs per hold (classic N+1). Note: Hold.work is a Python
+            # property that resolves to license_pool.work, which is already
+            # lazy="joined" on the LicensePool side, so no joinedload is needed
+            # for the work itself.
             .options(
                 joinedload(Hold.patron).joinedload(Patron.device_tokens),
                 joinedload(Hold.patron).joinedload(Patron.library),
                 joinedload(Hold.license_pool).joinedload(LicensePool.identifier),
-                joinedload(Hold.work),
             )
         )
         return query

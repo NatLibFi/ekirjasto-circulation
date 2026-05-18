@@ -527,10 +527,6 @@ class SweepMonitor(CollectionMonitor):
         # item_query() that affect row ordering can't cause the next
         # batch to skip or re-process rows.
         next_offset = max(item.id for item in items)
-        # If the batch was short, the sweep is finished; skip the extra
-        # query that would otherwise be needed to discover that.
-        if len(items) < self.batch_size:
-            return 0, len(items)
         return next_offset, len(items)
 
     def process_items(self, items):

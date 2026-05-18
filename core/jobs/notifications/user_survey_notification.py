@@ -17,6 +17,10 @@ class UserSurveyNotificationScript(PatronSweepMonitor):
     """
 
     SERVICE_NAME: str | None = "User Survey Notification"
+    # Override the PatronSweepMonitor default (100). Each batch fans out to
+    # FCM I/O via send_user_survey_message(); a smaller batch keeps per-batch
+    # blocking time and memory bounded and matches the loan/hold monitors.
+    DEFAULT_BATCH_SIZE = 25
 
     def run_once(self, *ignore):
         setting = ConfigurationSetting.sitewide(

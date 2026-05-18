@@ -144,7 +144,7 @@ class PushNotifications(LoggerMixin):
         responses = cls.send_messages(
             tokens, messaging.Notification(title=title, body=body), data
         )
-        # Phase 4: update unconditionally so a transient FCM failure does not
+        # Update unconditionally so a transient FCM failure does not
         # cause the same patron to be re-notified on the next run.
         loan.patron_last_notified = utc_now().date()
         return responses
@@ -186,7 +186,7 @@ class PushNotifications(LoggerMixin):
             resp = cls.send_messages(
                 tokens, messaging.Notification(title=title, body=body), data
             )
-            # Phase 4: update unconditionally so a transient FCM failure does not
+            # Update unconditionally so a transient FCM failure does not
             # cause the same patron to be re-notified on the next run.
             hold.patron_last_notified = utc_now().date()
 
