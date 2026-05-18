@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-from sqlalchemy.orm import Query
+from sqlalchemy import exists
+from sqlalchemy.orm import Query, selectinload
 
 from core.config import Configuration, ConfigurationConstants
 from core.model.configuration import ConfigurationSetting
+from core.model.devicetokens import DeviceToken, DeviceTokenTypes
 from core.model.patron import Patron
 from core.monitor import PatronSweepMonitor
 from core.util.notifications import PushNotifications
@@ -29,9 +31,25 @@ class UserSurveyNotificationScript(PatronSweepMonitor):
         return super().run_once(*ignore)
 
     def item_query(self):
-        """Query all patrons"""
-        query: Query = super().item_query()
-        self.log.info(f"{query.count()} patrons found")
+        """Query only patrons with at least one FCM-eligible device token."""
+        # Correlated EXISTS: lets the planner skip patrons with no token in a
+        # single index lookup, rather than scanning the patrons table and
+        # filtering in Python.
+        has_fcm_token = exists().where(
+            DeviceToken.patron_id == Patron.id,
+            DeviceToken.token_type.in_(
+                (DeviceTokenTypes.FCM_ANDROID, DeviceTokenTypes.FCM_IOS)
+            ),
+        )
+        query: Query = (
+            super()
+            .item_query()
+            .filter(has_fcm_token)
+            # selectinload (not joinedload) because device_tokens is a
+            # collection, and we want one extra SELECT per batch rather than
+            # a JOIN that fans out rows.
+            .options(selectinload(Patron.device_tokens))
+        )
         return query
 
     def process_items(self, items: list[Patron]) -> None:
