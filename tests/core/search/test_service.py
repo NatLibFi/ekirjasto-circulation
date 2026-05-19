@@ -40,7 +40,7 @@ class TestService:
 
         indices = external_search_fixture.client.indices.client.indices
         assert indices is not None
-        assert indices.exists("base-empty")
+        assert indices.exists(index="base-empty")
 
     def test_create_index_idempotent(
         self, external_search_fixture: ExternalSearchFixture
@@ -56,7 +56,7 @@ class TestService:
 
         indices = external_search_fixture.client.indices.client.indices
         assert indices is not None
-        assert indices.exists(revision.name_for_index("base"))
+        assert indices.exists(index=revision.name_for_index("base"))
 
     def test_read_pointer_none(self, external_search_fixture: ExternalSearchFixture):
         """The read pointer is initially unset."""
@@ -152,7 +152,9 @@ class TestService:
 
         indices = external_search_fixture.client.indices.client.indices
         assert indices is not None
-        assert indices.exists(revision.name_for_index("base"))
-        assert indices.get(revision.name_for_index("base"))["base-v23"]["mappings"] == {
+        assert indices.exists(index=revision.name_for_index("base"))
+        assert indices.get(index=revision.name_for_index("base"))["base-v23"][
+            "mappings"
+        ] == {
             "properties": mappings.serialize_properties()
         }

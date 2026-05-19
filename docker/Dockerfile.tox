@@ -30,13 +30,13 @@ RUN apt-get update && \
     libxmlsec1-dev \
     libxmlsec1-openssl \
     libxslt1-dev \
-    python3.11 \
-    python3.11-dev \
-    python3.11-venv \
+    python3.12 \
+    python3.12-dev \
+    python3.12-venv \
     unzip \
     wget && \
-    python3.11 -m ensurepip --upgrade && \
-    python3.11 -m pip install --upgrade \
+    python3.12 -m ensurepip --upgrade && \
+    python3.12 -m pip install --upgrade \
     pip \
     setuptools \
     wheel \
@@ -54,6 +54,7 @@ RUN apt-get update && \
 WORKDIR /workspace
 
 ENV POETRY_VIRTUALENVS_CREATE=false \
+    POETRY_INSTALLER_NO_BINARY=lxml,xmlsec \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PYTHONIOENCODING=UTF-8 \
     LC_ALL=C.UTF-8

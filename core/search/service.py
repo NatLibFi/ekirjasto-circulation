@@ -283,7 +283,7 @@ class SearchServiceOpensearch1(SearchService):
             script = dict(script=dict(lang="painless", source=body))
             if not name.startswith("simplified"):
                 name = revision.script_name(name)
-            self._client.put_script(name, script)  # type: ignore [misc] ## Seems the types aren't up to date
+            self._client.put_script(id=name, body=script)
 
     def index_submit_documents(
         self, pointer: str, documents: Iterable[dict]
@@ -375,7 +375,7 @@ class SearchServiceOpensearch1(SearchService):
         return f"{base_name}-empty"
 
     def index_remove_document(self, pointer: str, id: int):
-        self._client.delete(index=pointer, id=id, doc_type="_doc")
+        self._client.delete(index=pointer, id=id)
 
     def is_pointer_empty(self, pointer: str) -> bool:
         return pointer == self._empty(self.base_revision_name)

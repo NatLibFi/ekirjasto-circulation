@@ -8,7 +8,7 @@ from typing import Any, Literal, overload
 
 from Crypto.Cipher.PKCS1_OAEP import PKCS1OAEP_Cipher
 from flask_babel import lazy_gettext as _
-from html_sanitizer import Sanitizer
+from html_sanitizer.sanitizer import Sanitizer
 from requests import Response
 from sqlalchemy import select
 from sqlalchemy.orm.session import Session

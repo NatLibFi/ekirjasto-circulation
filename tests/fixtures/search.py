@@ -65,12 +65,12 @@ class ExternalSearchFixture(LoggerMixin):
         for index in self._indexes_created:
             try:
                 self.log.info(f"Deleting index {index}")
-                self.client.indices.delete(index)
+                self.client.indices.delete(index=index)
             except Exception as e:
                 self.log.info(f"Failed to delete index {index}: {e}")
 
         # Force test index deletion
-        self.client.indices.delete("test_index*")
+        self.client.indices.delete(index="test_index*")
         self.log.info("Waiting for operations to complete.")
         self.client.indices.refresh()
 

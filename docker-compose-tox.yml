@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.tox
-    image: ekirjasto-circulation-tox
+    image: ekirjasto-circulation-tox-py312
     entrypoint: []
     command: ["/bin/bash"]
     tty: true

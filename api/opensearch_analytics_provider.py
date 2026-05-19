@@ -83,10 +83,10 @@ class OpenSearchAnalyticsProvider(LocalAnalyticsProvider):
         """Create the event index with appropriate mapping."""
 
         index_name = new_index
-        if self.indices.exists(index_name):
+        if self.indices.exists(index=index_name):
             # A light-weight ad-hoc migration for putting the new duration field to mappings.
             # This can soon be removed.
-            index = self.indices.get(index_name)
+            index = self.indices.get(index=index_name)
             duration_mapping = (
                 index.get(index_name)
                 .get("mappings", {})

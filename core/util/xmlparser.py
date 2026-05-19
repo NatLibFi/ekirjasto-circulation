@@ -3,6 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Generator
 from io import BytesIO
+import re
 from typing import TYPE_CHECKING, Generic, TypeVar
 
 from lxml import etree
@@ -18,6 +19,7 @@ class XMLParser:
     """Helper functions to process XML data."""
 
     NAMESPACES: dict[str, str] = {}
+    INVALID_XML_CHARACTER_REFERENCES = re.compile(rb"&#(x[0-9a-fA-F]+|[0-9]+);")
 
     @classmethod
     def _xpath(
@@ -89,11 +91,33 @@ class XMLParser:
             # encounters the null character. Remove that character
             # immediately and XMLParser will handle the rest.
             xml = xml.replace(b"\x00", b"")
+            xml = XMLParser._strip_invalid_xml_character_references(xml)
             parser = etree.XMLParser(recover=True)
             return etree.parse(BytesIO(xml), parser)
 
         else:
             return xml
+
+    @staticmethod
+    def _strip_invalid_xml_character_references(xml: bytes) -> bytes:
+        """Remove numeric character references that are invalid in XML 1.0."""
+
+        def replace(match: re.Match[bytes]) -> bytes:
+            value = match.group(1)
+            if value[:1].lower() == b"x":
+                codepoint = int(value[1:], 16)
+            else:
+                codepoint = int(value)
+
+            valid_xml_character = (
+                codepoint in (0x09, 0x0A, 0x0D)
+                or 0x20 <= codepoint <= 0xD7FF
+                or 0xE000 <= codepoint <= 0xFFFD
+                or 0x10000 <= codepoint <= 0x10FFFF
+            )
+            return match.group(0) if valid_xml_character else b""
+
+        return XMLParser.INVALID_XML_CHARACTER_REFERENCES.sub(replace, xml)
 
     @staticmethod
     def _process_all(
