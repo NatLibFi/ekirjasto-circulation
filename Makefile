@@ -32,8 +32,8 @@ install_libxmlsec1:
 .PHONY: venv
 
 # The Python version and virtual environment name
-PYTHON_VERSION=3.11.1
-VENV_NAME=circ-311
+PYTHON_VERSION=3.12.7
+VENV_NAME=circ-312
 
 venv:
 	@echo "Installing Python $(PYTHON_VERSION)..."

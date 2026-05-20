@@ -19,7 +19,14 @@ services:
       LC_ALL: C.UTF-8
       TOX_WORK_DIR: /workspace/.tox
       DOCKER_HOST: unix:///var/run/docker.sock
-      TOX_SERVICE_HOST: host.docker.internal
+      # tox-docker 5.0 reads TOX_DOCKER_GATEWAY to decide which address the
+      # test runner should use to reach published service ports. When this
+      # compose file launches the tox runner inside a container on macOS
+      # Docker Desktop, the default (docker0 gateway, 172.17.0.1) is not
+      # reachable; host.docker.internal is, via the extra_hosts mapping below.
+      # CI runs tox directly on the runner (no docker-in-docker) and sets
+      # this to "0.0.0.0" in the workflow.
+      TOX_DOCKER_GATEWAY: host.docker.internal
     extra_hosts:
       - "host.docker.internal:host-gateway"
     user: "${LOCAL_UID:-0}:${LOCAL_GID:-0}"

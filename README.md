@@ -5,7 +5,7 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://pycqa.github.io/isort/)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
-![Python: 3.10,3.11](https://img.shields.io/badge/Python-3.10%20|%203.11-blue)
+![Python: 3.12](https://img.shields.io/badge/Python-3.12-blue)
 This is the E-kirjasto fork of the [The Palace Project](https://thepalaceproject.org) Palace Manager (which is a fork of
 [Library Simplified](http://www.librarysimplified.org/) Circulation Manager).
 
