@@ -52,7 +52,7 @@ class LoanNotificationsMonitor(SweepMonitor):
         return qu
 
     def item_query(self):
-        # Phase 3: select loans whose `end` falls inside a 24h interval ending
+        # Select loans whose `end` falls inside a 24h interval ending
         # at `now + N days` for each configured notification day. This is more
         # correct than date-equality (`Loan.end == today + N days`), which
         # would only match loans ending at exactly midnight on the target day.
