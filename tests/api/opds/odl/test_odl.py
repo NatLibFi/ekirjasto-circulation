@@ -21,7 +21,7 @@ def test__get_publication_type() -> None:
 @pytest.mark.parametrize(
     "filename",
     [
-        "demarque_feed.json",
+        "feed.json",
         "feed2.json",
         "auth_token_feed.json",
     ],
