@@ -136,16 +136,17 @@ class PushNotifications(LoggerMixin):
         if loan.patron.authorization_identifier:
             data["authorization_identifier"] = loan.patron.authorization_identifier
 
-        cls.logger().info(
-            f"Patron {loan.patron.authorization_identifier} has {len(tokens)} device tokens. "
-            f"Sending loan expiry notification(s)."
-        )
         responses = cls.send_messages(
             tokens, messaging.Notification(title=title, body=body), data
         )
         # Update unconditionally so a transient FCM failure does not
         # cause the same patron to be re-notified on the next run.
         loan.patron_last_notified = utc_now().date()
+        cls.logger().info(
+            f"Sent loan expiry notification to patron {loan.patron.authorization_identifier} for loan {loan.id} with {len(tokens)} tokens. "
+            f"Updated patron_last_notified for loan {loan.id} to {loan.patron_last_notified}. "
+        )
+
         return responses
 
     @classmethod
