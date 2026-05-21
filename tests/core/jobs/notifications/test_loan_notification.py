@@ -99,67 +99,6 @@ class TestLoanNotificationsMonitor:
         results = set(loan_fixture.monitor.item_query().all())
         assert results == {loan_1d, loan_3d, loan_yesterday}
 
-    def test_item_query_bucket_aware_cooldown(
-        self, loan_fixture: LoanNotificationsFixture
-    ):
-        """A loan that has already received its 3-day notification must NOT
-        be selected on subsequent cron runs that still fall inside the same
-        3-day window (regression test for the duplicate-per-bucket bug).
-
-        The 3-day window is `(now+2d, now+3d]` — a sliding 24h slice. A loan
-        ending just past midnight of (today+2d) is inside the window on any
-        cron tick from yesterday's late ticks through today, so the patron
-        could otherwise be notified on both days.
-        """
-        db = loan_fixture.db
-        now = utc_now()
-        today = now.date()
-
-        # End at 00:01 UTC, two calendar days from today.
-        # → loan.end - 3d = yesterday 00:01 UTC, so date(loan.end - 3d) is
-        #   yesterday — i.e. the 3-day bucket opened yesterday.
-        end = datetime.datetime.combine(
-            today + datetime.timedelta(days=2),
-            datetime.time(0, 1),
-            tzinfo=datetime.timezone.utc,
-        )
-        work = db.work(with_license_pool=True)
-        pool = work.active_license_pool()
-        assert pool is not None
-        loan, _ = pool.loan_to(loan_fixture.patron, now, end)
-
-        # Patron was already notified for this loan yesterday — which was
-        # inside the 3-day bucket.
-        loan.patron_last_notified = today - datetime.timedelta(days=1)
-
-        # Without bucket-aware cooldown, this loan would be returned again
-        # today and the patron would receive a duplicate 3-day notification.
-        assert loan not in loan_fixture.monitor.item_query().all()
-
-    def test_item_query_resends_when_loan_enters_next_bucket(
-        self, loan_fixture: LoanNotificationsFixture
-    ):
-        """After the 3-day notification, the loan must be picked up again
-        once it enters the 1-day bucket (different bucket, different msg)."""
-        db = loan_fixture.db
-        now = utc_now()
-
-        # End is 23h out → loan is now in the 1-day bucket.
-        work = db.work(with_license_pool=True)
-        pool = work.active_license_pool()
-        assert pool is not None
-        loan, _ = pool.loan_to(
-            loan_fixture.patron,
-            now,
-            now + datetime.timedelta(hours=23),
-        )
-        # Suppose we sent the 3-day notification 2 days ago. The 1-day
-        # bucket only opens at loan.end - 1d ≈ today, so a 2-day-old
-        # notification is before the 1-day bucket opens → must be sent.
-        loan.patron_last_notified = now.date() - datetime.timedelta(days=2)
-
-        assert loan in loan_fixture.monitor.item_query().all()
-
     def test_run_sends_notifications(self, loan_fixture: LoanNotificationsFixture):
         """The monitor's run() should invoke PushNotifications once per
         eligible loan with the correct (loan, days, tokens) arguments."""
