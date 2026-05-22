@@ -10,6 +10,7 @@ from freezegun import freeze_time
 from api.circulation_exceptions import PatronHoldLimitReached, PatronLoanLimitReached
 from api.odl2 import ODL2HoldQueueReaper, ODL2HoldReaper, ODL2Importer, ODL2LoanReaper
 from core.coverage import CoverageFailure
+from core.integration.base import integration_settings_load
 from core.model import (
     Collection,
     Contribution,
@@ -67,6 +68,51 @@ class TestODL2Importer:
 
         return None
 
+    @staticmethod
+    def _first_publication(odl2_importer: ODL2Importer, feed: str):
+        """Parse a feed string and return its first publication object."""
+        parsed_feed = odl2_importer._parse_feed(feed)
+        return odl2_importer._get_publication(parsed_feed.publications[0])
+
+    @pytest.mark.parametrize(
+        "feed_filename,expected_medium",
+        [
+            pytest.param(
+                "feed-audiobook-streaming.json",
+                EditionConstants.AUDIO_MEDIUM,
+                id="audiobook",
+            ),
+            pytest.param(
+                "ellibs_feed_single_publication.json",
+                EditionConstants.BOOK_MEDIUM,
+                id="book",
+            ),
+            pytest.param(
+                "demarque_feed.json",
+                EditionConstants.BOOK_MEDIUM,
+                id="demarque-book",
+            ),
+            pytest.param(
+                "feed-audiobook-no-streaming.json",
+                EditionConstants.AUDIO_MEDIUM,
+                id="audiobook-no-streaming",
+            ),
+        ],
+    )
+    def test__extract_medium_from_license_formats(
+        self,
+        odl2_importer: ODL2Importer,
+        api_odl_files_fixture: ODLAPIFilesFixture,
+        feed_filename: str,
+        expected_medium: str,
+    ) -> None:
+        feed = api_odl_files_fixture.sample_text(feed_filename)
+        publication = self._first_publication(odl2_importer, feed)
+        assert (
+            odl2_importer._extract_medium_from_license_formats(publication)
+            == expected_medium
+        )
+
     @freeze_time("2016-01-01T00:00:00+00:00")
     def test_import(
         self,
@@ -95,9 +141,6 @@ class TestODL2Importer:
 
         config = odl2_importer.collection.integration_configuration
         odl2_importer.ignored_identifier_types = [IdentifierConstants.URI]
-        DatabaseTransactionFixture.set_settings(
-            config, odl2_skipped_license_formats=["text/html"]
-        )
 
         # Act
         imported_editions, pools, works, failures = odl2_importer.import_from_feed(feed)
@@ -251,9 +294,6 @@ class TestODL2Importer:
 
         config = odl2_importer.collection.integration_configuration
         odl2_importer.ignored_identifier_types = [IdentifierConstants.URI]
-        DatabaseTransactionFixture.set_settings(
-            config, odl2_skipped_license_formats=["text/html"]
-        )
 
         # Act
         imported_editions, pools, works, failures = odl2_importer.import_from_feed(feed)
@@ -376,7 +416,7 @@ class TestODL2Importer:
         assert True == maahan_katketty_work.fiction
 
     @freeze_time("2016-01-01T00:00:00+00:00")
-    def test_import_audiobook_with_streaming(
+    def test_import_demarque_audiobook_with_streaming(
         self,
         db: DatabaseTransactionFixture,
         odl2_importer: ODL2Importer,
@@ -387,12 +427,14 @@ class TestODL2Importer:
         license = api_odl_files_fixture.sample_text("license-audiobook.json")
         feed = api_odl_files_fixture.sample_text("feed-audiobook-streaming.json")
         odl_mock_get.add(license)
-
+        config = odl2_importer.collection.integration_configuration
         db.set_settings(
-            odl2_importer.collection.integration_configuration,
-            odl2_skipped_license_formats=["text/html"],
+            config,
+            odl2_skipped_license_formats=[""],  # Don't skip any formats in this test
         )
-
+        odl2_importer.settings = integration_settings_load(
+            odl2_importer.settings_class(), config
+        )
         imported_editions, pools, works, failures = odl2_importer.import_from_feed(feed)
 
         # Make sure we imported one edition and it is an audiobook
@@ -414,7 +456,7 @@ class TestODL2Importer:
         assert 1 == license_pool.licenses_owned
         assert 1 == license_pool.licenses_available
 
-        assert 2 == len(license_pool.delivery_mechanisms)
+        assert 3 == len(license_pool.delivery_mechanisms)
 
         lcp_delivery_mechanism = (
             self._get_delivery_mechanism_by_drm_scheme_and_content_type(
@@ -434,15 +476,24 @@ class TestODL2Importer:
         )
         assert feedbooks_delivery_mechanism is not None
 
+        feedbooks_delivery_mechanism_streaming = (
+            self._get_delivery_mechanism_by_drm_scheme_and_content_type(
+                license_pool.delivery_mechanisms,
+                DeliveryMechanism.STREAMING_AUDIO_CONTENT_TYPE,
+                DeliveryMechanism.STREAMING_DRM,
+            )
+        )
+        assert feedbooks_delivery_mechanism_streaming is not None
+
     @freeze_time("2016-01-01T00:00:00+00:00")
-    def test_import_ebook_with_webreader(
+    def test_import_demarque_ebook_streaming(
         self,
         db: DatabaseTransactionFixture,
         odl2_importer: ODL2Importer,
         odl_mock_get: MockGet,
         api_odl_files_fixture: ODLAPIFilesFixture,
     ) -> None:
-        """Ensure that ODL2Importer2 correctly processes and imports a feed with an audiobook."""
+        """Ensure that ODL2Importer2 correctly processes and imports a feed with an e-book that is available for reading in a web reader."""
         license = LicenseInfoHelper(
             license=LicenseHelper(
                 identifier="urn:uuid:111",
@@ -455,8 +506,13 @@ class TestODL2Importer:
         feed = api_odl_files_fixture.sample_text("dm_feed_accessibility.json")
         odl_mock_get.add(license)
 
+        config = odl2_importer.collection.integration_configuration
         db.set_settings(
-            odl2_importer.collection.integration_configuration
+            config,
+            odl2_skipped_license_formats=[""],  # Don't skip any formats in this test
+        )
+        odl2_importer.settings = integration_settings_load(
+            odl2_importer.settings_class(), config
         )
 
         imported_editions, pools, works, failures = odl2_importer.import_from_feed(feed)
@@ -475,7 +531,7 @@ class TestODL2Importer:
         assert 1 == len(pools)
 
         [license_pool] = pools
-        print("TEST ", license_pool.delivery_mechanisms)
+        # There should be LCP+streaming, LCP+download and Adobe DRM+download.
         assert 3 == len(license_pool.delivery_mechanisms)
 
         lcp_delivery_mechanism = (
@@ -487,14 +543,14 @@ class TestODL2Importer:
         )
         assert lcp_delivery_mechanism is not None
 
-        feedbooks_delivery_mechanism = (
+        feedbooks_delivery_mechanism_streaming = (
             self._get_delivery_mechanism_by_drm_scheme_and_content_type(
                 license_pool.delivery_mechanisms,
-                MediaTypes.TEXT_HTML_MEDIA_TYPE,
-                DeliveryMechanism.LCP_DRM,
+                DeliveryMechanism.STREAMING_TEXT_CONTENT_TYPE,
+                DeliveryMechanism.STREAMING_DRM,
             )
         )
-        assert feedbooks_delivery_mechanism is not None
+        assert feedbooks_delivery_mechanism_streaming is not None
 
     @freeze_time("2016-01-01T00:00:00+00:00")
     def test_import_audiobook_no_streaming(
