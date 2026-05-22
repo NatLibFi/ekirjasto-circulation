@@ -5,7 +5,6 @@ import logging
 from collections.abc import Callable, Sequence
 from typing import Any
 
-from core.model.constants import MediaTypes
 from flask_babel import lazy_gettext as _
 from pydantic import PositiveInt
 from requests import Response
@@ -28,6 +27,7 @@ from core.integration.settings import (
 from core.metadata_layer import FormatData, LicenseData, Metadata, TimestampData
 from core.model import Collection, Edition, LicensePool, Loan, RightsStatus
 from core.model.configuration import ExternalIntegration
+from core.model.constants import MediaTypes
 from core.model.licensing import DeliveryMechanism, License, LicenseStatus
 from core.model.patron import Hold, Patron
 from core.monitor import CollectionMonitor
@@ -174,6 +174,44 @@ class ODL2Importer(BaseODLImporter[ODL2Settings], OPDS2Importer):
         self._logger = logging.getLogger(__name__)
         self.http_get = http_get or HTTP.get_with_timeout
 
+    def _extract_medium_from_license_formats(
+        self,
+        publication: opds2.BasePublication,
+        default_medium: str | None = Edition.BOOK_MEDIUM,
+    ) -> str | None:
+        """Extract the publication's medium from its metadata.
+
+        :param publication: Publication object
+        :return: Publication's medium
+        """
+        media_types: list[str] = []
+
+        # Extract content types from license formats
+        if isinstance(publication, odl.Publication) and publication.licenses:
+            for license_info in publication.licenses:
+                media_types.extend(license_info.metadata.formats)
+
+        # Extract content types from links
+        for link in publication.links:
+            if not link.rels or not link.type or not self._is_acquisition_link(link):
+                continue
+            for (
+                media_type,
+                drm_scheme,
+            ) in self._extract_media_types_and_drm_scheme_from_link(link):
+                media_types.append(media_type)
+
+        for media_type in media_types:
+            medium: str | None = Edition.medium_from_media_type(media_type)
+            if medium:
+                return medium
+
+        # Our fallback is to use the medium based on the type of the document, this seems like
+        # it should be the way we determine the medium generally, but in practice we get all
+        # sorts of types supplied, and they don't always correlate to the medium of the
+        # files contained in the publication.
+        return default_medium
+
     def _extract_publication_metadata(
         self,
         publication: opds2.BasePublication,
@@ -194,12 +232,11 @@ class ODL2Importer(BaseODLImporter[ODL2Settings], OPDS2Importer):
 
         formats = []
         licenses = []
-        medium = metadata.medium
+        medium = self._extract_medium_from_license_formats(publication)
 
         # E-Kirjasto: If this is a generic OPDS2 publication, it is an open-access title.
         if isinstance(publication, odl.Publication):
             skipped_license_formats = set(self.settings.skipped_license_formats)
-            print("SKIPPED ", skipped_license_formats)
             publication_availability = publication.metadata.availability.available
 
             for odl_license in publication.licenses:
@@ -251,7 +288,6 @@ class ODL2Importer(BaseODLImporter[ODL2Settings], OPDS2Importer):
                         skipped_license_formats
                         and license_format in skipped_license_formats
                     ):
-                        print("?")
                         continue
 
                     if license_format == BaseODLImporter.FEEDBOOKS_AUDIO:
@@ -268,7 +304,6 @@ class ODL2Importer(BaseODLImporter[ODL2Settings], OPDS2Importer):
                             )
                         )
                     elif license_format == MediaTypes.TEXT_HTML_MEDIA_TYPE:
-                        print("1 ", license_format)
                         # Handle web reader content. When the license format is text/html, we ignore any
                         # protection.formats and instead use the streaming delivery mechanism, which has
                         # its own access control (STREAMING_DRM). The content type is determined by the
@@ -278,7 +313,6 @@ class ODL2Importer(BaseODLImporter[ODL2Settings], OPDS2Importer):
                             if medium == Edition.AUDIO_MEDIUM
                             else DeliveryMechanism.STREAMING_TEXT_CONTENT_TYPE
                         )
-                        print("2 ", streaming_content_type)
 
                         # Handle the case where we want to skip the derived license format
                         if streaming_content_type in skipped_license_formats:
@@ -295,8 +329,9 @@ class ODL2Importer(BaseODLImporter[ODL2Settings], OPDS2Importer):
                         # Standard format handling: create a format entry for each DRM scheme
                         # in protection.formats, using the license format as the content type.
                         # If no DRM schemes are specified, create one entry with no DRM.
+                        no_drm: list[str | None] = [None]
                         drm_schemes: Sequence[str | None] = (
-                            odl_license.metadata.protection.formats or [None]
+                            odl_license.metadata.protection.formats or no_drm
                         )
                         for drm_scheme in drm_schemes:
                             formats.append(
