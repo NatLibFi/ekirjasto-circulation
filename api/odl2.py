@@ -38,7 +38,7 @@ from core.util.http import HTTP
 
 class ODL2Settings(ODLSettings, OPDS2ImporterSettings):
     skipped_license_formats: list[str] = FormField(
-        default=[""],
+        default=["text/html"],
         alias="odl2_skipped_license_formats",
         form=ConfigurationFormItem(
             label=_("Skipped license formats"),
