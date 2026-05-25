@@ -232,6 +232,7 @@ class ODL2Importer(BaseODLImporter[ODL2Settings], OPDS2Importer):
 
         formats = []
         licenses = []
+        # Most likely the OPDS2 importer did not extract a reliable medium.
         medium = self._extract_medium_from_license_formats(publication)
 
         # E-Kirjasto: If this is a generic OPDS2 publication, it is an open-access title.
