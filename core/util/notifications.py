@@ -79,14 +79,14 @@ class PushNotifications(LoggerMixin):
 
         for token in tokens:
             try:
-                cls.logger().info(f"Trying device token {token.device_token}")
+                cls.logger().debug(f"Trying device token {token.device_token}")
                 msg = messaging.Message(
                     token=token.device_token,
                     notification=notification,
                     data=data_typed,
                 )
                 resp = messaging.send(msg, dry_run=cls.TESTING_MODE, app=cls.fcm_app())
-                cls.logger().info(
+                cls.logger().debug(
                     f"Sent notification for patron {token.patron.authorization_identifier} "
                     f"notification ID: {resp}"
                 )
@@ -102,6 +102,8 @@ class PushNotifications(LoggerMixin):
                 cls.logger().exception(
                     f"Failed to send notification for patron {token.patron.authorization_identifier}"
                 )
+        if responses:
+            cls.logger().info(f"Sent {len(responses)} notifications in batch.")
         return responses
 
     @classmethod
@@ -134,16 +136,17 @@ class PushNotifications(LoggerMixin):
         if loan.patron.authorization_identifier:
             data["authorization_identifier"] = loan.patron.authorization_identifier
 
-        cls.logger().info(
-            f"Patron {loan.patron.authorization_identifier} has {len(tokens)} device tokens. "
-            f"Sending loan expiry notification(s)."
-        )
         responses = cls.send_messages(
             tokens, messaging.Notification(title=title, body=body), data
         )
-        if len(responses) > 0:
-            # Atleast one notification succeeded
-            loan.patron_last_notified = utc_now().date()
+        # Update unconditionally so a transient FCM failure does not
+        # cause the same patron to be re-notified on the next run.
+        loan.patron_last_notified = utc_now().date()
+        cls.logger().info(
+            f"Sent loan expiry notification to patron {loan.patron.authorization_identifier} for loan {loan.id} with {len(tokens)} tokens. "
+            f"Updated patron_last_notified for loan {loan.id} to {loan.patron_last_notified}. "
+        )
+
         return responses
 
     @classmethod
@@ -183,9 +186,9 @@ class PushNotifications(LoggerMixin):
             resp = cls.send_messages(
                 tokens, messaging.Notification(title=title, body=body), data
             )
-            if len(resp) > 0:
-                # Atleast one notification succeeded
-                hold.patron_last_notified = utc_now().date()
+            # Update unconditionally so a transient FCM failure does not
+            # cause the same patron to be re-notified on the next run.
+            hold.patron_last_notified = utc_now().date()
 
             responses.extend(resp)
 
@@ -200,7 +203,7 @@ class PushNotifications(LoggerMixin):
         for patron in patrons:
             tokens = cls.notifiable_tokens(patron)
             if not tokens:
-                return []
+                continue
             cls.logger().info(
                 f"Notifying patron {patron.id} has {len(tokens)} device tokens."
             )

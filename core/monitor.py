@@ -440,8 +440,9 @@ class SweepMonitor(CollectionMonitor):
     """
 
     # The completion of each individual item should be logged at
-    # this log level.
-    COMPLETION_LOG_LEVEL = logging.INFO
+    # this log level. Defaults to DEBUG to avoid heavy per-item logging
+    # (which also calls __repr__ on every item) on large sweeps.
+    COMPLETION_LOG_LEVEL = logging.DEBUG
 
     # Items will be processed in batches of this size.
     DEFAULT_BATCH_SIZE = 100
@@ -515,17 +516,18 @@ class SweepMonitor(CollectionMonitor):
         offset = offset or 0
         self.log.info(f"Processing batch {offset}")
         items = self.fetch_batch(offset).all()
-        if items:
-            self.log.info(f"Processing batch {offset} items {len(items)}")
-            self.process_items(items)
-            # We've completed a batch. Return the ID of the last item
-            # in the batch so we don't do this work again.
-            return items[-1].id, len(items)
-        else:
+        if not items:
             self.log.info("No items.")
             # There are no more items in this database table, so we
             # are done with the sweep. Reset the counter.
             return 0, 0
+        self.log.info(f"Processing batch {offset} items {len(items)}")
+        self.process_items(items)
+        # Use max(id) rather than items[-1].id so DISTINCT or joins in
+        # item_query() that affect row ordering can't cause the next
+        # batch to skip or re-process rows.
+        next_offset = max(item.id for item in items)
+        return next_offset, len(items)
 
     def process_items(self, items):
         """Process a list of items."""
@@ -865,15 +867,20 @@ class ReaperMonitor(Monitor):
         to_defer = getattr(self.MODEL_CLASS, "LARGE_FIELDS", [])
         for x in to_defer:
             qu = qu.options(defer(x))
-        count = qu.count()
-        self.log.info("Deleting %d row(s)", count)
-        while count > 0:
-            for i in qu.limit(self.BATCH_SIZE):
-                self.log.info("Deleting %r", i)
-                self.delete(i)
+        # Iterate in batches without calling .count() each loop, which on
+        # large tables is an expensive scan that previously turned the loop
+        # into O(N^2) work.
+        while True:
+            batch = qu.limit(self.BATCH_SIZE).all()
+            if not batch:
+                break
+            for row in batch:
+                self.delete(row)
                 rows_deleted += 1
             self._db.commit()
-            count = qu.count()
+            self.log.info(
+                "Deleted batch of %d row(s) (total %d)", len(batch), rows_deleted
+            )
         return TimestampData(achievements="Items deleted: %d" % rows_deleted)
 
     def delete(self, row):
