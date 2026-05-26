@@ -190,6 +190,11 @@ class PushNotifications(LoggerMixin):
             # cause the same patron to be re-notified on the next run.
             hold.patron_last_notified = utc_now().date()
 
+            cls.logger().info(
+                f"Sent hold available notification to patron {hold.patron.authorization_identifier} for hold {hold.id} with {len(tokens)} tokens. "
+                f"Updated patron_last_notified for hold {hold.id} to {hold.patron_last_notified}. "
+            )
+
             responses.extend(resp)
 
         return responses

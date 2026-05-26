@@ -125,9 +125,7 @@ class TestHoldsNotifications:
         hold_eligible, _ = work_eligible.active_license_pool().on_hold_to(
             patron, position=0
         )
-        hold_raced, _ = work_raced.active_license_pool().on_hold_to(
-            patron, position=0
-        )
+        hold_raced, _ = work_raced.active_license_pool().on_hold_to(patron, position=0)
         # Simulate the race: another worker already notified for hold_raced.
         hold_raced.patron_last_notified = utc_now().date()
 

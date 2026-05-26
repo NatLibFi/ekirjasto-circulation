@@ -227,8 +227,6 @@ class TestLoanNotificationsMonitor:
         )
         # Simulate the 3-day notification having been sent ~2 days ago,
         # when the 3-day bucket was open: that is date(end - 3d).
-        loan.patron_last_notified = (
-            loan.end - datetime.timedelta(days=3)
-        ).date()
+        loan.patron_last_notified = (loan.end - datetime.timedelta(days=3)).date()
 
         assert loan in loan_fixture.monitor.item_query().all()
