@@ -9,8 +9,8 @@ from collections.abc import Iterable
 
 from attr import define
 from flask_babel import lazy_gettext as _
-from opensearch_dsl import SF
-from opensearch_dsl.query import (
+from opensearchpy import SF
+from opensearchpy.helpers.query import (
     Bool,
     DisMax,
     Exists,
@@ -22,8 +22,8 @@ from opensearch_dsl.query import (
     MultiMatch,
     Nested,
 )
-from opensearch_dsl.query import Query as BaseQuery
-from opensearch_dsl.query import Range, Regexp, Term, Terms
+from opensearchpy.helpers.query import Query as BaseQuery
+from opensearchpy.helpers.query import Range, Regexp, Term, Terms
 from spellchecker import SpellChecker
 
 from core.classifier import (

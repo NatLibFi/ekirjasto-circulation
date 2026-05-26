@@ -5,8 +5,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 
 import opensearchpy.helpers
-from opensearch_dsl import MultiSearch, Search
-from opensearchpy import NotFoundError, OpenSearch, RequestError
+from opensearchpy import MultiSearch, NotFoundError, OpenSearch, RequestError, Search
 
 from core.search.revision import SearchSchemaRevision
 

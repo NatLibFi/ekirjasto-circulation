@@ -1,7 +1,6 @@
 import datetime
 
-from opensearch_dsl import Search
-from opensearchpy import OpenSearch
+from opensearchpy import OpenSearch, Search
 
 from core.local_analytics_provider import LocalAnalyticsProvider
 from core.model.contributor import Contributor

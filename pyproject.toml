@@ -219,7 +219,6 @@ money = "1.3.0"
 multipledispatch = "^1.0"
 nameparser = "^1.1"  # nameparser is for author name manipulations
 openpyxl = "3.1.5"  # Finland
-opensearch-dsl = "^2.1"
 opensearch-py = "^3.2"
 pillow = "^12.0.0"
 pre-commit = "^4.5"
