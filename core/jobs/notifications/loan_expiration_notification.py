@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime
 import math
 
-from sqlalchemy import and_, or_
+from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import joinedload
 
 from core.config import Configuration, ConfigurationConstants
@@ -57,28 +57,31 @@ class LoanNotificationsMonitor(SweepMonitor):
         # correct than date-equality (`Loan.end == today + N days`), which
         # would only match loans ending at exactly midnight on the target day.
         now = utc_now()
-        today = now.date()
-        # One clause per notification day. Window is right-closed / left-open
-        # so a loan can't be picked up by two windows on the same run.
-        expiry_clauses = [
-            and_(
+        # One clause per notification day. Each clause pairs a 24h expiry
+        # window with a bucket-aware cooldown: we only send the N-day
+        # notification once per loan, even if the sliding window contains the
+        # loan across two consecutive calendar days. The N-day bucket "opens"
+        # on date(loan.end - N days); once patron_last_notified is on or
+        # after that date, the N-day message has already been sent.
+        bucket_clauses = []
+        for days in self.LOAN_EXPIRATION_DAYS:
+            window = and_(
                 Loan.end <= now + datetime.timedelta(days=days),
                 Loan.end > now + datetime.timedelta(days=days - 1),
             )
-            for days in self.LOAN_EXPIRATION_DAYS
-        ]
+            cooldown = or_(
+                Loan.patron_last_notified == None,
+                Loan.patron_last_notified
+                < func.date(Loan.end - datetime.timedelta(days=days)),
+            )
+            bucket_clauses.append(and_(window, cooldown))
         query = (
             super()
             .item_query()
             .filter(
-                # Cooldown: skip loans already notified today. NULL means
-                # "never notified", which still qualifies.
-                or_(
-                    Loan.patron_last_notified == None,
-                    Loan.patron_last_notified != today,
-                ),
-                # Loan must be in one of the expiry windows.
-                or_(*expiry_clauses),
+                # Loan must be in one of the expiry buckets and not yet
+                # notified for that bucket.
+                or_(*bucket_clauses),
                 # Defensive: orphan loans without a patron would crash later
                 # when we dereference `loan.patron`. Filter them out in SQL.
                 Loan.patron_id != None,
@@ -129,11 +132,21 @@ class LoanNotificationsMonitor(SweepMonitor):
             # Belt-and-suspenders: SQL `now` and Python `now` differ slightly,
             # so a loan right on a boundary could compute a different bucket
             # in Python than SQL selected. Skip those.
-            if days in self.LOAN_EXPIRATION_DAYS:
-                self.log.info(
-                    f"Patron {patron.authorization_identifier} has an expiring loan on "
-                    f"({loan.license_pool.identifier.urn})"
-                )
-                # send_loan_expiry_message also sets loan.patron_last_notified;
-                # SweepMonitor.run_once commits after every batch.
-                PushNotifications.send_loan_expiry_message(loan, days, tokens)
+            if days not in self.LOAN_EXPIRATION_DAYS:
+                continue
+            # Re-check the bucket-aware cooldown in Python in case another
+            # worker notified this patron between the SQL fetch and now.
+            bucket_open = (loan.end - datetime.timedelta(days=days)).date()
+            last_notified = loan.patron_last_notified
+            if isinstance(last_notified, datetime.datetime):
+                # Legacy DB rows may still carry a datetime; normalize.
+                last_notified = last_notified.date()
+            if last_notified is not None and last_notified >= bucket_open:
+                continue
+            self.log.info(
+                f"Patron {patron.authorization_identifier} has an expiring loan on "
+                f"({loan.license_pool.identifier.urn})"
+            )
+            # send_loan_expiry_message also sets loan.patron_last_notified;
+            # SweepMonitor.run_once commits after every batch.
+            PushNotifications.send_loan_expiry_message(loan, days, tokens)
