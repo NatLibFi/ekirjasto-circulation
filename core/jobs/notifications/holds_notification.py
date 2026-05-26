@@ -106,10 +106,13 @@ class HoldsNotificationMonitor(SweepMonitor):
         today = utc_now().date()
         eligible: list[Hold] = []
         for hold in items:
-            last_notified = hold.patron_last_notified
-            if isinstance(last_notified, datetime.datetime):
+            raw = hold.patron_last_notified
+            last_notified: datetime.date | None
+            if isinstance(raw, datetime.datetime):
                 # Legacy DB rows may carry a datetime; normalize to date.
-                last_notified = last_notified.date()
+                last_notified = raw.date()
+            else:
+                last_notified = raw
             if last_notified is not None and last_notified >= today:
                 continue
             eligible.append(hold)

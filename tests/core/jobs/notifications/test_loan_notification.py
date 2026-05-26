@@ -198,15 +198,16 @@ class TestLoanNotificationsMonitor:
         date(end - 3d) = today, and patron_last_notified == today, so the
         bucket-aware cooldown must filter it out."""
         now = utc_now()
+        end = now + datetime.timedelta(days=2, hours=12)
         loan, _ = loan_fixture.pool.loan_to(
             loan_fixture.patron,
             now,
             # 2d + 12h: deep inside the 3-day window, far from the 2-day
             # boundary so this stays valid regardless of time-of-day.
-            now + datetime.timedelta(days=2, hours=12),
+            end,
         )
         # The 3-day bucket for this loan opens on date(end - 3d).
-        bucket_open = (loan.end - datetime.timedelta(days=3)).date()
+        bucket_open = (end - datetime.timedelta(days=3)).date()
         loan.patron_last_notified = bucket_open
 
         assert loan not in loan_fixture.monitor.item_query().all()
@@ -219,14 +220,15 @@ class TestLoanNotificationsMonitor:
         bucket opens on date(end - 1d), which is later than the 3-day
         bucket-open date, so the cooldown allows the new notification."""
         now = utc_now()
+        end = now + datetime.timedelta(hours=12)
         loan, _ = loan_fixture.pool.loan_to(
             loan_fixture.patron,
             now,
             # Inside the 1-day window.
-            now + datetime.timedelta(hours=12),
+            end,
         )
         # Simulate the 3-day notification having been sent ~2 days ago,
         # when the 3-day bucket was open: that is date(end - 3d).
-        loan.patron_last_notified = (loan.end - datetime.timedelta(days=3)).date()
+        loan.patron_last_notified = (end - datetime.timedelta(days=3)).date()
 
         assert loan in loan_fixture.monitor.item_query().all()

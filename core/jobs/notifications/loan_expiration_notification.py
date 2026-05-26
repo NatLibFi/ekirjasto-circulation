@@ -137,10 +137,13 @@ class LoanNotificationsMonitor(SweepMonitor):
             # Re-check the bucket-aware cooldown in Python in case another
             # worker notified this patron between the SQL fetch and now.
             bucket_open = (loan.end - datetime.timedelta(days=days)).date()
-            last_notified = loan.patron_last_notified
-            if isinstance(last_notified, datetime.datetime):
+            raw = loan.patron_last_notified
+            last_notified: datetime.date | None
+            if isinstance(raw, datetime.datetime):
                 # Legacy DB rows may still carry a datetime; normalize.
-                last_notified = last_notified.date()
+                last_notified = raw.date()
+            else:
+                last_notified = raw
             if last_notified is not None and last_notified >= bucket_open:
                 continue
             self.log.info(
