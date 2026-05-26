@@ -78,7 +78,9 @@ class TestLoanNotificationsMonitor:
             now + datetime.timedelta(days=1, hours=23),
         )
 
-        # Inside the 1-day window but already notified today → NOT selected.
+        # Inside the 1-day window but already notified for the 1-day
+        # bucket → NOT selected. The 1-day bucket opens on
+        # date(end - 1 day); a same-day notification is past that.
         work_notified = db.work(with_license_pool=True)
         loan_notified, _ = work_notified.active_license_pool().loan_to(
             loan_fixture.patron,
@@ -87,14 +89,16 @@ class TestLoanNotificationsMonitor:
         )
         loan_notified.patron_last_notified = now.date()
 
-        # Inside the 1-day window, notified yesterday → selected.
+        # Inside the 1-day window, notified well before the 1-day bucket
+        # opened (>= 2 days ago) → selected. Two days is enough to be
+        # robust against time-of-day jitter at the bucket boundary.
         work_yesterday = db.work(with_license_pool=True)
         loan_yesterday, _ = work_yesterday.active_license_pool().loan_to(
             loan_fixture.patron,
             now,
             now + datetime.timedelta(hours=21),
         )
-        loan_yesterday.patron_last_notified = now.date() - datetime.timedelta(days=1)
+        loan_yesterday.patron_last_notified = now.date() - datetime.timedelta(days=2)
 
         results = set(loan_fixture.monitor.item_query().all())
         assert results == {loan_1d, loan_3d, loan_yesterday}
@@ -177,3 +181,54 @@ class TestLoanNotificationsMonitor:
             loan_fixture.monitor.process_items([loan])
 
         assert mock_notf.send_loan_expiry_message.call_count == 0
+
+    def test_item_query_skips_loan_already_notified_for_3d_bucket(
+        self, loan_fixture: LoanNotificationsFixture
+    ):
+        """Regression: the 3-day expiry window spans a 24h slice that can
+        contain the same loan on two consecutive calendar days. Once we've
+        sent the 3-day notification, the loan must NOT be re-selected on
+        the next day's cron even if `patron_last_notified` is a different
+        calendar date than today.
+
+        Example: a loan ending now+2d+12h enters the 3-day window today;
+        after notification, patron_last_notified is set to today. Tomorrow
+        the loan is still in the 3-day window (end - 1d = now+1d+12h, still
+        > 2 days away) — but the 3-day bucket opened on
+        date(end - 3d) = today, and patron_last_notified == today, so the
+        bucket-aware cooldown must filter it out."""
+        now = utc_now()
+        loan, _ = loan_fixture.pool.loan_to(
+            loan_fixture.patron,
+            now,
+            # 2d + 12h: deep inside the 3-day window, far from the 2-day
+            # boundary so this stays valid regardless of time-of-day.
+            now + datetime.timedelta(days=2, hours=12),
+        )
+        # The 3-day bucket for this loan opens on date(end - 3d).
+        bucket_open = (loan.end - datetime.timedelta(days=3)).date()
+        loan.patron_last_notified = bucket_open
+
+        assert loan not in loan_fixture.monitor.item_query().all()
+
+    def test_item_query_selects_loan_in_1d_bucket_after_3d_notification(
+        self, loan_fixture: LoanNotificationsFixture
+    ):
+        """A loan that received the 3-day notification 2 days ago must
+        still be picked up when it enters the 1-day window: the 1-day
+        bucket opens on date(end - 1d), which is later than the 3-day
+        bucket-open date, so the cooldown allows the new notification."""
+        now = utc_now()
+        loan, _ = loan_fixture.pool.loan_to(
+            loan_fixture.patron,
+            now,
+            # Inside the 1-day window.
+            now + datetime.timedelta(hours=12),
+        )
+        # Simulate the 3-day notification having been sent ~2 days ago,
+        # when the 3-day bucket was open: that is date(end - 3d).
+        loan.patron_last_notified = (
+            loan.end - datetime.timedelta(days=3)
+        ).date()
+
+        assert loan in loan_fixture.monitor.item_query().all()
