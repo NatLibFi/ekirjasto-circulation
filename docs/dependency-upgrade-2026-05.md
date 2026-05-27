@@ -171,17 +171,46 @@ list literals fail.
 
 ---
 
+---
+
+## Additional safe upgrades (2026-05-27)
+
+Constraint-only changes in `pyproject.toml` to allow newer minor/patch releases,
+plus transitive bumps resolved by `poetry update`:
+
+| Package | Old constraint | New constraint | Resolved to | Notes |
+| --- | --- | --- | --- | --- |
+| `levenshtein` | `^0.24` | `^0.27` | 0.27.3 | Edit-distance lib; backwards-compatible API |
+| `pycountry` | `^24.6.1` | `^26.0` | 26.2.16 | Country/language data; stable API |
+| `pyspellchecker` | `0.8.1` (exact) | `^0.9` | 0.9.0 | Minor API bump; internal use only |
+| `pytz` | `^2023.3` | `>=2023.3` | 2026.2 | Timezone data; `^` was overly conservative |
+
+Transitive updates pulled in by the above (no constraint change needed):
+
+| Package | Before | After | Notes |
+| --- | --- | --- | --- |
+| `cryptography` | 46.0.7 | 48.0.0 | Security update; compatible with `pyOpenSSL ^26` |
+| `idna` | 3.15 | 3.16 | Minor |
+| `google-auth` | 2.52.0 | 2.53.0 | Minor |
+| `boto3` / `botocore` | 1.43.14 | 1.43.15 | Patch |
+| `isodate` | 0.6.1 | 0.7.2 | Minor |
+| `rapidfuzz` | 3.4.0 | 3.14.5 | Transitive of `levenshtein` |
+
+---
+
 ## Not upgraded: would require significant work
 
 | Package | Pinned | Available | Reason |
-|---|---|---|---|
-| `sqlalchemy` | `^1.4` | 2.0.x | Complete ORM rewrite: legacy `Query` API removed, `session.execute()` required everywhere, relationship loading semantics changed. Affects all 34 model files and most controller/service code. |
-| `mypy` | `^1.4` | 2.1.x | Major version; likely surfaces new type errors across the codebase. Best done alongside a mypy-strict cleanup pass. |
-| `pytest` | `>=7.2` | 9.x | Two major versions. Fixture and plugin APIs changed; `pytest-cov`, `pytest-alembic`, `tox-docker` compatibility needs verification. |
-| `pytest-cov` | `^4.0` | 7.x | Follows pytest — upgrade together. |
-| `firebase-admin` | `^6.0` | 7.x | FCM API changes likely affect push notification jobs in `core/jobs/notifications/`. |
-| `bcrypt` | `^4.0` | 5.x | Password hashing API may have changed. |
-| `protobuf` | `5.29.6` (pinned) | 7.x | Two major versions; affects generated protobuf code and firebase-admin/grpc dependencies. |
-| `pyld` | `2.0.3` (pinned) | 3.x | JSON-LD library used in OPDS/LDP processing. |
-| `pyfakefs` | `^5.3` | 6.x | Major version; filesystem mocking changes may break test fixtures. |
-| `google-cloud-storage` | `^2.9` (transitive) | 3.x | Upgrade blocked by firebase-admin 6.x. |
+| --- | --- | --- | --- |
+| `sqlalchemy` | `^1.4` | 2.0.50 | Complete ORM rewrite: legacy `Query` API removed, `session.execute()` required everywhere, relationship loading semantics changed. Affects all 34 model files and most controller/service code. |
+| `mypy` | `^1.4` | 2.1.0 | Major version; likely surfaces new type errors across the codebase. Best done alongside a mypy-strict cleanup pass. |
+| `pytest` | `>=7.2` | 9.0.3 | Two major versions. Fixture and plugin APIs changed; `pytest-cov`, `pytest-alembic`, `tox-docker` compatibility needs verification. |
+| `pytest-cov` | `^4.0` | 7.1.0 | Follows pytest — upgrade together. |
+| `firebase-admin` | `^6.0` | 7.4.0 | FCM API changes likely affect push notification jobs in `core/jobs/notifications/`. |
+| `bcrypt` | `^4.0` | 5.0.0 | Password hashing API may have changed. |
+| `protobuf` | `5.29.6` (pinned) | 7.35.0 | Two major versions; affects generated protobuf code and firebase-admin/grpc dependencies. |
+| `pyld` | `2.0.3` (pinned) | 3.0.0 | JSON-LD library used in OPDS/LDP processing. |
+| `pyfakefs` | `^5.3` | 6.2.0 | Major version; filesystem mocking changes may break test fixtures. |
+| `google-cloud-storage` | `^2.9` (transitive) | 3.10.1 | Upgrade blocked by firebase-admin 6.x. |
+| `pydantic` | `~2.11.7` | 2.13.4 | See FormFieldInfo section above. |
+| `pymarc` | `5.1.1` (pinned) | 5.3.1 | See indicators section above. |
