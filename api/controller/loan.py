@@ -7,7 +7,7 @@ from flask import Response
 from flask_babel import lazy_gettext as _
 from werkzeug import Response as wkResponse
 
-from api.circulation import UrlFulfillment
+from api.circulation import RedirectFulfillment, UrlFulfillment
 from api.circulation_exceptions import CirculationException, RemoteInitiatedServerError
 from api.controller.circulation_manager import CirculationManagerController
 from api.problem_details import (
@@ -301,6 +301,7 @@ class LoanController(CirculationManagerController):
             mechanism = self.load_licensepooldelivery(
                 requested_license_pool, mechanism_id
             )
+            print("MECHANISM ID", mechanism)
             if isinstance(mechanism, ProblemDetail):
                 return mechanism
             else:
@@ -350,7 +351,7 @@ class LoanController(CirculationManagerController):
         #   so each integration can choose when to return a feed response like
         #   this, and when to return a direct response.
         if mechanism.delivery_mechanism.is_streaming and isinstance(
-            fulfillment, UrlFulfillment
+            fulfillment, RedirectFulfillment
         ):
             # If this is a streaming delivery mechanism (note: E-kirjasto does not stream),
             # create an OPDS entry with a fulfillment link to the streaming reader url.
