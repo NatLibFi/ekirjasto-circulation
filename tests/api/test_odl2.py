@@ -57,6 +57,8 @@ class TestODL2Importer:
         """
         for delivery_mechanism in delivery_mechanisms:
             mechanism = delivery_mechanism.delivery_mechanism
+            print(mechanism.drm_scheme)
+            print(mechanism.content_type)
 
             if (
                 mechanism.drm_scheme == drm_scheme
@@ -66,27 +68,85 @@ class TestODL2Importer:
 
         return None
 
+    @staticmethod
+    def _first_publication(odl2_importer: ODL2Importer, feed: str):
+        """Parse a feed string and return its first publication object."""
+        parsed_feed = odl2_importer._parse_feed(feed)
+        return odl2_importer._get_publication(parsed_feed.publications[0])
+
+    @pytest.mark.parametrize(
+        "feed_filename,expected_medium",
+        [
+            pytest.param(
+                "feed-audiobook-streaming.json",
+                EditionConstants.AUDIO_MEDIUM,
+                id="audiobook",
+            ),
+            pytest.param(
+                "ellibs_feed_single_publication.json",
+                EditionConstants.BOOK_MEDIUM,
+                id="book",
+            ),
+            pytest.param(
+                "demarque_feed.json",
+                EditionConstants.BOOK_MEDIUM,
+                id="demarque-book",
+            ),
+            pytest.param(
+                "feed-audiobook-no-streaming.json",
+                EditionConstants.AUDIO_MEDIUM,
+                id="audiobook-no-streaming",
+            ),
+        ],
+    )
+    def test__extract_medium_from_license_formats(
+        self,
+        odl2_importer: ODL2Importer,
+        api_odl_files_fixture: ODLAPIFilesFixture,
+        feed_filename: str,
+        expected_medium: str,
+    ) -> None:
+        feed = api_odl_files_fixture.sample_text(feed_filename)
+        publication = self._first_publication(odl2_importer, feed)
+        assert (
+            odl2_importer._extract_medium_from_license_formats(publication)
+            == expected_medium
+        )
+
     @pytest.mark.parametrize(
         "skipped_drm,expected_drms",
         [
             pytest.param(
                 [DeliveryMechanism.ADOBE_DRM],
-                {DeliveryMechanism.LCP_DRM},
+                {DeliveryMechanism.LCP_DRM, DeliveryMechanism.STREAMING_DRM},
                 id="skip-adobe",
             ),
             pytest.param(
                 [DeliveryMechanism.LCP_DRM],
-                {DeliveryMechanism.ADOBE_DRM},
+                {DeliveryMechanism.ADOBE_DRM, DeliveryMechanism.STREAMING_DRM},
                 id="skip-lcp",
             ),
             pytest.param(
-                [DeliveryMechanism.ADOBE_DRM, DeliveryMechanism.LCP_DRM],
+                [DeliveryMechanism.STREAMING_DRM],
+                {DeliveryMechanism.ADOBE_DRM, DeliveryMechanism.LCP_DRM},
+                id="skip-streaming",
+            ),
+            pytest.param(
+                [
+                    DeliveryMechanism.ADOBE_DRM,
+                    DeliveryMechanism.LCP_DRM,
+                    DeliveryMechanism.STREAMING_DRM,
+                ],
                 set(),
-                id="skip-both",
+                id="skip-all",
             ),
             pytest.param(
                 [],
-                {DeliveryMechanism.ADOBE_DRM, DeliveryMechanism.LCP_DRM},
+                {
+                    DeliveryMechanism.ADOBE_DRM,
+                    DeliveryMechanism.LCP_DRM,
+                    DeliveryMechanism.STREAMING_DRM,
+                },
                 id="skip-none",
             ),
         ],
@@ -101,25 +161,26 @@ class TestODL2Importer:
         expected_drms: set[str],
     ) -> None:
         """Delivery mechanisms whose DRM scheme is listed in
-        ``skipped_drm_schemes`` must not be imported."""
-        moby_dick_license = LicenseInfoHelper(
+        ``skipped_drm_schemes`` must not be imported. Covers both
+        protection-format DRM (Adobe, LCP) and the streaming DRM derived
+        from a text/html license format."""
+        license = LicenseInfoHelper(
             license=LicenseHelper(
-                identifier="urn:uuid:f7847120-fc6f-11e3-8158-56847afe9799",
-                concurrency=10,
-                checkouts=30,
-                expires="2016-04-25T12:25:21+02:00",
+                identifier="urn:uuid:111",
+                concurrency=1,
+                expires="2027-01-15",
             ),
-            left=30,
-            available=10,
+            available=1,
         )
-        odl_mock_get.add(moby_dick_license)
-        feed = api_odl_files_fixture.sample_text("feed.json")
+        odl_mock_get.add(license)
+        feed = api_odl_files_fixture.sample_text("dm_feed_accessibility.json")
 
         config = odl2_importer.collection.integration_configuration
-        odl2_importer.ignored_identifier_types = [IdentifierConstants.URI]
         DatabaseTransactionFixture.set_settings(
             config,
-            odl2_skipped_license_formats=["text/html"],
+            # Do not skip text/html at the license-format level so it reaches
+            # the streaming branch where STREAMING_DRM is assigned.
+            odl2_skipped_license_formats=[""],
             odl2_skipped_drm_schemes=skipped_drm,
         )
         # ``self.settings`` is cached on the importer at construction time
@@ -133,9 +194,7 @@ class TestODL2Importer:
 
         [pool] = pools
         actual_drms = {
-            lpdm.delivery_mechanism.drm_scheme
-            for lpdm in pool.delivery_mechanisms
-            if lpdm.delivery_mechanism.content_type == MediaTypes.EPUB_MEDIA_TYPE
+            lpdm.delivery_mechanism.drm_scheme for lpdm in pool.delivery_mechanisms
         }
         assert actual_drms == expected_drms
 
@@ -163,13 +222,10 @@ class TestODL2Importer:
         )
 
         odl_mock_get.add(moby_dick_license)
-        feed = api_odl_files_fixture.sample_text("feed.json")
+        feed = api_odl_files_fixture.sample_text("demarque_feed.json")
 
         config = odl2_importer.collection.integration_configuration
         odl2_importer.ignored_identifier_types = [IdentifierConstants.URI]
-        DatabaseTransactionFixture.set_settings(
-            config, odl2_skipped_license_formats=["text/html"]
-        )
 
         # Act
         imported_editions, pools, works, failures = odl2_importer.import_from_feed(feed)
@@ -323,9 +379,6 @@ class TestODL2Importer:
 
         config = odl2_importer.collection.integration_configuration
         odl2_importer.ignored_identifier_types = [IdentifierConstants.URI]
-        DatabaseTransactionFixture.set_settings(
-            config, odl2_skipped_license_formats=["text/html"]
-        )
 
         # Act
         imported_editions, pools, works, failures = odl2_importer.import_from_feed(feed)
@@ -448,7 +501,7 @@ class TestODL2Importer:
         assert True == maahan_katketty_work.fiction
 
     @freeze_time("2016-01-01T00:00:00+00:00")
-    def test_import_audiobook_with_streaming(
+    def test_import_demarque_audiobook_with_streaming(
         self,
         db: DatabaseTransactionFixture,
         odl2_importer: ODL2Importer,
@@ -459,12 +512,14 @@ class TestODL2Importer:
         license = api_odl_files_fixture.sample_text("license-audiobook.json")
         feed = api_odl_files_fixture.sample_text("feed-audiobook-streaming.json")
         odl_mock_get.add(license)
-
+        config = odl2_importer.collection.integration_configuration
         db.set_settings(
-            odl2_importer.collection.integration_configuration,
-            odl2_skipped_license_formats=["text/html"],
+            config,
+            odl2_skipped_license_formats=[""],  # Don't skip any formats in this test
         )
-
+        odl2_importer.settings = integration_settings_load(
+            odl2_importer.settings_class(), config
+        )
         imported_editions, pools, works, failures = odl2_importer.import_from_feed(feed)
 
         # Make sure we imported one edition and it is an audiobook
@@ -486,7 +541,7 @@ class TestODL2Importer:
         assert 1 == license_pool.licenses_owned
         assert 1 == license_pool.licenses_available
 
-        assert 2 == len(license_pool.delivery_mechanisms)
+        assert 3 == len(license_pool.delivery_mechanisms)
 
         lcp_delivery_mechanism = (
             self._get_delivery_mechanism_by_drm_scheme_and_content_type(
@@ -505,6 +560,82 @@ class TestODL2Importer:
             )
         )
         assert feedbooks_delivery_mechanism is not None
+
+        feedbooks_delivery_mechanism_streaming = (
+            self._get_delivery_mechanism_by_drm_scheme_and_content_type(
+                license_pool.delivery_mechanisms,
+                DeliveryMechanism.STREAMING_AUDIO_CONTENT_TYPE,
+                DeliveryMechanism.STREAMING_DRM,
+            )
+        )
+        assert feedbooks_delivery_mechanism_streaming is not None
+
+    @freeze_time("2016-01-01T00:00:00+00:00")
+    def test_import_demarque_ebook_streaming(
+        self,
+        db: DatabaseTransactionFixture,
+        odl2_importer: ODL2Importer,
+        odl_mock_get: MockGet,
+        api_odl_files_fixture: ODLAPIFilesFixture,
+    ) -> None:
+        """Ensure that ODL2Importer2 correctly processes and imports a feed with an e-book that is available for reading in a web reader."""
+        license = LicenseInfoHelper(
+            license=LicenseHelper(
+                identifier="urn:uuid:111",
+                concurrency=1,
+                expires="2027-01-15",
+            ),
+            available=1,
+        )
+        odl_mock_get.add(license)
+        feed = api_odl_files_fixture.sample_text("dm_feed_accessibility.json")
+        odl_mock_get.add(license)
+
+        config = odl2_importer.collection.integration_configuration
+        db.set_settings(
+            config,
+            odl2_skipped_license_formats=[""],  # Don't skip any formats in this test
+        )
+        odl2_importer.settings = integration_settings_load(
+            odl2_importer.settings_class(), config
+        )
+
+        imported_editions, pools, works, failures = odl2_importer.import_from_feed(feed)
+
+        # Make sure we imported one edition and it is an ebook.
+        assert isinstance(imported_editions, list)
+        assert 1 == len(imported_editions)
+
+        [edition] = imported_editions
+        assert isinstance(edition, Edition)
+        assert edition.primary_identifier.identifier == "9781250895653"
+        assert EditionConstants.BOOK_MEDIUM == edition.medium
+
+        # Make sure that license pools have correct configuration
+        assert isinstance(pools, list)
+        assert 1 == len(pools)
+
+        [license_pool] = pools
+        # There should be LCP+streaming, LCP+download and Adobe DRM+download.
+        assert 3 == len(license_pool.delivery_mechanisms)
+
+        lcp_delivery_mechanism = (
+            self._get_delivery_mechanism_by_drm_scheme_and_content_type(
+                license_pool.delivery_mechanisms,
+                MediaTypes.EPUB_MEDIA_TYPE,
+                DeliveryMechanism.LCP_DRM,
+            )
+        )
+        assert lcp_delivery_mechanism is not None
+
+        feedbooks_delivery_mechanism_streaming = (
+            self._get_delivery_mechanism_by_drm_scheme_and_content_type(
+                license_pool.delivery_mechanisms,
+                DeliveryMechanism.STREAMING_TEXT_CONTENT_TYPE,
+                DeliveryMechanism.STREAMING_DRM,
+            )
+        )
+        assert feedbooks_delivery_mechanism_streaming is not None
 
     @freeze_time("2016-01-01T00:00:00+00:00")
     def test_import_audiobook_no_streaming(
@@ -603,7 +734,7 @@ class TestODL2Importer:
         odl_mock_get: MockGet,
         api_odl_files_fixture: ODLAPIFilesFixture,
     ) -> None:
-        feed_json = json.loads(api_odl_files_fixture.sample_text("feed.json"))
+        feed_json = json.loads(api_odl_files_fixture.sample_text("demarque_feed.json"))
 
         moby_dick_license_dict = feed_json["publications"][0]["licenses"][0]
         test_book_license_dict = feed_json["publications"][2]["licenses"][0]
