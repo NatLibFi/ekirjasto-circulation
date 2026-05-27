@@ -113,6 +113,79 @@ class TestODL2Importer:
             == expected_medium
         )
 
+    @pytest.mark.parametrize(
+        "skipped_drm,expected_drms",
+        [
+            pytest.param(
+                [DeliveryMechanism.ADOBE_DRM],
+                {DeliveryMechanism.LCP_DRM},
+                id="skip-adobe",
+            ),
+            pytest.param(
+                [DeliveryMechanism.LCP_DRM],
+                {DeliveryMechanism.ADOBE_DRM},
+                id="skip-lcp",
+            ),
+            pytest.param(
+                [DeliveryMechanism.ADOBE_DRM, DeliveryMechanism.LCP_DRM],
+                set(),
+                id="skip-both",
+            ),
+            pytest.param(
+                [],
+                {DeliveryMechanism.ADOBE_DRM, DeliveryMechanism.LCP_DRM},
+                id="skip-none",
+            ),
+        ],
+    )
+    @freeze_time("2016-01-01T00:00:00+00:00")
+    def test_import_skipped_drm_schemes(
+        self,
+        odl2_importer: ODL2Importer,
+        odl_mock_get: MockGet,
+        api_odl_files_fixture: ODLAPIFilesFixture,
+        skipped_drm: list[str],
+        expected_drms: set[str],
+    ) -> None:
+        """Delivery mechanisms whose DRM scheme is listed in
+        ``skipped_drm_schemes`` must not be imported."""
+        moby_dick_license = LicenseInfoHelper(
+            license=LicenseHelper(
+                identifier="urn:uuid:f7847120-fc6f-11e3-8158-56847afe9799",
+                concurrency=10,
+                checkouts=30,
+                expires="2016-04-25T12:25:21+02:00",
+            ),
+            left=30,
+            available=10,
+        )
+        odl_mock_get.add(moby_dick_license)
+        feed = api_odl_files_fixture.sample_text("demarque_feed.json")
+
+        config = odl2_importer.collection.integration_configuration
+        odl2_importer.ignored_identifier_types = [IdentifierConstants.URI]
+        DatabaseTransactionFixture.set_settings(
+            config,
+            odl2_skipped_license_formats=["text/html"],
+            odl2_skipped_drm_schemes=skipped_drm,
+        )
+        # ``self.settings`` is cached on the importer at construction time
+        # (and the pydantic model is frozen), so reload it from the updated
+        # integration configuration to reflect the test configuration.
+        odl2_importer.settings = integration_settings_load(
+            odl2_importer.settings_class(), config
+        )
+
+        _, pools, _, _ = odl2_importer.import_from_feed(feed)
+
+        [pool] = pools
+        actual_drms = {
+            lpdm.delivery_mechanism.drm_scheme
+            for lpdm in pool.delivery_mechanisms
+            if lpdm.delivery_mechanism.content_type == MediaTypes.EPUB_MEDIA_TYPE
+        }
+        assert actual_drms == expected_drms
+
     @freeze_time("2016-01-01T00:00:00+00:00")
     def test_import(
         self,

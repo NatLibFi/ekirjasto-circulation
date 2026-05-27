@@ -152,16 +152,20 @@ class TestPushNotifications:
             "core.util.notifications.PushNotifications.send_messages"
         ) as mock_send, mock.patch("core.util.notifications.utc_now") as mock_now:
             # Loan expiry
-            # No messages sent
+            # patron_last_notified is now updated unconditionally — even when
+            # send_messages returns no successful responses (e.g. all tokens
+            # were unregistered) — so we don't re-attempt the same loan on the
+            # next sweep run within the same day.
+            mock_now.return_value = datetime(2020, 1, 1, tzinfo=pytz.UTC)
             mock_send.return_value = []
             responses = PushNotifications.send_loan_expiry_message(
                 loan, 1, [device_token]
             )
             assert responses == []
-            assert loan.patron_last_notified == None
+            assert loan.patron_last_notified == datetime(2020, 1, 1).date()
 
-            # One message sent
-            mock_now.return_value = datetime(2020, 1, 1, tzinfo=pytz.UTC)
+            # Reset so we can verify the success path also updates the field.
+            loan.patron_last_notified = None
             mock_send.return_value = ["mock-mid"]
             responses = PushNotifications.send_loan_expiry_message(
                 loan, 1, [device_token]
@@ -170,12 +174,14 @@ class TestPushNotifications:
             # last notified gets updated
             assert loan.patron_last_notified == datetime(2020, 1, 1).date()
 
-            # Now hold expiry
+            # Now hold expiry — same contract: update happens regardless of
+            # whether any FCM send actually succeeded.
             mock_send.return_value = []
             responses = PushNotifications.send_holds_notifications([hold])
             assert responses == []
-            assert hold.patron_last_notified == None
+            assert hold.patron_last_notified == datetime(2020, 1, 1).date()
 
+            hold.patron_last_notified = None
             mock_send.return_value = ["mock-mid"]
             responses = PushNotifications.send_holds_notifications([hold])
             assert responses == ["mock-mid"]

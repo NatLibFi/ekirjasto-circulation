@@ -50,6 +50,21 @@ class ODL2Settings(ODLSettings, OPDS2ImporterSettings):
         ),
     )
 
+    skipped_drm_schemes: list[str] = FormField(
+        default=[],
+        alias="odl2_skipped_drm_schemes",
+        form=ConfigurationFormItem(
+            label=_("Skipped DRM schemes"),
+            description=_(
+                "List of DRM schemes (from the license's protection.format) that "
+                "will NOT be imported into Circulation Manager. "
+                "Example: application/vnd.adobe.adept+xml"
+            ),
+            type=ConfigurationFormItemType.LIST,
+            required=False,
+        ),
+    )
+
     loan_limit: PositiveInt | None = FormField(
         default=None,
         alias="odl2_loan_limit",
@@ -238,6 +253,7 @@ class ODL2Importer(BaseODLImporter[ODL2Settings], OPDS2Importer):
         # E-Kirjasto: If this is a generic OPDS2 publication, it is an open-access title.
         if isinstance(publication, odl.Publication):
             skipped_license_formats = set(self.settings.skipped_license_formats)
+            skipped_drm_schemes = set(self.settings.skipped_drm_schemes)
             publication_availability = publication.metadata.availability.available
 
             for odl_license in publication.licenses:
@@ -297,6 +313,11 @@ class ODL2Importer(BaseODLImporter[ODL2Settings], OPDS2Importer):
                         # application/audiobook+json; protection=http://www.feedbooks.com/audiobooks/access-restriction
                         # it means that this audiobook title is available through the DeMarque streaming manifest
                         # endpoint.
+                        if (
+                            DeliveryMechanism.FEEDBOOKS_AUDIOBOOK_DRM
+                            in skipped_drm_schemes
+                        ):
+                            continue
                         formats.append(
                             FormatData(
                                 content_type=MediaTypes.AUDIOBOOK_MANIFEST_MEDIA_TYPE,
@@ -335,6 +356,8 @@ class ODL2Importer(BaseODLImporter[ODL2Settings], OPDS2Importer):
                             odl_license.metadata.protection.formats or no_drm
                         )
                         for drm_scheme in drm_schemes:
+                            if drm_scheme in skipped_drm_schemes:
+                                continue
                             formats.append(
                                 FormatData(
                                     content_type=license_format,
@@ -350,6 +373,17 @@ class ODL2Importer(BaseODLImporter[ODL2Settings], OPDS2Importer):
             metadata.circulation.patrons_in_hold_queue = None
             metadata.circulation.formats.extend(formats)
             metadata.medium = medium
+
+        # Filter out any FormatData (including those produced by the base
+        # OPDS2 importer from acquisition links) whose DRM scheme has been
+        # configured to be skipped.
+        skipped_drm_schemes = set(self.settings.skipped_drm_schemes)
+        if skipped_drm_schemes:
+            metadata.circulation.formats = [
+                format_data
+                for format_data in metadata.circulation.formats
+                if format_data.drm_scheme not in skipped_drm_schemes
+            ]
 
         return metadata
 
