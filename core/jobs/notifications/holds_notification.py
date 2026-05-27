@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import and_, exists, or_
+from sqlalchemy import and_, exists, func, or_
 from sqlalchemy.orm import joinedload
 
 from core.config import Configuration, ConfigurationConstants
@@ -68,10 +69,16 @@ class HoldsNotificationMonitor(SweepMonitor):
             .filter(
                 # Only holds ready for checkout.
                 Hold.position == 0,
-                # Cooldown: skip patrons already notified today for this hold.
+                # Cooldown: at most one notification per calendar day per hold.
+                # We compare on the date portion only (func.date) so legacy
+                # rows that stored a full timestamp in patron_last_notified
+                # still get normalized to a calendar date. Using `<` (not
+                # `!=`) guarantees we never re-notify a patron whose
+                # last-notified date is today, even if a clock skew or a
+                # legacy row produces an unexpected value.
                 or_(
                     Hold.patron_last_notified == None,
-                    Hold.patron_last_notified != utc_now().date(),
+                    func.date(Hold.patron_last_notified) < utc_now().date(),
                 ),
                 # Skip patrons with no FCM-eligible device tokens.
                 has_fcm_token,
@@ -91,4 +98,23 @@ class HoldsNotificationMonitor(SweepMonitor):
         return query
 
     def process_items(self, items: list[Hold]) -> None:
-        PushNotifications.send_holds_notifications(items)
+        # Race-safety re-check in Python: between the SQL fetch and now,
+        # another worker (or an earlier batch in the same run) could have
+        # already notified this patron today. Re-filter on the same
+        # calendar-day cooldown the SQL filter uses so we never send a
+        # second push on the same day.
+        today = utc_now().date()
+        eligible: list[Hold] = []
+        for hold in items:
+            raw = hold.patron_last_notified
+            last_notified: datetime.date | None
+            if isinstance(raw, datetime.datetime):
+                # Legacy DB rows may carry a datetime; normalize to date.
+                last_notified = raw.date()
+            else:
+                last_notified = raw
+            if last_notified is not None and last_notified >= today:
+                continue
+            eligible.append(hold)
+        if eligible:
+            PushNotifications.send_holds_notifications(eligible)
