@@ -58,7 +58,12 @@ class ODL2Settings(ODLSettings, OPDS2ImporterSettings):
             description=_(
                 "List of DRM schemes (from the license's protection.format) that "
                 "will NOT be imported into Circulation Manager. "
-                "Example: application/vnd.adobe.adept+xml"
+                "<br>"
+                "Adobe: application/vnd.adobe.adept+xml "
+                "<br>"
+                "Derived DeMarque streaming DRM: Streaming "
+                "<br>"
+                "LCP: application/vnd.readium.lcp.license.v1.0+json"
             ),
             type=ConfigurationFormItemType.LIST,
             required=False,
@@ -338,6 +343,9 @@ class ODL2Importer(BaseODLImporter[ODL2Settings], OPDS2Importer):
 
                         # Handle the case where we want to skip the derived license format
                         if streaming_content_type in skipped_license_formats:
+                            continue
+                        # or the case where we want to skip the derived DRM
+                        if DeliveryMechanism.STREAMING_DRM in skipped_drm_schemes:
                             continue
 
                         formats.append(

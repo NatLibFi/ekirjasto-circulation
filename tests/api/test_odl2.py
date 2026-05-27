@@ -118,22 +118,35 @@ class TestODL2Importer:
         [
             pytest.param(
                 [DeliveryMechanism.ADOBE_DRM],
-                {DeliveryMechanism.LCP_DRM},
+                {DeliveryMechanism.LCP_DRM, DeliveryMechanism.STREAMING_DRM},
                 id="skip-adobe",
             ),
             pytest.param(
                 [DeliveryMechanism.LCP_DRM],
-                {DeliveryMechanism.ADOBE_DRM},
+                {DeliveryMechanism.ADOBE_DRM, DeliveryMechanism.STREAMING_DRM},
                 id="skip-lcp",
             ),
             pytest.param(
-                [DeliveryMechanism.ADOBE_DRM, DeliveryMechanism.LCP_DRM],
+                [DeliveryMechanism.STREAMING_DRM],
+                {DeliveryMechanism.ADOBE_DRM, DeliveryMechanism.LCP_DRM},
+                id="skip-streaming",
+            ),
+            pytest.param(
+                [
+                    DeliveryMechanism.ADOBE_DRM,
+                    DeliveryMechanism.LCP_DRM,
+                    DeliveryMechanism.STREAMING_DRM,
+                ],
                 set(),
-                id="skip-both",
+                id="skip-all",
             ),
             pytest.param(
                 [],
-                {DeliveryMechanism.ADOBE_DRM, DeliveryMechanism.LCP_DRM},
+                {
+                    DeliveryMechanism.ADOBE_DRM,
+                    DeliveryMechanism.LCP_DRM,
+                    DeliveryMechanism.STREAMING_DRM,
+                },
                 id="skip-none",
             ),
         ],
@@ -148,25 +161,26 @@ class TestODL2Importer:
         expected_drms: set[str],
     ) -> None:
         """Delivery mechanisms whose DRM scheme is listed in
-        ``skipped_drm_schemes`` must not be imported."""
-        moby_dick_license = LicenseInfoHelper(
+        ``skipped_drm_schemes`` must not be imported. Covers both
+        protection-format DRM (Adobe, LCP) and the streaming DRM derived
+        from a text/html license format."""
+        license = LicenseInfoHelper(
             license=LicenseHelper(
-                identifier="urn:uuid:f7847120-fc6f-11e3-8158-56847afe9799",
-                concurrency=10,
-                checkouts=30,
-                expires="2016-04-25T12:25:21+02:00",
+                identifier="urn:uuid:111",
+                concurrency=1,
+                expires="2027-01-15",
             ),
-            left=30,
-            available=10,
+            available=1,
         )
-        odl_mock_get.add(moby_dick_license)
-        feed = api_odl_files_fixture.sample_text("demarque_feed.json")
+        odl_mock_get.add(license)
+        feed = api_odl_files_fixture.sample_text("dm_feed_accessibility.json")
 
         config = odl2_importer.collection.integration_configuration
-        odl2_importer.ignored_identifier_types = [IdentifierConstants.URI]
         DatabaseTransactionFixture.set_settings(
             config,
-            odl2_skipped_license_formats=["text/html"],
+            # Do not skip text/html at the license-format level so it reaches
+            # the streaming branch where STREAMING_DRM is assigned.
+            odl2_skipped_license_formats=[""],
             odl2_skipped_drm_schemes=skipped_drm,
         )
         # ``self.settings`` is cached on the importer at construction time
@@ -180,9 +194,7 @@ class TestODL2Importer:
 
         [pool] = pools
         actual_drms = {
-            lpdm.delivery_mechanism.drm_scheme
-            for lpdm in pool.delivery_mechanisms
-            if lpdm.delivery_mechanism.content_type == MediaTypes.EPUB_MEDIA_TYPE
+            lpdm.delivery_mechanism.drm_scheme for lpdm in pool.delivery_mechanisms
         }
         assert actual_drms == expected_drms
 
