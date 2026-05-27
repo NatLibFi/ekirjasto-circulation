@@ -19,7 +19,10 @@ class XMLParser:
     """Helper functions to process XML data."""
 
     NAMESPACES: dict[str, str] = {}
-    INVALID_XML_CHARACTER_REFERENCES = re.compile(rb"&#(x[0-9a-fA-F]+|[0-9]+);")
+    # Matches decimal (&#123;) and hex (&#x7F; / &#X7F;) numeric character references.
+    INVALID_XML_CHARACTER_REFERENCES = re.compile(
+        rb"&#(?:(?P<hex>[xX][0-9a-fA-F]+)|(?P<dec>[0-9]+));"
+    )
 
     @classmethod
     def _xpath(
@@ -27,7 +30,6 @@ class XMLParser:
     ) -> list[_Element]:
         if not namespaces:
             namespaces = cls.NAMESPACES
-        """Wrapper to do a namespaced XPath expression."""
         return tag.xpath(expression, namespaces=namespaces)  # type: ignore[no-any-return]
 
     @classmethod
@@ -100,22 +102,25 @@ class XMLParser:
 
     @staticmethod
     def _strip_invalid_xml_character_references(xml: bytes) -> bytes:
-        """Remove numeric character references that are invalid in XML 1.0."""
+        """Remove numeric character references that are invalid in XML 1.0.
+
+        lxml 6.x rejects character references whose codepoints fall outside the
+        XML 1.0 Char production (§2.2 https://www.w3.org/TR/xml/#charsets).
+        Vendor feeds occasionally contain illegal references (e.g. &#x8; for
+        backspace); this strips them before parsing so lxml can proceed.
+        """
 
         def replace(match: re.Match[bytes]) -> bytes:
-            value = match.group(1)
-            if value[:1].lower() == b"x":
-                codepoint = int(value[1:], 16)
-            else:
-                codepoint = int(value)
-
-            valid_xml_character = (
+            hex_group = match.group("hex")
+            codepoint = int(hex_group[1:], 16) if hex_group else int(match.group("dec"))
+            # XML 1.0 §2.2 Char: #x9 | #xA | #xD | [#x20-#xD7FF] | [#xE000-#xFFFD] | [#x10000-#x10FFFF]
+            valid = (
                 codepoint in (0x09, 0x0A, 0x0D)
                 or 0x20 <= codepoint <= 0xD7FF
                 or 0xE000 <= codepoint <= 0xFFFD
                 or 0x10000 <= codepoint <= 0x10FFFF
             )
-            return match.group(0) if valid_xml_character else b""
+            return match.group(0) if valid else b""
 
         return XMLParser.INVALID_XML_CHARACTER_REFERENCES.sub(replace, xml)
 
