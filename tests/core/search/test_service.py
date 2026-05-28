@@ -155,6 +155,4 @@ class TestService:
         assert indices.exists(index=revision.name_for_index("base"))
         assert indices.get(index=revision.name_for_index("base"))["base-v23"][
             "mappings"
-        ] == {
-            "properties": mappings.serialize_properties()
-        }
+        ] == {"properties": mappings.serialize_properties()}

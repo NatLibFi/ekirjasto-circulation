@@ -589,23 +589,23 @@ class TestOPDS2Importer(OPDS2Test):
         ) == [
             (
                 "urn:isbn:978-3-16-148410-0",
-                datetime.datetime(2015, 9, 29, 17, 0, tzinfo=datetime.timezone.utc),
+                datetime.datetime(2015, 9, 29, 17, 0, tzinfo=datetime.UTC),
             ),
             (
                 "http://example.org/huckleberry-finn",
-                datetime.datetime(2015, 9, 29, 17, 0, tzinfo=datetime.timezone.utc),
+                datetime.datetime(2015, 9, 29, 17, 0, tzinfo=datetime.UTC),
             ),
             (
                 "urn:proquest.com/document-id/181639",
-                datetime.datetime(2022, 9, 12, 21, 4, tzinfo=datetime.timezone.utc),
+                datetime.datetime(2022, 9, 12, 21, 4, tzinfo=datetime.UTC),
             ),
             (
                 "urn:isbn:9789523565593",
-                datetime.datetime(2015, 9, 29, 17, 0, tzinfo=datetime.timezone.utc),
+                datetime.datetime(2015, 9, 29, 17, 0, tzinfo=datetime.UTC),
             ),
             (
                 "urn:isbn:978-0-06-112008-4",
-                datetime.datetime(2015, 9, 29, 17, 0, tzinfo=datetime.timezone.utc),
+                datetime.datetime(2015, 9, 29, 17, 0, tzinfo=datetime.UTC),
             ),
         ]
 

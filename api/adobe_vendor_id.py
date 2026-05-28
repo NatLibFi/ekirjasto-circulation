@@ -3,9 +3,8 @@ from __future__ import annotations
 import base64
 import datetime
 import logging
-import sys
 import uuid
-from typing import Any
+from typing import Any, Self
 
 import jwt
 from jwt.algorithms import HMACAlgorithm
@@ -24,11 +23,6 @@ from core.model.discovery_service_registration import (
     RegistrationStatus,
 )
 from core.util.datetime_helpers import datetime_utc, utc_now
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
 
 
 class AuthdataUtility:

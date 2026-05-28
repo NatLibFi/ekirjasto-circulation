@@ -202,13 +202,13 @@ Transitive updates pulled in by the above (no constraint change needed):
 
 | Package | Pinned | Available | Reason |
 | --- | --- | --- | --- |
-| `sqlalchemy` | `^1.4` | 2.0.50 | Complete ORM rewrite: legacy `Query` API removed, `session.execute()` required everywhere, relationship loading semantics changed. Affects all 34 model files and most controller/service code. |
-| `mypy` | `^1.4` | 2.1.0 | Major version; likely surfaces new type errors across the codebase. Best done alongside a mypy-strict cleanup pass. |
-| `pytest` | `>=7.2` | 9.0.3 | Two major versions. Fixture and plugin APIs changed; `pytest-cov`, `pytest-alembic`, `tox-docker` compatibility needs verification. |
+| `sqlalchemy` | `^1.4` | 2.0.50 | Complete ORM rewrite: `Query` API removed. All 34 model files affected. |
+| `mypy` | `^1.4` | 2.1.0 | Major version; likely surfaces new type errors. Best alongside a mypy-strict cleanup. |
+| `pytest` | `>=7.2` | 9.0.3 | `pytest-cov`, `pytest-alembic`, `tox-docker` compatibility needs verification. |
 | `pytest-cov` | `^4.0` | 7.1.0 | Follows pytest — upgrade together. |
-| `firebase-admin` | `^6.0` | 7.4.0 | FCM API changes likely affect push notification jobs in `core/jobs/notifications/`. |
+| `firebase-admin` | `^6.0` | 7.4.0 | FCM API changes; may affect `core/jobs/notifications/` push jobs. |
 | `bcrypt` | `^4.0` | 5.0.0 | Password hashing API may have changed. |
-| `protobuf` | `5.29.6` (pinned) | 7.35.0 | Two major versions; affects generated protobuf code and firebase-admin/grpc dependencies. |
+| `protobuf` | `5.29.6` (pinned) | 7.35.0 | Two major versions; affects protobuf code and firebase-admin/grpc deps. |
 | `pyld` | `2.0.3` (pinned) | 3.0.0 | JSON-LD library used in OPDS/LDP processing. |
 | `pyfakefs` | `^5.3` | 6.2.0 | Major version; filesystem mocking changes may break test fixtures. |
 | `google-cloud-storage` | `^2.9` (transitive) | 3.10.1 | Upgrade blocked by firebase-admin 6.x. |

@@ -1,11 +1,10 @@
 import json
 from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Any
+from typing import Any, Unpack
 from unittest.mock import patch
 
 from requests import Request, Response
-from typing_extensions import Unpack
 
 from core.util.http import HTTP, GetRequestKwargs, RequestKwargs
 

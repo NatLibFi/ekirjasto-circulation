@@ -1,5 +1,6 @@
+from typing import Self
+
 from requests import Response
-from typing_extensions import Self
 
 from core.util.http import BadResponseException
 from core.util.problem_detail import ProblemDetail

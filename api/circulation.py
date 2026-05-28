@@ -5,7 +5,7 @@ import datetime
 import logging
 import math
 from abc import ABC, abstractmethod
-from typing import Any, Literal, TypeVar
+from typing import Any, Literal, Self, TypeVar
 
 import flask
 import requests
@@ -14,7 +14,6 @@ from flask_babel import lazy_gettext as _
 from pydantic import PositiveInt
 from sqlalchemy import select
 from sqlalchemy.orm import Query, Session
-from typing_extensions import Self
 
 from api.circulation_exceptions import *
 from api.integration.registry.license_providers import LicenseProvidersRegistry

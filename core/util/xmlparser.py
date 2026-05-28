@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import re
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Generator
 from io import BytesIO
-import re
 from typing import TYPE_CHECKING, Generic, TypeVar
 
 from lxml import etree

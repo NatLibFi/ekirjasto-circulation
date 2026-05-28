@@ -1,22 +1,16 @@
 from __future__ import annotations
 
 import dataclasses
-import sys
 from io import BytesIO
 from string import Formatter
 from types import TracebackType
-from typing import TYPE_CHECKING, BinaryIO
+from typing import TYPE_CHECKING, BinaryIO, Self
 from urllib.parse import quote
 
 from botocore.exceptions import BotoCoreError, ClientError
 
 from core.config import CannotLoadConfiguration
 from core.util.log import LoggerMixin
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
 
 if TYPE_CHECKING:
     from mypy_boto3_s3 import S3Client

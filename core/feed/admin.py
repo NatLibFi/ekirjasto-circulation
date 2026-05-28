@@ -1,6 +1,7 @@
+from typing import Self
+
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
-from typing_extensions import Self
 
 from core.feed.acquisition import OPDSAcquisitionFeed
 from core.feed.annotator.admin import AdminAnnotator

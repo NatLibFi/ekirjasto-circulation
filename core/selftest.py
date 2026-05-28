@@ -2,12 +2,11 @@
 """
 from __future__ import annotations
 
-import sys
 import traceback
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Generator
 from datetime import datetime
-from typing import Any, ParamSpec, TypeVar
+from typing import Any, ParamSpec, Self, TypeVar
 
 from sqlalchemy.orm import Session
 
@@ -17,11 +16,6 @@ from core.util.datetime_helpers import utc_now
 from core.util.http import IntegrationException
 from core.util.log import LoggerMixin
 from core.util.opds_writer import AtomFeed
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
 
 
 class SelfTestResult:
