@@ -83,5 +83,3 @@ class PalaceCProfileProfiler(PalaceProfiler):
         app.wsgi_app = ProfilerMiddleware(  # type: ignore
             app.wsgi_app, profile_dir=str(profile_dir), filename_format=filename
         )
-
-
