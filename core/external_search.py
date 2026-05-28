@@ -1237,7 +1237,7 @@ class JSONQuery(Query):
 
         return es_query
 
-    def _parse_json_leaf(self, query: dict) -> dict:
+    def _parse_json_leaf(self, query: dict) -> BaseQuery:
         """We have a leaf query, which means this becomes a keyword.term query"""
         op = query.get(self.QueryLeaf.OP, self.Operators.EQ)
 
@@ -1313,7 +1313,7 @@ class JSONQuery(Query):
 
         return es_query
 
-    def _parse_json_join(self, query: dict) -> dict:
+    def _parse_json_join(self, query: dict) -> BaseQuery:
         if len(query.keys()) != 1:
             raise QueryParseException(
                 detail="A conjuction cannot have multiple parts in the same sub-query"

@@ -13,7 +13,6 @@ from api.util.flask import PalaceFlask
 from api.util.profilers import (
     PalaceCProfileProfiler,
     PalacePyInstrumentProfiler,
-    PalaceXrayProfiler,
 )
 from core.app_server import ErrorHandler
 from core.flask_sqlalchemy_session import flask_scoped_session
@@ -51,7 +50,6 @@ app.url_map.merge_slashes = False
 # Optionally setup any profilers that are enabled
 PalacePyInstrumentProfiler.configure(app)
 PalaceCProfileProfiler.configure(app)
-PalaceXrayProfiler.configure(app)
 
 
 def initialize_admin(_db=None):

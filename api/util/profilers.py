@@ -1,4 +1,3 @@
-import logging
 import os
 import time
 from pathlib import Path
@@ -86,18 +85,3 @@ class PalaceCProfileProfiler(PalaceProfiler):
         )
 
 
-class PalaceXrayProfiler(PalaceProfiler):
-    ENVIRONMENT_VARIABLE = "PALACE_XRAY"
-
-    @classmethod
-    def configure(cls, app: Flask):
-        if not cls.enabled():
-            return
-
-        from aws_xray_sdk.core import xray_recorder
-
-        from api.util.xray import PalaceXrayMiddleware
-
-        logging.getLogger(cls.__name__).info("Configuring app with AWS XRAY.")
-        PalaceXrayMiddleware.setup_xray(xray_recorder)
-        PalaceXrayMiddleware(app, xray_recorder)

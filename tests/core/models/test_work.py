@@ -1257,6 +1257,7 @@ class TestWork:
         assert 1.0 == genre1_doc["weight"]
         target_age_doc = search_doc["target_age"]
         assert work.target_age.lower == target_age_doc["lower"]
+        assert work.target_age.upper is not None
         assert (
             work.target_age.upper - 1 == target_age_doc["upper"]
         )  # .commit() changes this to exclusive upper
