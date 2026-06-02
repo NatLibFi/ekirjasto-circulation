@@ -347,20 +347,8 @@ class LoanController(CirculationManagerController):
         except (CirculationException, RemoteInitiatedServerError) as e:
             return e.problem_detail
 
-        # TODO: This should really be turned into its own Fulfillment class,
-        #   so each integration can choose when to return a feed response like
-        #   this, and when to return a direct response.
-        if mechanism.delivery_mechanism.is_streaming and isinstance(
-            fulfillment, RedirectFulfillment
-        ):
-            # If this is a streaming delivery mechanism (note: E-kirjasto does not stream),
-            # create an OPDS entry with a fulfillment link to the streaming reader url.
-            return OPDSAcquisitionFeed.single_entry_loans_feed(
-                self.circulation, loan, fulfillment=fulfillment
-            )  # type: ignore[return-value]
-
         try:
-            return fulfillment.response()
+            return fulfillment.response(self.circulation, loan)
         except BaseProblemDetailException as e:
             return e.problem_detail
 

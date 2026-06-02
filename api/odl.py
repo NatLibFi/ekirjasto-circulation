@@ -689,7 +689,7 @@ class BaseODLAPI(
         if fulfill_link is None:
             raise CannotFulfill()
 
-        self.log.info(f"Fulfilling with {drm_scheme}, Link: {fulfill_link.href}")
+        self.log.info(f"Fulfilling with {drm_scheme}, Link: {fulfill_link.href} FULFILL CLASS: {fulfill_cls}")
         return fulfill_cls(fulfill_link.href, fulfill_link.type)
 
     def _fulfill(
