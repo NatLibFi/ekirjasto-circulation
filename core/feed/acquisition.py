@@ -5,6 +5,7 @@ import logging
 from collections.abc import Callable, Generator
 from typing import TYPE_CHECKING, Any
 
+from core.exceptions import PalaceValueError
 from dependency_injector.wiring import Provide, inject
 from sqlalchemy.orm import Query, Session
 
@@ -562,7 +563,7 @@ class OPDSAcquisitionFeed(BaseOPDSFeed):
         fulfillment: FulfillmentInfo | Fulfillment | None = None,
         selected_book: SelectedBook | None = None,
         **response_kwargs: Any,
-    ) -> OPDSEntryResponse | ProblemDetail | None:
+    ) -> OPDSEntryResponse | ProblemDetail:
         """
         Returns a single entry feed for a patron's loan or hold, including
         information about the loan, hold, and selected book.
@@ -582,16 +583,15 @@ class OPDSAcquisitionFeed(BaseOPDSFeed):
                 response generation.
 
         Returns:
-            An OPDSEntryResponse object containing the feed, a ProblemDetail
-            object if an error occurs, or None if the feed cannot be
-            generated.
+            An OPDSEntryResponse object containing the feed or a ProblemDetail
+            object if an error occurs.
 
         Raises:
-            ValueError: If the 'item' argument is empty or not an instance of
+            PalaceValueError: If the 'item' argument is empty or not an instance of
                 LicensePool, Loan, or Hold.
         """
         if not item:
-            raise ValueError("Argument 'item' must be non-empty")
+            raise PalaceValueError("Argument 'item' must be non-empty")
 
         if isinstance(item, LicensePool):
             license_pool = item
@@ -600,7 +600,7 @@ class OPDSAcquisitionFeed(BaseOPDSFeed):
             license_pool = item.license_pool
             library = item.library
         else:
-            raise ValueError(
+            raise PalaceValueError(
                 "Argument 'item' must be an instance of {}, {}, or {} classes".format(
                     Loan, Hold, LicensePool
                 )
@@ -613,14 +613,12 @@ class OPDSAcquisitionFeed(BaseOPDSFeed):
 
         # Sometimes the pool or work may be None
         # In those cases we have to protect against the exceptions
-        try:
-            work = license_pool.work or license_pool.presentation_edition.work
-        except AttributeError as ex:
-            log.error(f"Error retrieving a Work Object {ex}")
-            log.error(
-                f"Error Data: {license_pool} | {license_pool and license_pool.presentation_edition}"
-            )
-            return NOT_FOUND_ON_REMOTE
+        work: Work | None = None
+        if license_pool:
+            if license_pool.work:
+                work = license_pool.work
+            elif license_pool.presentation_edition:
+                work = license_pool.presentation_edition.work
 
         if not work:
             return NOT_FOUND_ON_REMOTE
@@ -653,12 +651,10 @@ class OPDSAcquisitionFeed(BaseOPDSFeed):
 
         entry = cls.single_entry(work, annotator, even_if_no_license_pool=True)
 
-        if isinstance(entry, WorkEntry) and entry.computed:
-            return cls.entry_as_response(entry, **response_kwargs)
-        elif isinstance(entry, OPDSMessage):
-            return cls.entry_as_response(entry, max_age=0)
+        if isinstance(entry, OPDSMessage):
+            response_kwargs["max_age"] = 0
 
-        return None
+        return cls.entry_as_response(entry, **response_kwargs)
 
     @classmethod
     def single_entry(
