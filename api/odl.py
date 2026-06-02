@@ -20,11 +20,13 @@ from uritemplate import URITemplate
 from api.circulation import (
     BaseCirculationAPI,
     BaseCirculationEbookLoanSettings,
+    EllibsStreamingFulfillment,
     FetchFulfillment,
     Fulfillment,
     HoldInfo,
     LoanInfo,
     RedirectFulfillment,
+    StreamingFulfillment,
     UrlFulfillment,
 )
 from api.circulation_exceptions import *
@@ -651,14 +653,15 @@ class BaseODLAPI(
         assert loan_status.links  # To satisfy mypy
         if drm_scheme == DeliveryMechanism.NO_DRM:
             # If we have no DRM, we can just redirect to the content link and let the patron download the book.
+            # In E-kirjasto, this is not used for fulfilling loans at the moment.
             fulfill_link = loan_status.links.get(
                 rel="publication",
                 type=content_type,
             )
             fulfill_cls = RedirectFulfillment
         elif drm_scheme == DeliveryMechanism.STREAMING_DRM:
-            # Streaming DRM is handled similarly to NO_DRM, we find the appropriate link and redirect the
-            # patron to the streaming reader.
+            # Streaming DRM returns an OPDS entry containing the streaming reader link.
+            print("CONTENT TYPE", content_type)
             link_content_type = (
                 DeliveryMechanism.MEDIA_TYPES_FOR_STREAMING.get(content_type)
                 if content_type
@@ -674,12 +677,19 @@ class BaseODLAPI(
                 rel="publication",
                 type=link_content_type,
             )
-            fulfill_cls = RedirectFulfillment
+            fulfill_cls = StreamingFulfillment
         elif drm_scheme == DeliveryMechanism.FEEDBOOKS_AUDIOBOOK_DRM:
             # For DeMarque audiobook content using "FEEDBOOKS_AUDIOBOOK_DRM", the link
             # we are looking for is stored in the 'manifest' rel.
             fulfill_link = loan_status.links.get(rel="manifest", type=BaseODLImporter.FEEDBOOKS_AUDIO)
             fulfill_cls = partial(FetchFulfillment, allowed_response_codes=["2xx"])
+        elif drm_scheme == DeliveryMechanism.LCP_DRM and content_type == DeliveryMechanism.EKIRJASTO_STREAMING_PROFILE:
+            # For E-Kirjasto streaming content, the link is in "license" (just as for downlaodable content), but the
+            # fulfillment class is different, since we need to handle the E-Kirjasto specific streaming format later
+            # for statistics purposes.
+            fulfill_link = loan_status.links.get(rel="license", type=drm_scheme)
+            fulfill_cls = partial(EllibsStreamingFulfillment, allowed_response_codes=["2xx"])
+
         else:
             # We are getting content via a license document, so we need to find the link
             # that corresponds to the delivery mechanism we are using.
