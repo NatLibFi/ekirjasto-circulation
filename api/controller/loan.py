@@ -300,7 +300,6 @@ class LoanController(CirculationManagerController):
             mechanism = self.load_licensepooldelivery(
                 requested_license_pool, mechanism_id
             )
-            print("MECHANISM ID", mechanism)
             if isinstance(mechanism, ProblemDetail):
                 return mechanism
             else:

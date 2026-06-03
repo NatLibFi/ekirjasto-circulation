@@ -697,7 +697,7 @@ class BaseODLAPI(
             )
 
         else:
-            # We are getting content via a license document, so we need to find the link
+            # We are getting content via a loan status document, so we need to find the link
             # that corresponds to the delivery mechanism we are using.
             fulfill_link = loan_status.links.get(rel="license", type=drm_scheme)
             fulfill_cls = partial(FetchFulfillment, allowed_response_codes=["2xx"])

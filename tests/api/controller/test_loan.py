@@ -39,7 +39,6 @@ from api.problem_details import (
     NO_LICENSES,
     NOT_FOUND_ON_REMOTE,
 )
-from core.util.problem_detail import ProblemDetailException
 from core.feed.serializer.opds2 import OPDS2Serializer
 from core.model import (
     Collection,
@@ -64,7 +63,7 @@ from core.util.datetime_helpers import utc_now
 from core.util.flask_util import OPDSEntryResponse, Response
 from core.util.http import RemoteIntegrationException
 from core.util.opds_writer import AtomFeed, OPDSFeed
-from core.util.problem_detail import ProblemDetail
+from core.util.problem_detail import ProblemDetail, ProblemDetailException
 from tests.api.mockapi.mock import MockHTTPClient
 from tests.fixtures.api_controller import CirculationControllerFixture
 from tests.fixtures.database import DatabaseTransactionFixture

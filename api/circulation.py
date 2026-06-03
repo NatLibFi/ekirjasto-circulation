@@ -49,7 +49,6 @@ from core.model import (
 )
 from core.model.integration import IntegrationConfiguration
 from core.model.patron import LoanCheckout
-from core.problem_details import INTERNAL_SERVER_ERROR
 from core.util.datetime_helpers import utc_now
 from core.util.http import HTTP, BadResponseException, ResponseCodesT
 from core.util.log import LoggerMixin
@@ -598,9 +597,9 @@ class StreamingFulfillment(UrlFulfillment):
         """
         from core.feed.acquisition import OPDSAcquisitionFeed
 
-        if loan is None:
-            raise ProblemDetailException(INTERNAL_SERVER_ERROR)
-
+        assert (
+            loan is not None
+        )  # To please mypy, since we'd never call this without a loan.
         result = OPDSAcquisitionFeed.single_entry_loans_feed(
             circulation, loan, fulfillment=self
         )
