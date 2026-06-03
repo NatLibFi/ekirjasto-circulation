@@ -929,13 +929,13 @@ class TestOPDSAcquisitionFeed:
         response = OPDSAcquisitionFeed.single_entry_loans_feed(None, None)  # type: ignore[arg-type]
         assert isinstance(response, ProblemDetail)
         assert response.status_code == 400
-        assert "sorry" in response.detail
+        assert response.detail and "sorry" in response.detail
 
         # Mandatory loans item was incorrect
         response = OPDSAcquisitionFeed.single_entry_loans_feed(None, object())  # type: ignore[arg-type]
         assert isinstance(response, ProblemDetail)
         assert response.status_code == 400
-        assert "sorry" in response.detail
+        assert response.detail and "sorry" in response.detail
 
         # A work and pool that has no edition, will not have an entry
         work = db.work(with_open_access_download=True)
