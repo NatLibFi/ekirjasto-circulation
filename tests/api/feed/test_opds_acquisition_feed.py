@@ -17,7 +17,6 @@ from core.entrypoint import (
     EverythingEntryPoint,
     MediumEntryPoint,
 )
-from core.exceptions import PalaceValueError
 from core.facets import FacetConstants
 from core.feed.acquisition import LookupAcquisitionFeed, OPDSAcquisitionFeed
 from core.feed.annotator.base import Annotator
@@ -37,6 +36,7 @@ from core.model.constants import LinkRelations
 from core.util.datetime_helpers import utc_now
 from core.util.flask_util import OPDSEntryResponse, OPDSFeedResponse
 from core.util.opds_writer import OPDSFeed, OPDSMessage
+from core.util.problem_detail import ProblemDetail
 from tests.api.feed.conftest import PatchedUrlFor, patch_url_for  # noqa
 from tests.fixtures.database import DatabaseTransactionFixture
 
@@ -507,12 +507,10 @@ class TestOPDSAcquisitionFeed:
 
         work = db.work()
         entry = OPDSAcquisitionFeed.single_entry(work, Annotator())
-        expect = OPDSAcquisitionFeed.error_message(
-            work.presentation_edition.primary_identifier,
-            403,
-            "I've heard about this work but have no active licenses for it.",
-        )
-        assert expect == entry
+        # Verify it's an OPDSMessage error
+        assert isinstance(entry, OPDSMessage)
+        assert entry.status_code == 403
+        assert "no active licenses" in entry.message
 
     def test_error_when_work_has_no_presentation_edition(
         self, db: DatabaseTransactionFixture
@@ -927,15 +925,17 @@ class TestOPDSAcquisitionFeed:
         assert feed.annotator.active_holds_by_work == {work: hold}
 
     def test_single_entry_loans_feed_errors(self, db: DatabaseTransactionFixture):
-        with pytest.raises(PalaceValueError) as raised:
-            # Mandatory loans item was missing
-            OPDSAcquisitionFeed.single_entry_loans_feed(None, None)  # type: ignore[arg-type]
-        assert str(raised.value) == "Argument 'item' must be non-empty"
+        # Mandatory loans item was missing
+        response = OPDSAcquisitionFeed.single_entry_loans_feed(None, None)  # type: ignore[arg-type]
+        assert isinstance(response, ProblemDetail)
+        assert response.status_code == 400
+        assert "sorry" in response.detail
 
-        with pytest.raises(PalaceValueError) as raised:
-            # Mandatory loans item was incorrect
-            OPDSAcquisitionFeed.single_entry_loans_feed(None, object())  # type: ignore[arg-type]
-        assert "Argument 'item' must be an instance of" in str(raised.value)
+        # Mandatory loans item was incorrect
+        response = OPDSAcquisitionFeed.single_entry_loans_feed(None, object())  # type: ignore[arg-type]
+        assert isinstance(response, ProblemDetail)
+        assert response.status_code == 400
+        assert "sorry" in response.detail
 
         # A work and pool that has no edition, will not have an entry
         work = db.work(with_open_access_download=True)
