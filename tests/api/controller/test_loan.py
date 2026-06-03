@@ -17,6 +17,7 @@ from api.circulation import (
     HoldInfo,
     LoanInfo,
     RedirectFulfillment,
+    StreamingFulfillment,
 )
 from api.circulation_exceptions import (
     AlreadyOnHold,
@@ -62,7 +63,7 @@ from core.util.datetime_helpers import utc_now
 from core.util.flask_util import OPDSEntryResponse, Response
 from core.util.http import RemoteIntegrationException
 from core.util.opds_writer import AtomFeed, OPDSFeed
-from core.util.problem_detail import ProblemDetail
+from core.util.problem_detail import ProblemDetail, ProblemDetailException
 from tests.api.mockapi.mock import MockHTTPClient
 from tests.fixtures.api_controller import CirculationControllerFixture
 from tests.fixtures.database import DatabaseTransactionFixture
@@ -503,10 +504,9 @@ class TestLoanController:
             # Now let's try to fulfill the loan using the streaming mechanism.
             loan_fixture.manager.d_circulation.queue_fulfill(
                 pool,
-                RedirectFulfillment(
+                StreamingFulfillment(
                     "http://streaming-content-link",
-                    Representation.TEXT_HTML_MEDIA_TYPE
-                    + DeliveryMechanism.STREAMING_PROFILE,
+                    Representation.TEXT_HTML_MEDIA_TYPE,
                 ),
             )
             fulfill_response = loan_fixture.manager.loans.fulfill(
@@ -563,10 +563,9 @@ class TestLoanController:
             # But we can still fulfill the streaming mechanism again.
             loan_fixture.manager.d_circulation.queue_fulfill(
                 pool,
-                RedirectFulfillment(
+                StreamingFulfillment(
                     "http://streaming-content-link",
-                    Representation.TEXT_HTML_MEDIA_TYPE
-                    + DeliveryMechanism.STREAMING_PROFILE,
+                    Representation.TEXT_HTML_MEDIA_TYPE,
                 ),
             )
 
@@ -817,7 +816,7 @@ class TestLoanController:
             def __init__(self):
                 self.response_called = False
 
-            def response(self) -> Response:
+            def response(self, circulation=None, loan=None) -> Response:
                 self.response_called = True
                 return response_value
 
@@ -930,9 +929,12 @@ class TestLoanController:
                 ) as feed,
                 patch.object(circulation, "fulfill") as fulfill,
             ):
-                fulfill.return_value = MagicMock(spec=RedirectFulfillment)
-                # The single_item_feed must return this error
-                feed.return_value = NOT_FOUND_ON_REMOTE
+                # Mock the fulfillment response to raise an exception when the feed fails
+                mock_fulfillment = MagicMock(spec=StreamingFulfillment)
+                mock_fulfillment.response.side_effect = ProblemDetailException(
+                    NOT_FOUND_ON_REMOTE
+                )
+                fulfill.return_value = mock_fulfillment
                 # The content type needs to be streaming
                 loan_fixture.mech1.delivery_mechanism.content_type = (
                     DeliveryMechanism.STREAMING_TEXT_CONTENT_TYPE

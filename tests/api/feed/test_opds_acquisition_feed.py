@@ -17,6 +17,7 @@ from core.entrypoint import (
     EverythingEntryPoint,
     MediumEntryPoint,
 )
+from core.exceptions import PalaceValueError
 from core.facets import FacetConstants
 from core.feed.acquisition import LookupAcquisitionFeed, OPDSAcquisitionFeed
 from core.feed.annotator.base import Annotator
@@ -926,12 +927,12 @@ class TestOPDSAcquisitionFeed:
         assert feed.annotator.active_holds_by_work == {work: hold}
 
     def test_single_entry_loans_feed_errors(self, db: DatabaseTransactionFixture):
-        with pytest.raises(ValueError) as raised:
+        with pytest.raises(PalaceValueError) as raised:
             # Mandatory loans item was missing
             OPDSAcquisitionFeed.single_entry_loans_feed(None, None)  # type: ignore[arg-type]
         assert str(raised.value) == "Argument 'item' must be non-empty"
 
-        with pytest.raises(ValueError) as raised:
+        with pytest.raises(PalaceValueError) as raised:
             # Mandatory loans item was incorrect
             OPDSAcquisitionFeed.single_entry_loans_feed(None, object())  # type: ignore[arg-type]
         assert "Argument 'item' must be an instance of" in str(raised.value)
@@ -955,10 +956,10 @@ class TestOPDSAcquisitionFeed:
         loan, _ = pool.loan_to(patron)
 
         with patch.object(OPDSAcquisitionFeed, "single_entry") as mock:
-            mock.return_value = None
+            mock.return_value = OPDSMessage("test_urn", 404, "Not found")
             response = OPDSAcquisitionFeed.single_entry_loans_feed(None, loan)
 
-        assert response == None
+        assert isinstance(response, OPDSEntryResponse)
         assert mock.call_count == 1
         _work, annotator = mock.call_args[0]
         assert isinstance(annotator, LibraryLoanAndHoldAnnotator)

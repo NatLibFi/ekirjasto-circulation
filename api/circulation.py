@@ -17,6 +17,7 @@ from sqlalchemy.orm import Query, Session
 from typing_extensions import Self
 
 from api.circulation_exceptions import *
+from api.controller.circulation_manager import CirculationManagerController
 from api.integration.registry.license_providers import LicenseProvidersRegistry
 from api.util.patron import PatronUtility
 from core.analytics import Analytics
@@ -51,6 +52,7 @@ from core.model.patron import LoanCheckout
 from core.util.datetime_helpers import utc_now
 from core.util.http import HTTP, BadResponseException, ResponseCodesT
 from core.util.log import LoggerMixin
+from core.util.problem_detail import ProblemDetailException
 
 
 class CirculationInfo:
@@ -424,7 +426,9 @@ class Fulfillment(ABC):
     """
 
     @abstractmethod
-    def response(self) -> Response:
+    def response(
+        self, circulation: CirculationManagerController, loan: Loan
+    ) -> Response:
         """
         Return a Flask Response object that can be used to fulfill a loan.
         """
@@ -457,7 +461,9 @@ class DirectFulfillment(Fulfillment):
         self.content = content
         self.content_type = content_type
 
-    def response(self) -> Response:
+    def response(
+        self, circulation: CirculationManagerController, loan: Loan
+    ) -> Response:
         return Response(self.content, content_type=self.content_type)
 
     def __repr__(self) -> str:
@@ -470,7 +476,9 @@ class RedirectFulfillment(UrlFulfillment):
     Fulfill a loan by redirecting the client to a URL.
     """
 
-    def response(self) -> Response:
+    def response(
+        self, circulation: CirculationManagerController, loan: Loan
+    ) -> Response:
         return Response(
             f"Redirecting to {self.content_link} ...",
             status=302,
@@ -518,7 +526,9 @@ class FetchFulfillment(UrlFulfillment, LoggerMixin):
             allow_redirects=True,
         )
 
-    def response(self) -> Response:
+    def response(
+        self, circulation: CirculationManagerController, loan: Loan
+    ) -> Response:
         try:
             response = self.get(self.content_link)
         except BadResponseException as ex:
@@ -540,6 +550,62 @@ class FetchFulfillment(UrlFulfillment, LoggerMixin):
         return FetchResponse(
             response.content, status=response.status_code, headers=headers
         )
+
+
+class EllibsStreamingFulfillment(FetchFulfillment):
+    """
+    Fulfill a loan by fetching a URL and returning the content.
+    """
+
+    def __init__(
+        self,
+        content_link: str,
+        content_type: str | None = None,
+        *,
+        include_headers: dict[str, str] | None = None,
+        allowed_response_codes: ResponseCodesT = None,
+    ) -> None:
+        super().__init__(content_link, content_type)
+        self.include_headers = include_headers or {}
+        self.allowed_response_codes = allowed_response_codes or []
+
+
+class StreamingFulfillment(UrlFulfillment):
+    """
+    Fulfill a loan by returning an OPDS feed entry containing the streaming link.
+
+    Used for streaming delivery mechanisms where clients expect an OPDS entry
+    rather than a direct redirect to the content.
+
+    If a content type is provided, the streaming profile is automatically appended.
+    """
+
+    def __init__(self, content_link: str, content_type: str | None = None) -> None:
+        if content_type is not None:
+            content_type += DeliveryMechanism.STREAMING_PROFILE
+        super().__init__(content_link, content_type)
+
+    def response(
+        self,
+        circulation: CirculationManagerController | None = None,
+        loan: Loan | None = None,
+    ) -> Response:
+        """
+        Generate an OPDS entry response containing the fulfillment link.
+
+        :raises ProblemDetailException: If the OPDS feed cannot be generated.
+        """
+        from core.feed.acquisition import OPDSAcquisitionFeed
+
+        assert (
+            loan is not None
+        )  # To please mypy, since we'd never call this without a loan.
+        result = OPDSAcquisitionFeed.single_entry_loans_feed(
+            circulation, loan, fulfillment=self
+        )
+        if isinstance(result, ProblemDetail):
+            raise ProblemDetailException(result)
+        return result
 
 
 class LoanAndHoldInfoMixin:
