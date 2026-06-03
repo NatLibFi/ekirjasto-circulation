@@ -7,8 +7,6 @@ import math
 from abc import ABC, abstractmethod
 from typing import Any, Literal, TypeVar
 
-from api.controller.circulation_manager import CirculationManagerController
-from core.util.problem_detail import ProblemDetailException
 import flask
 import requests
 from flask import Response
@@ -19,6 +17,7 @@ from sqlalchemy.orm import Query, Session
 from typing_extensions import Self
 
 from api.circulation_exceptions import *
+from api.controller.circulation_manager import CirculationManagerController
 from api.integration.registry.license_providers import LicenseProvidersRegistry
 from api.util.patron import PatronUtility
 from core.analytics import Analytics
@@ -50,9 +49,11 @@ from core.model import (
 )
 from core.model.integration import IntegrationConfiguration
 from core.model.patron import LoanCheckout
+from core.problem_details import INTERNAL_SERVER_ERROR
 from core.util.datetime_helpers import utc_now
 from core.util.http import HTTP, BadResponseException, ResponseCodesT
 from core.util.log import LoggerMixin
+from core.util.problem_detail import ProblemDetailException
 
 
 class CirculationInfo:
@@ -426,7 +427,9 @@ class Fulfillment(ABC):
     """
 
     @abstractmethod
-    def response(self, circulation: CirculationManagerController, loan: Loan) -> Response:
+    def response(
+        self, circulation: CirculationManagerController, loan: Loan
+    ) -> Response:
         """
         Return a Flask Response object that can be used to fulfill a loan.
         """
@@ -459,7 +462,9 @@ class DirectFulfillment(Fulfillment):
         self.content = content
         self.content_type = content_type
 
-    def response(self, circulation: CirculationManagerController, loan: Loan) -> Response:
+    def response(
+        self, circulation: CirculationManagerController, loan: Loan
+    ) -> Response:
         return Response(self.content, content_type=self.content_type)
 
     def __repr__(self) -> str:
@@ -472,7 +477,9 @@ class RedirectFulfillment(UrlFulfillment):
     Fulfill a loan by redirecting the client to a URL.
     """
 
-    def response(self, circulation: CirculationManagerController, loan: Loan) -> Response:
+    def response(
+        self, circulation: CirculationManagerController, loan: Loan
+    ) -> Response:
         return Response(
             f"Redirecting to {self.content_link} ...",
             status=302,
@@ -520,7 +527,9 @@ class FetchFulfillment(UrlFulfillment, LoggerMixin):
             allow_redirects=True,
         )
 
-    def response(self, circulation: CirculationManagerController, loan: Loan) -> Response:
+    def response(
+        self, circulation: CirculationManagerController, loan: Loan
+    ) -> Response:
         try:
             response = self.get(self.content_link)
         except BadResponseException as ex:
@@ -543,10 +552,12 @@ class FetchFulfillment(UrlFulfillment, LoggerMixin):
             response.content, status=response.status_code, headers=headers
         )
 
+
 class EllibsStreamingFulfillment(FetchFulfillment):
     """
     Fulfill a loan by fetching a URL and returning the content.
     """
+
     def __init__(
         self,
         content_link: str,
@@ -587,12 +598,16 @@ class StreamingFulfillment(UrlFulfillment):
         """
         from core.feed.acquisition import OPDSAcquisitionFeed
 
+        if loan is None:
+            raise ProblemDetailException(INTERNAL_SERVER_ERROR)
+
         result = OPDSAcquisitionFeed.single_entry_loans_feed(
             circulation, loan, fulfillment=self
         )
         if isinstance(result, ProblemDetail):
             raise ProblemDetailException(result)
         return result
+
 
 class LoanAndHoldInfoMixin:
     collection_id: int

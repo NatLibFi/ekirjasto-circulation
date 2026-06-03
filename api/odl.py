@@ -661,7 +661,6 @@ class BaseODLAPI(
             fulfill_cls = RedirectFulfillment
         elif drm_scheme == DeliveryMechanism.STREAMING_DRM:
             # Streaming DRM returns an OPDS entry containing the streaming reader link.
-            print("CONTENT TYPE", content_type)
             link_content_type = (
                 DeliveryMechanism.MEDIA_TYPES_FOR_STREAMING.get(content_type)
                 if content_type
@@ -681,14 +680,21 @@ class BaseODLAPI(
         elif drm_scheme == DeliveryMechanism.FEEDBOOKS_AUDIOBOOK_DRM:
             # For DeMarque audiobook content using "FEEDBOOKS_AUDIOBOOK_DRM", the link
             # we are looking for is stored in the 'manifest' rel.
-            fulfill_link = loan_status.links.get(rel="manifest", type=BaseODLImporter.FEEDBOOKS_AUDIO)
+            fulfill_link = loan_status.links.get(
+                rel="manifest", type=BaseODLImporter.FEEDBOOKS_AUDIO
+            )
             fulfill_cls = partial(FetchFulfillment, allowed_response_codes=["2xx"])
-        elif drm_scheme == DeliveryMechanism.LCP_DRM and content_type == DeliveryMechanism.EKIRJASTO_STREAMING_PROFILE:
+        elif (
+            drm_scheme == DeliveryMechanism.LCP_DRM
+            and content_type == DeliveryMechanism.EKIRJASTO_STREAMING_PROFILE
+        ):
             # For E-Kirjasto streaming content, the link is in "license" (just as for downlaodable content), but the
             # fulfillment class is different, since we need to handle the E-Kirjasto specific streaming format later
             # for statistics purposes.
             fulfill_link = loan_status.links.get(rel="license", type=drm_scheme)
-            fulfill_cls = partial(EllibsStreamingFulfillment, allowed_response_codes=["2xx"])
+            fulfill_cls = partial(
+                EllibsStreamingFulfillment, allowed_response_codes=["2xx"]
+            )
 
         else:
             # We are getting content via a license document, so we need to find the link
@@ -699,7 +705,7 @@ class BaseODLAPI(
         if fulfill_link is None:
             raise CannotFulfill()
 
-        self.log.info(f"Fulfilling with {drm_scheme}, Link: {fulfill_link.href} FULFILL CLASS: {fulfill_cls}")
+        self.log.info(f"Fulfilling with {drm_scheme}, Link: {fulfill_link.href}")
         return fulfill_cls(fulfill_link.href, fulfill_link.type)
 
     def _fulfill(

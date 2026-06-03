@@ -7,7 +7,6 @@ from flask import Response
 from flask_babel import lazy_gettext as _
 from werkzeug import Response as wkResponse
 
-from api.circulation import RedirectFulfillment, UrlFulfillment
 from api.circulation_exceptions import CirculationException, RemoteInitiatedServerError
 from api.controller.circulation_manager import CirculationManagerController
 from api.problem_details import (
