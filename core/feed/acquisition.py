@@ -11,7 +11,6 @@ from sqlalchemy.orm import Query, Session
 from api.circulation import Fulfillment, FulfillmentInfo
 from api.problem_details import NOT_FOUND_ON_REMOTE
 from core.entrypoint import EntryPoint
-from core.exceptions import PalaceValueError
 from core.external_search import ExternalSearchIndex, QueryParseException
 from core.facets import FacetConstants
 from core.feed.annotator.base import Annotator
@@ -585,13 +584,10 @@ class OPDSAcquisitionFeed(BaseOPDSFeed):
         Returns:
             An OPDSEntryResponse object containing the feed or a ProblemDetail
             object if an error occurs.
-
-        Raises:
-            PalaceValueError: If the 'item' argument is empty or not an instance of
-                LicensePool, Loan, or Hold.
         """
         if not item:
-            raise PalaceValueError("Argument 'item' must be non-empty")
+            logging.error("No item provided for single_entry_loans_feed")
+            return INVALID_INPUT.detailed("Something went wrong, sorry for that.")
 
         if isinstance(item, LicensePool):
             license_pool = item
@@ -600,11 +596,8 @@ class OPDSAcquisitionFeed(BaseOPDSFeed):
             license_pool = item.license_pool
             library = item.library
         else:
-            raise PalaceValueError(
-                "Argument 'item' must be an instance of {}, {}, or {} classes".format(
-                    Loan, Hold, LicensePool
-                )
-            )
+            logging.error("Invalid item type provided for single_entry_loans_feed: %r", type(item))  # type: ignore[unreachable]
+            return INVALID_INPUT.detailed("Something went wrong, sorry for that.")
 
         if not annotator:
             annotator = LibraryLoanAndHoldAnnotator(circulation, None, library)
@@ -709,7 +702,7 @@ class OPDSAcquisitionFeed(BaseOPDSFeed):
             return cls.error_message(
                 identifier,
                 403,
-                "I've heard about this work but have no active licenses for it.",
+                "I've heard about this work but there are no active licenses for it anymore.",
             )
 
         if not active_edition:
