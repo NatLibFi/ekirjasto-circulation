@@ -5,13 +5,13 @@ import logging
 from collections.abc import Callable, Generator
 from typing import TYPE_CHECKING, Any
 
-from core.exceptions import PalaceValueError
 from dependency_injector.wiring import Provide, inject
 from sqlalchemy.orm import Query, Session
 
 from api.circulation import Fulfillment, FulfillmentInfo
 from api.problem_details import NOT_FOUND_ON_REMOTE
 from core.entrypoint import EntryPoint
+from core.exceptions import PalaceValueError
 from core.external_search import ExternalSearchIndex, QueryParseException
 from core.facets import FacetConstants
 from core.feed.annotator.base import Annotator
@@ -609,8 +609,6 @@ class OPDSAcquisitionFeed(BaseOPDSFeed):
         if not annotator:
             annotator = LibraryLoanAndHoldAnnotator(circulation, None, library)
 
-        log = logging.getLogger(cls.__name__)
-
         # Sometimes the pool or work may be None
         # In those cases we have to protect against the exceptions
         work: Work | None = None
@@ -651,6 +649,14 @@ class OPDSAcquisitionFeed(BaseOPDSFeed):
 
         entry = cls.single_entry(work, annotator, even_if_no_license_pool=True)
 
+        if entry is None:
+            # If single_entry returns None, create an error message
+            entry = cls.error_message(
+                identifier,
+                500,
+                "Unable to generate entry for this work",
+            )
+
         if isinstance(entry, OPDSMessage):
             response_kwargs["max_age"] = 0
 
@@ -659,23 +665,28 @@ class OPDSAcquisitionFeed(BaseOPDSFeed):
     @classmethod
     def single_entry(
         cls,
-        work: Work | Edition | None,
+        work: Work | Edition,
         annotator: Annotator,
         even_if_no_license_pool: bool = False,
     ) -> WorkEntry | OPDSMessage | None:
         """Turn a work into an annotated work entry for an acquisition feed."""
         identifier = None
         _work: Work
+        active_edition: Edition | None
         if isinstance(work, Edition):
             active_edition = work
             identifier = active_edition.primary_identifier
             active_license_pool = None
-            _work = active_edition.work  # We always need a work for an entry
+            if active_edition.work is None:
+                # We always need a work for an entry
+                logging.warning("NO WORK FOR %r", active_edition)  # type: ignore[unreachable]
+                return cls.error_message(
+                    identifier,
+                    403,
+                    "I have no work associated with this edition.",
+                )
+            _work = active_edition.work
         else:
-            if not work:
-                # We have a license pool but no work. Most likely we don't have
-                # metadata for this work yet.
-                return None
             _work = work
             active_license_pool = annotator.active_licensepool_for(work)
             if active_license_pool:
@@ -683,7 +694,10 @@ class OPDSAcquisitionFeed(BaseOPDSFeed):
                 active_edition = active_license_pool.presentation_edition
             elif work.presentation_edition:
                 active_edition = work.presentation_edition
-                identifier = active_edition.primary_identifier
+                if active_edition is not None:
+                    identifier = active_edition.primary_identifier
+            else:
+                active_edition = None
 
         # There's no reason to present a book that has no active license pool.
         if not identifier:
@@ -714,6 +728,7 @@ class OPDSAcquisitionFeed(BaseOPDSFeed):
             logging.info(
                 "Work %r is not fulfillable, refusing to create an <entry>.",
                 work,
+                exc_info=e,
             )
             return cls.error_message(
                 identifier,
