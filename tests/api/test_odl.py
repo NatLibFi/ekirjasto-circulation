@@ -14,7 +14,13 @@ from freezegun import freeze_time
 from requests import Response
 from sqlalchemy import delete
 
-from api.circulation import FetchFulfillment, HoldInfo, RedirectFulfillment
+from api.circulation import (
+    EllibsStreamingFulfillment,
+    FetchFulfillment,
+    HoldInfo,
+    RedirectFulfillment,
+    StreamingFulfillment,
+)
 from api.circulation_exceptions import (
     AlreadyOnHold,
     CannotFulfill,
@@ -828,12 +834,11 @@ class TestODLAPI:
         assert 0 == db.session.query(Loan).count()
 
     @pytest.mark.parametrize(
-        "drm_scheme, correct_type, correct_link, links",
+        "drm_scheme, content_type, links, expected_type, expected_link, expected_class",
         [
             pytest.param(
                 DeliveryMechanism.ADOBE_DRM,
-                DeliveryMechanism.ADOBE_DRM,
-                "http://acsm",
+                "ignored/format",
                 [
                     {
                         "rel": "license",
@@ -841,12 +846,14 @@ class TestODLAPI:
                         "type": DeliveryMechanism.ADOBE_DRM,
                     }
                 ],
+                DeliveryMechanism.ADOBE_DRM,
+                "http://acsm",
+                FetchFulfillment,
                 id="adobe drm",
             ),
             pytest.param(
                 DeliveryMechanism.LCP_DRM,
-                DeliveryMechanism.LCP_DRM,
-                "http://lcp",
+                "ignored/format",
                 [
                     {
                         "rel": "license",
@@ -854,12 +861,14 @@ class TestODLAPI:
                         "type": DeliveryMechanism.LCP_DRM,
                     }
                 ],
+                DeliveryMechanism.LCP_DRM,
+                "http://lcp",
+                FetchFulfillment,
                 id="lcp drm",
             ),
             pytest.param(
                 DeliveryMechanism.NO_DRM,
                 "application/epub+zip",
-                "http://publication",
                 [
                     {
                         "rel": "publication",
@@ -867,12 +876,14 @@ class TestODLAPI:
                         "type": "application/epub+zip",
                     }
                 ],
+                "application/epub+zip",
+                "http://publication",
+                RedirectFulfillment,
                 id="no drm",
             ),
             pytest.param(
                 DeliveryMechanism.FEEDBOOKS_AUDIOBOOK_DRM,
-                BaseODLImporter.FEEDBOOKS_AUDIO,
-                "http://correct",
+                "ignored/format",
                 [
                     {
                         "rel": "license",
@@ -885,7 +896,55 @@ class TestODLAPI:
                         "type": BaseODLImporter.FEEDBOOKS_AUDIO,
                     },
                 ],
-                id="feedbooks audio",
+                BaseODLImporter.FEEDBOOKS_AUDIO,
+                "http://correct",
+                FetchFulfillment,
+                id="demarque audio",
+            ),
+            pytest.param(
+                DeliveryMechanism.STREAMING_DRM,
+                DeliveryMechanism.STREAMING_TEXT_CONTENT_TYPE,
+                [
+                    {
+                        "rel": "publication",
+                        "href": "http://streaming-content",
+                        "type": "text/html",
+                    }
+                ],
+                DeliveryMechanism.EKIRJASTO_STREAMING_PROFILE,
+                "http://streaming-content",
+                StreamingFulfillment,
+                id="demarque text streaming drm",
+            ),
+            pytest.param(
+                DeliveryMechanism.STREAMING_DRM,
+                DeliveryMechanism.STREAMING_AUDIO_CONTENT_TYPE,
+                [
+                    {
+                        "rel": "publication",
+                        "href": "http://streaming-content",
+                        "type": "text/html",
+                    }
+                ],
+                DeliveryMechanism.EKIRJASTO_STREAMING_PROFILE,
+                "http://streaming-content",
+                StreamingFulfillment,
+                id="demarque audio streaming drm",
+            ),
+            pytest.param(
+                DeliveryMechanism.LCP_DRM,
+                DeliveryMechanism.EKIRJASTO_STREAMING_PROFILE,
+                [
+                    {
+                        "rel": "license",
+                        "href": "http://lcp-streaming-content",
+                        "type": DeliveryMechanism.LCP_DRM,
+                    }
+                ],
+                DeliveryMechanism.LCP_DRM,
+                "http://lcp-streaming-content",
+                EllibsStreamingFulfillment,
+                id="lcp with e-kirjasto streaming profile",
             ),
         ],
     )
@@ -894,9 +953,11 @@ class TestODLAPI:
         opds2_with_odl_api_fixture: OPDS2WithODLApiFixture,
         db: DatabaseTransactionFixture,
         drm_scheme: str,
-        correct_type: str,
-        correct_link: str,
+        content_type: str,
         links: list[dict[str, str]],
+        expected_type: str,
+        expected_link: str,
+        expected_class: type,
     ) -> None:
         # Fulfill a loan in a way that gives access to a license file.
         opds2_with_odl_api_fixture.setup_license(concurrency=1, available=1)
@@ -905,9 +966,7 @@ class TestODLAPI:
 
         lpdm = MagicMock(spec=LicensePoolDeliveryMechanism)
         lpdm.delivery_mechanism = MagicMock(spec=DeliveryMechanism)
-        lpdm.delivery_mechanism.content_type = (
-            "ignored/format" if drm_scheme != DeliveryMechanism.NO_DRM else correct_type
-        )
+        lpdm.delivery_mechanism.content_type = content_type
         lpdm.delivery_mechanism.drm_scheme = drm_scheme
 
         lsd = opds2_with_odl_api_fixture.loan_status_document("active", links=links)
@@ -921,13 +980,10 @@ class TestODLAPI:
                 opds2_with_odl_api_fixture.pool,
                 lpdm,
             )
-        assert (
-            isinstance(fulfillment, FetchFulfillment)
-            if drm_scheme != DeliveryMechanism.NO_DRM
-            else isinstance(fulfillment, RedirectFulfillment)
-        )
-        assert correct_link == fulfillment.content_link  # type: ignore[attr-defined]
-        assert correct_type == fulfillment.content_type  # type: ignore[attr-defined]
+
+        assert isinstance(fulfillment, expected_class)
+        assert expected_link == fulfillment.content_link  # type: ignore[attr-defined]
+        assert expected_type == fulfillment.content_type  # type: ignore[attr-defined]
         if isinstance(fulfillment, FetchFulfillment):
             assert fulfillment.allowed_response_codes == ["2xx"]
 
