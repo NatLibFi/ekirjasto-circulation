@@ -448,12 +448,13 @@ class LoanController(CirculationManagerController):
                 self.circulation.release_hold(patron, credential, pool)
             except (CirculationException, RemoteInitiatedServerError) as e:
                 return e.problem_detail
-        
-        return OPDSAcquisitionFeed.single_entry_loans_feed(
+
+        result = OPDSAcquisitionFeed.single_entry_loans_feed(
             self.circulation,
             pool,
             mime_types=flask.request.accept_mimetypes,
         )
+        return result  # type: ignore[return-value]
 
     def detail(
         self, identifier_type: str, identifier: str

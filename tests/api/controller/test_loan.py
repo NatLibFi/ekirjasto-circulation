@@ -1119,13 +1119,13 @@ class TestLoanController:
         loan_fixture: LoanFixture,
     ):
         """Test revoking the last (only) loan in a license pool.
-        
+
         When a patron returns the last loan in a license pool, the pool may
         transition to having licenses_owned=0, making it appear as 'inactive'
         in the collection. The revoke endpoint should still generate a valid
         OPDS entry response so the client sees the final state after revocation,
         instead of returning a 403 error.
-        
+
         This tests that even_if_no_license_pool=True is used in the revoke
         endpoint's response generation, so it can generate a response even when
         annotator.active_licensepool_for() returns None (the condition that
@@ -1134,7 +1134,7 @@ class TestLoanController:
         # Set up the pool with only one owned license
         loan_fixture.pool.licenses_owned = 1
         loan_fixture.pool.licenses_available = 1
-        
+
         headers = {"Authorization": loan_fixture.valid_auth}
 
         with loan_fixture.request_context_with_library("/", headers=headers):
@@ -1151,9 +1151,7 @@ class TestLoanController:
             assert loan is not None
 
             # Queue a successful checkin
-            loan_fixture.manager.d_circulation.queue_checkin(
-                loan_fixture.pool, True
-            )
+            loan_fixture.manager.d_circulation.queue_checkin(loan_fixture.pool, True)
 
             # Revoke the loan
             response = loan_fixture.manager.loans.revoke(loan_fixture.pool_id)
@@ -1162,18 +1160,21 @@ class TestLoanController:
         # Without even_if_no_license_pool=True, this would fail with 403 because
         # the pool has no active license pool for the annotator after revocation
         assert 200 == response.status_code
-        
+
         # Verify it's a valid OPDS entry response with proper serialization
         serialization_helper = OPDSSerializationTestHelper(
             None, "application/atom+xml;type=entry;profile=opds-catalog"
         )
-        feed_links = serialization_helper.verify_and_get_single_entry_feed_links(response)
-        
+        feed_links = serialization_helper.verify_and_get_single_entry_feed_links(
+            response
+        )
+
         # Ensure the response has the expected structure
         assert feed_links is not None
         assert len(feed_links) > 0
-        
+
         # Verify the response contains a valid OPDS entry
+        assert isinstance(response, OPDSEntryResponse)
         feed = feedparser.parse(response.data)
         entries = feed.get("entries", [])
         assert len(entries) == 1
