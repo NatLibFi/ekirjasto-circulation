@@ -651,7 +651,9 @@ class OPDSAcquisitionFeed(BaseOPDSFeed):
         selected_books_by_work[work] = selected_book
         annotator.selected_books_by_work = selected_books_by_work
 
-        entry = cls.single_entry(work, annotator, even_if_no_license_pool=True)
+        entry = cls.single_entry(
+            work, annotator, even_if_no_license_pool=True, license_pool=license_pool
+        )
 
         if isinstance(entry, WorkEntry) and entry.computed:
             return cls.entry_as_response(entry, **response_kwargs)
@@ -666,6 +668,7 @@ class OPDSAcquisitionFeed(BaseOPDSFeed):
         work: Work | Edition | None,
         annotator: Annotator,
         even_if_no_license_pool: bool = False,
+        license_pool: LicensePool | None = None,
     ) -> WorkEntry | OPDSMessage | None:
         """Turn a work into an annotated work entry for an acquisition feed."""
         identifier = None
@@ -681,7 +684,10 @@ class OPDSAcquisitionFeed(BaseOPDSFeed):
                 # metadata for this work yet.
                 return None
             _work = work
-            active_license_pool = annotator.active_licensepool_for(work)
+            # Use the provided license_pool if available, otherwise try to find an active one.
+            # This is relevant when revoking a hold or loan and the license pool has become
+            # inactive.
+            active_license_pool = license_pool or annotator.active_licensepool_for(work)
             if active_license_pool:
                 identifier = active_license_pool.identifier
                 active_edition = active_license_pool.presentation_edition
