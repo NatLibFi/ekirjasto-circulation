@@ -82,7 +82,10 @@ from core.util.datetime_helpers import to_utc, utc_now
 from core.util.http import HTTP, BadResponseException, RemoteIntegrationException
 from core.util.log import LoggerMixin
 from core.util.pydantic import HttpUrl
-
+from api.integration.demarque_webreader import (
+    DEMARQUE_WEBREADER_REL,
+    DeMarqueWebReader,
+)
 
 class ODLAPIConstants:
     DEFAULT_PASSPHRASE_HINT = "View the help page for more information."
@@ -190,6 +193,7 @@ class BaseODLAPI(
         _db: Session,
         collection: Collection,
         analytics: Any = Provide[Services.analytics.analytics],
+        demarque_webreader: DeMarqueWebReader | None = None,
     ) -> None:
         super().__init__(_db, collection)
         if collection.protocol != self.label():
@@ -210,6 +214,8 @@ class BaseODLAPI(
         self._hasher_factory = HasherFactory()
         self._credential_factory = LCPCredentialFactory()
         self._hasher_instance: Hasher | None = None
+        # Create DeMarque WebReader client (None if not configured)
+        self._demarque_webreader = demarque_webreader or DeMarqueWebReader.create()
 
     def _get_hasher(self) -> Hasher:
         """Returns a Hasher instance
@@ -672,10 +678,22 @@ class BaseODLAPI(
                     f"Supported types: {list(DeliveryMechanism.MEDIA_TYPES_FOR_STREAMING.keys())}."
                 )
                 raise CannotFulfill("The requested streaming format is not available.")
-            fulfill_link = loan_status.links.get(
-                rel="publication",
-                type=link_content_type,
-            )
+            # Check for DeMarque WebReader link first (requires JWT config)
+            if (
+                self._demarque_webreader is not None
+                and (
+                    webreader_link := loan_status.links.get(
+                        rel=DEMARQUE_WEBREADER_REL, type=link_content_type
+                    )
+                )
+                is not None
+            ):
+                fulfill_link = self._demarque_webreader.fulfill_link(webreader_link)
+            else:
+                fulfill_link = loan_status.links.get(
+                    rel="publication",
+                    type=link_content_type,
+                )
             fulfill_cls = StreamingFulfillment
         elif drm_scheme == DeliveryMechanism.FEEDBOOKS_AUDIOBOOK_DRM:
             # For DeMarque audiobook content using "FEEDBOOKS_AUDIOBOOK_DRM", the link
