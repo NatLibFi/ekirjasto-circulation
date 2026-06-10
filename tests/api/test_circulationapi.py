@@ -15,9 +15,11 @@ from api.circulation import (
     BaseCirculationAPI,
     CirculationAPI,
     CirculationInfo,
+    EllibsStreamingFulfillment,
     FulfillmentInfo,
     HoldInfo,
     LoanInfo,
+    StreamingFulfillment,
 )
 from api.circulation_exceptions import *
 from core.analytics import Analytics
@@ -943,6 +945,64 @@ class TestCirculationAPI:
         circulation_api.circulation.can_fulfill_without_loan = yes_we_can
         result = try_to_fulfill()
         assert fulfillment == result
+
+    def test_fulfill_records_streaming_event_for_streaming_fulfillment(
+        self, circulation_api: CirculationAPIFixture
+    ):
+        """Test that StreamingFulfillment records CM_STREAMING_FULFILL event."""
+        circulation_api.pool.loan_to(circulation_api.patron)
+
+        # Queue a StreamingFulfillment
+        streaming_fulfillment = StreamingFulfillment(
+            content_link="https://example.com/stream"
+        )
+        circulation_api.remote.queue_fulfill(streaming_fulfillment)
+
+        result = circulation_api.circulation.fulfill(
+            circulation_api.patron,
+            "1234",
+            circulation_api.pool,
+            circulation_api.pool.delivery_mechanisms[0],
+        )
+
+        # The fulfillment looks good.
+        assert streaming_fulfillment == result
+
+        # An analytics event was created with CM_STREAMING_FULFILL.
+        assert 1 == circulation_api.analytics.count
+        assert (
+            CirculationEvent.CM_STREAMING_FULFILL
+            == circulation_api.analytics.event_type
+        )
+
+    def test_fulfill_records_streaming_event_for_ellips_streaming_fulfillment(
+        self, circulation_api: CirculationAPIFixture
+    ):
+        """Test that EllibsStreamingFulfillment records CM_STREAMING_FULFILL event."""
+        circulation_api.pool.loan_to(circulation_api.patron)
+
+        # Queue an EllibsStreamingFulfillment
+        ellibs_fulfillment = EllibsStreamingFulfillment(
+            content_link="https://example.com/ellips"
+        )
+        circulation_api.remote.queue_fulfill(ellibs_fulfillment)
+
+        result = circulation_api.circulation.fulfill(
+            circulation_api.patron,
+            "1234",
+            circulation_api.pool,
+            circulation_api.pool.delivery_mechanisms[0],
+        )
+
+        # The fulfillment looks good.
+        assert ellibs_fulfillment == result
+
+        # An analytics event was created with CM_STREAMING_FULFILL.
+        assert 1 == circulation_api.analytics.count
+        assert (
+            CirculationEvent.CM_STREAMING_FULFILL
+            == circulation_api.analytics.event_type
+        )
 
     @pytest.mark.parametrize("open_access", [True, False])
     def test_revoke_loan(self, circulation_api: CirculationAPIFixture, open_access):
