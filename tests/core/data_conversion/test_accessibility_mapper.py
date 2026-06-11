@@ -1,10 +1,10 @@
 import pytest
 
-from api.opds.rwpm import (
+from api.opds.accessibility import (
     AccessibilityFeature,
     AccessMode,
     AccessModeSufficient,
-    ConformsTo,
+    Hazard,
 )
 from core.data_conversion.accessibility_mapper import (
     AccessibilityDataMapper,
@@ -20,7 +20,7 @@ class TestAccessibilityDataMapper:
 
     def test_map_accessibility_with_data(self, data_mapper):
         mock_data = AccessibilityData(
-            conforms_to=[ConformsTo.epub_1_0_wcag_2_0_level_a],
+            conforms_to=["https://www.w3.org/TR/epub-a11y-11#wcag-2.2-aa"],
             access_mode=[AccessMode.textual],
             access_mode_sufficient=[AccessModeSufficient.textual],
             features=[AccessibilityFeature.alternative_text],
@@ -85,14 +85,18 @@ class TestAccessibilityDataMapper:
     @pytest.mark.parametrize(
         "hazards, expected_output",
         [
-            pytest.param(["flashing"], ["Flashing content"], id="flashing"),
+            pytest.param([Hazard.flashing], ["Flashing content"], id="flashing"),
             pytest.param(
-                ["noflashinghazard", "nosoundhazard", "nomotionsimulationhazard"],
+                [
+                    Hazard.no_flashing_hazard,
+                    Hazard.no_sound_hazard,
+                    Hazard.no_motion_simulation_hazard,
+                ],
                 ["No hazards"],
                 id="no hazards",
             ),
             pytest.param(
-                ["unknown"], ["The presence of hazards is unknown"], id="unknown"
+                [Hazard.unknown], ["The presence of hazards is unknown"], id="unknown"
             ),
             pytest.param(None, None, id="no data"),
         ],
@@ -104,9 +108,9 @@ class TestAccessibilityDataMapper:
         "access_mode_list, access_mode_sufficient_list, feature_list, expected_output",
         [
             pytest.param(
-                ["textual"],
-                ["textual"],
-                ["longdescription"],
+                [AccessMode.textual],
+                [AccessModeSufficient.textual],
+                [AccessibilityFeature.long_description],
                 [
                     "Has alternative text",
                     "Readable in read aloud or dynamic braille",
@@ -114,7 +118,7 @@ class TestAccessibilityDataMapper:
                 id="accessmode textual, accessmodesufficient textual, feature",
             ),
             pytest.param(
-                ["auditory"],
+                [AccessMode.auditory],
                 None,
                 None,
                 ["Not readable in read aloud or dynamic braille"],
@@ -123,7 +127,10 @@ class TestAccessibilityDataMapper:
             pytest.param(
                 None,
                 ["textual, visual"],
-                ["tableofcontents", "displaytransformability"],
+                [
+                    AccessibilityFeature.table_of_contents,
+                    AccessibilityFeature.display_transformability,
+                ],
                 [
                     "Appearance can be modified",
                     "Not fully readable in read aloud or dynamic braille",
@@ -131,9 +138,9 @@ class TestAccessibilityDataMapper:
                 id="accessmode textual, accessmodesufficient textual, features",
             ),
             pytest.param(
-                ["auditory"],
+                [AccessMode.auditory],
                 None,
-                ["synchronizedaudiotext"],
+                [AccessibilityFeature.synchronized_audio_text],
                 [
                     "Not readable in read aloud or dynamic braille",
                     "Prerecorded audio synchronized with text",
@@ -141,9 +148,12 @@ class TestAccessibilityDataMapper:
                 id="accessmode auditory, feature",
             ),
             pytest.param(
-                ["textual"],
-                ["textual, visual", "textual"],
-                ["displaytransformability", "alternativetext"],
+                [AccessMode.textual],
+                ["textual, visual", AccessModeSufficient.textual],
+                [
+                    AccessibilityFeature.display_transformability,
+                    AccessibilityFeature.alternative_text,
+                ],
                 [
                     "Appearance can be modified",
                     "Has alternative text",
@@ -152,7 +162,7 @@ class TestAccessibilityDataMapper:
                 id="accessmode textual,visual and accessmodesufficient textual,visual, textual, features",
             ),
             pytest.param(
-                ["visual"],
+                [AccessMode.visual],
                 None,
                 None,
                 ["Not readable in read aloud or dynamic braille"],
@@ -160,8 +170,8 @@ class TestAccessibilityDataMapper:
             ),
             pytest.param(
                 None,
-                ["textual"],
-                ["longdescription"],
+                [AccessModeSufficient.textual],
+                [AccessibilityFeature.long_description],
                 [
                     "Has alternative text",
                     "Readable in read aloud or dynamic braille",
@@ -190,37 +200,80 @@ class TestAccessibilityDataMapper:
         "access_mode_list, access_mode_sufficient_list, feature_list, expected_output",
         [
             pytest.param(
-                ["textual"], None, None, ["all_necessary_content_textual"], id="textual"
+                [AccessMode.textual],
+                None,
+                None,
+                ["all_necessary_content_textual"],
+                id="only textual",
             ),
             pytest.param(
-                ["auditory"], None, None, ["audio_only_content"], id="auditory"
+                [AccessMode.auditory],
+                None,
+                None,
+                ["audio_only_content"],
+                id="only auditory",
             ),
-            pytest.param(["visual"], None, None, ["visual_only_content"], id="visual"),
+            pytest.param(
+                [AccessMode.visual],
+                None,
+                None,
+                ["visual_only_content"],
+                id="only visual",
+            ),
+            pytest.param(
+                [AccessMode.textual, AccessMode.visual, AccessMode.auditory],
+                [
+                    "auditory, textual, visual",
+                    "auditory, textual",
+                    AccessModeSufficient.textual,
+                ],
+                [
+                    AccessibilityFeature.reading_order,
+                    AccessibilityFeature.synchronized_audio_text,
+                    AccessibilityFeature.table_of_contents,
+                    AccessibilityFeature.page_navigation,
+                ],
+                ["some_sufficient_text", "synchronised_pre_recorded_audio"],
+                id="multiple access modes",
+            ),
             pytest.param(
                 None,
-                ["textual"],
+                [AccessModeSufficient.textual],
                 ["none"],
                 ["all_necessary_content_textual"],
                 id="some sufficient text",
             ),
             pytest.param(
-                ["textual"],
+                [AccessMode.textual],
                 None,
-                ["longdescription", "alternativetext", "describedmath", "transcript"],
+                [
+                    AccessibilityFeature.long_description,
+                    AccessibilityFeature.alternative_text,
+                    AccessibilityFeature.described_math,
+                    AccessibilityFeature.transcript,
+                ],
                 ["all_necessary_content_textual", "textual_alternatives"],
                 id="text alternatives, all textual",
             ),
             pytest.param(
                 None,
                 None,
-                ["longdescription", "alternativetext", "describedmath", "transcript"],
+                [
+                    AccessibilityFeature.long_description,
+                    AccessibilityFeature.alternative_text,
+                    AccessibilityFeature.described_math,
+                    AccessibilityFeature.transcript,
+                ],
                 ["textual_alternatives"],
                 id="text alternatives",
             ),
             pytest.param(
                 None,
                 ["textual, visual"],
-                ["longdescription", "alternativetext"],
+                [
+                    AccessibilityFeature.long_description,
+                    AccessibilityFeature.alternative_text,
+                ],
                 ["some_sufficient_text", "textual_alternatives"],
                 id="some text alternatives",
             ),
