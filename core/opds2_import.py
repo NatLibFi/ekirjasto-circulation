@@ -629,11 +629,14 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
         self, accessibility_data: rwpm.Accessibility | None
     ) -> AccessibilityData | None:
         if accessibility_data:
-            conforms_to = (
-                self._parse_element_values(accessibility_data.conforms_to)
-                if accessibility_data.conforms_to
-                else None
-            )
+            # conforms_to contains strings (URLs), not enums, so handle separately
+            conforms_to = None
+            if accessibility_data.conforms_to:
+                if isinstance(accessibility_data.conforms_to, str):
+                    conforms_to = [accessibility_data.conforms_to]
+                else:
+                    conforms_to = list(accessibility_data.conforms_to)
+            
             access_mode = (
                 self._parse_element_values(accessibility_data.access_mode)
                 if accessibility_data.access_mode
