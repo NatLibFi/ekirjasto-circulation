@@ -8,7 +8,12 @@ from enum import Enum
 from functools import cached_property
 from typing import Any, cast
 
-from pydantic import Field, field_validator, model_serializer, SerializerFunctionWrapHandler
+from pydantic import (
+    Field,
+    SerializerFunctionWrapHandler,
+    field_validator,
+    model_serializer,
+)
 
 from api.opds.base import BaseOpdsModel
 from api.opds.util import StrOrTuple, drop_if_falsy, obj_or_tuple_to_tuple
@@ -177,7 +182,7 @@ def _coerce_single_access_mode_sufficient(
     value: str, lookup: dict[str, AccessModeSufficient]
 ) -> AccessModeSufficient | None:
     """Coerce a single access mode sufficient value with logging.
-    
+
     Returns the coerced enum member or None if the value is unknown.
     """
     match = lookup.get(value.lower())
@@ -197,13 +202,13 @@ def _coerce_access_mode_sufficient_string(
     value: str, lookup: dict[str, AccessModeSufficient]
 ) -> tuple[AccessModeSufficient, ...] | AccessModeSufficient | None:
     """Coerce a string that may contain comma-separated access mode sufficient values.
-    
+
     Returns a tuple for comma-separated values, a single enum for single values,
     or None if all values were unknown.
     """
     if "," not in value:
         return _coerce_single_access_mode_sufficient(value.strip(), lookup)
-    
+
     # Handle comma-separated values
     parts: list[AccessModeSufficient] = []
     for part in value.split(","):
@@ -248,9 +253,11 @@ class Accessibility(BaseOpdsModel):
 
     @field_validator("access_mode_sufficient", mode="before")
     @classmethod
-    def normalize_access_mode_sufficient(cls, value: list[Any] | None) -> list[Any] | None:
+    def normalize_access_mode_sufficient(
+        cls, value: list[Any] | None
+    ) -> list[Any] | None:
         """Normalize accessModeSufficient values by splitting comma-separated items.
-        
+
         Some data sources (e.g., Ellibs) provide comma-separated values like
         "auditory, textual, visual" as individual list items. This validator
         splits those into proper tuples that can be handled by StrOrTuple.

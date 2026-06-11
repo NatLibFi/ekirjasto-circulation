@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 from collections.abc import Sequence
 from datetime import date, datetime
 from enum import Enum
@@ -21,8 +20,6 @@ from api.opds.base import BaseOpdsModel
 from api.opds.types.language import LanguageCode, LanguageMap
 from api.opds.types.link import BaseLink, CompactCollection
 from api.opds.util import StrModelOrTuple, StrOrModel, StrOrTuple, obj_or_tuple_to_tuple
-
-_logger = logging.getLogger(__name__)
 
 
 class Encryption(BaseOpdsModel):
