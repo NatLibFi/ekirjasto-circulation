@@ -92,27 +92,6 @@ def _mode_list_is_only(
     return _list_is_only(mode_list, mode)
 
 
-def _normalize_features_list(
-    feature_list: list[Any],
-) -> list[AccessibilityFeature]:
-    """
-    Normalize a feature list to always contain AccessibilityFeature enum members.
-
-    Handles both string values (from tests) and enum members (from real data).
-    """
-    normalized: list[AccessibilityFeature] = []
-    for item in feature_list:
-        if isinstance(item, AccessibilityFeature):
-            normalized.append(item)
-        elif isinstance(item, str):
-            # Try to find the enum member by value
-            for feature in AccessibilityFeature:
-                if feature.value.lower() == item.lower():
-                    normalized.append(feature)
-                    break
-    return normalized
-
-
 class W3CVariables:
     # Ways of reading
     all_necessary_content_textual = "all_necessary_content_textual"
@@ -466,12 +445,9 @@ class AccessibilityDataMapper:
                 w3c_variables.append(W3CVariables.some_sufficient_text)
 
         if feature_list:
-            # Normalize feature_list to enum members (handles both strings and enums)
-            normalized_features = _normalize_features_list(feature_list)
-
             # At least one of the following is present:
             if any(
-                _list_contains(normalized_features, feature)
+                _list_contains(feature_list, feature)
                 for feature in [
                     AccessibilityFeature.long_description,
                     AccessibilityFeature.alternative_text,
@@ -483,19 +459,17 @@ class AccessibilityDataMapper:
 
             # All textual content can be modified is present.
             if _list_contains(
-                normalized_features, AccessibilityFeature.display_transformability
+                feature_list, AccessibilityFeature.display_transformability
             ):
                 w3c_variables.append(W3CVariables.all_textual_content_can_be_modified)
 
             # Fixed format is present.
-            if _list_contains(
-                normalized_features, AccessibilityFeature.is_fixed_layout
-            ):
+            if _list_contains(feature_list, AccessibilityFeature.is_fixed_layout):
                 w3c_variables.append(W3CVariables.is_fixed_layout)
 
             # Text-synchronised prerecorded audio narration is present.
             if _list_contains(
-                normalized_features, AccessibilityFeature.synchronized_audio_text
+                feature_list, AccessibilityFeature.synchronized_audio_text
             ):
                 w3c_variables.append(W3CVariables.synchronised_pre_recorded_audio)
 
