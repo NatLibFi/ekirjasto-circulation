@@ -637,51 +637,16 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
                 else:
                     conforms_to = list(accessibility_data.conforms_to)
             
-            access_mode = (
-                self._parse_element_values(accessibility_data.access_mode)
-                if accessibility_data.access_mode
-                else None
-            )
-            access_mode_sufficient = (
-                self._parse_element_values(accessibility_data.access_mode_sufficient)
-                if accessibility_data.access_mode_sufficient
-                else None
-            )
-            features = (
-                self._parse_element_values(accessibility_data.feature)
-                if accessibility_data.feature
-                else None
-            )
-            hazards = (
-                self._parse_element_values(accessibility_data.hazard)
-                if accessibility_data.hazard
-                else None
-            )
             accessibility_metadata = AccessibilityData(
-                access_mode_sufficient=access_mode_sufficient,
-                access_mode=access_mode,
-                features=features,
+                access_mode_sufficient=list(accessibility_data.access_mode_sufficient)
+                if accessibility_data.access_mode_sufficient
+                else None,
+                access_mode=accessibility_data.access_mode,
+                features=accessibility_data.feature,
                 conforms_to=conforms_to,
-                hazards=hazards,
+                hazards=accessibility_data.hazard,
             )
             return accessibility_metadata
-        return None
-
-    def _parse_element_values(
-        self,
-        element_list: list[rwpm.ConformsTo]
-        | list[rwpm.AccessMode]
-        | list[rwpm.AccessModeSufficient]
-        | list[rwpm.AccessibilityFeature]
-        | list[rwpm.Hazard]
-        | None,
-    ) -> list[str] | None:
-        """
-        Extracts the names of the provided enum elements from a list.
-        """
-        if element_list:
-            values = [element.value for element in element_list]
-            return values
         return None
 
     def _extract_publication_metadata(
