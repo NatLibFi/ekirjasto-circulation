@@ -1,5 +1,6 @@
 import argparse
 import datetime
+import json
 import logging
 import os
 import subprocess
@@ -11,6 +12,7 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
+from jwcrypto import jwk
 from sqlalchemy import inspect, select
 from sqlalchemy.engine import Connection
 from sqlalchemy.exc import NoResultFound
@@ -1287,3 +1289,94 @@ class GenerateShortTokenScript(LibraryInputScript):
         output.write(f"Token: {token}\n")
         output.write(f"Username: {username}\n")
         output.write(f"Password: {password}\n")
+
+class GenerateKeysScript(Script):
+    """Generate Ed25519 keys for e.g. DeMarque WebReader JWT authentication.
+
+    This script generates a public/private keypair in JWK format suitable
+    for JWT-based authentication.
+    It outputs:
+    - Private key (JSON) for environment variable configuration
+    - JWKS file (public keys) for deployment to web root
+
+    Note: This script does not require database access.
+    """
+
+    name = "Generate JWT keys"
+
+    @classmethod
+    def arg_parser(cls, _db=None):
+        """Create argument parser for key generation.
+        
+        Args:
+            _db: Database session (not used for this script).
+        """
+        parser = argparse.ArgumentParser(description=cls.name)
+        parser.add_argument(
+            "--key-id",
+            default="demarque-key",
+            help="Key identifier (kid). Default: demarque-key",
+        )
+        parser.add_argument(
+            "--output-dir",
+            default=".",
+            help="Directory to save key files. Default: current directory",
+        )
+        parser.add_argument(
+            "--force",
+            action="store_true",
+            help="Overwrite existing key files without confirmation",
+        )
+        return parser
+
+    def do_run(self, cmd_args=None, output=sys.stdout):
+        """Generate Ed25519 keypair and save to files.
+        
+        Args:
+            cmd_args: Command-line arguments to parse.
+            output: Output stream for messages.
+        """
+        parser = self.arg_parser(self._db)
+        args = parser.parse_args(cmd_args)
+        output_dir = Path(args.output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        private_key_file = output_dir / "demarque-private-key.json"
+        jwks_file = output_dir / "r.cantook.com-jwks.json"
+
+        # Check if files exist
+        if not args.force:
+            files_to_check = [private_key_file, jwks_file]
+            if any(f.exists() for f in files_to_check):
+                output.write(f"Output files already exist in {output_dir}\n")
+                output.write("Use --force to overwrite\n")
+                return
+
+        output.write(
+            f"Generating Ed25519 keypair with kid='{args.key_id}'...\n"
+        )
+
+        # Generate Ed25519 key
+        key = jwk.JWK.generate(
+            kty="OKP", crv="Ed25519", kid=args.key_id, use="sig", alg="EdDSA"
+        )
+
+        # Save private key as JWK (JSON)
+        private_key_json = key.export()
+        private_key_file.write_text(private_key_json)
+        output.write(f"Private key saved (JWK): {private_key_file}\n")
+
+        # Extract public key and create JWKS
+        public_key_json = key.export_public()
+        public_key_dict = json.loads(public_key_json)
+
+        jwks = {"keys": [public_key_dict]}
+
+        # Save JWKS
+        jwks_file.write_text(json.dumps(jwks, indent=2))
+        output.write(f"JWKS file saved: {jwks_file}\n")
+        output.write("\n" + "=" * 70 + "\n")
+        output.write("Public Key Information:\n")
+        output.write("=" * 70 + "\n")
+        output.write(json.dumps(public_key_dict, indent=2) + "\n")
+        output.write("All done!\n")
