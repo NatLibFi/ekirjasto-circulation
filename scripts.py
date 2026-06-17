@@ -1290,6 +1290,7 @@ class GenerateShortTokenScript(LibraryInputScript):
         output.write(f"Username: {username}\n")
         output.write(f"Password: {password}\n")
 
+
 class GenerateKeysScript(Script):
     """Generate Ed25519 keys for e.g. DeMarque WebReader JWT authentication.
 
@@ -1307,7 +1308,7 @@ class GenerateKeysScript(Script):
     @classmethod
     def arg_parser(cls, _db=None):
         """Create argument parser for key generation.
-        
+
         Args:
             _db: Database session (not used for this script).
         """
@@ -1331,7 +1332,7 @@ class GenerateKeysScript(Script):
 
     def do_run(self, cmd_args=None, output=sys.stdout):
         """Generate Ed25519 keypair and save to files.
-        
+
         Args:
             cmd_args: Command-line arguments to parse.
             output: Output stream for messages.
@@ -1352,9 +1353,7 @@ class GenerateKeysScript(Script):
                 output.write("Use --force to overwrite\n")
                 return
 
-        output.write(
-            f"Generating Ed25519 keypair with kid='{args.key_id}'...\n"
-        )
+        output.write(f"Generating Ed25519 keypair with kid='{args.key_id}'...\n")
 
         # Generate Ed25519 key
         key = jwk.JWK.generate(
