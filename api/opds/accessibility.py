@@ -154,7 +154,7 @@ def _coerce_enum_list(value: Any, enum_cls: type[Enum], field_name: str) -> Any:
     """
     if not isinstance(value, list):
         return value
-    lookup = {member.value.lower(): member for member in enum_cls}  # type: ignore[attr-defined]
+    lookup = {member.value.lower(): member for member in enum_cls}
     coerced: list[Any] = []
     for item in value:
         if isinstance(item, enum_cls):
@@ -163,12 +163,12 @@ def _coerce_enum_list(value: Any, enum_cls: type[Enum], field_name: str) -> Any:
         if isinstance(item, str):
             match = lookup.get(item.lower())
             if match is not None:
-                if match.value != item:  # type: ignore[attr-defined]
+                if match.value != item:
                     _logger.warning(
                         "Coerced %s value %r to canonical %r",
                         field_name,
                         item,
-                        match.value,  # type: ignore[attr-defined]
+                        match.value,
                     )
                 coerced.append(match)
                 continue

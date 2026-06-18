@@ -636,7 +636,7 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
                     conforms_to = [accessibility_data.conforms_to]
                 else:
                     conforms_to = list(accessibility_data.conforms_to)
-            
+
             accessibility_metadata = AccessibilityData(
                 access_mode_sufficient=list(accessibility_data.access_mode_sufficient)
                 if accessibility_data.access_mode_sufficient

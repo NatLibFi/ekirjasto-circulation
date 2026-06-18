@@ -2,6 +2,7 @@ import pytest
 from pydantic import ValidationError
 
 from api.opds import opds2
+from api.opds.accessibility import Accessibility
 from api.opds.odl.odl import Feed, Publication, _get_publication_type
 from tests.fixtures.files import OPDS2FilesFixture, OPDS2WithODLFilesFixture
 
@@ -87,4 +88,5 @@ def test_feed_odl_bad_accessibility_data_failure(
     # The invalid feature value should have been dropped, resulting in an empty feature list
     publication = feed.publications[0]
     assert publication.metadata.accessibility is not None
+    assert isinstance(publication.metadata.accessibility, Accessibility)
     assert publication.metadata.accessibility.feature == []
