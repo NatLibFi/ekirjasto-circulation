@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import datetime
+import json
 import logging
+import tempfile
 from io import StringIO
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -9,6 +11,7 @@ from unittest.mock import MagicMock, call, create_autospec, patch
 
 import pytest
 from _pytest.logging import LogCaptureFixture
+from jwcrypto import jwk
 from sqlalchemy.exc import NoResultFound
 
 from alembic.util import CommandError
@@ -33,6 +36,7 @@ from core.util.datetime_helpers import datetime_utc, utc_now
 from scripts import (
     AdobeAccountIDResetScript,
     CacheMARCFiles,
+    GenerateKeysScript,
     GenerateShortTokenScript,
     InstanceInitializationScript,
     LanguageListScript,
@@ -909,3 +913,473 @@ class TestGenerateShortTokenScript:
             )
         assert pytest_exit.value.code == -1
         assert "Patron not found" in output.getvalue()
+
+
+class TestGenerateKeysScript:
+    """Tests for the GenerateKeysScript that creates Ed25519 JWT keys."""
+
+    def test_arg_parser(self):
+        """Test that the argument parser is properly configured."""
+        parser = GenerateKeysScript.arg_parser()
+        assert parser is not None
+
+        # Test with defaults (key_id should be None to trigger auto-generation from date)
+        args = parser.parse_args([])
+        assert args.key_id is None
+        assert args.output_dir == "."
+
+        # Test with custom values
+        args = parser.parse_args(["--key-id", "test-key", "--output-dir", "/tmp"])
+        assert args.key_id == "test-key"
+        assert args.output_dir == "/tmp"
+
+    def test_auto_generates_key_id_from_date(self, caplog):
+        """Test that key ID is auto-generated from today's date with timestamp when not provided."""
+        import datetime
+        import logging
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            script = GenerateKeysScript(None)
+            # Call without --key-id to trigger auto-generation
+            with caplog.at_level(logging.INFO):
+                script.do_run(
+                    cmd_args=["--output-dir", tmpdir],
+                    output=StringIO(),
+                )
+
+            # Verify the generated key has a kid based on today's date with timestamp
+            private_key_file = Path(tmpdir) / "demarque-private-key.json"
+            private_key_json = json.loads(private_key_file.read_text())
+
+            today = datetime.date.today().isoformat()
+            # Kid should start with date and include timestamp with microseconds (YYYY-MM-DD-HHMMSS-ffffff)
+            assert private_key_json["kid"].startswith(f"demarque-key-{today}-")
+            # Format: demarque-key-YYYY-MM-DD-HHMMSS-ffffff (29 chars)
+            assert len(private_key_json["kid"]) == len(
+                "demarque-key-2026-06-18-000000-000000"
+            )
+
+            # Verify logging contains the auto-generated kid
+            assert "demarque-key-" in caplog.text
+
+    def test_generates_valid_keys(self):
+        """Test that the script generates valid Ed25519 keys."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output = StringIO()
+            script = GenerateKeysScript(None)
+            script.do_run(
+                cmd_args=["--output-dir", tmpdir, "--key-id", "test-key-1"],
+                output=output,
+            )
+
+            # Check that files were created
+            private_key_file = Path(tmpdir) / "demarque-private-key.json"
+            jwks_file = Path(tmpdir) / "r.cantook.com-jwks.json"
+            assert private_key_file.exists()
+            assert jwks_file.exists()
+
+            # Verify private key is valid JWK
+            private_key_json = json.loads(private_key_file.read_text())
+            assert private_key_json["kty"] == "OKP"
+            assert private_key_json["crv"] == "Ed25519"
+            assert private_key_json["kid"] == "test-key-1"
+            assert "d" in private_key_json  # Private key component
+            assert "x" in private_key_json  # Public key component
+            assert private_key_json["use"] == "sig"
+            assert private_key_json["alg"] == "EdDSA"
+
+            # Verify JWKS format is correct
+            jwks_json = json.loads(jwks_file.read_text())
+            assert "keys" in jwks_json
+            assert isinstance(jwks_json["keys"], list)
+            assert len(jwks_json["keys"]) == 1
+
+            # Verify public key in JWKS doesn't have private component
+            public_key = jwks_json["keys"][0]
+            assert public_key["kty"] == "OKP"
+            assert public_key["crv"] == "Ed25519"
+            assert "d" not in public_key  # Private key should not be in JWKS
+            assert "x" in public_key  # Public key component should be present
+
+    def test_public_key_matches_private_key(self):
+        """Test that the public key in JWKS matches the private key."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            script = GenerateKeysScript(None)
+            script.do_run(
+                cmd_args=["--output-dir", tmpdir, "--key-id", "match-test"],
+                output=StringIO(),
+            )
+
+            private_key_json = json.loads(
+                (Path(tmpdir) / "demarque-private-key.json").read_text()
+            )
+            jwks_json = json.loads(
+                (Path(tmpdir) / "r.cantook.com-jwks.json").read_text()
+            )
+
+            # The public key component 'x' should match
+            assert private_key_json["x"] == jwks_json["keys"][0]["x"]
+
+    def test_default_output_directory(self):
+        """Test that the script uses current directory as default."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Change to temp directory
+            import os
+
+            original_cwd = os.getcwd()
+            try:
+                os.chdir(tmpdir)
+                output = StringIO()
+                script = GenerateKeysScript(None)
+                script.do_run(cmd_args=["--key-id", "test-default"], output=output)
+
+                # Files should be in current directory
+                assert (Path(tmpdir) / "demarque-private-key.json").exists()
+                assert (Path(tmpdir) / "r.cantook.com-jwks.json").exists()
+            finally:
+                os.chdir(original_cwd)
+
+    def test_new_key_added_to_jwks(self):
+        """Test that private key is overwritten and new public keys are added to JWKS."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_dir = Path(tmpdir)
+
+            script = GenerateKeysScript(None)
+
+            # Generate first key
+            script.do_run(
+                cmd_args=[
+                    "--output-dir",
+                    str(output_dir),
+                    "--key-id",
+                    "existing-key",
+                ],
+                output=StringIO(),
+            )
+
+            # Verify first key exists
+            private_key_file = output_dir / "demarque-private-key.json"
+            jwks_file = output_dir / "r.cantook.com-jwks.json"
+            first_private = json.loads(private_key_file.read_text())
+            assert first_private["kid"] == "existing-key"
+
+            # Generate second key in same location (overwrites private key, merges to JWKS)
+            script.do_run(
+                cmd_args=[
+                    "--output-dir",
+                    str(output_dir),
+                    "--key-id",
+                    "new-key",
+                ],
+                output=StringIO(),
+            )
+
+            # Private key should be overwritten with new one
+            new_private_key = json.loads(private_key_file.read_text())
+            assert new_private_key["kid"] == "new-key"
+            assert new_private_key["kty"] == "OKP"
+
+            # JWKS should have BOTH keys (merged, not overwritten)
+            new_jwks = json.loads(jwks_file.read_text())
+            assert len(new_jwks["keys"]) == 2
+            assert new_jwks["keys"][0]["kid"] == "new-key"  # New key first
+            assert new_jwks["keys"][1]["kid"] == "existing-key"  # Old key preserved
+
+    def test_creates_missing_output_directory(self):
+        """Test that the script creates output directory if it doesn't exist."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Use a nested path that doesn't exist
+            nested_dir = Path(tmpdir) / "nested" / "path"
+            assert not nested_dir.exists()
+
+            output = StringIO()
+            script = GenerateKeysScript(None)
+            script.do_run(
+                cmd_args=[
+                    "--output-dir",
+                    str(nested_dir),
+                    "--key-id",
+                    "nested-test",
+                ],
+                output=output,
+            )
+
+            # Directory should have been created
+            assert nested_dir.exists()
+            assert (nested_dir / "demarque-private-key.json").exists()
+            assert (nested_dir / "r.cantook.com-jwks.json").exists()
+
+    def test_key_can_be_used_with_jwcrypto(self):
+        """Test that the generated keys can be used with jwcrypto library."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            script = GenerateKeysScript(None)
+            script.do_run(
+                cmd_args=["--output-dir", tmpdir, "--key-id", "crypto-test"],
+                output=StringIO(),
+            )
+
+            # Load the private key
+            private_key_json = json.loads(
+                (Path(tmpdir) / "demarque-private-key.json").read_text()
+            )
+            private_key = jwk.JWK(**private_key_json)
+
+            # The key should be valid for signing
+            assert private_key.has_private
+            assert private_key.get("kid") == "crypto-test"
+            assert private_key.get("kty") == "OKP"
+
+            # Load public key from JWKS
+            jwks_json = json.loads(
+                (Path(tmpdir) / "r.cantook.com-jwks.json").read_text()
+            )
+            public_key = jwk.JWK(**jwks_json["keys"][0])
+
+            # Public key should not have private component
+            assert not public_key.has_private
+
+            # Both keys should have the same public component
+            assert private_key.get("x") == public_key.get("x")
+
+    def test_multiple_keys_in_different_runs(self):
+        """Test generating multiple keys in different directories."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            dir1 = Path(tmpdir) / "keys1"
+            dir2 = Path(tmpdir) / "keys2"
+
+            script = GenerateKeysScript(None)
+
+            # Generate first key
+            script.do_run(
+                cmd_args=[
+                    "--output-dir",
+                    str(dir1),
+                    "--key-id",
+                    "key-1",
+                ],
+                output=StringIO(),
+            )
+
+            # Generate second key
+            script.do_run(
+                cmd_args=[
+                    "--output-dir",
+                    str(dir2),
+                    "--key-id",
+                    "key-2",
+                ],
+                output=StringIO(),
+            )
+
+            # Load both keys
+            key1 = json.loads((dir1 / "demarque-private-key.json").read_text())
+            key2 = json.loads((dir2 / "demarque-private-key.json").read_text())
+
+            # Keys should be different
+            assert key1["kid"] == "key-1"
+            assert key2["kid"] == "key-2"
+            assert key1["x"] != key2["x"]  # Public components should differ
+            assert key1["d"] != key2["d"]  # Private components should differ
+
+    def test_auto_generates_unique_kid(self):
+        """Test that consecutive auto-generated kids are unique due to timestamps."""
+        import datetime
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_dir = Path(tmpdir)
+            script = GenerateKeysScript(None)
+
+            # Generate first key without --key-id (auto-generates from date+time)
+            script.do_run(
+                cmd_args=[
+                    "--output-dir",
+                    str(output_dir),
+                ],
+                output=StringIO(),
+            )
+
+            jwks_file = output_dir / "r.cantook.com-jwks.json"
+            jwks = json.loads(jwks_file.read_text())
+            assert len(jwks["keys"]) == 1
+            first_kid = jwks["keys"][0]["kid"]
+
+            # Generate a second key without --key-id (should get different timestamp)
+            output = StringIO()
+            script.do_run(
+                cmd_args=[
+                    "--output-dir",
+                    str(output_dir),
+                ],
+                output=output,
+            )
+
+            # JWKS should now have two keys with different kids (due to timestamp)
+            jwks = json.loads(jwks_file.read_text())
+            assert len(jwks["keys"]) == 2
+            second_kid = jwks["keys"][0]["kid"]
+
+            # Both kids should start with demarque-key-YYYY-MM-DD but have different timestamps
+            today = datetime.date.today().isoformat()
+            assert first_kid.startswith(f"demarque-key-{today}-")
+            assert second_kid.startswith(f"demarque-key-{today}-")
+            assert first_kid != second_kid  # Different timestamps make them unique
+
+    def test_merge_multiple_times_increments_kid(self):
+        """Test that generating multiple keys accumulates them correctly in JWKS."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_dir = Path(tmpdir)
+            script = GenerateKeysScript(None)
+
+            # Generate three keys
+            for i, key_id in enumerate(["key-1", "key-2", "key-3"]):
+                script.do_run(
+                    cmd_args=[
+                        "--output-dir",
+                        str(output_dir),
+                        "--key-id",
+                        key_id,
+                    ],
+                    output=StringIO(),
+                )
+
+            # Verify JWKS has all three keys
+            jwks_file = output_dir / "r.cantook.com-jwks.json"
+            jwks = json.loads(jwks_file.read_text())
+            assert len(jwks["keys"]) == 3
+
+            # Most recent key should be first
+            assert jwks["keys"][0]["kid"] == "key-3"
+            assert jwks["keys"][1]["kid"] == "key-2"
+            assert jwks["keys"][2]["kid"] == "key-1"
+
+            # Private key should match the most recent
+            private_key = json.loads(
+                (output_dir / "demarque-private-key.json").read_text()
+            )
+            assert private_key["kid"] == "key-3"
+
+    def test_remove_key_operation(self, caplog):
+        """Test removing a key from JWKS."""
+        import logging
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_dir = Path(tmpdir)
+            script = GenerateKeysScript(None)
+
+            # Generate multiple keys
+            script.do_run(
+                cmd_args=[
+                    "--output-dir",
+                    str(output_dir),
+                    "--key-id",
+                    "key-to-keep",
+                ],
+                output=StringIO(),
+            )
+
+            script.do_run(
+                cmd_args=[
+                    "--output-dir",
+                    str(output_dir),
+                    "--key-id",
+                    "key-to-remove",
+                ],
+                output=StringIO(),
+            )
+
+            jwks_file = output_dir / "r.cantook.com-jwks.json"
+            jwks = json.loads(jwks_file.read_text())
+            assert len(jwks["keys"]) == 2
+
+            # Remove one key
+            with caplog.at_level(logging.INFO):
+                script.do_run(
+                    cmd_args=[
+                        "--remove-key",
+                        "key-to-remove",
+                        "--jwks-file",
+                        str(jwks_file),
+                    ],
+                    output=StringIO(),
+                )
+
+            # Verify key was removed
+            jwks = json.loads(jwks_file.read_text())
+            assert len(jwks["keys"]) == 1
+            assert jwks["keys"][0]["kid"] == "key-to-keep"
+            assert "Removed 1 key(s)" in caplog.text
+
+    def test_remove_key_nonexistent(self, caplog):
+        """Test removing non-existent key from JWKS."""
+        import logging
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_dir = Path(tmpdir)
+            script = GenerateKeysScript(None)
+
+            # Generate one key
+            script.do_run(
+                cmd_args=[
+                    "--output-dir",
+                    str(output_dir),
+                    "--key-id",
+                    "only-key",
+                ],
+                output=StringIO(),
+            )
+
+            jwks_file = output_dir / "r.cantook.com-jwks.json"
+
+            # Try to remove non-existent key
+            with caplog.at_level(logging.INFO):
+                script.do_run(
+                    cmd_args=[
+                        "--remove-key",
+                        "nonexistent-key",
+                        "--jwks-file",
+                        str(jwks_file),
+                    ],
+                    output=StringIO(),
+                )
+
+            # JWKS should be unchanged
+            jwks = json.loads(jwks_file.read_text())
+            assert len(jwks["keys"]) == 1
+            assert "No key with kid='nonexistent-key' found" in caplog.text
+
+    def test_remove_key_requires_jwks_file(self, caplog):
+        """Test that --remove-key requires --jwks-file."""
+        import logging
+
+        script = GenerateKeysScript(None)
+        with caplog.at_level(logging.ERROR):
+            script.do_run(
+                cmd_args=["--remove-key", "some-key"],
+                output=StringIO(),
+            )
+
+        assert "--jwks-file required" in caplog.text
+
+    def test_jwks_creation(self):
+        """Test that JWKS is created if it doesn't exist."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_dir = Path(tmpdir)
+            script = GenerateKeysScript(None)
+
+            # JWKS is created by default if it doesn't exist
+            output = StringIO()
+            script.do_run(
+                cmd_args=[
+                    "--output-dir",
+                    str(output_dir),
+                    "--key-id",
+                    "new-key",
+                ],
+                output=output,
+            )
+
+            jwks_file = output_dir / "r.cantook.com-jwks.json"
+            assert jwks_file.exists()
+            jwks = json.loads(jwks_file.read_text())
+            assert len(jwks["keys"]) == 1
+            assert jwks["keys"][0]["kid"] == "new-key"
