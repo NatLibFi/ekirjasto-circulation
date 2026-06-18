@@ -1297,10 +1297,12 @@ class GenerateKeysScript(Script):
     This script generates a public/private keypair in JWK format suitable
     for JWT-based authentication.
     It outputs:
-    - Private key (JSON) for environment variable configuration
-    - JWKS file (public keys) for deployment to web root
+    - Private key (JSON)
+    - JWKS file (public keys) for deployment
 
-    Note: This script does not require database access.
+    Supports key rotation by adding new keys into existing JWKS files and
+    removing specific keys.
+
     """
 
     name = "Generate JWT keys"
@@ -1315,8 +1317,8 @@ class GenerateKeysScript(Script):
         parser = argparse.ArgumentParser(description=cls.name)
         parser.add_argument(
             "--key-id",
-            default="demarque-key",
-            help="Key identifier (kid). Default: demarque-key",
+            default=None,
+            help="Key identifier (kid). If not provided, uses today's date (e.g., demarque-key-2026-06-17)",
         )
         parser.add_argument(
             "--output-dir",
@@ -1324,36 +1326,53 @@ class GenerateKeysScript(Script):
             help="Directory to save key files. Default: current directory",
         )
         parser.add_argument(
-            "--force",
-            action="store_true",
-            help="Overwrite existing key files without confirmation",
+            "--remove-key",
+            type=str,
+            metavar="KID",
+            help="Remove a key by its kid (key ID) from JWKS file",
+        )
+        parser.add_argument(
+            "--jwks-file",
+            type=str,
+            metavar="PATH",
+            help="Path to JWKS file for remove-key operation",
         )
         return parser
 
     def do_run(self, cmd_args=None, output=sys.stdout):
-        """Generate Ed25519 keypair and save to files.
+        """Generate Ed25519 keypair and save to files or manage JWKS.
 
         Args:
             cmd_args: Command-line arguments to parse.
-            output: Output stream for messages.
+            output: Output stream for messages (deprecated, use logging instead).
         """
-        parser = self.arg_parser(self._db)
+        parser = self.arg_parser()
         args = parser.parse_args(cmd_args)
+
+        # Auto-generate key ID from datetime if not provided
+        # Format: demarque-key-YYYY-MM-DD-HHmmss-ffffff ensures uniqueness
+        if args.key_id is None:
+            now = datetime.datetime.now()
+            timestamp = now.strftime("%Y-%m-%d-%H%M%S-%f")
+            args.key_id = f"demarque-key-{timestamp}"
+
+        # Handle remove-key operation
+        if args.remove_key:
+            if not args.jwks_file:
+                self.log.error("--jwks-file required for --remove-key")
+                return
+            self._remove_key(args.remove_key, args.jwks_file)
+            return
+
+        # Generate new key
         output_dir = Path(args.output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
 
+        # Hardcode output file names for now, but could be made configurable if needed
         private_key_file = output_dir / "demarque-private-key.json"
         jwks_file = output_dir / "r.cantook.com-jwks.json"
 
-        # Check if files exist
-        if not args.force:
-            files_to_check = [private_key_file, jwks_file]
-            if any(f.exists() for f in files_to_check):
-                output.write(f"Output files already exist in {output_dir}\n")
-                output.write("Use --force to overwrite\n")
-                return
-
-        output.write(f"Generating Ed25519 keypair with kid='{args.key_id}'...\n")
+        self.log.info(f"Generating Ed25519 keypair with kid='{args.key_id}'...")
 
         # Generate Ed25519 key
         key = jwk.JWK.generate(
@@ -1363,19 +1382,73 @@ class GenerateKeysScript(Script):
         # Save private key as JWK (JSON)
         private_key_json = key.export()
         private_key_file.write_text(private_key_json)
-        output.write(f"Private key saved (JWK): {private_key_file}\n")
+        self.log.info(f"Private key saved (JWK): {private_key_file}")
 
-        # Extract public key and create JWKS
+        # Extract public key
         public_key_json = key.export_public()
         public_key_dict = json.loads(public_key_json)
 
-        jwks = {"keys": [public_key_dict]}
+        # Handle JWKS file - merge if exists, otherwise create new
+        if jwks_file.exists():
+            self._merge_key_to_jwks(jwks_file, public_key_dict)
+        else:
+            # Create new JWKS
+            jwks = {"keys": [public_key_dict]}
+            jwks_file.write_text(json.dumps(jwks, indent=2))
+            self.log.info(f"JWKS file saved: {jwks_file}")
 
-        # Save JWKS
+        self.log.info(
+            f"Public Key Information: {public_key_dict.get('kid')} created. All done."
+        )
+
+    def _merge_key_to_jwks(self, jwks_file: Path, new_key: dict) -> None:
+        """Merge a new public key into existing JWKS file.
+
+        Args:
+            jwks_file: Path to JWKS file.
+            new_key: Public key dictionary to merge.
+        """
+        try:
+            jwks = json.loads(jwks_file.read_text())
+        except (json.JSONDecodeError, FileNotFoundError):
+            jwks = {"keys": []}
+
+        # Ensure jwks has a "keys" field
+        if "keys" not in jwks:
+            jwks["keys"] = []
+
+        # Add new key to front (most recent first)
+        jwks["keys"].insert(0, new_key)
         jwks_file.write_text(json.dumps(jwks, indent=2))
-        output.write(f"JWKS file saved: {jwks_file}\n")
-        output.write("\n" + "=" * 70 + "\n")
-        output.write("Public Key Information:\n")
-        output.write("=" * 70 + "\n")
-        output.write(json.dumps(public_key_dict, indent=2) + "\n")
-        output.write("All done!\n")
+        self.log.info(f"Merged new key '{new_key.get('kid')}' into JWKS: {jwks_file}")
+        self.log.info(f"JWKS now contains {len(jwks['keys'])} key(s)")
+
+    def _remove_key(self, kid: str, jwks_file: str) -> None:
+        """Remove a key from JWKS by kid.
+
+        Args:
+            kid: Key ID to remove.
+            jwks_file: Path to JWKS file.
+        """
+        path = Path(jwks_file)
+        if not path.exists():
+            self.log.error(f"File not found: {path}")
+            return
+
+        try:
+            jwks = json.loads(path.read_text())
+        except json.JSONDecodeError as e:
+            self.log.error(f"Invalid JSON in {path}: {e}")
+            return
+
+        original_count = len(jwks.get("keys", []))
+        jwks["keys"] = [k for k in jwks.get("keys", []) if k.get("kid") != kid]
+        removed_count = original_count - len(jwks["keys"])
+
+        if removed_count == 0:
+            self.log.info(f"No key with kid='{kid}' found")
+            return
+
+        path.write_text(json.dumps(jwks, indent=2))
+        self.log.info(f"Removed {removed_count} key(s) with kid='{kid}'")
+        self.log.info(f"JWKS now contains {len(jwks['keys'])} key(s)")
