@@ -1015,7 +1015,7 @@ class TestLoanController:
 
             response = loan_fixture.manager.loans.revoke(loan_fixture.pool_id)
 
-        assert 200 == response.status_code
+        assert 200 == response.status_code  # type: ignore
         serialization_helper.verify_and_get_single_entry_feed_links(response)
 
     def test_revoke_loan_exception(
@@ -1083,7 +1083,7 @@ class TestLoanController:
 
             response = loan_fixture.manager.loans.revoke(loan_fixture.pool_id)
 
-        assert 200 == response.status_code
+        assert 200 == response.status_code  # type: ignore
         _ = serialization_helper.verify_and_get_single_entry_feed_links(response)
 
     def test_revoke_hold_exception(
@@ -1169,7 +1169,7 @@ class TestLoanController:
         # Should return 200 with valid OPDS entry (not 403 error)
         # Without even_if_no_license_pool=True, this would fail with 403 because
         # the pool has no active license pool for the annotator after revocation
-        assert 200 == response.status_code
+        assert 200 == response.status_code  # type: ignore
 
         # Verify it's a valid OPDS entry response with proper serialization
         serialization_helper = OPDSSerializationTestHelper(
@@ -1256,7 +1256,7 @@ class TestLoanController:
             response = loan_fixture.manager.loans.revoke(loan_fixture.pool_id)
 
         # Should return 200 with valid OPDS entry (not 403 error)
-        assert 200 == response.status_code
+        assert 200 == response.status_code  # type: ignore
 
         # Verify it's a valid OPDS entry response with proper serialization
         serialization_helper = OPDSSerializationTestHelper(

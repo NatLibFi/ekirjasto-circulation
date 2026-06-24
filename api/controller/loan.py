@@ -397,7 +397,7 @@ class LoanController(CirculationManagerController):
         # doesn't identify its patrons.)
         return self.circulation.can_fulfill_without_loan(patron, pool, lpdm)
 
-    def revoke(self, license_pool_id: int) -> OPDSEntryResponse | ProblemDetail:
+    def revoke(self, license_pool_id: int) -> OPDSEntryResponse | ProblemDetail | None:
         patron = flask.request.patron  # type: ignore[attr-defined]
         pool = self.load_licensepool(license_pool_id)
         if isinstance(pool, ProblemDetail):
@@ -454,7 +454,7 @@ class LoanController(CirculationManagerController):
             pool,
             mime_types=flask.request.accept_mimetypes,
         )
-        return result  # type: ignore[return-value]
+        return result
 
     def detail(
         self, identifier_type: str, identifier: str
