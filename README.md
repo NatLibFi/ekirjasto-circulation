@@ -66,6 +66,7 @@ poetry install --only ci
     - [4. Running Tests](#4-Run-the-API-or-core-suites)
     - [5. Run an individual file or test](#5-Run-an-individual-file-or-test)
 - [Localization (flask-pybabel, Transifex)](#localization-flask-pybabel-transifex)
+- [DeMarque WebReader](#demarque-webreader)
 - [Technology overview](#technology-overview)
 - [Code Style](#code-style)
     - [1. Pre-Commit Configuration](#3-pre-commit-configuration)
@@ -406,6 +407,23 @@ Once all strings have been translated and reviewed in Transifex, Transifex will 
 commit the updated files.
 
 Compiled `.mo` files are generated when Docker containers are initialized.
+
+## DeMarque WebReader
+
+For DeMarque WebReader JWT authentication, the following environment variables can be configured. All are
+optional—if not configured, the system falls back to regular streaming fulfillment. Contact DeMarque for more
+information about the WebReader and its usage.
+
+PALACE_DEMARQUE_WEBREADER_ISSUER_URL: JWT issuer URL (must be whitelisted by DeMarque).
+PALACE_DEMARQUE_WEBREADER_JWK_FILE: Path to an Ed25519 private key JWK file (JSON format).
+PALACE_DEMARQUE_WEBREADER_JWK: Inline Ed25519 private key JWK (JSON string). Takes precedence over JWK_FILE if both are set.
+The JWK must be an Ed25519 key with a kid (key ID) field and the private key component (d).
+
+Optional display settings for the WebReader:
+
+PALACE_DEMARQUE_WEBREADER_LANGUAGE: Preferred UI language in BCP-47 format (default: en).
+PALACE_DEMARQUE_WEBREADER_SHOWCASE_TTS: Display text-to-speech in primary actions (default: false).
+PALACE_DEMARQUE_WEBREADER_ALLOW_OFFLINE: Enable offline reading mode (default: false).
 
 ## Technology overview
 
