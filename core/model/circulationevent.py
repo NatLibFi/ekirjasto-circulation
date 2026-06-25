@@ -89,7 +89,7 @@ class CirculationEvent(Base):
     CM_HOLD_PLACE = "circulation_manager_hold_place"
     CM_HOLD_RELEASE = "circulation_manager_hold_release"
     CM_FULFILL = "circulation_manager_fulfill"
-
+    CM_STREAMING_FULFILL = "circulation_stream_fulfill"
     # Events that we hear about from a distributor.
     DISTRIBUTOR_CHECKOUT = "distributor_check_out"
     DISTRIBUTOR_CHECKIN = "distributor_check_in"

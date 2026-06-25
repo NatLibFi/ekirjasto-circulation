@@ -1597,12 +1597,15 @@ class CirculationAPI:
         if not fulfillment:
             raise NoAcceptableFormat()
 
-        # Send out an analytics event to record the fact that
-        # a fulfillment was initiated through the circulation
-        # manager.
-        self._collect_event(
-            patron, licensepool, CirculationEvent.CM_FULFILL, include_neighborhood=True
-        )
+        # Send out an analytics event to record whether the fulfillment was for
+        # a streaming or non-streaming delivery mechanism.
+        if isinstance(fulfillment, StreamingFulfillment) or isinstance(
+            fulfillment, EllibsStreamingFulfillment
+        ):
+            cm_event = CirculationEvent.CM_STREAMING_FULFILL
+        else:
+            cm_event = CirculationEvent.CM_FULFILL
+        self._collect_event(patron, licensepool, cm_event, include_neighborhood=True)
 
         # Make sure the delivery mechanism we just used is associated
         # with the loan, if any.
