@@ -2,7 +2,94 @@ from typing import Any
 
 from flask_babel import gettext as _
 
-from api.opds.rwpm import AccessibilityFeature, AccessMode, AccessModeSufficient, Hazard
+from api.opds.accessibility import (
+    AccessibilityFeature,
+    AccessMode,
+    AccessModeSufficient,
+    Hazard,
+)
+
+
+def _list_contains(
+    item_list: list[Any], item: AccessMode | AccessModeSufficient | AccessibilityFeature
+) -> bool:
+    """
+    Check if a specific item is present in a list that may contain both individual
+    values (enums) and comma-separated string combinations.
+
+    Handles AccessMode, AccessModeSufficient, and AccessibilityFeature enums,
+    and works with lists that may contain enum members, strings, or mixed formats.
+
+    Args:
+        item_list: List of values which may contain enum members, strings,
+                   or comma-separated string combinations
+        item: The item to search for (AccessMode, AccessModeSufficient, or AccessibilityFeature)
+
+    Returns:
+        True if the item is found either as an individual item or within any combination
+    """
+    item_value = item.value
+    for element in item_list:
+        # Check if element is the item itself (enum)
+        if element == item:
+            return True
+        # Check if element is a string version of the item
+        if isinstance(element, str):
+            if element == item_value:
+                return True
+            # Check if item is part of a comma-separated combination
+            if "," in element:
+                parts = [part.strip() for part in element.split(",")]
+                if item_value in parts:
+                    return True
+    return False
+
+
+def _list_is_only(
+    item_list: list[Any], item: AccessMode | AccessModeSufficient | AccessibilityFeature
+) -> bool:
+    """
+    Check if an item_list contains ONLY a single specified item (not a combination).
+
+    Handles AccessMode, AccessModeSufficient, and AccessibilityFeature enums,
+    and works with lists that may contain enum members, strings, or mixed formats.
+
+    Args:
+        item_list: List of values
+        item: The item to check for (AccessMode, AccessModeSufficient, or AccessibilityFeature)
+
+    Returns:
+        True if the list contains exactly one item that is the specified item
+    """
+    if len(item_list) != 1:
+        return False
+
+    element = item_list[0]
+    item_value = item.value
+
+    # Check if element is the item itself (enum)
+    if element == item:
+        return True
+    # Check if element is a string version of the item (not a combination)
+    if isinstance(element, str) and element == item_value and "," not in element:
+        return True
+
+    return False
+
+
+# Aliases for backward compatibility and semantic clarity
+def _mode_list_contains(
+    mode_list: list[Any], mode: AccessMode | AccessModeSufficient
+) -> bool:
+    """Alias to _list_contains for backward compatibility."""
+    return _list_contains(mode_list, mode)
+
+
+def _mode_list_is_only(
+    mode_list: list[Any], mode: AccessMode | AccessModeSufficient
+) -> bool:
+    """Alias to _list_is_only for backward compatibility."""
+    return _list_is_only(mode_list, mode)
 
 
 class W3CVariables:
@@ -314,71 +401,76 @@ class AccessibilityDataMapper:
 
         if access_mode_list is not None:
             # All main content is provided in textual form.
-            if len(access_mode_list) == 1 and AccessMode.textual in access_mode_list:
+            if _mode_list_is_only(access_mode_list, AccessMode.textual):
                 w3c_variables.append(W3CVariables.all_necessary_content_textual)
 
             # The content is at least partially readable in textual form.
-            elif AccessMode.textual in access_mode_list:
+            elif _mode_list_contains(access_mode_list, AccessMode.textual):
                 w3c_variables.append(W3CVariables.some_sufficient_text)
 
             # There is only a single access mode of auditory (an audiobook).
-            elif len(access_mode_list) == 1 and AccessMode.auditory in access_mode_list:
+            elif _mode_list_is_only(access_mode_list, AccessMode.auditory):
                 w3c_variables.append(W3CVariables.audio_only_content)
 
             # Prerecorded audio content is included as part of the work.
-            elif AccessMode.auditory in access_mode_list:
+            elif _mode_list_contains(access_mode_list, AccessMode.auditory):
                 w3c_variables.append(W3CVariables.audio_content)
 
             # There is only a single access mode of visual and there are no sufficient access modes
             # that include textual (e.g., comics and manga with no alternative text).
-            elif AccessMode.visual in access_mode_list and len(access_mode_list) == 1:
-                if (
-                    access_mode_sufficient_list is None
-                    or AccessModeSufficient.textual not in access_mode_sufficient_list
+            elif _mode_list_is_only(access_mode_list, AccessMode.visual):
+                if access_mode_sufficient_list is None or not _mode_list_contains(
+                    access_mode_sufficient_list, AccessModeSufficient.textual
                 ):
                     w3c_variables.append(W3CVariables.visual_only_content)
 
         elif access_mode_sufficient_list is not None:
             # All main content is provided in audio form.
-            if AccessModeSufficient.auditory in access_mode_sufficient_list:
+            if _mode_list_is_only(
+                access_mode_sufficient_list, AccessModeSufficient.auditory
+            ):
                 w3c_variables.append(W3CVariables.all_content_audio)
 
             # All main content is provided in textual form. There was no accessModes.
-            elif (
-                len(access_mode_sufficient_list) == 1
-                and AccessModeSufficient.textual in access_mode_sufficient_list
+            elif _mode_list_is_only(
+                access_mode_sufficient_list, AccessModeSufficient.textual
             ):
                 w3c_variables.append(W3CVariables.all_necessary_content_textual)
 
             # The content is at least partially readable in textual form (i.e., "textual" is one
             # of a set of sufficient access modes).
-            elif (
-                AccessModeSufficient.textual_visual in access_mode_sufficient_list
-                or AccessModeSufficient.visual_textual in access_mode_sufficient_list
-                or AccessModeSufficient.textual in access_mode_sufficient_list
+            elif _mode_list_contains(
+                access_mode_sufficient_list, AccessModeSufficient.textual
             ):
                 w3c_variables.append(W3CVariables.some_sufficient_text)
 
         if feature_list:
             # At least one of the following is present:
-            if {
-                AccessibilityFeature.long_description,
-                AccessibilityFeature.alternative_text,
-                AccessibilityFeature.described_math,
-                AccessibilityFeature.transcript,
-            } & set(feature_list):
+            if any(
+                _list_contains(feature_list, feature)
+                for feature in [
+                    AccessibilityFeature.long_description,
+                    AccessibilityFeature.alternative_text,
+                    AccessibilityFeature.described_math,
+                    AccessibilityFeature.transcript,
+                ]
+            ):
                 w3c_variables.append(W3CVariables.textual_alternatives)
 
             # All textual content can be modified is present.
-            if AccessibilityFeature.display_transformability in feature_list:
+            if _list_contains(
+                feature_list, AccessibilityFeature.display_transformability
+            ):
                 w3c_variables.append(W3CVariables.all_textual_content_can_be_modified)
 
             # Fixed format is present.
-            if AccessibilityFeature.is_fixed_layout in feature_list:
+            if _list_contains(feature_list, AccessibilityFeature.is_fixed_layout):
                 w3c_variables.append(W3CVariables.is_fixed_layout)
 
             # Text-synchronised prerecorded audio narration is present.
-            if AccessibilityFeature.synchronized_audio_text in feature_list:
+            if _list_contains(
+                feature_list, AccessibilityFeature.synchronized_audio_text
+            ):
                 w3c_variables.append(W3CVariables.synchronised_pre_recorded_audio)
 
         return w3c_variables if w3c_variables else None

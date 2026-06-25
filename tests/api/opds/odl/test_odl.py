@@ -2,6 +2,7 @@ import pytest
 from pydantic import ValidationError
 
 from api.opds import opds2
+from api.opds.accessibility import Accessibility
 from api.opds.odl.odl import Feed, Publication, _get_publication_type
 from tests.fixtures.files import OPDS2FilesFixture, OPDS2WithODLFilesFixture
 
@@ -76,12 +77,16 @@ def test_feed_odl_bad_accessibility_data_failure(
     opds2_with_odl_files_fixture: OPDS2WithODLFilesFixture,
 ) -> None:
     """
-    The ODL parser should fail to parse an OPDS2 feed with an ODL publication with invalid accessibility data.
+    The ODL parser should gracefully handle invalid accessibility data by dropping unknown values.
     """
-    with pytest.raises(ValidationError) as exc_info:
-        Feed.model_validate_json(
-            opds2_with_odl_files_fixture.sample_data("bad_accessibility_data.json")
-        )
-
-    errors = exc_info.value.errors()
-    assert len(errors) == 1
+    feed = Feed.model_validate_json(
+        opds2_with_odl_files_fixture.sample_data("bad_accessibility_data.json")
+    )
+    # Verify the feed was parsed successfully
+    assert feed.publications is not None
+    assert len(feed.publications) > 0
+    # The invalid feature value should have been dropped, resulting in an empty feature list
+    publication = feed.publications[0]
+    assert publication.metadata.accessibility is not None
+    assert isinstance(publication.metadata.accessibility, Accessibility)
+    assert publication.metadata.accessibility.feature == []
