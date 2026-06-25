@@ -219,7 +219,7 @@ class DeMarqueWebReader:
 
         token = JWT(header=header, claims=claims)
         token.make_signed_token(self._jwk_key)
-        return token.serialize()
+        return cast(str, token.serialize())
 
     def fulfill_link(self, link: LsdLink) -> LsdLink:
         """
