@@ -11,6 +11,7 @@ from urllib.parse import parse_qs, urlparse
 import dateutil
 import pytest
 from freezegun import freeze_time
+from jwcrypto.jwt import JWT
 from requests import Response
 from sqlalchemy import delete
 
@@ -33,11 +34,13 @@ from api.circulation_exceptions import (
     NotCheckedOut,
     NotOnHold,
 )
+from api.integration.demarque_webreader import DEMARQUE_WEBREADER_REL
 from api.lcp.status import LoanStatus
 from api.odl import ODLAPI, BaseODLImporter, ODLImporter
 from api.odl_api.auth import OpdsWithOdlException
 from core.metadata_layer import LicenseData
 from core.model.collection import Collection
+from core.model.constants import MediaTypes
 from core.model.edition import Edition
 from core.model.licensing import (
     DeliveryMechanism,
@@ -1059,6 +1062,68 @@ class TestODLAPI:
                     opds2_with_odl_api_fixture.pool,
                     MagicMock(),
                 )
+
+    def test_fulfill_streaming_demarque_webreader(
+        self,
+        opds2_with_odl_api_fixture: OPDS2WithODLApiFixture,
+    ) -> None:
+        """Test streaming fulfillment with DeMarque WebReader JWT authentication."""
+        opds2_with_odl_api_fixture.setup_license(concurrency=1, available=1)
+
+        # Checkout must be done within a mock HTTP context
+        with opds2_with_odl_api_fixture.mock_http.patch():
+            opds2_with_odl_api_fixture.checkout(create_loan=True)
+
+        lpdm = MagicMock(spec=LicensePoolDeliveryMechanism)
+        lpdm.delivery_mechanism = MagicMock(spec=DeliveryMechanism)
+        lpdm.delivery_mechanism.content_type = (
+            DeliveryMechanism.STREAMING_TEXT_CONTENT_TYPE
+        )
+        lpdm.delivery_mechanism.drm_scheme = DeliveryMechanism.STREAMING_DRM
+
+        # Create LSD with DeMarque WebReader link
+        # The rel can include multiple values, one of which is DEMARQUE_WEBREADER_REL
+        lsd = opds2_with_odl_api_fixture.loan_status_document(
+            "active",
+            links=[
+                {
+                    "rel": ["publication", DEMARQUE_WEBREADER_REL],
+                    "href": "https://r.cantook.com/read/{?token}",
+                    "type": MediaTypes.TEXT_HTML_MEDIA_TYPE,
+                    "templated": True,
+                    "properties": {"identifier": "test-publication-id"},
+                },
+            ],
+        )
+        opds2_with_odl_api_fixture.mock_http.queue_response(
+            200, content=lsd.model_dump_json()
+        )
+
+        # Fulfill must also be done within a mock HTTP context
+        with opds2_with_odl_api_fixture.mock_http.patch():
+            fulfillment = opds2_with_odl_api_fixture.api.fulfill(
+                opds2_with_odl_api_fixture.patron,
+                "pin",
+                opds2_with_odl_api_fixture.pool,
+                lpdm,
+            )
+
+        assert isinstance(fulfillment, StreamingFulfillment)
+
+        # Verify the URL contains a JWT token
+        assert "token=" in fulfillment.content_link
+        assert fulfillment.content_link.startswith("https://r.cantook.com/read/?token=")
+
+        # Verify that we have a valid JWT token
+        parsed = urlparse(fulfillment.content_link)
+        token = parse_qs(parsed.query)["token"][0]
+
+        jwt = JWT(jwt=token, key=opds2_with_odl_api_fixture.demarque_webreader_jwk)
+        claims = json.loads(jwt.claims)
+        assert claims["sub"] == "test-publication-id"
+        assert claims["aud"] == "https://r.cantook.com"
+        assert "iat" in claims
+        assert "jti" in claims
 
     @freeze_time()
     def test_place_hold_success(

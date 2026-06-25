@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 
+from api.integration.demarque_webreader import DeMarqueWebReader
 from api.odl import ODLAPI
 from api.odl2 import ODL2API
 from core.model.collection import Collection
@@ -12,8 +13,9 @@ class MockOPDS2WithODLApi(ODLAPI):
         _db: Session,
         collection: Collection,
         mock_http_client: MockHTTPClient,
+        demarque_webreader: DeMarqueWebReader | None = None,
     ) -> None:
-        super().__init__(_db, collection)
+        super().__init__(_db, collection, demarque_webreader=demarque_webreader)
 
         self.mock_http_client = mock_http_client
 
