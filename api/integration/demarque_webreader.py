@@ -20,11 +20,11 @@ from pydantic_settings import SettingsConfigDict
 
 from api.circulation_exceptions import CannotFulfill
 from api.lcp.status import Link as LsdLink
+
 # from palace.manager.service.configuration.service_configuration import (
 #     ServiceConfiguration,
 # )
 from core.service.configuration import ServiceConfiguration
-
 from core.util.log import LoggerMixin
 
 # DeMarque WebReader URL pattern used in LSD link relations
@@ -219,7 +219,7 @@ class DeMarqueWebReader:
 
         token = JWT(header=header, claims=claims)
         token.make_signed_token(self._jwk_key)
-        return token.serialize()  # type: ignore[no-any-return]
+        return token.serialize()
 
     def fulfill_link(self, link: LsdLink) -> LsdLink:
         """

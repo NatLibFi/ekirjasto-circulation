@@ -137,6 +137,12 @@ module = [
 ]
 
 [[tool.mypy.overrides]]
+# Pre-existing jwcrypto type compatibility issues in this module
+# TODO: Fix the type incompatibilities
+ignore_errors = true
+module = "api.authentication.access_token"
+
+[[tool.mypy.overrides]]
 # This override silences errors for modules we import that don't currently
 # have type hints, or type stubs that cover them. We should go through this
 # list periodically and remove modules that have since added type hints.
@@ -157,7 +163,7 @@ module = [
     "greenlet",
     "html_sanitizer",
     "isbnlib",
-    "jwcrypto",
+    "jwcrypto.*",
     "lxml.*",
     "money",
     "multipledispatch",

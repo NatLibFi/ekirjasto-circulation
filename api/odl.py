@@ -30,6 +30,7 @@ from api.circulation import (
     UrlFulfillment,
 )
 from api.circulation_exceptions import *
+from api.integration.demarque_webreader import DEMARQUE_WEBREADER_REL, DeMarqueWebReader
 from api.lcp.hash import Hasher, HasherFactory, HashingAlgorithm
 from api.lcp.status import LoanStatus
 from api.odl_api.auth import OpdsWithOdlException
@@ -82,10 +83,7 @@ from core.util.datetime_helpers import to_utc, utc_now
 from core.util.http import HTTP, BadResponseException, RemoteIntegrationException
 from core.util.log import LoggerMixin
 from core.util.pydantic import HttpUrl
-from api.integration.demarque_webreader import (
-    DEMARQUE_WEBREADER_REL,
-    DeMarqueWebReader,
-)
+
 
 class ODLAPIConstants:
     DEFAULT_PASSPHRASE_HINT = "View the help page for more information."

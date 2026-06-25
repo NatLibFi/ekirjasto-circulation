@@ -17,6 +17,7 @@ class LinkProperties(BaseOpdsModel):
 
     identifier: str | None = None
 
+
 class Link(BaseLink):
     """
     https://readium.org/lcp-specs/releases/lsd/latest#25-links
@@ -25,6 +26,7 @@ class Link(BaseLink):
     title: str | None = None
     profile: str | None = None
     properties: LinkProperties = Field(default_factory=LinkProperties)
+
 
 class Status(str, Enum):
     """
