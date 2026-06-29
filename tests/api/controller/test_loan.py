@@ -1017,7 +1017,7 @@ class TestLoanController:
 
             response = loan_fixture.manager.loans.revoke(loan_fixture.pool_id)
 
-        assert 200 == response.status_code
+        assert 200 == response.status_code  # type: ignore
         serialization_helper.verify_and_get_single_entry_feed_links(response)
 
     def test_revoke_loan_exception(
@@ -1085,7 +1085,7 @@ class TestLoanController:
 
             response = loan_fixture.manager.loans.revoke(loan_fixture.pool_id)
 
-        assert 200 == response.status_code
+        assert 200 == response.status_code  # type: ignore
         _ = serialization_helper.verify_and_get_single_entry_feed_links(response)
 
     def test_revoke_hold_exception(
@@ -1115,6 +1115,181 @@ class TestLoanController:
             response = loan_fixture.manager.loans.revoke(-10)
             assert isinstance(response, ProblemDetail)
             assert INVALID_INPUT.uri == response.uri
+
+    def test_revoke_loan_last_in_pool(
+        self,
+        loan_fixture: LoanFixture,
+    ):
+        """Test revoking the last (only) loan in a license pool.
+
+        When a patron returns the last loan in a license pool, the pool may
+        transition to having licenses_owned=0, making it appear as 'inactive'
+        in the collection. The revoke endpoint should still generate a valid
+        OPDS entry response so the client sees the final state after revocation,
+        instead of returning a 403 error.
+
+        This tests that even_if_no_license_pool=True is used in the revoke
+        endpoint's response generation, so it can generate a response even when
+        annotator.active_licensepool_for() returns None (the condition that
+        would otherwise trigger a 403 "no active licenses" error).
+        """
+        # Ensure pool is not open_access so license counts matter
+        loan_fixture.pool.open_access = False
+        loan_fixture.pool.unlimited_access = False
+
+        # Set up the pool with only one owned license
+        loan_fixture.pool.licenses_owned = 1
+        loan_fixture.pool.licenses_available = 1
+
+        headers = {"Authorization": loan_fixture.valid_auth}
+
+        with loan_fixture.request_context_with_library("/", headers=headers):
+            patron = loan_fixture.manager.loans.authenticated_patron_from_request()
+            assert isinstance(patron, Patron)
+
+            # Verify pool is active (has licenses)
+            assert 1 == loan_fixture.pool.licenses_owned
+            assert 1 == loan_fixture.pool.licenses_available
+
+            # Create a loan
+            loan, newly_created = loan_fixture.pool.loan_to(patron)
+            assert newly_created
+            assert loan is not None
+
+            # Queue a successful checkin
+            loan_fixture.manager.d_circulation.queue_checkin(loan_fixture.pool, True)
+
+            # Simulate what the real API does: after checkin, the pool would have no available licenses
+            # We set this before revoke so the response generation sees the unavailable state
+            loan_fixture.pool.licenses_available = 0
+            loan_fixture.pool.licenses_owned = 0
+            loan_fixture.db.session.flush()
+
+            # Revoke the loan
+            response = loan_fixture.manager.loans.revoke(loan_fixture.pool_id)
+
+        # Should return 200 with valid OPDS entry (not 403 error)
+        # Without even_if_no_license_pool=True, this would fail with 403 because
+        # the pool has no active license pool for the annotator after revocation
+        assert 200 == response.status_code  # type: ignore
+
+        # Verify it's a valid OPDS entry response with proper serialization
+        serialization_helper = OPDSSerializationTestHelper(
+            None, "application/atom+xml;type=entry;profile=opds-catalog"
+        )
+        feed_links = serialization_helper.verify_and_get_single_entry_feed_links(
+            response
+        )
+
+        # Ensure the response has the expected structure
+        assert feed_links is not None
+        assert len(feed_links) > 0
+
+        # Verify the response contains a valid OPDS entry
+        assert isinstance(response, OPDSEntryResponse)
+        feed = feedparser.parse(response.data)
+        entries = feed.get("entries", [])
+        assert len(entries) == 1
+
+        # Verify that availability information is present in the entry
+        # After revoking the last loan, availability should show "unavailable"
+        entry = entries[0]
+        assert (
+            "opds_availability" in entry
+        ), "OPDS entry should include availability information after loan revocation"
+        availability = entry["opds_availability"]
+        assert isinstance(availability, dict), "Availability should be a dict"
+        assert "status" in availability, "Availability should have a status"
+        # Status should be 'unavailable' when pool has no active licenses
+        assert (
+            availability["status"] == "unavailable"
+        ), "Status should be 'unavailable' when pool has no active licenses"
+
+    def test_revoke_hold_last_in_pool(
+        self,
+        loan_fixture: LoanFixture,
+    ):
+        """Test releasing the last (only) hold in a license pool.
+
+        Similar to test_revoke_loan_last_in_pool, when a patron releases the
+        last hold in a license pool, the pool may transition to having
+        licenses_owned=0. The revoke endpoint should still generate a valid
+        OPDS entry response showing the final state, instead of returning a 403 error.
+        """
+        # Ensure pool is not open_access so license counts matter
+        loan_fixture.pool.open_access = False
+        loan_fixture.pool.unlimited_access = False
+
+        # Set up the pool with only one owned license
+        loan_fixture.pool.licenses_owned = 1
+        loan_fixture.pool.licenses_available = 1
+
+        headers = {"Authorization": loan_fixture.valid_auth}
+
+        with loan_fixture.request_context_with_library("/", headers=headers):
+            patron = loan_fixture.manager.loans.authenticated_patron_from_request()
+            assert isinstance(patron, Patron)
+
+            # Verify pool is active (has licenses)
+            assert 1 == loan_fixture.pool.licenses_owned
+            assert 1 == loan_fixture.pool.licenses_available
+
+            # Create a hold at position 10 in the queue
+            hold, newly_created = loan_fixture.pool.on_hold_to(patron, position=10)
+            assert newly_created
+            assert hold is not None
+
+            # Simulate that the hold was placed long ago (several weeks before the pool became inactive)
+            hold.start = utc_now() - datetime.timedelta(days=30)
+            loan_fixture.db.session.flush()
+
+            # Queue a successful release_hold
+            loan_fixture.manager.d_circulation.queue_release_hold(
+                loan_fixture.pool, True
+            )
+
+            # Simulate what the real API does: after release, the pool would have no active licenses
+            # We set this before revoke so the response generation sees the unavailable state
+            loan_fixture.pool.licenses_available = 0
+            loan_fixture.pool.licenses_owned = 0
+            loan_fixture.db.session.flush()
+
+            # Revoke (release) the hold
+            response = loan_fixture.manager.loans.revoke(loan_fixture.pool_id)
+
+        # Should return 200 with valid OPDS entry (not 403 error)
+        assert 200 == response.status_code  # type: ignore
+
+        # Verify it's a valid OPDS entry response with proper serialization
+        serialization_helper = OPDSSerializationTestHelper(
+            None, "application/atom+xml;type=entry;profile=opds-catalog"
+        )
+        feed_links = serialization_helper.verify_and_get_single_entry_feed_links(
+            response
+        )
+
+        # Ensure the response has the expected structure
+        assert feed_links is not None
+        assert len(feed_links) > 0
+
+        # Verify the response contains a valid OPDS entry
+        assert isinstance(response, OPDSEntryResponse)
+        feed = feedparser.parse(response.data)
+        entries = feed.get("entries", [])
+        assert len(entries) == 1
+
+        # Verify that availability information is present in the entry
+        entry = entries[0]
+        assert (
+            "opds_availability" in entry
+        ), "OPDS entry should include availability information after hold revocation"
+        availability = entry["opds_availability"]
+        assert isinstance(availability, dict), "Availability should be a dict"
+        assert "status" in availability, "Availability should have a status"
+        # Status should be 'unavailable' when pool has no active licenses
+        assert (
+            availability["status"] == "unavailable"
+        ), "Status should be 'unavailable' when pool has no active licenses"
 
     def test_hold_fails_when_patron_is_at_hold_limit(self, loan_fixture: LoanFixture):
         edition, pool = loan_fixture.db.edition(with_license_pool=True)
