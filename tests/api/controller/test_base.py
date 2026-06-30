@@ -386,7 +386,7 @@ class TestBaseController:
                     pool1.identifier.type,
                     pool1.identifier.identifier,
                 )
-                work.age_appropriate_for_patron.called_with(
+                work.age_appropriate_for_patron.assert_called_with(
                     circulation_fixture.default_patron
                 )
 
@@ -415,13 +415,20 @@ class TestBaseController:
         # If there are multiple matching delivery mechanisms (that is,
         # multiple ways of getting a book with the same media type and
         # DRM scheme) we pick one arbitrarily.
+        resource, ignore = create(
+            circulation_fixture.db.session,
+            model.Resource,
+            url=circulation_fixture.db.fresh_url(),
+        )
         new_lpdm, is_new = create(
             circulation_fixture.db.session,
             LicensePoolDeliveryMechanism,
             identifier=licensepool.identifier,
             data_source=licensepool.data_source,
             delivery_mechanism=lpdm.delivery_mechanism,
+            resource=resource,
         )
+
         assert True == is_new
 
         assert new_lpdm.delivery_mechanism == lpdm.delivery_mechanism
@@ -430,6 +437,7 @@ class TestBaseController:
         delivery = circulation_fixture.controller.load_licensepooldelivery(
             licensepool, lpdm.delivery_mechanism.id
         )
+        assert not isinstance(delivery, ProblemDetail)
 
         # We don't know which LicensePoolDeliveryMechanism this is,
         # but we know it's one of the matches.
@@ -443,6 +451,7 @@ class TestBaseController:
         problem_detail = circulation_fixture.controller.load_licensepooldelivery(
             adobe_licensepool, lpdm.delivery_mechanism.id
         )
+        assert isinstance(problem_detail, ProblemDetail)
         assert BAD_DELIVERY_MECHANISM.uri == problem_detail.uri
 
     def test_apply_borrowing_policy_succeeds_for_unlimited_access_books(

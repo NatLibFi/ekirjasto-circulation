@@ -4,13 +4,12 @@ from collections.abc import Generator
 from contextlib import contextmanager
 from copy import deepcopy
 from functools import partial
-from typing import Any
+from typing import Any, Self
 from unittest.mock import MagicMock
 
 import pytest
 from pydantic import PositiveInt, ValidationError, field_validator, model_validator
 from sqlalchemy.orm import Session
-from typing_extensions import Self
 
 from core.integration.settings import (
     BaseSettings,

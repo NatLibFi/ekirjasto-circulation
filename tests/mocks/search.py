@@ -4,9 +4,8 @@ from collections.abc import Iterable
 from enum import Enum
 from unittest.mock import MagicMock
 
-from opensearch_dsl import MultiSearch, Search
-from opensearch_dsl.response.hit import Hit
-from opensearchpy import OpenSearchException
+from opensearchpy import MultiSearch, OpenSearchException, Search
+from opensearchpy.helpers.response import Hit
 
 from core.external_search import ExternalSearchIndex
 from core.model.work import Work

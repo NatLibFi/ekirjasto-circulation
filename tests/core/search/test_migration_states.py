@@ -35,10 +35,10 @@ class TestMigrationStates:
 
         # Ensure we are in the initial state, no test indices and pointer available
         prefix = fx.search_config.index_prefix
-        all_indices = fx.client.indices.get("*")
+        all_indices = fx.client.indices.get(index="*")
         for index_name in all_indices.keys():
             if prefix in index_name:
-                fx.client.indices.delete(index_name)
+                fx.client.indices.delete(index=index_name)
 
         # We cannot make any requests before we intitialize
         with pytest.raises(Exception) as raised:
@@ -52,16 +52,16 @@ class TestMigrationStates:
         # Ensure we have created the index and pointers
         new_index_name = index._revision.name_for_index(prefix)
         empty_index_name = service._empty(prefix)
-        all_indices = fx.client.indices.get("*")
+        all_indices = fx.client.indices.get(index="*")
 
         assert prefix in new_index_name
         assert new_index_name in all_indices.keys()
         assert empty_index_name in all_indices.keys()
         assert fx.client.indices.exists_alias(
-            index._search_read_pointer, index=new_index_name
+            name=index._search_read_pointer, index=new_index_name
         )
         assert fx.client.indices.exists_alias(
-            index._search_write_pointer, index=new_index_name
+            name=index._search_write_pointer, index=new_index_name
         )
 
         # The same client should work without issue once the pointers are setup
@@ -102,7 +102,7 @@ class TestMigrationStates:
 
         # The mock index does not exist yet
         with pytest.raises(Exception) as raised:
-            fx.client.indices.get(mock_index_name)
+            fx.client.indices.get(index=mock_index_name)
         assert "index_not_found" in str(raised.value)
 
         # This should run the migration
@@ -111,7 +111,7 @@ class TestMigrationStates:
         ).run()
 
         # The new version is created, and the aliases point to the right index
-        assert fx.client.indices.get(mock_index_name) is not None
+        assert fx.client.indices.get(index=mock_index_name) is not None
         assert mock_index_name in fx.client.indices.get_alias(
             name=client._search_read_pointer
         )

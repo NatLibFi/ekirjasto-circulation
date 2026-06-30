@@ -7,9 +7,8 @@ from datetime import datetime
 from unittest.mock import MagicMock
 
 import pytest
-from opensearch_dsl import Q
-from opensearch_dsl.function import RandomScore, ScriptScore
-from opensearch_dsl.query import (
+from opensearchpy.helpers.function import RandomScore, ScriptScore
+from opensearchpy.helpers.query import (
     Bool,
     DisMax,
     Match,
@@ -18,9 +17,10 @@ from opensearch_dsl.query import (
     MatchPhrase,
     MultiMatch,
     Nested,
+    Q,
 )
-from opensearch_dsl.query import Query as opensearch_dsl_query
-from opensearch_dsl.query import Range, Term, Terms
+from opensearchpy.helpers.query import Query as opensearch_dsl_query
+from opensearchpy.helpers.query import Range, Term, Terms
 from psycopg2.extras import NumericRange
 from sqlalchemy.sql import Delete as sqlaDelete
 

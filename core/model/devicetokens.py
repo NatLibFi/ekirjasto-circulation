@@ -1,4 +1,4 @@
-import sys
+from typing import Self
 
 from sqlalchemy import Column, Enum, ForeignKey, Index, Integer, Unicode
 from sqlalchemy.exc import IntegrityError
@@ -6,11 +6,6 @@ from sqlalchemy.orm import Mapped, backref, relationship
 
 from core.model import Base
 from core.model.patron import Patron
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
 
 
 class DeviceTokenTypes:

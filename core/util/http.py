@@ -3,7 +3,7 @@ import time
 from collections.abc import Callable, Iterable, Mapping
 from io import BytesIO, StringIO
 from json import JSONDecodeError
-from typing import Any, Literal, Protocol, TypedDict
+from typing import Any, Literal, Protocol, TypedDict, Unpack
 from urllib.parse import urlparse
 
 import requests
@@ -11,7 +11,6 @@ from flask_babel import lazy_gettext as _
 from requests import sessions
 from requests.adapters import HTTPAdapter, Response
 from requests.auth import AuthBase
-from typing_extensions import Unpack
 from urllib3 import Retry
 
 import core

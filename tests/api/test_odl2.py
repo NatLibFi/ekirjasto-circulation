@@ -321,7 +321,7 @@ class TestODL2Importer:
         )
         assert "http://www.example.com/status/294024" == moby_dick_license.status_url  # type: ignore
         assert (
-            datetime.datetime(2016, 4, 25, 10, 25, 21, tzinfo=datetime.timezone.utc)
+            datetime.datetime(2016, 4, 25, 10, 25, 21, tzinfo=datetime.UTC)
             == moby_dick_license.expires  # type: ignore
         )
         assert 30 == moby_dick_license.checkouts_left  # type: ignore

@@ -118,6 +118,35 @@ Circulation Manager. If so, please use the instructions below.
 
 We recommend you install at least version 18.06 of the Docker engine.
 
+### `baseimage`
+
+All other images (`webapp`, `scripts`, `exec`) are built `FROM` a shared base image that bundles Python 3.12,
+Poetry, the system libraries needed to compile the Python wheels (lxml, xmlsec, psycopg2, uwsgi), and a pre-installed
+copy of the `main` + `pg` dependency groups. Building it is slow, so in CI it is built on a schedule and published to
+the GitHub Container Registry as `ghcr.io/natlibfi/ekirjasto-circ-baseimage:latest`. The app image builds normally pull
+that published image.
+
+You only need to build the base image locally when you have changed dependencies (`pyproject.toml` / `poetry.lock`) and
+want those changes baked into the base layer rather than re-installed on top of a stale base. Build it from the root of
+the repository:
+
+```sh
+docker build \
+  --file docker/Dockerfile.baseimage \
+  --target baseimage \
+  --tag ghcr.io/natlibfi/ekirjasto-circ-baseimage:latest \
+  .
+```
+
+Tagging it as `...:latest` means the app image builds and `docker-compose-dev.yml` will pick up your local copy
+automatically (that tag is the default value of the `BASE_IMAGE` build arg / `BUILD_BASE_IMAGE` compose variable). If
+you would rather not shadow the published `:latest` tag, give it a different tag and point the build at it explicitly,
+e.g. `--tag circ-baseimage:local` then `export BUILD_BASE_IMAGE=circ-baseimage:local` before building the app images.
+
+> Note: even when an image is built on top of a stale base image, the final image build re-runs
+> `poetry install --only main,pg` against the current `poetry.lock`, so the resulting image is always up to date. Building
+> the base image fresh is purely an optimization that moves that work into the cached base layer.
+
 ### `webapp` and `scripts` images
 
 Determine which image you would like to build and update the tag and `Dockerfile` listed below accordingly. Run the
@@ -131,3 +160,67 @@ docker build --tag circ --file docker/Dockerfile --target scripts .
 See `docker/Dockerfile` for details.
 
 Feel free to change the image tag as you like.
+
+## Running the development stack
+
+For local development, `docker-compose-dev.yml` (in the repository root) builds and runs the full stack — `webapp` and
+`scripts` plus PostgreSQL, OpenSearch, MinIO (S3), pgadmin, the OpenSearch dashboard, and the data API. It uses
+persistent host-mounted volumes for the database (`~/src/circ_psql_data`) and search index (`~/src/circ_os_data`) so
+data survives container restarts.
+
+### Build phase
+
+The compose file does **not** build the base image; it pulls
+`ghcr.io/natlibfi/ekirjasto-circ-baseimage:latest`. If you want the stack built on a locally built base image (for
+example after a dependency change), build the base image first (see the `baseimage` section above), then build the app
+images:
+
+```sh
+# Optional: build the base image fresh first (see "baseimage" above)
+
+# Build webapp + scripts (and the local OpenSearch image) on top of the base image
+docker compose -f docker-compose-dev.yml build
+
+# Force a clean rebuild that ignores the layer cache
+docker compose -f docker-compose-dev.yml build --no-cache
+```
+
+Relevant build-time variables (all optional, with sensible defaults):
+
+| Variable | Purpose | Default |
+| --- | --- | --- |
+| `BUILD_BASE_IMAGE` | Base image to build the app images `FROM` | `ghcr.io/natlibfi/ekirjasto-circ-baseimage:latest` |
+| `BUILD_PLATFORM` | Target platform passed to the build | host platform |
+| `BUILD_CACHE_FROM` | Image used as a build cache source | `ghcr.io/natlibfi/ekirjasto-circ-webapp:main` |
+
+### Run phase
+
+```sh
+# Build (if needed) and start everything in the background
+docker compose -f docker-compose-dev.yml up --build -d
+```
+
+Database migrations run automatically when the containers start (Alembic, via `docker/startup/`). On a fresh database
+the search index does not exist yet, so build it once via the `scripts` container:
+
+```sh
+docker exec -it scripts /bin/bash
+../core/bin/run search_index_clear && ../core/bin/run search_index_refresh
+```
+
+Once running, the services are available at:
+
+| Service | URL |
+| --- | --- |
+| App | <http://localhost:6500> |
+| Admin | <http://localhost:6500/admin/> |
+| pgadmin | <http://localhost:5050> (`admin@admin.com` / `root`) |
+| MinIO console | <http://localhost:9001> (`palace` / `test123456789`) |
+| OpenSearch | <http://localhost:9200> |
+| OpenSearch Dashboards | <http://localhost:5601> |
+| data-api | <http://localhost:8000> |
+| PostgreSQL | `localhost:5432` (`palace` / `test` / `circ`) |
+
+Before admin authentication will work you must set a real `ADMIN_EKIRJASTO_AUTHENTICATION_URL` in
+`docker-compose-dev.yml` (it ships with a `"https://"` placeholder). To start completely fresh, stop the stack and
+delete the persistent volume directories (`~/src/circ_psql_data`, `~/src/circ_os_data`).

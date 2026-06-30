@@ -20,8 +20,9 @@ repos:
     rev: v3.14.0
     hooks:
       - id: pyupgrade
+        language_version: python3.12
         args:
-          - --py310-plus
+          - --py312-plus
 
   - repo: https://github.com/MarcoGorelli/absolufy-imports
     rev: v0.3.0

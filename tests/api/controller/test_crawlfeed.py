@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 
 import feedparser
 from flask import url_for
-from opensearch_dsl.response.hit import Hit
+from opensearchpy.helpers.response import Hit
 
 from api.lanes import (
     CrawlableCollectionBasedLane,

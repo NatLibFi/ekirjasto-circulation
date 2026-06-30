@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import logging
-import sys
 from collections import Counter
 from datetime import date, datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Self, cast
 
 import pytz
 from dependency_injector.wiring import Provide, inject
@@ -51,11 +50,6 @@ from core.model.measurement import Measurement
 from core.model.patron import Patron
 from core.util import LanguageCodes
 from core.util.datetime_helpers import utc_now
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
 
 # Import related models when doing type checking
 if TYPE_CHECKING:

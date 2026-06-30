@@ -35,18 +35,16 @@ brew install libjpeg
 
 ### venv - Virtual environment
 
-The codes uses Python 3.10 and 3.11. We mostly use 3.11, but install both versions (3.10 in case you want to run
-tests against it):
+The code uses Python 3.12.
 
 ```sh
-brew install python@3.11
-brew install python@3.10
+brew install python@3.12
 ```
 
-Create a virtual environment that uses Python 3.11 and activate it:
+Create a virtual environment that uses Python 3.12 and activate it:
 
 ```sh
-python3.11 -m venv venv
+python3.12 -m venv venv
 source venv/bin/activate
 ```
 
@@ -60,7 +58,7 @@ Install Poetry 2.2.1 using the official installer:
 curl -sSL https://install.python-poetry.org | python3 - --version 2.2.1
 ```
 
-Run `poetry debug info` to check that Python 3.11 is used in Poetry and the envirnoment.
+Run `poetry debug info` to check that Python 3.12 is used in Poetry and the environment.
 
 Then install dependencies:
 

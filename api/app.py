@@ -10,11 +10,7 @@ from api.admin.controller import setup_admin_controllers
 from api.circulation_manager import CirculationManager
 from api.config import Configuration
 from api.util.flask import PalaceFlask
-from api.util.profilers import (
-    PalaceCProfileProfiler,
-    PalacePyInstrumentProfiler,
-    PalaceXrayProfiler,
-)
+from api.util.profilers import PalaceCProfileProfiler, PalacePyInstrumentProfiler
 from core.app_server import ErrorHandler
 from core.flask_sqlalchemy_session import flask_scoped_session
 from core.model import (
@@ -51,7 +47,6 @@ app.url_map.merge_slashes = False
 # Optionally setup any profilers that are enabled
 PalacePyInstrumentProfiler.configure(app)
 PalaceCProfileProfiler.configure(app)
-PalaceXrayProfiler.configure(app)
 
 
 def initialize_admin(_db=None):

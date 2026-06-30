@@ -5,7 +5,7 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://pycqa.github.io/isort/)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
-![Python: 3.10,3.11](https://img.shields.io/badge/Python-3.10%20|%203.11-blue)
+![Python: 3.12](https://img.shields.io/badge/Python-3.12-blue)
 This is the E-kirjasto fork of the [The Palace Project](https://thepalaceproject.org) Palace Manager (which is a fork of
 [Library Simplified](http://www.librarysimplified.org/) Circulation Manager).
 
@@ -65,6 +65,7 @@ poetry install --only ci
     - [3. Tox-Docker](#3-Running-tox-inside-Docker)
     - [4. Running Tests](#4-Run-the-API-or-core-suites)
     - [5. Run an individual file or test](#5-Run-an-individual-file-or-test)
+    - [6. tox_pytest.py](#6-tox_pytestpy)
 - [Localization (flask-pybabel, Transifex)](#localization-flask-pybabel-transifex)
 - [Technology overview](#technology-overview)
 - [Code Style](#code-style)
@@ -293,7 +294,7 @@ with failing loans.
 
 ## Testing
 
-The Github Actions CI service runs the unit tests against Python 3.10, and 3.11 automatically using
+The Github Actions CI service runs the unit tests against Python 3.12 automatically using
 [tox](https://tox.readthedocs.io/en/latest/).
 
 Tox has an environment for each python version, the module being tested, and an optional `-docker` factor that will
@@ -304,16 +305,16 @@ for running the tests locally, you'll need a `venv`.
 
 ### 1. venv - Virtual environment
 
-The codes uses Python 3.10 and 3.11. We mostly use 3.11.
+The code uses Python 3.12.
 
 ```sh
-brew install python@3.11
+brew install python@3.12
 ```
 
-Create a virtual environment that uses Python 3.11 and activate it:
+Create a virtual environment that uses Python 3.12 and activate it:
 
 ```sh
-python3.11 -m venv venv
+python3.12 -m venv venv
 source venv/bin/activate
 ```
 
@@ -327,7 +328,7 @@ Install Poetry 2.2.1 using the official installer:
 curl -sSL https://install.python-poetry.org | python3 - --version 2.2.1
 ```
 
-Run `poetry debug info` to check that Python 3.11 is used in Poetry and the envirnoment.
+Run `poetry debug info` to check that Python 3.12 is used in Poetry and the environment.
 
 Then install dependencies:
 
@@ -338,7 +339,7 @@ poetry install
 ### 3. Running tox inside Docker
 
 Use the `scripts/tox-docker.sh` helper to run tox in the container defined in `docker-compose-tox.yml`. The tests are
-run using `Python 3.11`. Docker Desktop (macOS/Windows) or a running Docker Engine (Linux) is required.
+run using Python 3.12. Docker Desktop (macOS/Windows) or a running Docker Engine (Linux) is required.
 
 Build the image (only needed after dependency or Dockerfile changes):
 
@@ -372,6 +373,22 @@ pytest options after an optional `--`:
 The script wraps `docker compose -f docker-compose-tox.yml run --rm tox` so the repository mounts into `/workspace` and
 the host Docker daemon remains available for `tox-docker`. Export `LOCAL_UID` and `LOCAL_GID` before invoking the script
 if you need container file ownership to match your host user.
+
+### 6. tox_pytest.py
+
+`tox.ini` runs pytest through `scripts/tox_pytest.py` for Docker-backed tox environments. This helper exists because
+`tox-docker` exposes service host and port values only after the containers have started, which is too late for normal
+tox substitution in `setenv`.
+
+The helper converts the tox-docker variables into the environment variables used by the tests:
+
+- `DB_CIRC_HOST` and `DB_CIRC_5432_TCP_PORT` become `SIMPLIFIED_TEST_DATABASE`.
+- `OS_CIRC_HOST` and `OS_CIRC_9200_TCP_PORT` become `PALACE_TEST_SEARCH_URL`.
+- API tests also set `ADMIN_EKIRJASTO_AUTHENTICATION_URL`.
+- Core tests also set `PALACE_TEST_MINIO_ENDPOINT_URL` from the MinIO container.
+
+It then runs `poetry run pytest` with the pytest arguments passed through from tox. Keep test-specific service URL
+setup in this helper instead of duplicating long shell commands in `tox.ini`.
 
 ## Localization (flask-pybabel, Transifex)
 

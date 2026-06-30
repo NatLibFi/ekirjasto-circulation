@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import base64
 import json
-import sys
 from collections.abc import Callable
-from typing import Any, Literal, overload
+from typing import Any, Literal, Self, overload
 
 from Crypto.Cipher.PKCS1_OAEP import PKCS1OAEP_Cipher
 from flask_babel import lazy_gettext as _
-from html_sanitizer import Sanitizer
+from html_sanitizer.sanitizer import Sanitizer
 from requests import Response
 from sqlalchemy import select
 from sqlalchemy.orm.session import Session
@@ -27,11 +26,6 @@ from core.model.discovery_service_registration import (
 from core.util.http import HTTP
 from core.util.problem_detail import ProblemError
 from core.util.pydantic import HttpUrl
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
 
 
 class OpdsRegistrationServiceSettings(BaseSettings):

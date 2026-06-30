@@ -1,13 +1,12 @@
 import datetime
 import json
 import logging
-import sys
 import urllib.error
 import urllib.parse
 import urllib.request
 from collections import Counter
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, Self
 
 from requests import Response
 from sqlalchemy.engine import Row
@@ -46,11 +45,6 @@ from core.model import (
 from core.util import TitleProcessor
 from core.util.http import HTTP
 from core.util.log import LoggerMixin
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
 
 
 class NoveListApiSettings(MetadataServiceSettings):

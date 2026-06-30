@@ -2,8 +2,7 @@ import logging
 import os
 
 import flask
-from opensearch_dsl import Search
-from opensearchpy import OpenSearch
+from opensearchpy import OpenSearch, Search
 
 from api.opensearch_analytics_provider import OpenSearchAnalyticsProvider
 

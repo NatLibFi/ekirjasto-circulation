@@ -31,13 +31,13 @@ case "${1:-}" in
     dc build "$SERVICE"
     ;;
   api)
-    dc run --rm "$SERVICE" tox -e py311-api-docker
+    dc run --rm "$SERVICE" tox -e py312-api-docker
     ;;
   core)
-    dc run --rm "$SERVICE" tox -e py311-core-docker
+    dc run --rm "$SERVICE" tox -e py312-core-docker
     ;;
   all)
-    dc run --rm "$SERVICE" tox -e py311-api-docker,py311-core-docker
+    dc run --rm "$SERVICE" tox -e py312-api-docker,py312-core-docker
     ;;
   -h|--help|"")
     usage
@@ -46,9 +46,9 @@ case "${1:-}" in
     # Run single test (auto-detect api/core by path)
     [[ "${1:-}" == "--" ]] && shift
     if [[ "${1:-}" == tests/core/* ]]; then
-      env="py311-core-docker"
+      env="py312-core-docker"
     else
-      env="py311-api-docker"
+      env="py312-api-docker"
     fi
     dc run --rm "$SERVICE" tox -e "$env" -- "$@"
     ;;

@@ -2,10 +2,9 @@ from __future__ import annotations
 
 import json
 import logging
-import sys
 from abc import ABC
 from collections.abc import Iterable
-from typing import cast
+from typing import Self, cast
 
 import flask
 import jwt
@@ -44,11 +43,6 @@ from core.util.http import RemoteIntegrationException
 from core.util.log import LoggerMixin, elapsed_time_logging
 from core.util.opds_writer import OPDSFeed
 from core.util.problem_detail import ProblemDetail, ProblemError
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
 
 
 class CirculationPatronProfileStorage(PatronProfileStorage):

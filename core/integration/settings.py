@@ -4,7 +4,7 @@ import typing
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Union
+from typing import Any, Union, Unpack
 
 import annotated_types
 import typing_extensions
@@ -27,7 +27,6 @@ from pydantic.fields import (
 )
 from pydantic_core import ErrorDetails, PydanticUndefined
 from sqlalchemy.orm import Session
-from typing_extensions import Unpack
 
 from api.admin.problem_details import (
     INCOMPLETE_CONFIGURATION,

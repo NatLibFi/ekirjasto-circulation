@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from enum import Enum
 from functools import cached_property
-from typing import Annotated, Any, Generic, TypeVar
+from typing import Annotated, Any, Generic, Self, TypeVar
 
 from pydantic import (
     AwareDatetime,
@@ -15,7 +15,6 @@ from pydantic import (
     field_validator,
     model_validator,
 )
-from typing_extensions import Self
 
 from api.opds import rwpm
 from api.opds.base import BaseOpdsModel

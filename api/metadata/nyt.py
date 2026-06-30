@@ -4,10 +4,9 @@ from core.selftest import HasSelfTests, SelfTestResult
 
 """Interface to the New York Times APIs."""
 import json
-import sys
 from collections.abc import Generator
 from datetime import date, datetime, timedelta
-from typing import Any
+from typing import Any, Self
 
 from dateutil import tz
 from sqlalchemy import select
@@ -29,11 +28,6 @@ from core.model import (
     get_one_or_create,
 )
 from core.util.log import LoggerMixin
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
 
 
 class NytBestSellerApiSettings(MetadataServiceSettings):

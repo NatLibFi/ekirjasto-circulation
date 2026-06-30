@@ -1,20 +1,14 @@
 from __future__ import annotations
 
-import sys
 from collections.abc import Callable
 from queue import Queue
 from threading import Thread
 from types import TracebackType
-from typing import Any, Literal
+from typing import Any, Literal, Self
 
 from sqlalchemy.orm import Session
 
 from core.util.log import LoggerMixin
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
 
 # Much of the work in this file is based on
 # https://github.com/shazow/workerpool, with

@@ -1,19 +1,12 @@
 from __future__ import annotations
 
 import functools
-import sys
-from typing import TYPE_CHECKING, BinaryIO, NamedTuple, Protocol
+from typing import TYPE_CHECKING, BinaryIO, NamedTuple, Protocol, Self
 from unittest.mock import MagicMock
 
 import pytest
 
 from core.service.storage.s3 import MultipartS3ContextManager, S3Service
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
-
 
 if TYPE_CHECKING:
     from mypy_boto3_s3.client import S3Client
