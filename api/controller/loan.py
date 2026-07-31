@@ -384,7 +384,7 @@ class LoanController(CirculationManagerController):
         # doesn't identify its patrons.)
         return self.circulation.can_fulfill_without_loan(patron, pool, lpdm)
 
-    def revoke(self, license_pool_id: int) -> OPDSEntryResponse | ProblemDetail:
+    def revoke(self, license_pool_id: int) -> OPDSEntryResponse | ProblemDetail | None:
         patron = flask.request.patron  # type: ignore[attr-defined]
         pool = self.load_licensepool(license_pool_id)
         if isinstance(pool, ProblemDetail):
@@ -436,12 +436,12 @@ class LoanController(CirculationManagerController):
             except (CirculationException, RemoteInitiatedServerError) as e:
                 return e.problem_detail
 
-        annotator = self.manager.annotator(None)
-        single_entry_feed = OPDSAcquisitionFeed.single_entry(work, annotator)
-        return OPDSAcquisitionFeed.entry_as_response(
-            entry=single_entry_feed,  # type: ignore
+        result = OPDSAcquisitionFeed.single_entry_loans_feed(
+            self.circulation,
+            pool,
             mime_types=flask.request.accept_mimetypes,
         )
+        return result
 
     def detail(
         self, identifier_type: str, identifier: str
