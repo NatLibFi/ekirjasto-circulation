@@ -7,6 +7,17 @@ from api.opds.base import BaseOpdsModel
 from api.opds.types.link import BaseLink, CompactCollection
 
 
+class LinkProperties(BaseOpdsModel):
+    """
+    Properties for LSD links.
+
+    This is a DeMarque specific extension. They use the identifier
+    property in LSD links to support their web reader.
+    """
+
+    identifier: str | None = None
+
+
 class Link(BaseLink):
     """
     https://readium.org/lcp-specs/releases/lsd/latest#25-links
@@ -14,6 +25,7 @@ class Link(BaseLink):
 
     title: str | None = None
     profile: str | None = None
+    properties: LinkProperties = Field(default_factory=LinkProperties)
 
 
 class Status(str, Enum):
