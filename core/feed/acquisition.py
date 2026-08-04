@@ -669,7 +669,7 @@ class OPDSAcquisitionFeed(BaseOPDSFeed):
         if work is None:
             logging.warning("Creating single entry but Work is None.")
             return None
-        
+
         identifier = None
         _work: Work
         active_edition: Edition | None
