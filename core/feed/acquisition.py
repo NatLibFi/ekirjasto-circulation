@@ -660,12 +660,16 @@ class OPDSAcquisitionFeed(BaseOPDSFeed):
     @classmethod
     def single_entry(
         cls,
-        work: Work | Edition,
+        work: Work | Edition | None,
         annotator: Annotator,
         even_if_no_license_pool: bool = False,
         license_pool: LicensePool | None = None,
     ) -> WorkEntry | OPDSMessage | None:
         """Turn a work into an annotated work entry for an acquisition feed."""
+        if work is None:
+            logging.warning("Creating single entry but Work is None.")
+            return None
+        
         identifier = None
         _work: Work
         active_edition: Edition | None
