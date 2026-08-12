@@ -1,4 +1,3 @@
-syntax=docker/dockerfile:1.7
 # Dedicated image for running tox-based test suites locally.
 # Extends the project base image so all system dependencies match production.
 
