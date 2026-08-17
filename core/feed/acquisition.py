@@ -660,7 +660,7 @@ class OPDSAcquisitionFeed(BaseOPDSFeed):
     @classmethod
     def single_entry(
         cls,
-        work: Work | Edition | None,
+        work: Work | Edition,
         annotator: Annotator,
         even_if_no_license_pool: bool = False,
         license_pool: LicensePool | None = None,
