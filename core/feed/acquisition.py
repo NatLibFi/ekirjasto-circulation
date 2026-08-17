@@ -666,10 +666,6 @@ class OPDSAcquisitionFeed(BaseOPDSFeed):
         license_pool: LicensePool | None = None,
     ) -> WorkEntry | OPDSMessage | None:
         """Turn a work into an annotated work entry for an acquisition feed."""
-        if work is None:
-            logging.warning("Creating single entry but Work is None.")
-            return None
-
         identifier = None
         _work: Work
         active_edition: Edition | None
