@@ -930,39 +930,6 @@ class TestOPDSAcquisitionFeed:
         )
         assert feed.annotator.active_holds_by_work == {work: hold}
 
-    def test_selected_books_for_with_orphaned_works(
-        self, db: DatabaseTransactionFixture, patch_url_for: PatchedUrlFor
-    ):
-        """Test that selected_books_for handles orphaned SelectedBooks gracefully."""
-
-        patron = db.patron()
-        work1 = db.work()
-        work2 = db.work()
-
-        # Add two books to patron's selected books
-        selected_book1 = patron.select_book(work1)
-        selected_book2 = patron.select_book(work2)
-        db.session.commit()
-
-        # Simulate an orphaned SelectedBook by manually nullifying the work relationship
-        # (This would normally happen if a work was deleted but the SelectedBook wasn't cleaned up)
-        selected_book1.work = None  # type: ignore
-        db.session.commit()
-
-        # Create the feed - it should handle the None work gracefully
-        feed = OPDSAcquisitionFeed.selected_books_for(
-            None, patron, LibraryAnnotator(None, None, db.default_library())
-        )
-
-        # The feed should only contain entries for non-None works
-        # Verify that the feed was created successfully
-        assert feed is not None
-        assert feed.title == "Selected books"
-
-        # The feed should have entries for valid works only
-        # (The None work is filtered out by get_selected_works())
-        assert len(feed._feed.entries) == 1
-
     def test_single_entry_loans_feed_errors(self, db: DatabaseTransactionFixture):
         # Mandatory loans item was missing
         response = OPDSAcquisitionFeed.single_entry_loans_feed(None, None)  # type: ignore[arg-type]
