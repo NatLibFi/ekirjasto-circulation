@@ -65,7 +65,7 @@ class TestJWKSController:
 
     def test_get_jwks_file_not_found_raises_problem_detail(self, flask_app_fixture: FlaskAppFixture):
         """Test that JWKS raises an error if the file is not found."""
-        
+
         with patch("builtins.open", side_effect=FileNotFoundError):
             with flask_app_fixture.test_request_context():
                 with pytest.raises(ProblemDetailException) as exc_info:
