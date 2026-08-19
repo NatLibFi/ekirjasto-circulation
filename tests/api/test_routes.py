@@ -419,6 +419,19 @@ class TestODLNotificationController:
         fixture.assert_supported_methods(url, "GET", "POST")
 
 
+class TestJWKS:
+    CONTROLLER_NAME = "jwks"
+
+    @pytest.fixture(scope="function")
+    def fixture(self, route_test: RouteTestFixture) -> RouteTestFixture:
+        route_test.set_controller_name(self.CONTROLLER_NAME)
+        return route_test
+
+    def test_jwks(self, fixture: RouteTestFixture):
+        url = "/.well-known/r.cantook.com-jwks.json"
+        fixture.assert_supported_methods(url, "GET")
+
+
 class TestApplicationVersionController:
     CONTROLLER_NAME = "version"
 
