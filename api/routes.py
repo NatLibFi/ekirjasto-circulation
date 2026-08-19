@@ -735,3 +735,10 @@ def health_check():
 @app.route("/images/<filename>")
 def static_image(filename):
     return app.manager.static_files.image(filename)
+
+
+# DeMarque webreader key discovery endpoint
+@raises_problem_detail
+@app.route("/.well-known/r.cantook.com-jwks.json", methods=["GET"])
+def get_jwks() -> Response:
+    return app.manager.jwks.get_jwks()

@@ -18,6 +18,7 @@ from api.controller.annotation import AnnotationController
 from api.controller.catalog_descriptions import CatalogDescriptionsController  # Finland
 from api.controller.device_tokens import DeviceTokensController
 from api.controller.index import IndexController
+from api.controller.jwks import JwksController
 from api.controller.loan import LoanController
 from api.controller.marc import MARCRecordController
 from api.controller.odl_notification import ODLNotificationController
@@ -93,6 +94,7 @@ class CirculationManager(LoggerMixin):
     odl_notification_controller: ODLNotificationController
     playtime_entries: PlaytimeEntriesController
     select_books: SelectBooksController
+    jwks: JwksController
 
     # Admin controllers
     admin_sign_in_controller: SignInController
@@ -330,6 +332,7 @@ class CirculationManager(LoggerMixin):
         self.catalog_descriptions = CatalogDescriptionsController(self)
         self.playtime_entries = PlaytimeEntriesController(self)
         self.select_books = SelectBooksController(self)
+        self.jwks = JwksController()
 
     def setup_configuration_dependent_controllers(self):
         """Set up all the controllers that depend on the
