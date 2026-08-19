@@ -452,3 +452,10 @@ COULD_NOT_MIRROR_TO_REMOTE = pd(
         "Could not convince a third party to accept the change you made. It's likely to show up again soon."
     ),
 )
+
+JWKS_FILE_NOT_FOUND = pd(
+    "http://jwks-file-not-found",
+    status_code=404,
+    title=_("JWKS file not found."),
+    detail=_("The JWKS file could not be found on the server."),
+)
