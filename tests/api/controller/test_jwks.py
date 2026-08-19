@@ -3,11 +3,12 @@ import time
 from unittest.mock import patch
 
 import pytest
+from _pytest.logging import LogCaptureFixture
 
 from api.controller.jwks import (  # Adjust the import based on your project structure
     JwksController,
 )
-from core.util.problem_detail import ProblemDetailException
+from api.problem_details import JWKS_FILE_ERROR
 from tests.fixtures.files import OPDSODLFilesFixture
 from tests.fixtures.flask import FlaskAppFixture
 
@@ -56,7 +57,7 @@ class TestJWKSController:
             response = self.jwks_controller.get_jwks()
 
         # Assert the response
-        assert response.data == expected_content
+        assert response.data == expected_content  # type: ignore
         assert response.status_code == 200
 
     def test_get_jwks_loads_from_file(
@@ -74,7 +75,7 @@ class TestJWKSController:
             response = self.jwks_controller.get_jwks()
 
             # Assert the correct loading of data from the file
-            assert response.data == mock_jwks_data
+            assert response.data == mock_jwks_data  # type: ignore
             assert response.status_code == 200
             # Assert that the cache is updated
             assert self.jwks_controller._jwks_cache["data"] == mock_jwks_data
@@ -82,21 +83,18 @@ class TestJWKSController:
                 self.jwks_controller._jwks_cache["timestamp"] > 0
             )  # Ensure timestamp is set
 
-    def test_get_jwks_file_not_found_raises_problem_detail(
-        self, flask_app_fixture: FlaskAppFixture
+    def test_get_jwks_file_not_found_returns_problem_detail(
+        self, flask_app_fixture: FlaskAppFixture, caplog: LogCaptureFixture
     ):
-        """Test that JWKS raises an error if the file is not found."""
+        """Test that JWKS raises an error if some problem occurs when trying to read the JWKS file."""
 
-        with patch("builtins.open", side_effect=FileNotFoundError):
+        with patch("builtins.open", side_effect=RuntimeError("Simulated read error")):
             with flask_app_fixture.test_request_context():
-                with pytest.raises(ProblemDetailException) as exc_info:
-                    self.jwks_controller.get_jwks()
+                response = self.jwks_controller.get_jwks()
 
-        problem_detail = exc_info.value.problem_detail
+        # Assert that the response matches the expected error details
+        assert response.status_code == JWKS_FILE_ERROR.status_code
+        assert response.uri == JWKS_FILE_ERROR.uri  # type: ignore
+        assert response.title == JWKS_FILE_ERROR.title  # type: ignore
 
-        # Check that the ProblemDetail has the correct title and detail
-        assert problem_detail.title == "JWKS file not found."
-        assert (
-            problem_detail.detail == "The JWKS file could not be found on the server."
-        )
-        assert problem_detail.status_code == 404
+        assert "Error reading JWKS file: Simulated read error" in caplog.text

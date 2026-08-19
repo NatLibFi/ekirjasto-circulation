@@ -738,7 +738,7 @@ def static_image(filename):
 
 
 # DeMarque webreader key discovery endpoint
-@raises_problem_detail
 @app.route("/.well-known/r.cantook.com-jwks.json", methods=["GET"])
-def get_jwks() -> Response:
+@returns_problem_detail
+def get_jwks():
     return app.manager.jwks.get_jwks()

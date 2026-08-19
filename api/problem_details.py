@@ -453,9 +453,8 @@ COULD_NOT_MIRROR_TO_REMOTE = pd(
     ),
 )
 
-JWKS_FILE_NOT_FOUND = pd(
-    "http://jwks-file-not-found",
+JWKS_FILE_ERROR = pd(
+    "jwks-file-error",
     status_code=404,
-    title=_("JWKS file not found."),
-    detail=_("The JWKS file could not be found on the server."),
+    title="Error reading JWKS file.",
 )
