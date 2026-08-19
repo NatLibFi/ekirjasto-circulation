@@ -118,11 +118,6 @@ class DeMarqueWebReaderConfiguration(ServiceConfiguration, LoggerMixin):
             self.log.error("Invalid JWK: Missing required 'kid' (key ID) field.")
             return None
 
-        # Validate private key component is present
-        if "d" not in jwk:
-            self.log.error("Invalid JWK: Missing required 'd' (private key) field.")
-            return None
-
         return jwk
 
 
