@@ -1300,9 +1300,6 @@ class GenerateKeysScript(Script):
     - Private key (JSON)
     - JWKS file (public keys) for deployment
 
-    Supports key rotation by adding new keys into existing JWKS files and
-    removing specific keys.
-
     """
 
     name = "Generate JWT keys"
@@ -1311,19 +1308,15 @@ class GenerateKeysScript(Script):
         """Generate Ed25519 keypair and save to files or manage JWKS.
 
         Args:
-            cmd_args: Command-line arguments to parse.
             output: Output stream for messages (deprecated, use logging instead).
         """
-        # Auto-generate key ID from datetime if not provided
-        # Format: demarque-key-YYYY-MM-DD-HHmmss-ffffff ensures uniqueness
         now = datetime.datetime.now()
+        # For now, date is enough to distinguish keys, but in the future we may want to include e.g. time.
         key_id = f"demarque-key-{now.strftime('%Y-%m-%d')}"
 
-        # Generate new key
         output_dir = Path(".")
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        # Hardcode output file names for now, but could be made configurable if needed
         private_key_file = output_dir / "demarque-private-key.json"
         jwks_file = output_dir / "r.cantook.com-jwks.json"
 
@@ -1336,7 +1329,6 @@ class GenerateKeysScript(Script):
 
         # Save private key as JWK (JSON)
         private_key_json = key.export()
-        print(private_key_json)
         private_key_file.write_text(private_key_json)
         self.log.info(f"Private key saved (JWK): {private_key_file}")
 
@@ -1344,8 +1336,7 @@ class GenerateKeysScript(Script):
         public_key_json = key.export(private_key=False)
         public_key_dict = json.loads(public_key_json)
 
-        # Handle JWKS file - merge if exists, otherwise create new
-        # Create new JWKS
+        # Save public key in JWKS format
         jwks_file.write_text(json.dumps(public_key_dict))
         self.log.info(f"JWKS file saved: {jwks_file}")
 
