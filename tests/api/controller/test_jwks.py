@@ -51,7 +51,7 @@ class TestJWKSController:
         self.jwks_controller._jwks_cache["data"] = expected_content
         self.jwks_controller._jwks_cache["timestamp"] = (
             time.time() - 1000
-        )  # Valid cache, older than TTL
+        )  # Valid cache, still within TTL
 
         with flask_app_fixture.test_request_context():
             response = self.jwks_controller.get_jwks()
@@ -68,6 +68,7 @@ class TestJWKSController:
             "r.cantook.com-jwks.json"
         )  # Use sample JWKS data
 
+        # 1. No cached data, should read from file
         assert self.jwks_controller._jwks_cache["data"] == None
         assert self.jwks_controller._jwks_cache["timestamp"] == 0
 
@@ -82,6 +83,22 @@ class TestJWKSController:
             assert (
                 self.jwks_controller._jwks_cache["timestamp"] > 0
             )  # Ensure timestamp is set
+
+        # 2. Cached data is outdated, should read from file
+        self.jwks_controller._jwks_cache["data"] = mock_jwks_data
+        outdated_cache = self.jwks_controller._jwks_cache["timestamp"] = (
+            time.time() - 3601
+        )  # Invalid cache, just past TTL
+        print(f"Cache timestamp: {outdated_cache}, Current time: {time.time()}")
+
+        with flask_app_fixture.test_request_context():
+            response = self.jwks_controller.get_jwks()
+
+        # Assert the response
+        assert response.data == mock_jwks_data  # type: ignore
+        assert response.status_code == 200
+        # Ensure timestamp is updated after reading from file
+        assert self.jwks_controller._jwks_cache["timestamp"] != outdated_cache
 
     def test_get_jwks_file_not_found_returns_problem_detail(
         self, flask_app_fixture: FlaskAppFixture, caplog: LogCaptureFixture
