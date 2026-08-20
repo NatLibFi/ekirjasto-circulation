@@ -452,3 +452,9 @@ COULD_NOT_MIRROR_TO_REMOTE = pd(
         "Could not convince a third party to accept the change you made. It's likely to show up again soon."
     ),
 )
+
+JWKS_FILE_ERROR = pd(
+    "jwks-file-error",
+    status_code=404,
+    title="Error reading JWKS file.",
+)

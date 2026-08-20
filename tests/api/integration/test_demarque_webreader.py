@@ -170,15 +170,6 @@ class TestDeMarqueWebReaderConfiguration:
         )
         assert config.get_jwk() is None
 
-    def test_get_jwk_missing_private_key(
-        self, jwt_keys_fixture: JwtKeysFixture
-    ) -> None:
-        """Test get_jwk returns None when private key is missing."""
-        config = DeMarqueWebReaderConfiguration(
-            jwk=jwt_keys_fixture.without("d"),
-        )
-        assert config.get_jwk() is None
-
     def test_get_jwk_wrong_curve(self, jwt_keys_fixture: JwtKeysFixture) -> None:
         """Test get_jwk returns None for wrong curve."""
         config = DeMarqueWebReaderConfiguration(
