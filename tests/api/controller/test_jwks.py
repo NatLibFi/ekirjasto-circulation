@@ -36,7 +36,7 @@ class TestJWKSController:
         )
         with patch.dict(
             os.environ,
-            {"PALACE_DEMARQUE_WEBREADER_PUBLIC_JWK_FILE": self.jwks_file_path},
+            {"PALACE_DEMARQUE_WEBREADER_PUBLIC_JWKS_FILE": self.jwks_file_path},
         ):
             self.jwks_controller = JwksController()
 
