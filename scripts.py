@@ -11,6 +11,7 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
+from jwcrypto import jwk
 from sqlalchemy import inspect, select
 from sqlalchemy.engine import Connection
 from sqlalchemy.exc import NoResultFound
@@ -1287,3 +1288,55 @@ class GenerateShortTokenScript(LibraryInputScript):
         output.write(f"Token: {token}\n")
         output.write(f"Username: {username}\n")
         output.write(f"Password: {password}\n")
+
+
+class GenerateKeysScript(Script):
+    """Generate Ed25519 key for e.g. DeMarque WebReader JWT authentication.
+
+    This script generates a public/private keypair in JWK format suitable
+    for JWT-based authentication.
+    It outputs:
+    - Private key (JSON)
+    - JWKS file (public keys) for deployment
+
+    """
+
+    name = "Generate JWT keys"
+
+    def do_run(self, output=sys.stdout):
+        """Generate Ed25519 keypair and save to files or manage JWKS.
+
+        Args:
+            output: Output stream for messages (deprecated, use logging instead).
+        """
+        now = datetime.datetime.now()
+        # For now, date is enough to distinguish keys, but in the future we may want to include e.g. time.
+        key_id = f"demarque-key-{now.strftime('%Y-%m-%d')}"
+
+        output_dir = Path(".")
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        private_key_file = output_dir / "demarque-private-key.json"
+        jwks_file = output_dir / "r.cantook.com-jwks.json"
+
+        self.log.info(f"Generating Ed25519 keypair with kid='{key_id}'...")
+
+        # Generate Ed25519 key
+        key = jwk.JWK.generate(
+            kty="OKP", crv="Ed25519", kid=key_id, use="sig", alg="EdDSA"
+        )
+
+        # Save private key as JWK (JSON)
+        private_key_json = key.export()
+        private_key_file.write_text(private_key_json)
+        self.log.info(f"Private key saved (JWK): {private_key_file}")
+
+        # Create a JWKSet and add the key.
+        jwks = jwk.JWKSet()
+        jwks.add(key)
+
+        # Export JWKS with only the public key and save to file.
+        jwks_file.write_text(jwks.export(private_keys=False))
+        self.log.info(f"JWKS file saved: {jwks_file}")
+
+        self.log.info(f"Public Key Information: {key_id} created. All done.")
