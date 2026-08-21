@@ -960,10 +960,10 @@ class TestGenerateKeysScript:
         jwks_json = json.loads(jwks_file.read_text())
 
         # Verify public key in JWKS doesn't have private component
-        assert jwks_json["kty"] == "OKP"
-        assert jwks_json["crv"] == "Ed25519"
-        assert "d" not in jwks_json  # Private key should NOT be in JWKS
-        assert "x" in jwks_json  # Public key component should be present
+        assert jwks_json["keys"][0]["kty"] == "OKP"
+        assert jwks_json["keys"][0]["crv"] == "Ed25519"
+        assert "d" not in jwks_json["keys"][0]  # Private key should NOT be in JWKS
+        assert "x" in jwks_json["keys"][0]  # Public key component should be present
 
     def test_public_key_matches_private_key(self):
         """Test that the public key in JWKS matches the private key."""
@@ -979,7 +979,7 @@ class TestGenerateKeysScript:
         )
 
         # The public key component 'x' should match
-        assert private_key_json["x"] == jwks_json["x"]
+        assert private_key_json["x"] == jwks_json["keys"][0]["x"]
 
     def test_key_can_be_used_with_jwcrypto(self):
         """Test that the generated keys can be used with jwcrypto library."""
@@ -1001,7 +1001,7 @@ class TestGenerateKeysScript:
         jwks_json = json.loads(
             (Path(current_dir) / "r.cantook.com-jwks.json").read_text()
         )
-        public_key = jwk.JWK(**jwks_json)
+        public_key = jwk.JWK(**jwks_json["keys"][0])
 
         # Public key should not have private component
         assert not public_key.has_private

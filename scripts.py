@@ -1,6 +1,5 @@
 import argparse
 import datetime
-import json
 import logging
 import os
 import subprocess
@@ -1332,14 +1331,12 @@ class GenerateKeysScript(Script):
         private_key_file.write_text(private_key_json)
         self.log.info(f"Private key saved (JWK): {private_key_file}")
 
-        # Extract public key
-        public_key_json = key.export(private_key=False)
-        public_key_dict = json.loads(public_key_json)
+        # Create a JWKSet and add the key.
+        jwks = jwk.JWKSet()
+        jwks.add(key)
 
-        # Save public key in JWKS format
-        jwks_file.write_text(json.dumps(public_key_dict))
+        # Export JWKS with only the public key and save to file.
+        jwks_file.write_text(jwks.export(private_keys=False))
         self.log.info(f"JWKS file saved: {jwks_file}")
 
-        self.log.info(
-            f"Public Key Information: {public_key_dict.get('kid')} created. All done."
-        )
+        self.log.info(f"Public Key Information: {key_id} created. All done.")
