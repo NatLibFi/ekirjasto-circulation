@@ -532,7 +532,7 @@ class Patron(Base):
         :return: A list of Work objects
         """
         selected_book_objects = self.selected_books
-        selected_works = [sb.work for sb in selected_book_objects]
+        selected_works = [sb.work for sb in selected_book_objects if sb.work]
         return selected_works
 
 

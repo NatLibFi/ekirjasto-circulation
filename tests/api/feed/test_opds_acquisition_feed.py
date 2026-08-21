@@ -502,6 +502,12 @@ class TestOPDSAcquisitionFeed:
         entry = OPDSAcquisitionFeed.single_entry(work, Annotator())
         assert entry == None
 
+    def test_single_entry_with_none_work(self, db: DatabaseTransactionFixture):
+        """Test that single_entry() gracefully handles None work."""
+        # Calling single_entry with None work should return None
+        entry = OPDSAcquisitionFeed.single_entry(None, Annotator())  # type: ignore
+        assert entry is None
+
     def test_error_when_work_has_no_licensepool(self, db: DatabaseTransactionFixture):
         session = db.session
 
