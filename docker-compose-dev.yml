@@ -21,8 +21,9 @@ x-cm-variables: &cm
     EKIRJASTO_TOKEN_ENCRYPTING_SECRET: "321"
     ADMIN_EKIRJASTO_AUTHENTICATION_URL: "https://" # Apply actual dev url
     PALACE_DEMARQUE_WEBREADER_ISSUER_URL : "http://localhost/6500"
-    PALACE_DEMARQUE_WEBREADER_JWK_FILE: "jwks.json"
-    PALACE_DEMARQUE_WEBREADER_JWK: '{}'
+    PALACE_DEMARQUE_WEBREADER_JWK_FILE: "demarque-private-key.json"
+    PALACE_DEMARQUE_WEBREADER_JWK: '{"alg":"EdDSA","crv":"Ed25519","d":"_cKL1fRwzT3K2OtSfkhNrf-wEKIkNnq4z8-nelAwy6A","kid":"demarque-key-2026-08-21","kty":"OKP","use":"sig","x":"LyxFvWZAal95cOnU1qAMTsLMMPWYXPWv4cdKwI2Pm3I"}'
+    PALACE_DEMARQUE_WEBREADER_PUBLIC_JWK_FILE: "/var/www/circulation/r.cantook.com-jwks.json"
 
   depends_on:
     pg:
