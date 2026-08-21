@@ -13,7 +13,7 @@ class JwksController(LoggerMixin):
         self._jwks_cache = {"data": None, "timestamp": 0}
         self._JWKS_CACHE_TTL = 3600  # 1 hour
         self.jwks_file_path = os.environ.get(
-            "PALACE_DEMARQUE_WEBREADER_PUBLIC_JWK_FILE", ""
+            "PALACE_DEMARQUE_WEBREADER_PUBLIC_JWKS_FILE", ""
         )
 
     def get_jwks(self) -> Response | ProblemDetail:

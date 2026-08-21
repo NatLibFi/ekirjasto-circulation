@@ -435,7 +435,7 @@ PALACE_DEMARQUE_WEBREADER_ISSUER_URL: JWT issuer URL (must be whitelisted by DeM
 PALACE_DEMARQUE_WEBREADER_JWK_FILE: Path to an Ed25519 private key JWK file (JSON format).
 PALACE_DEMARQUE_WEBREADER_JWK: Inline Ed25519 private key JWK (JSON string). Takes precedence over JWK_FILE if both are set.
 The JWK must be an Ed25519 key with a kid (key ID) field and the private key component (d).
-PALACE_DEMARQUE_WEBREADER_PUBLIC_JWK_FILE: Path to public JWK file (JSON format).
+PALACE_DEMARQUE_WEBREADER_PUBLIC_JWKS_FILE: Path to public JWK file (JSON format).
 
 Optional display settings for the WebReader:
 
