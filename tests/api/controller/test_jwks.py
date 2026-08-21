@@ -35,7 +35,8 @@ class TestJWKSController:
             jwks_files_fixture.directory, "r.cantook.com-jwks.json"
         )
         with patch.dict(
-            os.environ, {"PALACE_DEMARQUE_WEBREADER_JWK_FILE": self.jwks_file_path}
+            os.environ,
+            {"PALACE_DEMARQUE_WEBREADER_PUBLIC_JWKS_FILE": self.jwks_file_path},
         ):
             self.jwks_controller = JwksController()
 
