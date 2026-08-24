@@ -21,8 +21,9 @@ x-cm-variables: &cm
     EKIRJASTO_TOKEN_ENCRYPTING_SECRET: "321"
     ADMIN_EKIRJASTO_AUTHENTICATION_URL: "https://" # Apply actual dev url
     PALACE_DEMARQUE_WEBREADER_ISSUER_URL : "http://localhost/6500"
-    PALACE_DEMARQUE_WEBREADER_JWK_FILE: "jwks.json"
+    PALACE_DEMARQUE_WEBREADER_JWK_FILE: "private-key.json"
     PALACE_DEMARQUE_WEBREADER_JWK: '{}'
+    PALACE_DEMARQUE_WEBREADER_PUBLIC_JWKS_FILE: "jwks.json"
 
   depends_on:
     pg:
