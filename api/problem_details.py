@@ -222,13 +222,6 @@ CANNOT_FULFILL = pd(
     _("Could not fulfill loan."),
 )
 
-DELIVERY_CONFLICT = pd(
-    "http://librarysimplified.org/terms/problem/delivery-mechanism-conflict",
-    409,
-    _("Delivery mechanism conflict."),
-    _("The delivery mechanism for this book has been locked in and can't be changed."),
-)
-
 BAD_DELIVERY_MECHANISM = pd(
     "http://librarysimplified.org/terms/problem/bad-delivery-mechanism",
     400,

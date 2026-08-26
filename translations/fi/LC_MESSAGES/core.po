@@ -10,7 +10,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-04-16 15:01+0300\n"
+"POT-Creation-Date: 2026-08-26 15:06+0300\n"
 "PO-Revision-Date: 2025-10-16 10:07+0000\n"
 "Last-Translator: Kaisa Kuivalahti, 2025\n"
 "Language: fi\n"
@@ -20,7 +20,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.13.0\n"
+"Generated-By: Babel 2.18.0\n"
 
 #: core/config.py:95
 msgid "Debug"
@@ -50,7 +50,7 @@ msgstr "Lokitaso"
 msgid "Application name"
 msgstr "Sovelluksen nimi"
 
-#: core/config.py:120
+#: core/config.py:121
 msgid ""
 "Log messages originating from this application will be tagged with this "
 "name. If you run multiple instances, giving each one a different "
@@ -65,7 +65,7 @@ msgstr ""
 msgid "Database Log Level"
 msgstr "Tietokantalokitaso"
 
-#: core/config.py:131
+#: core/config.py:132
 msgid ""
 "Database logs are extremely verbose, so unless you're diagnosing a "
 "database-related problem, it's a good idea to set a higher log level for "
@@ -79,7 +79,7 @@ msgstr ""
 msgid "Excluded audiobook sources"
 msgstr "Poissuljetut äänikirjalähteet"
 
-#: core/config.py:139
+#: core/config.py:140
 msgid ""
 "Audiobooks from these data sources will be hidden from the collection, "
 "even if they would otherwise show up as available."
@@ -91,7 +91,7 @@ msgstr ""
 msgid "Cleanup old measurement data"
 msgstr "Vanhojen mittaustietojen puhdistus"
 
-#: core/config.py:149
+#: core/config.py:150
 msgid ""
 "If this settings is 'true' old book measurement data will be cleaned out "
 "of the database. Some sites may want to keep this data for later "
@@ -105,7 +105,7 @@ msgstr ""
 msgid "Push notifications status"
 msgstr "Push-ilmoitusten tila"
 
-#: core/config.py:159
+#: core/config.py:160
 msgid ""
 "If this settings is 'true' push notification jobs will run as scheduled, "
 "and attempt to notify patrons via mobile push notifications."
@@ -126,7 +126,7 @@ msgstr "Epätosi"
 msgid "Connection retry limit"
 msgstr "Yhteyden uudelleen yrittämisen raja"
 
-#: core/connection_config.py:17
+#: core/connection_config.py:18
 msgid ""
 "The maximum number of times to retry a request for certain connection-"
 "related errors."
@@ -191,7 +191,7 @@ msgstr "Salli asiakkaiden suodattaa kokoelma"
 msgid "Allow patrons to filter by distributor"
 msgstr "Salli asiakkaiden suodattaa jakelijan mukaan"
 
-#: core/facets.py:102
+#: core/facets.py:103
 msgid "Allow patrons to filter by collection name"
 msgstr "Salli asiakkaiden suodattaa kokoelman nimen mukaan"
 
@@ -203,7 +203,7 @@ msgstr "Salli asiakkaiden suodattaa kielen mukaan"
 msgid "Title"
 msgstr "Nimi"
 
-#: core/facets.py:110 core/model/contributor.py:64
+#: core/facets.py:110 core/model/contributor.py:65
 msgid "Author"
 msgstr "Tekijä"
 
@@ -244,22 +244,22 @@ msgstr "Suositut kirjat"
 msgid "I don't know how to order a feed by '%(order)s'"
 msgstr "En tiedä, miten syöte järjestetään seuraavan mukaan: %(order)s"
 
-#: core/lane.py:393
+#: core/lane.py:394
 #, python-format
 msgid "I don't understand the availability term '%(availability)s'"
 msgstr "En ymmärrä saatavuustermiä %(availability)s"
 
-#: core/lane.py:405
+#: core/lane.py:406
 #, python-format
 msgid "I don't understand what '%(collection)s' refers to."
 msgstr "En ymmärrä, mitä %(collection)s tarkoittaa."
 
-#: core/lane.py:421
+#: core/lane.py:422
 #, python-format
 msgid "I don't understand which distributor '%(distributor)s' refers to."
 msgstr "En ymmärrä, mihin jakelijaan %(distributor)s viittaa."
 
-#: core/lane.py:437
+#: core/lane.py:438
 #, python-format
 msgid "I don't understand which collection '%(collection_name)s' refers to."
 msgstr "En ymmärrä, mihin kokoelmaan %(collection_name)s viittaa."
@@ -283,7 +283,7 @@ msgstr "Kaikki %(worklist)s"
 msgid "Custom accept header"
 msgstr "Mukautettu hyväksymisen otsikko"
 
-#: core/opds2_import.py:73 core/opds_import.py:180
+#: core/opds2_import.py:74 core/opds_import.py:181
 msgid ""
 "Some servers expect an accept header to decide which file to send. You "
 "can use */* if the server doesn't expect anything."
@@ -296,7 +296,7 @@ msgstr ""
 msgid "List of identifiers that will be skipped"
 msgstr "Luettelo ohitettavista tunnisteista"
 
-#: core/opds2_import.py:85
+#: core/opds2_import.py:86
 msgid ""
 "Circulation Manager will not be importing publications with identifiers "
 "having one of the selected types."
@@ -320,7 +320,7 @@ msgstr "Tietolähteen nimi"
 msgid "Default audience"
 msgstr "Oletusyleisö"
 
-#: core/opds_import.py:130
+#: core/opds_import.py:131
 msgid ""
 "If the vendor does not specify the target audience for their books, "
 "assume the books have this target audience."
@@ -336,7 +336,7 @@ msgstr "Ei oletusyleisöä"
 msgid "Username"
 msgstr "Käyttäjänimi"
 
-#: core/opds_import.py:150
+#: core/opds_import.py:151
 msgid ""
 "If HTTP Basic authentication is required to access the OPDS feed (it "
 "usually isn't), enter the username here."
@@ -348,7 +348,7 @@ msgstr ""
 msgid "Password"
 msgstr "Salasana"
 
-#: core/opds_import.py:161
+#: core/opds_import.py:162
 msgid ""
 "If HTTP Basic authentication is required to access the OPDS feed (it "
 "usually isn't), enter the password here."
@@ -1360,81 +1360,81 @@ msgstr "True Crime"
 msgid "World Record Books"
 msgstr "Ennätysten kirjat"
 
-#: core/data_conversion/accessibility_mapper.py:35
+#: core/data_conversion/accessibility_mapper.py:122
 msgid "This publication meets minimum accessibility standards"
 msgstr "Tämä julkaisu noudattaa saavutettavuusstandardien alinta tasoa"
 
-#: core/data_conversion/accessibility_mapper.py:36
+#: core/data_conversion/accessibility_mapper.py:123
 msgid "This publication meets accepted accessibility standards"
 msgstr ""
 "Tämä julkaisu noudattaa saavutettavuusstandardien yleisesti hyväksyttyä "
 "tasoa"
 
-#: core/data_conversion/accessibility_mapper.py:37
+#: core/data_conversion/accessibility_mapper.py:124
 msgid "This publication exceeds accepted accessibility standards"
 msgstr "Tämä julkaisu ylittää saavutettavuusstandardien yleisesti hyväksytyn tason"
 
-#: core/data_conversion/accessibility_mapper.py:40
+#: core/data_conversion/accessibility_mapper.py:128
 msgid "Readable in read aloud or dynamic braille"
 msgstr "Luettavissa ruudunlukuohjelmalla tai pistenäytöllä"
 
-#: core/data_conversion/accessibility_mapper.py:43
+#: core/data_conversion/accessibility_mapper.py:131
 msgid "Not fully readable in read aloud or dynamic braille"
 msgstr "Ei kokonaan luettavissa ruudunlukuohjelmalla tai pistenäytöllä"
 
-#: core/data_conversion/accessibility_mapper.py:46
+#: core/data_conversion/accessibility_mapper.py:134
 msgid "Not readable in read aloud or dynamic braille"
 msgstr "Ei luettavissa ruudunlukuohjelmalla tai pistenäytöllä"
 
-#: core/data_conversion/accessibility_mapper.py:49
+#: core/data_conversion/accessibility_mapper.py:137
 msgid "No information about nonvisual reading is available"
 msgstr "Ei tietoa tukeeko muita kuin näköön perustuvia tapoja lukea"
 
-#: core/data_conversion/accessibility_mapper.py:52
+#: core/data_conversion/accessibility_mapper.py:139
 msgid "Has alternative text"
 msgstr "Sisältää vaihtoehtoiset tekstit"
 
-#: core/data_conversion/accessibility_mapper.py:53
+#: core/data_conversion/accessibility_mapper.py:140
 msgid "Appearance can be modified"
 msgstr "Ulkoasua voi mukauttaa"
 
-#: core/data_conversion/accessibility_mapper.py:54
+#: core/data_conversion/accessibility_mapper.py:141
 msgid "Appearance cannot be modified"
 msgstr "Ulkoasua ei voi mukauttaa"
 
-#: core/data_conversion/accessibility_mapper.py:55
+#: core/data_conversion/accessibility_mapper.py:143
 msgid "Prerecorded audio synchronized with text"
 msgstr "Äänite on synkronoitu tekstin kanssa"
 
-#: core/data_conversion/accessibility_mapper.py:58
+#: core/data_conversion/accessibility_mapper.py:145
 msgid "Prerecorded audio only"
 msgstr "Sisältää vain ääntä"
 
-#: core/data_conversion/accessibility_mapper.py:59
+#: core/data_conversion/accessibility_mapper.py:146
 msgid "Prerecorded audio clips"
 msgstr "Sisältää äänitteitä"
 
-#: core/data_conversion/accessibility_mapper.py:62
+#: core/data_conversion/accessibility_mapper.py:149
 msgid "No hazards"
 msgstr "Ei vaaratekijöitä"
 
-#: core/data_conversion/accessibility_mapper.py:63
+#: core/data_conversion/accessibility_mapper.py:150
 msgid "Flashing content"
 msgstr "Välkkyvää sisältöä"
 
-#: core/data_conversion/accessibility_mapper.py:64
+#: core/data_conversion/accessibility_mapper.py:151
 msgid "Motion simulation"
 msgstr "Simuloitua liikettä"
 
-#: core/data_conversion/accessibility_mapper.py:65
+#: core/data_conversion/accessibility_mapper.py:152
 msgid "Sounds"
 msgstr "Ääniä"
 
-#: core/data_conversion/accessibility_mapper.py:66
+#: core/data_conversion/accessibility_mapper.py:153
 msgid "The presence of hazards is unknown"
 msgstr "Ei tietoa vaaratekijöistä"
 
-#: core/data_conversion/accessibility_mapper.py:67
+#: core/data_conversion/accessibility_mapper.py:154
 msgid "No information is available"
 msgstr "Tietoa ei ole saatavilla"
 
@@ -1446,47 +1446,47 @@ msgstr "Kaunokirjallisuus"
 msgid "Nonfiction"
 msgstr "Tietokirjallisuus"
 
-#: core/model/contributor.py:65
+#: core/model/contributor.py:66
 msgid "Primary Author"
 msgstr "Päätekijä"
 
-#: core/model/contributor.py:66
+#: core/model/contributor.py:67
 msgid "Editor"
 msgstr "Toimittaja"
 
-#: core/model/contributor.py:67
+#: core/model/contributor.py:68
 msgid "Artist"
 msgstr "Artisti"
 
-#: core/model/contributor.py:68
+#: core/model/contributor.py:69
 msgid "Photographer"
 msgstr "Valokuvaaja"
 
-#: core/model/contributor.py:69
+#: core/model/contributor.py:70
 msgid "Translator"
 msgstr "Kääntäjä"
 
-#: core/model/contributor.py:70
+#: core/model/contributor.py:71
 msgid "Illustrator"
 msgstr "Kuvittaja"
 
-#: core/model/contributor.py:79
+#: core/model/contributor.py:80
 msgid "Unknown"
 msgstr "Tuntematon"
 
-#: core/model/contributor.py:85
+#: core/model/contributor.py:86
 msgid "Contributor"
 msgstr "Muu tekijä"
 
-#: core/model/contributor.py:87
+#: core/model/contributor.py:88
 msgid "Narrator"
 msgstr "Lukija"
 
-#: core/model/contributor.py:93
+#: core/model/contributor.py:94
 msgid "Collaborator"
 msgstr "Yhteistyökumppani"
 
-#: core/util/http.py:34
+#: core/util/http.py:33
 msgid "Failure contacting external service"
 msgstr "Yhteydenotto ulkoiseen palveluun epäonnistui"
 
@@ -1499,7 +1499,7 @@ msgstr ""
 "Palvelin yritti käyttää palvelua %(service)s, mutta kolmannen osapuolen "
 "palvelussa tapahtui virhe."
 
-#: core/util/http.py:101
+#: core/util/http.py:100
 msgid "Bad response"
 msgstr "Väärä vastaus"
 
@@ -1512,22 +1512,22 @@ msgstr ""
 "Palvelin teki pyynnön palveluun %(service)s ja sai odottamattoman tai "
 "virheellisen vastauksen."
 
-#: core/util/http.py:156
+#: core/util/http.py:155
 msgid "Network failure contacting third-party service"
 msgstr "Verkkovirhe yhteydenotossa kolmannen osapuolen palveluun"
 
-#: core/util/http.py:157
+#: core/util/http.py:156
 #, python-format
 msgid "The server experienced a network error while contacting %(service)s."
 msgstr ""
 "Palvelimella tapahtui verkkovirhe, kun se otti yhteyttä palveluun "
 "%(service)s."
 
-#: core/util/http.py:166
+#: core/util/http.py:165
 msgid "Timeout"
 msgstr "Aikakatkaisu"
 
-#: core/util/http.py:167
+#: core/util/http.py:166
 #, python-format
 msgid "The server made a request to %(service)s, and that request timed out."
 msgstr "Palvelin teki pyynnön palveluun %(service)s, ja pyyntö aikakatkaistiin."

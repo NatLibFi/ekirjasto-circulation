@@ -1579,11 +1579,13 @@ class CirculationAPI:
             and loan.fulfillment is not None
             and not loan.fulfillment.compatible_with(delivery_mechanism)
         ):
-            raise DeliveryMechanismConflict(
+            raise DeliveryMechanismError(
                 _(
-                    "You already fulfilled this loan as %(loan_delivery_mechanism)s, you can't also do it as %(requested_delivery_mechanism)s",
-                    loan_delivery_mechanism=loan.fulfillment.delivery_mechanism.name,
+                    message="Something went wrong with  %(requested_delivery_mechanism)s",
                     requested_delivery_mechanism=delivery_mechanism.delivery_mechanism.name,
+                    debug_message="The book identifier or datasource did not match: %(identifier)s, %(datasource)s",
+                    identifier=delivery_mechanism.delivery_mechanism.identifier_id,
+                    datasource=delivery_mechanism.delivery_mechanism.datasource.name,
                 )
             )
 

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-04-16 15:01+0300\n"
+"POT-Creation-Date: 2026-08-26 15:06+0300\n"
 "PO-Revision-Date: 2024-02-19 22:14+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -16,7 +16,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.13.0\n"
+"Generated-By: Babel 2.18.0\n"
 
 #: core/config.py:95
 msgid "Debug"
@@ -46,7 +46,7 @@ msgstr "Log Level"
 msgid "Application name"
 msgstr "Application name"
 
-#: core/config.py:120
+#: core/config.py:121
 msgid ""
 "Log messages originating from this application will be tagged with this "
 "name. If you run multiple instances, giving each one a different "
@@ -62,7 +62,7 @@ msgstr ""
 msgid "Database Log Level"
 msgstr "Database Log Level"
 
-#: core/config.py:131
+#: core/config.py:132
 msgid ""
 "Database logs are extremely verbose, so unless you're diagnosing a "
 "database-related problem, it's a good idea to set a higher log level for "
@@ -76,7 +76,7 @@ msgstr ""
 msgid "Excluded audiobook sources"
 msgstr "Excluded audiobook sources"
 
-#: core/config.py:139
+#: core/config.py:140
 msgid ""
 "Audiobooks from these data sources will be hidden from the collection, "
 "even if they would otherwise show up as available."
@@ -88,7 +88,7 @@ msgstr ""
 msgid "Cleanup old measurement data"
 msgstr "Cleanup old measurement data"
 
-#: core/config.py:149
+#: core/config.py:150
 msgid ""
 "If this settings is 'true' old book measurement data will be cleaned out "
 "of the database. Some sites may want to keep this data for later "
@@ -102,7 +102,7 @@ msgstr ""
 msgid "Push notifications status"
 msgstr "Push notifications status"
 
-#: core/config.py:159
+#: core/config.py:160
 msgid ""
 "If this settings is 'true' push notification jobs will run as scheduled, "
 "and attempt to notify patrons via mobile push notifications."
@@ -122,7 +122,7 @@ msgstr "False"
 msgid "Connection retry limit"
 msgstr "Connection retry limit"
 
-#: core/connection_config.py:17
+#: core/connection_config.py:18
 msgid ""
 "The maximum number of times to retry a request for certain connection-"
 "related errors."
@@ -187,7 +187,7 @@ msgstr "Allow patrons to filter collection to"
 msgid "Allow patrons to filter by distributor"
 msgstr "Allow patrons to filter by distributor"
 
-#: core/facets.py:102
+#: core/facets.py:103
 msgid "Allow patrons to filter by collection name"
 msgstr "Allow patrons to filter by collection name"
 
@@ -199,7 +199,7 @@ msgstr "Allow patrons to filter by language"
 msgid "Title"
 msgstr "Title"
 
-#: core/facets.py:110 core/model/contributor.py:64
+#: core/facets.py:110 core/model/contributor.py:65
 msgid "Author"
 msgstr "Author"
 
@@ -240,22 +240,22 @@ msgstr "Popular Books"
 msgid "I don't know how to order a feed by '%(order)s'"
 msgstr "I don't know how to order a feed by '%(order)s'"
 
-#: core/lane.py:393
+#: core/lane.py:394
 #, python-format
 msgid "I don't understand the availability term '%(availability)s'"
 msgstr "I don't understand the availability term '%(availability)s'"
 
-#: core/lane.py:405
+#: core/lane.py:406
 #, python-format
 msgid "I don't understand what '%(collection)s' refers to."
 msgstr "I don't understand what '%(collection)s' refers to."
 
-#: core/lane.py:421
+#: core/lane.py:422
 #, python-format
 msgid "I don't understand which distributor '%(distributor)s' refers to."
 msgstr "I don't understand which distributor '%(distributor)s' refers to."
 
-#: core/lane.py:437
+#: core/lane.py:438
 #, python-format
 msgid "I don't understand which collection '%(collection_name)s' refers to."
 msgstr "I don't understand which collection '%(collection_name)s' refers to."
@@ -279,7 +279,7 @@ msgstr "All %(worklist)s"
 msgid "Custom accept header"
 msgstr "Custom accept header"
 
-#: core/opds2_import.py:73 core/opds_import.py:180
+#: core/opds2_import.py:74 core/opds_import.py:181
 msgid ""
 "Some servers expect an accept header to decide which file to send. You "
 "can use */* if the server doesn't expect anything."
@@ -291,7 +291,7 @@ msgstr ""
 msgid "List of identifiers that will be skipped"
 msgstr "List of identifiers that will be skipped"
 
-#: core/opds2_import.py:85
+#: core/opds2_import.py:86
 msgid ""
 "Circulation Manager will not be importing publications with identifiers "
 "having one of the selected types."
@@ -315,7 +315,7 @@ msgstr "Data source name"
 msgid "Default audience"
 msgstr "Default audience"
 
-#: core/opds_import.py:130
+#: core/opds_import.py:131
 msgid ""
 "If the vendor does not specify the target audience for their books, "
 "assume the books have this target audience."
@@ -331,7 +331,7 @@ msgstr "No default audience"
 msgid "Username"
 msgstr "Username"
 
-#: core/opds_import.py:150
+#: core/opds_import.py:151
 msgid ""
 "If HTTP Basic authentication is required to access the OPDS feed (it "
 "usually isn't), enter the username here."
@@ -343,7 +343,7 @@ msgstr ""
 msgid "Password"
 msgstr "Password"
 
-#: core/opds_import.py:161
+#: core/opds_import.py:162
 msgid ""
 "If HTTP Basic authentication is required to access the OPDS feed (it "
 "usually isn't), enter the password here."
@@ -1355,79 +1355,79 @@ msgstr "True Crime"
 msgid "World Record Books"
 msgstr "World Record Books"
 
-#: core/data_conversion/accessibility_mapper.py:35
+#: core/data_conversion/accessibility_mapper.py:122
 msgid "This publication meets minimum accessibility standards"
 msgstr "This publication meets minimum accessibility standards"
 
-#: core/data_conversion/accessibility_mapper.py:36
+#: core/data_conversion/accessibility_mapper.py:123
 msgid "This publication meets accepted accessibility standards"
 msgstr "This publication meets accepted accessibility standards"
 
-#: core/data_conversion/accessibility_mapper.py:37
+#: core/data_conversion/accessibility_mapper.py:124
 msgid "This publication exceeds accepted accessibility standards"
 msgstr "This publication exceeds accepted accessibility standards"
 
-#: core/data_conversion/accessibility_mapper.py:40
+#: core/data_conversion/accessibility_mapper.py:128
 msgid "Readable in read aloud or dynamic braille"
 msgstr "Readable in read aloud or dynamic braille"
 
-#: core/data_conversion/accessibility_mapper.py:43
+#: core/data_conversion/accessibility_mapper.py:131
 msgid "Not fully readable in read aloud or dynamic braille"
 msgstr "Not fully readable in read aloud or dynamic braille"
 
-#: core/data_conversion/accessibility_mapper.py:46
+#: core/data_conversion/accessibility_mapper.py:134
 msgid "Not readable in read aloud or dynamic braille"
 msgstr "Not readable in read aloud or dynamic braille"
 
-#: core/data_conversion/accessibility_mapper.py:49
+#: core/data_conversion/accessibility_mapper.py:137
 msgid "No information about nonvisual reading is available"
 msgstr "No information about nonvisual reading is available"
 
-#: core/data_conversion/accessibility_mapper.py:52
+#: core/data_conversion/accessibility_mapper.py:139
 msgid "Has alternative text"
 msgstr "Has alternative text"
 
-#: core/data_conversion/accessibility_mapper.py:53
+#: core/data_conversion/accessibility_mapper.py:140
 msgid "Appearance can be modified"
 msgstr "Appearance can be modified"
 
-#: core/data_conversion/accessibility_mapper.py:54
+#: core/data_conversion/accessibility_mapper.py:141
 msgid "Appearance cannot be modified"
 msgstr "Appearance cannot be modified"
 
-#: core/data_conversion/accessibility_mapper.py:55
+#: core/data_conversion/accessibility_mapper.py:143
 msgid "Prerecorded audio synchronized with text"
 msgstr "Prerecorded audio synchronized with text"
 
-#: core/data_conversion/accessibility_mapper.py:58
+#: core/data_conversion/accessibility_mapper.py:145
 msgid "Prerecorded audio only"
 msgstr "Prerecorded audio only"
 
-#: core/data_conversion/accessibility_mapper.py:59
+#: core/data_conversion/accessibility_mapper.py:146
 msgid "Prerecorded audio clips"
 msgstr "Prerecorded audio clips"
 
-#: core/data_conversion/accessibility_mapper.py:62
+#: core/data_conversion/accessibility_mapper.py:149
 msgid "No hazards"
 msgstr "No hazards"
 
-#: core/data_conversion/accessibility_mapper.py:63
+#: core/data_conversion/accessibility_mapper.py:150
 msgid "Flashing content"
 msgstr "Flashing content"
 
-#: core/data_conversion/accessibility_mapper.py:64
+#: core/data_conversion/accessibility_mapper.py:151
 msgid "Motion simulation"
 msgstr "Motion simulation"
 
-#: core/data_conversion/accessibility_mapper.py:65
+#: core/data_conversion/accessibility_mapper.py:152
 msgid "Sounds"
 msgstr "Sounds"
 
-#: core/data_conversion/accessibility_mapper.py:66
+#: core/data_conversion/accessibility_mapper.py:153
 msgid "The presence of hazards is unknown"
 msgstr "The presence of hazards is unknown"
 
-#: core/data_conversion/accessibility_mapper.py:67
+#: core/data_conversion/accessibility_mapper.py:154
 msgid "No information is available"
 msgstr "No information is available"
 
@@ -1439,47 +1439,47 @@ msgstr "Fiction"
 msgid "Nonfiction"
 msgstr "Nonfiction"
 
-#: core/model/contributor.py:65
+#: core/model/contributor.py:66
 msgid "Primary Author"
 msgstr "Primary Author"
 
-#: core/model/contributor.py:66
+#: core/model/contributor.py:67
 msgid "Editor"
 msgstr "Editor"
 
-#: core/model/contributor.py:67
+#: core/model/contributor.py:68
 msgid "Artist"
 msgstr "Artist"
 
-#: core/model/contributor.py:68
+#: core/model/contributor.py:69
 msgid "Photographer"
 msgstr "Photographer"
 
-#: core/model/contributor.py:69
+#: core/model/contributor.py:70
 msgid "Translator"
 msgstr "Translator"
 
-#: core/model/contributor.py:70
+#: core/model/contributor.py:71
 msgid "Illustrator"
 msgstr "Illustrator"
 
-#: core/model/contributor.py:79
+#: core/model/contributor.py:80
 msgid "Unknown"
 msgstr "Unknown"
 
-#: core/model/contributor.py:85
+#: core/model/contributor.py:86
 msgid "Contributor"
 msgstr "Contributor"
 
-#: core/model/contributor.py:87
+#: core/model/contributor.py:88
 msgid "Narrator"
 msgstr "Narrator"
 
-#: core/model/contributor.py:93
+#: core/model/contributor.py:94
 msgid "Collaborator"
 msgstr "Collaborator"
 
-#: core/util/http.py:34
+#: core/util/http.py:33
 msgid "Failure contacting external service"
 msgstr "Failure contacting external service"
 
@@ -1492,7 +1492,7 @@ msgstr ""
 "The server tried to access %(service)s but the third-party service "
 "experienced an error."
 
-#: core/util/http.py:101
+#: core/util/http.py:100
 msgid "Bad response"
 msgstr "Bad response"
 
@@ -1505,20 +1505,21 @@ msgstr ""
 "The server made a request to %(service)s, and got an unexpected or "
 "invalid response."
 
-#: core/util/http.py:156
+#: core/util/http.py:155
 msgid "Network failure contacting third-party service"
 msgstr "Network failure contacting third-party service"
 
-#: core/util/http.py:157
+#: core/util/http.py:156
 #, python-format
 msgid "The server experienced a network error while contacting %(service)s."
 msgstr "The server experienced a network error while contacting %(service)s."
 
-#: core/util/http.py:166
+#: core/util/http.py:165
 msgid "Timeout"
 msgstr "Timeout"
 
-#: core/util/http.py:167
+#: core/util/http.py:166
 #, python-format
 msgid "The server made a request to %(service)s, and that request timed out."
 msgstr "The server made a request to %(service)s, and that request timed out."
+
