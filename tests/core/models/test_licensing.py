@@ -169,56 +169,6 @@ class TestDeliveryMechanism:
         assert MediaTypes.EPUB_MEDIA_TYPE == mech.content_type
         assert mech.NO_DRM == mech.drm_scheme
 
-    def test_compatible_with(
-        self, test_delivery_mechanism_fixture: TestDeliveryMechanismFixture
-    ):
-        session = test_delivery_mechanism_fixture.transaction.session
-
-        """Test the rules about which DeliveryMechanisms are
-        mutually compatible and which are mutually exclusive.
-        """
-        epub_adobe, ignore = DeliveryMechanism.lookup(
-            session, MediaTypes.EPUB_MEDIA_TYPE, DeliveryMechanism.ADOBE_DRM
-        )
-
-        pdf_adobe, ignore = DeliveryMechanism.lookup(
-            session, MediaTypes.PDF_MEDIA_TYPE, DeliveryMechanism.ADOBE_DRM
-        )
-
-        epub_no_drm, ignore = DeliveryMechanism.lookup(
-            session, MediaTypes.EPUB_MEDIA_TYPE, DeliveryMechanism.NO_DRM
-        )
-
-        pdf_no_drm, ignore = DeliveryMechanism.lookup(
-            session, MediaTypes.PDF_MEDIA_TYPE, DeliveryMechanism.NO_DRM
-        )
-
-        streaming, ignore = DeliveryMechanism.lookup(
-            session,
-            DeliveryMechanism.STREAMING_TEXT_CONTENT_TYPE,
-            DeliveryMechanism.STREAMING_DRM,
-        )
-
-        # A non-streaming DeliveryMechanism is compatible only with
-        # itself or a streaming mechanism.
-        assert False == epub_adobe.compatible_with(None)
-        assert False == epub_adobe.compatible_with("Not a DeliveryMechanism")
-        assert False == epub_adobe.compatible_with(epub_no_drm)
-        assert False == epub_adobe.compatible_with(pdf_adobe)
-        assert False == epub_no_drm.compatible_with(pdf_no_drm)
-        assert True == epub_adobe.compatible_with(epub_adobe)
-        assert True == epub_adobe.compatible_with(streaming)
-
-        # A streaming mechanism is compatible with anything.
-        assert True == streaming.compatible_with(epub_adobe)
-        assert True == streaming.compatible_with(pdf_adobe)
-        assert True == streaming.compatible_with(epub_no_drm)
-
-        # Rules are slightly different for open-access books: books
-        # in any format are compatible so long as they have no DRM.
-        assert True == epub_no_drm.compatible_with(pdf_no_drm, True)
-        assert False == epub_no_drm.compatible_with(pdf_adobe, True)
-
     def test_uniqueness_constraint(
         self, test_delivery_mechanism_fixture: TestDeliveryMechanismFixture
     ):
@@ -1394,8 +1344,10 @@ class TestLicensePoolDeliveryMechanism:
         db.session.rollback()
 
     def test_compatible_with(self, db: DatabaseTransactionFixture):
-        """Test the rules about which LicensePoolDeliveryMechanisms are
-        mutually compatible and which are mutually exclusive.
+        """Test the few rules about which LicensePoolDeliveryMechanisms are
+        mutually compatible and which are mutually exclusive. Basically, two
+        LicensePoolDeliveryMechanisms are not compatible if they do not identify
+        the same book from the same data source.
         """
 
         edition, pool = db.edition(
@@ -1436,7 +1388,7 @@ class TestLicensePoolDeliveryMechanism:
         )
         mech1.delivery_mechanism = pdf_adobe
         db.session.commit()
-        assert False == mech1.compatible_with(mech2)
+        assert True == mech1.compatible_with(mech2)
 
         streaming, ignore = DeliveryMechanism.lookup(
             db.session,
@@ -1463,54 +1415,6 @@ class TestLicensePoolDeliveryMechanism:
         mech1.delivery_mechanism = ekirjasto_streaming
         db.session.commit()
         assert True == mech2.compatible_with(mech1)
-
-    def test_compatible_with_calls_compatible_with_on_deliverymechanism(
-        self, db: DatabaseTransactionFixture
-    ):
-        # Create two LicensePoolDeliveryMechanisms with different
-        # media types.
-        edition, pool = db.edition(
-            with_license_pool=True, with_open_access_download=True
-        )
-        [mech1] = pool.delivery_mechanisms
-        mech2 = db.add_generic_delivery_mechanism(pool)
-        mech2.delivery_mechanism, ignore = DeliveryMechanism.lookup(
-            db.session, MediaTypes.PDF_MEDIA_TYPE, DeliveryMechanism.NO_DRM
-        )
-        db.session.commit()
-
-        assert True == mech1.is_open_access
-        assert False == mech2.is_open_access
-
-        # Determining whether the mechanisms are compatible requires
-        # calling compatible_with on the first mechanism's
-        # DeliveryMechanism, passing in the second DeliveryMechanism
-        # plus the answer to 'are both LicensePoolDeliveryMechanisms
-        # open-access?'
-        class Mock:
-            called_with = None
-
-            @classmethod
-            def compatible_with(cls, other, open_access):
-                cls.called_with = (other, open_access)
-                return True
-
-        mech1.delivery_mechanism.compatible_with = Mock.compatible_with
-
-        # Call compatible_with, and the mock method is called with the
-        # second DeliveryMechanism and (since one of the
-        # LicensePoolDeliveryMechanisms is not open-access) the value
-        # False.
-        mech1.compatible_with(mech2)
-        assert (mech2.delivery_mechanism, False) == Mock.called_with
-
-        # If both LicensePoolDeliveryMechanisms are open-access,
-        # True is passed in instead, so that
-        # DeliveryMechanism.compatible_with() applies the less strict
-        # compatibility rules for open-access fulfillment.
-        mech2.set_rights_status(RightsStatus.GENERIC_OPEN_ACCESS)
-        mech1.compatible_with(mech2)
-        assert (mech2.delivery_mechanism, True) == Mock.called_with
 
     @pytest.mark.parametrize(
         "_,data_source,identifier,delivery_mechanism",
