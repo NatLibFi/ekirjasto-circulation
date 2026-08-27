@@ -1582,10 +1582,9 @@ class CirculationAPI:
             raise DeliveryMechanismError(
                 _(
                     message="Something went wrong with  %(requested_delivery_mechanism)s",
+                    debug_message="Mismatch with loan delivery mechanism %(loan_delivery_mechanism)s and requested delivery mechanism %(requested_delivery_mechanism)s",
+                    loan_delivery_mechanism=loan.fulfillment.delivery_mechanism.name,
                     requested_delivery_mechanism=delivery_mechanism.delivery_mechanism.name,
-                    debug_message="The book identifier or datasource did not match: %(identifier)s, %(datasource)s",
-                    identifier=delivery_mechanism.delivery_mechanism.identifier_id,
-                    datasource=delivery_mechanism.delivery_mechanism.datasource.name,
                 )
             )
 

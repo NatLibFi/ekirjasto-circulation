@@ -16,7 +16,6 @@ class TestCirculationExceptions:
             LibraryInvalidInputException,
             DeliveryMechanismError,
             DeliveryMechanismMissing,
-            DeliveryMechanismConflict,
             CannotLoan,
             AuthorizationExpired,
             AuthorizationBlocked,
