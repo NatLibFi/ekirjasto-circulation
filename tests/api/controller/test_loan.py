@@ -404,18 +404,16 @@ class TestLoanController:
             assert "I am an ACSM file" == fulfill_response.get_data(as_text=True)
             assert http.requests == [fulfillable_mechanism.resource.url]
 
-            # But we can't use some other mechanism -- we're stuck with
-            # the first one we chose.
+            # We can try again with a different mechanism with the other mechanism and succeed again.
+            loan_fixture.manager.d_circulation.queue_fulfill(
+                loan_fixture.pool, redirect
+            )
             fulfill_response = loan_fixture.manager.loans.fulfill(
                 loan_fixture.pool_id, loan_fixture.mech2.delivery_mechanism.id
             )
-            assert isinstance(fulfill_response, ProblemDetail)
-            assert 409 == fulfill_response.status_code
-            assert fulfill_response.detail is not None
             assert (
-                "You already fulfilled this loan as application/epub+zip (DRM Scheme 1), you can't also do it as application/pdf (DRM Scheme 2)"
-                in fulfill_response.detail
-            )
+                302 == fulfill_response.status_code
+            )  # RedirectFulfillment returns a 302 redirect
 
             # If the remote server fails, we get a problem detail.
             doomed_fulfillment = create_autospec(Fulfillment)

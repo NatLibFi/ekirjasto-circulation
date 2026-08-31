@@ -27,10 +27,10 @@ sequenceDiagram
         LoanController-->>Patron: Error: "No active loan. Cannot find your active loan for this work."
     end
     CirculationAPI->>CirculationAPI: Check loan fulfillment (license pool delivery mechanism) compatibility with requested delivery mechansim
-    Note over CirculationAPI: E-kirjasto-relevant: If DRMs match, True is returned despite delivery mechansim content type (Ellibs streaming or EPUB).<br/>This basically overrides the system's design of a loan being restricted to only one delivery mechanism!
+    Note over CirculationAPI: E-kirjasto-relevant: The license pool delivery mechanism id and datasource must match.
     alt Loan fulfillment not compatible with requested delivery mechanism
-        CirculationAPI-->>LoanController: Error: DeliveryMechanismConflict
-        LoanController-->>Patron: Error: "Delivery mechanism conflict. "You already fulfilled this loan as {loan delivery mechanism}, you can't also do it as {requested delivery mechansim}."
+        CirculationAPI-->>LoanController: Error: DeliveryMechanismError
+        LoanController-->>Patron: Error: "Mismatch with loan delivery mechanism {loan_delivery_mechanism} and requested delivery mechanism {requested_delivery_mechanism}"
     end
     CirculationAPI->>ODLAPI: fulfill(patron, pin, licensepool, delivery_mechanism)
     ODLAPI->>ODLServer: Request loan status

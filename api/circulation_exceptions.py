@@ -117,16 +117,6 @@ class DeliveryMechanismMissing(DeliveryMechanismError):
     """The patron needed to specify a delivery mechanism and didn't."""
 
 
-class DeliveryMechanismConflict(DeliveryMechanismError):
-    """The patron specified a delivery mechanism that conflicted with
-    one already set in stone.
-    """
-
-    @property
-    def base(self) -> ProblemDetail:
-        return DELIVERY_CONFLICT
-
-
 class CannotLoan(CirculationException):
     @property
     def base(self) -> ProblemDetail:

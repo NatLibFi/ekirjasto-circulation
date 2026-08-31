@@ -1579,9 +1579,10 @@ class CirculationAPI:
             and loan.fulfillment is not None
             and not loan.fulfillment.compatible_with(delivery_mechanism)
         ):
-            raise DeliveryMechanismConflict(
+            raise DeliveryMechanismError(
                 _(
-                    "You already fulfilled this loan as %(loan_delivery_mechanism)s, you can't also do it as %(requested_delivery_mechanism)s",
+                    message="Something went wrong with  %(requested_delivery_mechanism)s",
+                    debug_message="Mismatch with loan delivery mechanism %(loan_delivery_mechanism)s and requested delivery mechanism %(requested_delivery_mechanism)s",
                     loan_delivery_mechanism=loan.fulfillment.delivery_mechanism.name,
                     requested_delivery_mechanism=delivery_mechanism.delivery_mechanism.name,
                 )
