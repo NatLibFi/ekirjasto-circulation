@@ -200,42 +200,57 @@ class AnnifSubjectExtractionScript(Script):
 
     @classmethod
     def arg_parser(cls):
-        return argparse.ArgumentParser(description=cls.name)
+        parser = argparse.ArgumentParser(description=cls.name)
+        parser.add_argument(
+            "--force",
+            action="store_true",
+            help="re-extract subjects for works that already have Annif subjects",
+        )
+        return parser
 
-    def __init__(self, _db=None, extractor=None):
+    def __init__(self, _db=None, extractor=None, cmd_args=None):
         super().__init__(_db=_db)
         self.extractor = extractor or AnnifSubjectExtractor()
+        self.force = self.parse_command_line(_db, cmd_args=cmd_args).force
 
     def do_run(self):
         last_id = 0
         while True:
+            query = self._db.query(Work).filter(
+                Work.id > last_id,
+                Work.summary_text.isnot(None),
+            )
+            if not self.force:
+                query = query.filter(~Work.annif_subjects.any())
+
             works = (
-                self._db.query(Work)
-                .filter(
-                    Work.id > last_id,
-                    ~Work.annif_subjects.any(),
-                    Work.summary_text.isnot(None),
-                )
+                query
                 .order_by(Work.id)
-                .limit(10)
+                .limit(self.extractor.BATCH_SIZE)
                 .all()
             )
             if not works:
                 break
 
+            suggestions_by_work = self.extractor.suggestions_for(works)
+            if self.force:
+                # Delete the old rows before inserting replacements. This
+                # avoids a unique-key conflict when the suggestions have not
+                # changed.
+                for work in works:
+                    work.annif_subjects.clear()
+                self._db.flush()
             for work in works:
-                suggestions = self.extractor.suggestions_for(work)
                 work.annif_subjects = [
                     AnnifSubject(
                         uri=suggestion.uri,
                         label=suggestion.label,
                         score=suggestion.score,
-                        notation=suggestion.notation,
                     )
-                    for suggestion in suggestions
+                    for suggestion in suggestions_by_work[work.id]
                 ]
-                last_id = work.id
-                self._db.commit()
+            last_id = works[-1].id
+            self._db.commit()
 
 
 class RunMonitorScript(Script):
