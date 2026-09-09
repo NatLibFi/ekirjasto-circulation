@@ -23,6 +23,7 @@ from core.integration.goals import Goals
 from core.lane import Lane
 from core.metadata_layer import TimestampData
 from core.model import (
+    AnnifSubject,
     BaseCoverageRecord,
     Collection,
     ConfigurationSetting,
@@ -47,6 +48,7 @@ from core.model import (
     get_one_or_create,
     production_session,
 )
+from core.annif_subject_extractor import AnnifSubjectExtractor
 from core.model.classification import Classification
 from core.model.listeners import site_configuration_has_changed
 from core.monitor import CollectionMonitor, ReaperMonitor
@@ -189,6 +191,51 @@ class TimestampScript(Script):
             exception=exception,
         )
         timestamp_data.apply(self._db)
+
+
+class AnnifSubjectExtractionScript(Script):
+    """Extract and persist Annif subjects for newly imported Works."""
+
+    name = "Annif subject extraction script"
+
+    @classmethod
+    def arg_parser(cls):
+        return argparse.ArgumentParser(description=cls.name)
+
+    def __init__(self, _db=None, extractor=None):
+        super().__init__(_db=_db)
+        self.extractor = extractor or AnnifSubjectExtractor()
+
+    def do_run(self):
+        last_id = 0
+        while True:
+            works = (
+                self._db.query(Work)
+                .filter(
+                    Work.id > last_id,
+                    ~Work.annif_subjects.any(),
+                    Work.summary_text.isnot(None),
+                )
+                .order_by(Work.id)
+                .limit(10)
+                .all()
+            )
+            if not works:
+                break
+
+            for work in works:
+                suggestions = self.extractor.suggestions_for(work)
+                work.annif_subjects = [
+                    AnnifSubject(
+                        uri=suggestion.uri,
+                        label=suggestion.label,
+                        score=suggestion.score,
+                        notation=suggestion.notation,
+                    )
+                    for suggestion in suggestions
+                ]
+                last_id = work.id
+                self._db.commit()
 
 
 class RunMonitorScript(Script):
