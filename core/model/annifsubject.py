@@ -17,11 +17,15 @@ class AnnifSubject(Base):
 
     __tablename__ = "annifsubjects"
     id = Column(Integer, primary_key=True)
-    work_id = Column(Integer, ForeignKey("works.id"), nullable=False, index=True)
+    work_id = Column(
+        Integer,
+        ForeignKey("works.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
     uri = Column(Unicode, nullable=False)
     label = Column(Unicode, nullable=False)
     score: Mapped[Decimal | None] = Column(Numeric(6, 5), nullable=True)
-    notation = Column(Unicode, nullable=True)
 
     work: Mapped[Work] = relationship("Work", back_populates="annif_subjects")
 

@@ -22,7 +22,6 @@ def upgrade() -> None:
         sa.Column("uri", sa.Unicode(), nullable=False),
         sa.Column("label", sa.Unicode(), nullable=False),
         sa.Column("score", sa.Numeric(precision=6, scale=5), nullable=True),
-        sa.Column("notation", sa.Unicode(), nullable=True),
         sa.ForeignKeyConstraint(["work_id"], ["works.id"]),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("work_id", "uri"),
