@@ -516,7 +516,7 @@ from api.saml.metadata.federations.model import (
 )
 from core.model.accessibility import Accessibility
 from core.model.admin import Admin, AdminRole
-from core.model.annifsubject import AnnifSubject
+from core.model.ysosubject import YSOSubject
 from core.model.apitokens import ApiToken
 from core.model.circulationevent import CirculationEvent
 from core.model.classification import Classification, Genre, Subject

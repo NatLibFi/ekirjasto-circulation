@@ -175,7 +175,7 @@ class WorkEntryData(BaseModel):
     authors: list[Author] = field(default_factory=list)
     contributors: list[Author] = field(default_factory=list)
     categories: list[FeedEntryType] = field(default_factory=list)
-    annif_subjects: list[FeedEntryType] = field(default_factory=list)
+    yso_subjects: list[FeedEntryType] = field(default_factory=list)
     ratings: list[FeedEntryType] = field(default_factory=list)
     distribution: FeedEntryType | None = None
 

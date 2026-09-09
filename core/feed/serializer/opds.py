@@ -247,8 +247,8 @@ class OPDS1Serializer(SerializerInterface[etree._Element], OPDSFeed):
             )
             entry.append(element)
 
-        for subject in feed_entry.annif_subjects:
-            entry.append(self._serialize_feed_entry("annifsubject", subject))
+        for subject in feed_entry.yso_subjects:
+            entry.append(self._serialize_feed_entry("ysosubject", subject))
 
         for rating in feed_entry.ratings:
             rating_tag = self._serialize_feed_entry("Rating", rating)

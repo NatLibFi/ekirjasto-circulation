@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Extract Annif/Finto AI subjects for newly imported works."""
+"""Extract YSO subjects from Finto AI for newly imported works."""
 import os
 import sys
 
@@ -7,7 +7,7 @@ bin_dir = os.path.split(__file__)[0]
 package_dir = os.path.join(bin_dir, "..")
 sys.path.append(os.path.abspath(package_dir))
 
-from core.scripts import AnnifSubjectExtractionScript
+from core.scripts import YSOSubjectExtractionScript
 
 
-AnnifSubjectExtractionScript().run()
+YSOSubjectExtractionScript().run()
