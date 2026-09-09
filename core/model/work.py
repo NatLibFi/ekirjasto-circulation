@@ -54,7 +54,7 @@ from core.util.datetime_helpers import utc_now
 # Import related models when doing type checking
 if TYPE_CHECKING:
     from core.external_search import ExternalSearchIndex
-    from core.model import CustomListEntry, Library, LicensePool
+    from core.model import AnnifSubject, CustomListEntry, Library, LicensePool
 
 
 class WorkGenre(Base):
@@ -120,6 +120,11 @@ class Work(Base):
     # One Work may have copies scattered across many LicensePools.
     license_pools: Mapped[list[LicensePool]] = relationship(
         "LicensePool", backref="work", lazy="joined", uselist=True
+    )
+
+    # Annif subject suggestions generated from the work's summary.
+    annif_subjects: Mapped[list[AnnifSubject]] = relationship(
+        "AnnifSubject", back_populates="work", cascade="all, delete-orphan"
     )
 
     # A Work takes its presentation metadata from a single Edition.
