@@ -344,6 +344,14 @@ class Annotator(ToFeedEntry):
                 category_tags.append(category_tag)
         computed.categories = category_tags
 
+        computed.annif_subjects = []
+        for subject in work.annif_subjects:
+            subject_tag = FeedEntryType(text=subject.label)
+            subject_tag.add_attributes({"uri": subject.uri})
+            if subject.score is not None:
+                subject_tag.add_attributes({"score": str(subject.score)})
+            computed.annif_subjects.append(subject_tag)
+
         if edition.language_code:
             computed.language = FeedEntryType(text=edition.language_code)
 
