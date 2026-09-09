@@ -2,7 +2,6 @@
 
 from alembic import op
 
-
 revision = "20260909_annifsubj_cascade"
 down_revision = "20260909_annifsubjects"
 branch_labels = None

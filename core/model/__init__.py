@@ -516,7 +516,6 @@ from api.saml.metadata.federations.model import (
 )
 from core.model.accessibility import Accessibility
 from core.model.admin import Admin, AdminRole
-from core.model.ysosubject import YSOSubject
 from core.model.apitokens import ApiToken
 from core.model.circulationevent import CirculationEvent
 from core.model.classification import Classification, Genre, Subject
@@ -576,6 +575,7 @@ from core.model.resource import (
 )
 from core.model.time_tracking import PlaytimeEntry, PlaytimeSummary
 from core.model.work import Work, WorkGenre
+from core.model.ysosubject import YSOSubject
 
 # Import order important here to avoid an import cycle.
 from core.lane import Lane, LaneGenre  # isort:skip

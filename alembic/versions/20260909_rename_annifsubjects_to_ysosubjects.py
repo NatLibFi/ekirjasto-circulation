@@ -5,8 +5,8 @@ Revises: 20260909_annifsubj_cascade
 """
 
 import sqlalchemy as sa
-from alembic import op
 
+from alembic import op
 
 revision = "20260909_ysosubjects"
 down_revision = "20260909_annifsubj_cascade"
@@ -18,8 +18,7 @@ def upgrade() -> None:
     op.rename_table("annifsubjects", "ysosubjects")
     op.execute(
         sa.text(
-            "ALTER INDEX ix_annifsubjects_work_id "
-            "RENAME TO ix_ysosubjects_work_id"
+            "ALTER INDEX ix_annifsubjects_work_id " "RENAME TO ix_ysosubjects_work_id"
         )
     )
     op.execute(
@@ -41,8 +40,7 @@ def downgrade() -> None:
     )
     op.execute(
         sa.text(
-            "ALTER INDEX ix_ysosubjects_work_id "
-            "RENAME TO ix_annifsubjects_work_id"
+            "ALTER INDEX ix_ysosubjects_work_id " "RENAME TO ix_annifsubjects_work_id"
         )
     )
     op.rename_table("ysosubjects", "annifsubjects")

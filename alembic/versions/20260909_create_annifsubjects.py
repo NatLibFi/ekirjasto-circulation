@@ -5,8 +5,8 @@ Revises: 7d3add9fd1fe
 """
 
 import sqlalchemy as sa
-from alembic import op
 
+from alembic import op
 
 revision = "20260909_annifsubjects"
 down_revision = "7d3add9fd1fe"

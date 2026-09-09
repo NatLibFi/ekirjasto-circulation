@@ -5,10 +5,8 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from decimal import Decimal
 
-from core.model.identifier import Identifier
 from core.model.work import Work
 from core.util.http import HTTP
-
 
 log = logging.getLogger(__name__)
 

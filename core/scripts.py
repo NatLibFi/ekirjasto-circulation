@@ -23,7 +23,6 @@ from core.integration.goals import Goals
 from core.lane import Lane
 from core.metadata_layer import TimestampData
 from core.model import (
-    YSOSubject,
     BaseCoverageRecord,
     Collection,
     ConfigurationSetting,
@@ -43,12 +42,12 @@ from core.model import (
     Subject,
     Timestamp,
     Work,
+    YSOSubject,
     create,
     get_one,
     get_one_or_create,
     production_session,
 )
-from core.yso_subject_extractor import YSOSubjectExtractor
 from core.model.classification import Classification
 from core.model.listeners import site_configuration_has_changed
 from core.monitor import CollectionMonitor, ReaperMonitor
@@ -64,6 +63,7 @@ from core.util.personal_names import (
     display_name_to_sort_name,
 )
 from core.util.worker_pools import DatabasePool
+from core.yso_subject_extractor import YSOSubjectExtractor
 
 
 class Script:
@@ -223,12 +223,7 @@ class YSOSubjectExtractionScript(Script):
             if not self.force:
                 query = query.filter(~Work.yso_subjects.any())
 
-            works = (
-                query
-                .order_by(Work.id)
-                .limit(self.extractor.BATCH_SIZE)
-                .all()
-            )
+            works = query.order_by(Work.id).limit(self.extractor.BATCH_SIZE).all()
             if not works:
                 break
 
