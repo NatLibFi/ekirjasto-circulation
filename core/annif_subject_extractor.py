@@ -49,6 +49,13 @@ class AnnifSubjectExtractor:
         limit: int = 10,
         threshold: float = DEFAULT_THRESHOLD,
     ):
+        """Create an extractor configured for the Annif suggestion API.
+
+        Args:
+            api_url: Base URL of the Annif API, or the default Finto AI URL.
+            limit: Maximum number of suggestions to retain per work.
+            threshold: Minimum score for a suggestion to be included.
+        """
         self.api_url = (api_url or self.API_URL).rstrip("/")
         self.limit = limit
         self.threshold = threshold
@@ -60,12 +67,16 @@ class AnnifSubjectExtractor:
 
         Finto AI accepts at most 32 documents per batch. Works are grouped by
         language because each language uses a separate Annif project.
+
+        Works without summary text or a supported language are returned with
+        an empty suggestion list.
         """
         suggestions_by_work: dict[int, list[AnnifSubjectSuggestion]] = {
             work.id: [] for work in works
         }
         works_by_project: dict[tuple[str, str], list[Work]] = {}
         for work in works:
+            # Annif cannot produce useful suggestions without both inputs.
             if not work.summary_text or not work.language:
                 continue
 
@@ -76,6 +87,7 @@ class AnnifSubjectExtractor:
                 works_by_project.setdefault((project, language), []).append(work)
 
         for (project, language), project_works in works_by_project.items():
+            # Keep requests within Annif's maximum batch size.
             for start in range(0, len(project_works), self.BATCH_SIZE):
                 batch = project_works[start : start + self.BATCH_SIZE]
                 suggestions_by_work.update(
@@ -87,6 +99,16 @@ class AnnifSubjectExtractor:
     def _suggestions_for_batch(
         self, project: str, language: str, works: Sequence[Work]
     ) -> dict[int, list[AnnifSubjectSuggestion]]:
+        """Request and normalize suggestions for one Annif project batch.
+
+        Args:
+            project: Annif project identifier, such as ``yso-fi``.
+            language: Language code passed to Annif.
+            works: Works whose summaries are sent in this request.
+
+        Returns:
+            A mapping from work IDs to at most ``self.limit`` suggestions.
+        """
         url = f"{self.api_url}/projects/{project}/suggest-batch"
         response = HTTP.post_with_timeout(
             url,
@@ -118,6 +140,7 @@ class AnnifSubjectExtractor:
                     else None,
                 )
                 previous = suggestions_by_uri.get(subject.uri)
+                # A URI can occur more than once; retain the highest score.
                 if previous is None or (
                     subject.score is not None
                     and (previous.score is None or subject.score > previous.score)
