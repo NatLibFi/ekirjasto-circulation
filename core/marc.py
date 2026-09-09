@@ -391,14 +391,14 @@ class Annotator(LoggerMixin):
                 )
             )
         elif edition.medium == Edition.AUDIO_MEDIUM:
+            description = "verkkoaineisto"
+            if edition.duration is not None:
+                description += f" ({cls.format_duration(edition.duration)})"
             record.add_field(
                 Field(
                     tag="300",
                     indicators=[" ", " "],
-                    subfields=[
-                        Subfield("a", "äänitiedosto"),
-                        Subfield("b", "digitaalinen"),
-                    ],
+                    subfields=[Subfield("a", description)],
                 )
             )
 
@@ -473,6 +473,22 @@ class Annotator(LoggerMixin):
                     ],
                 )
             )
+
+    @staticmethod
+    def format_duration(duration: float) -> str:
+        """Format an audiobook duration in the units used by MARC 300."""
+        seconds = round(duration)
+        minutes, seconds = divmod(seconds, 60)
+        hours, minutes = divmod(minutes, 60)
+
+        parts = []
+        if hours:
+            parts.append(f"{hours}h")
+        if minutes:
+            parts.append(f"{minutes}min")
+        if seconds or not parts:
+            parts.append(f"{seconds}s")
+        return " ".join(parts)
 
     @classmethod
     def add_audience(cls, record: Record, work: Work) -> None:
