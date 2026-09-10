@@ -148,6 +148,8 @@ class Annotator(LoggerMixin):
         if self.include_genres:
             self.add_genres(record, work)
 
+        self.add_keywords(record, edition)
+
         self.add_web_client_urls(
             record,
             identifier,
@@ -567,7 +569,7 @@ class Annotator(LoggerMixin):
     @classmethod
     def add_keywords(cls, record: Record, edition: Edition) -> None:
         """Create keyword fields for this work."""
-        if edition.medium == Edition.BOOK_MEDIUM:
+        if edition.medium == Edition.AUDIO_MEDIUM:
             record.add_field(
                 Field(
                     tag="655",
@@ -579,13 +581,13 @@ class Annotator(LoggerMixin):
                     ],
                 )
             )
-        if edition.medium == Edition.EBOOK_MEDIUM:
+        if edition.medium == Edition.BOOK_MEDIUM:
             record.add_field(
                 Field(
                     tag="655",
                     indicators=["1", "7"],
                     subfields=[
-                        Subfield("a", _("e-kirja")),
+                        Subfield("a", "e-kirja"),
                         Subfield("2", "slm/fin"),
                     ],
                 )
