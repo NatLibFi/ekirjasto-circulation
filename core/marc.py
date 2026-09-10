@@ -401,13 +401,12 @@ class Annotator(LoggerMixin):
                     subfields=[Subfield("a", description)],
                 )
             )
-
             record.add_field(
                 Field(
                     tag="336",
                     indicators=[" ", " "],
                     subfields=[
-                        Subfield("a", "puhuttu sana"),
+                        Subfield("a", "puhe"),
                         Subfield("b", "spw"),
                         Subfield("2", "rdacontent"),
                     ],
@@ -419,7 +418,7 @@ class Annotator(LoggerMixin):
                 tag="337",
                 indicators=[" ", " "],
                 subfields=[
-                    Subfield("a", "tietokone"),
+                    Subfield("a", "tietokonekäyttöinen"),
                     Subfield("b", "c"),
                     Subfield("2", "rdamedia"),
                 ],
@@ -468,7 +467,7 @@ class Annotator(LoggerMixin):
                     tag="380",
                     indicators=[" ", " "],
                     subfields=[
-                        Subfield("a", "eBook"),
+                        Subfield("a", "e-kirja"),
                         Subfield("2", "tlcgt"),
                     ],
                 )
