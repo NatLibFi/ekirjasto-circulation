@@ -557,7 +557,7 @@ class Annotator(LoggerMixin):
         for genre in genres:
             record.add_field(
                 Field(
-                    tag="655",
+                    tag="653",
                     indicators=[" ", "0"],
                     subfields=[
                         Subfield("a", _(genre.name)),
