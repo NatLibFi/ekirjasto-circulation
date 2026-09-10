@@ -566,6 +566,33 @@ class Annotator(LoggerMixin):
             )
 
     @classmethod
+    def add_keywords(cls, record: Record, edition: Edition) -> None:
+        """Create keyword fields for this work."""
+        if edition.medium == Edition.BOOK_MEDIUM:
+            record.add_field(
+                Field(
+                    tag="655",
+                    indicators=["1", "7"],
+                    subfields=[
+                        Subfield("a", _("äänikirja")),
+                        Subfield("2", "slm/fin"),
+                        Subfield("0", "https://urn.fi/URN:NBN:fi:au:slm:s579"),
+                    ],
+                )
+            )
+        if edition.medium == Edition.EBOOK_MEDIUM:
+            record.add_field(
+                Field(
+                    tag="655",
+                    indicators=["1", "7"],
+                    subfields=[
+                        Subfield("a", _("e-kirja")),
+                        Subfield("2", "slm/fin"),
+                    ],
+                )
+            )
+
+    @classmethod
     def add_web_client_urls(
         cls,
         record: Record,
