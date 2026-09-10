@@ -136,7 +136,6 @@ class Annotator(LoggerMixin):
         self.add_physical_description(record, edition)
         self.add_audience(record, work)
         self.add_series(record, edition)
-        self.add_distributor(record, active_license_pool)
         self.add_formats(record, active_license_pool)
 
         if self.organization_code:
@@ -355,17 +354,6 @@ class Annotator(LoggerMixin):
                     ],
                 )
             )
-
-    @classmethod
-    def add_distributor(cls, record: Record, pool: LicensePool) -> None:
-        # Distributor
-        record.add_field(
-            Field(
-                tag="264",
-                indicators=[" ", "2"],
-                subfields=[Subfield("b", str(pool.data_source.name))],
-            )
-        )
 
     @classmethod
     def add_physical_description(cls, record: Record, edition: Edition) -> None:
