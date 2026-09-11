@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from api.lanes import create_default_lanes
 from core.classifier import SubjectClassifier
 from core.external_search import ExternalSearchIndex, Filter
+from core.integration.keyword_extractor import KeywordSuggestion
 from core.lane import Lane, WorkList
 from core.metadata_layer import TimestampData
 from core.model import (
@@ -49,6 +50,7 @@ from core.scripts import (
     DeleteInvisibleLanesScript,
     Explain,
     IdentifierInputScript,
+    KeywordExtractionScript,
     LaneSweeperScript,
     LibraryInputScript,
     MockStdin,
@@ -897,6 +899,63 @@ class TestAddClassificationScript:
         [classification] = identifier.classifications
         subject = classification.subject
         assert "some random tag" == subject.identifier
+
+
+class TestKeywordExtractionScript:
+    @pytest.mark.parametrize("force", [False, True])
+    def test_persists_extracted_keywords(self, force):
+        work = MagicMock(id=1, summary_text="A summary.", keywords=[])
+        query = MagicMock()
+        query.filter.return_value = query
+        query.order_by.return_value.limit.return_value.all.side_effect = [
+            [work],
+            [],
+        ]
+        db = MagicMock()
+        db.query.return_value = query
+
+        extractor = MagicMock(BATCH_SIZE=32)
+        extractor.suggestions_for.return_value = {
+            1: [KeywordSuggestion("uri", "Keyword", 0.75)]
+        }
+        script = KeywordExtractionScript.__new__(KeywordExtractionScript)
+        script._session = db
+        script.extractor = extractor
+        script.force = force
+
+        script.do_run()
+
+        extractor.suggestions_for.assert_called_once_with([work])
+        assert len(work.keywords) == 1
+        assert work.keywords[0].uri == "uri"
+        assert work.keywords[0].label == "Keyword"
+        assert work.keywords[0].score == 0.75
+        db.commit.assert_called_once_with()
+        if force:
+            db.flush.assert_called_once_with()
+        else:
+            db.flush.assert_not_called()
+
+    def test_force_replaces_existing_keywords(self):
+        old_keyword = object()
+        work = MagicMock(id=1, summary_text="A summary.", keywords=[old_keyword])
+        query = MagicMock()
+        query.filter.return_value = query
+        query.order_by.return_value.limit.return_value.all.side_effect = [[work], []]
+        db = MagicMock()
+        db.query.return_value = query
+
+        extractor = MagicMock(BATCH_SIZE=32)
+        extractor.suggestions_for.return_value = {1: []}
+        script = KeywordExtractionScript.__new__(KeywordExtractionScript)
+        script._session = db
+        script.extractor = extractor
+        script.force = True
+
+        script.do_run()
+
+        assert work.keywords == []
+        db.flush.assert_called_once_with()
 
 
 class TestShowLibrariesScript:

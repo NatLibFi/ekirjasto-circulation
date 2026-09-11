@@ -23,6 +23,7 @@ from api.admin.problem_details import (
     UNKNOWN_PROTOCOL,
 )
 from api.integration.registry.metadata import MetadataRegistry
+from api.metadata.finto import FintoAI
 from api.metadata.novelist import NoveListAPI, NoveListApiSettings
 from api.metadata.nyt import NYTBestSellerAPI, NytBestSellerApiSettings
 from core.integration.goals import Goals
@@ -43,6 +44,10 @@ class MetadataServicesFixture:
         nyt_protocol = self.registry.get_protocol(NYTBestSellerAPI)
         assert nyt_protocol is not None
         self.nyt_protocol = nyt_protocol
+
+        finto_protocol = self.registry.get_protocol(FintoAI)
+        assert finto_protocol is not None
+        self.finto_protocol = finto_protocol
 
         manager = MagicMock()
         manager._db = db.session
@@ -118,7 +123,7 @@ class TestMetadataServices:
         response_content = response.json
         assert isinstance(response_content, dict)
         assert response_content.get("metadata_services") == []
-        [nyt, novelist] = response_content.get("protocols", [])
+        [finto, nyt, novelist] = response_content.get("protocols", [])
 
         assert novelist.get("name") == metadata_services_fixture.novelist_protocol
         assert "settings" in novelist
@@ -127,6 +132,10 @@ class TestMetadataServices:
         assert nyt.get("name") == metadata_services_fixture.nyt_protocol
         assert "settings" in nyt
         assert nyt.get("sitewide") is True
+
+        assert finto.get("name") == metadata_services_fixture.finto_protocol
+        assert "settings" in finto
+        assert finto.get("sitewide") is False
 
     def test_process_get_with_one_service(
         self,
