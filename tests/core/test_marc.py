@@ -68,7 +68,6 @@ class AnnotateWorkRecordFixture:
         self.mock_add_title = create_autospec(self.annotator.add_title)
         self.mock_add_contributors = create_autospec(self.annotator.add_contributors)
         self.mock_add_publisher = create_autospec(self.annotator.add_publisher)
-        self.mock_add_distributor = create_autospec(self.annotator.add_distributor)
         self.mock_add_physical_description = create_autospec(
             self.annotator.add_physical_description
         )
@@ -77,6 +76,7 @@ class AnnotateWorkRecordFixture:
         self.mock_add_formats = create_autospec(self.annotator.add_formats)
         self.mock_add_summary = create_autospec(self.annotator.add_summary)
         self.mock_add_genres = create_autospec(self.annotator.add_genres)
+        self.mock_add_keywords = create_autospec(self.annotator.add_keywords)
         self.mock_add_web_client_urls = create_autospec(
             self.annotator.add_web_client_urls
         )
@@ -88,13 +88,13 @@ class AnnotateWorkRecordFixture:
         self.annotator.add_title = self.mock_add_title
         self.annotator.add_contributors = self.mock_add_contributors
         self.annotator.add_publisher = self.mock_add_publisher
-        self.annotator.add_distributor = self.mock_add_distributor
         self.annotator.add_physical_description = self.mock_add_physical_description
         self.annotator.add_audience = self.mock_add_audience
         self.annotator.add_series = self.mock_add_series
         self.annotator.add_formats = self.mock_add_formats
         self.annotator.add_summary = self.mock_add_summary
         self.annotator.add_genres = self.mock_add_genres
+        self.annotator.add_keywords = self.mock_add_keywords
         self.annotator.add_web_client_urls = self.mock_add_web_client_urls
 
         self.annotate_work_record = functools.partial(
@@ -136,7 +136,6 @@ class TestAnnotator:
         fixture.mock_add_title.assert_called_once_with(record, fixture.edition)
         fixture.mock_add_contributors.assert_called_once_with(record, fixture.edition)
         fixture.mock_add_publisher.assert_called_once_with(record, fixture.edition)
-        fixture.mock_add_distributor.assert_called_once_with(record, fixture.pool)
         fixture.mock_add_physical_description.assert_called_once_with(
             record, fixture.edition
         )
@@ -145,6 +144,7 @@ class TestAnnotator:
         fixture.mock_add_formats.assert_called_once_with(record, fixture.pool)
         fixture.mock_add_summary.assert_called_once_with(record, fixture.work)
         fixture.mock_add_genres.assert_called_once_with(record, fixture.work)
+        fixture.mock_add_keywords.assert_called_once_with(record, fixture.edition)
         fixture.mock_add_web_client_urls.assert_called_once_with(
             record,
             fixture.identifier,
@@ -365,12 +365,6 @@ class TestAnnotator:
         Annotator.add_publisher(record, edition)
         assert [] == record.get_fields("264")
 
-    def test_add_distributor(self, db: DatabaseTransactionFixture):
-        edition, pool = db.edition(with_license_pool=True)
-        record = Record()
-        Annotator.add_distributor(record, pool)
-        self._check_field(record, "264", {"b": pool.data_source.name}, [" ", "2"])
-
     def test_add_physical_description(self, db: DatabaseTransactionFixture):
         book = db.edition()
         book.medium = Edition.BOOK_MEDIUM
@@ -393,7 +387,7 @@ class TestAnnotator:
             record,
             "337",
             {
-                "a": "tietokone",
+                "a": "tietokonekäyttöinen",
                 "b": "c",
                 "2": "rdamedia",
             },
@@ -419,7 +413,7 @@ class TestAnnotator:
             record,
             "380",
             {
-                "a": "eBook",
+                "a": "e-kirja",
                 "2": "tlcgt",
             },
         )
@@ -430,15 +424,14 @@ class TestAnnotator:
             record,
             "300",
             {
-                "a": "äänitiedosto",
-                "b": "digitaalinen",
+                "a": "verkkoaineisto",
             },
         )
         self._check_field(
             record,
             "336",
             {
-                "a": "puhuttu sana",
+                "a": "puhe",
                 "b": "spw",
                 "2": "rdacontent",
             },
@@ -447,7 +440,7 @@ class TestAnnotator:
             record,
             "337",
             {
-                "a": "tietokone",
+                "a": "tietokonekäyttöinen",
                 "b": "c",
                 "2": "rdamedia",
             },
@@ -570,7 +563,7 @@ class TestAnnotator:
 
         record = Record()
         Annotator.add_genres(record, work)
-        fields = record.get_fields("655")
+        fields = record.get_fields("653")
         [fantasy_field, romance_field] = sorted(
             fields, key=lambda x: x.get_subfields("a")[0]
         )
@@ -578,6 +571,33 @@ class TestAnnotator:
         assert "Fantasy" == fantasy_field.get_subfields("a")[0]
         assert [" ", "0"] == romance_field.indicators
         assert "Romance" == romance_field.get_subfields("a")[0]
+
+    def test_add_keywords_audiobook_and_ebook(self, db: DatabaseTransactionFixture):
+        audiobook, ignore = db.edition(with_license_pool=True)
+        audiobook.medium = Edition.AUDIO_MEDIUM
+        record = Record()
+
+        Annotator.add_keywords(record, audiobook)
+
+        [field] = record.get_fields("655")
+        assert field.indicators == ["1", "7"]
+        assert field.get_subfields("a") == ["äänikirja"]
+        assert field.get_subfields("2") == ["slm/fin"]
+        assert field.get_subfields("0") == [
+            "https://urn.fi/URN:NBN:fi:au:slm:s579"
+        ]
+
+        ebook, ignore = db.edition(with_license_pool=True)
+        ebook.medium = Edition.BOOK_MEDIUM
+        record = Record()
+
+        Annotator.add_keywords(record, ebook)
+
+        [field] = record.get_fields("655")
+        assert field.indicators == ["1", "7"]
+        assert field.get_subfields("a") == ["e-kirja"]
+        assert field.get_subfields("2") == ["slm/fin"]
+        assert field.get_subfields("0") == []
 
     def test_add_web_client_urls_empty(self):
         record = MagicMock(spec=Record)
