@@ -29,6 +29,12 @@ class KeywordExtractor:
         "eng": "yso-en",
     }
 
+    LANGUAGES = {
+        "fin": "fi",
+        "swe": "sv",
+        "eng": "en",
+    }
+
     def __init__(
         self,
         api_url: str | None = None,
@@ -69,24 +75,28 @@ class KeywordExtractor:
 
             language_key = work.language.lower()
             project = self.PROJECTS.get(language_key)
-            if project:
-                works_by_project.setdefault(project, []).append(work)
+            language = self.LANGUAGES.get(language_key)
+            if project and language:
+                works_by_project.setdefault((project, language), []).append(work)
 
-        for project, project_works in works_by_project.items():
+        for (project, language), project_works in works_by_project.items():
             # Keep requests within Finto AI's maximum batch size.
             for start in range(0, len(project_works), self.BATCH_SIZE):
                 batch = project_works[start : start + self.BATCH_SIZE]
-                suggestions_by_work.update(self._suggestions_for_batch(project, batch))
+                suggestions_by_work.update(
+                    self._suggestions_for_batch(project, language, batch)
+                )
 
         return suggestions_by_work
 
     def _suggestions_for_batch(
-        self, project: str, works: Sequence[Work]
+        self, project: str, language: str, works: Sequence[Work]
     ) -> dict[int, list[KeywordSuggestion]]:
         """Request and normalize suggestions for one Finto AI project batch.
 
         Args:
             project: Finto AI project identifier, such as ``yso-fi``.
+            language: Language code for the Finto AI project, such as ``fi``.
             works: Works whose summaries are sent in this request.
 
         Returns:
@@ -100,7 +110,7 @@ class KeywordExtractor:
                 "threshold": self.threshold,
                 # Always request Finnish subject labels, regardless of the
                 # source language used to select the Finto AI project.
-                "language": "fi",
+                "language": language,
             },
             json={
                 "documents": [
