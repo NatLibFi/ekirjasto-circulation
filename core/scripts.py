@@ -21,6 +21,7 @@ from core.config import Configuration
 from core.coverage import CollectionCoverageProviderJob, CoverageProviderProgress
 from core.external_search import ExternalSearchIndex, Filter
 from core.integration.goals import Goals
+from core.integration.keyword_extractor import KeywordExtractor
 from core.lane import Lane
 from core.metadata_layer import TimestampData
 from core.model import (
@@ -64,7 +65,6 @@ from core.util.personal_names import (
     display_name_to_sort_name,
 )
 from core.util.worker_pools import DatabasePool
-from core.integration.keyword_extractor import KeywordExtractor
 
 
 class Script:
@@ -194,8 +194,14 @@ class TimestampScript(Script):
         timestamp_data.apply(self._db)
 
 
-class KeywordExtractionScript(Script):
-    """Extract and persist keywords for newly imported Works."""
+class KeywordExtractionScript(TimestampScript):
+    """Extract and persist keywords for imported Works.
+
+    Recording a timestamp makes the script visible in the admin diagnostics
+    page alongside the other scripts.
+
+    Use --force to run extraction for all works, otherwise only works without existing keywords will be processed.
+    """
 
     name = "Keyword extraction script"
 
