@@ -16,6 +16,7 @@ from sqlalchemy.orm import Query, Session, defer
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
 
+from api.metadata.finto import FintoAI, FintoAISettings
 from core.config import Configuration
 from core.coverage import CollectionCoverageProviderJob, CoverageProviderProgress
 from core.external_search import ExternalSearchIndex, Filter
@@ -210,7 +211,18 @@ class KeywordExtractionScript(Script):
 
     def __init__(self, _db=None, extractor=None, cmd_args=None):
         super().__init__(_db=_db)
-        self.extractor = extractor or KeywordExtractor()
+        if extractor is None:
+            integration = FintoAI.integration(self._db)
+            settings = (
+                FintoAI.settings_load(integration)
+                if integration is not None
+                else FintoAISettings()
+            )
+            extractor = KeywordExtractor(
+                limit=settings.limit,
+                threshold=settings.threshold,
+            )
+        self.extractor = extractor
         self.force = self.parse_command_line(_db, cmd_args=cmd_args).force
 
     def do_run(self):

@@ -1,4 +1,5 @@
 from api.metadata.base import MetadataServiceType
+from api.metadata.finto import FintoAI
 from api.metadata.novelist import NoveListAPI
 from api.metadata.nyt import NYTBestSellerAPI
 from core.integration.goals import Goals
@@ -11,3 +12,4 @@ class MetadataRegistry(IntegrationRegistry[MetadataServiceType]):
 
         self.register(NYTBestSellerAPI, canonical="New York Times")
         self.register(NoveListAPI, canonical="NoveList Select")
+        self.register(FintoAI)

@@ -23,17 +23,17 @@ class KeywordExtractor:
 
     API_URL = "https://ai.finto.fi/v1"
     BATCH_SIZE = 32
-    DEFAULT_THRESHOLD = 0.1
     PROJECTS = {
         "fin": "yso-fi",
         "swe": "yso-sv",
-        "en": "yso-en",
+        "eng": "yso-en",
     }
     def __init__(
         self,
         api_url: str | None = None,
-        limit: int = 10,
-        threshold: float = DEFAULT_THRESHOLD,
+        *,
+        limit: int,
+        threshold: float,
     ):
         """Create an extractor configured for the Finto AI suggestion API.
 
