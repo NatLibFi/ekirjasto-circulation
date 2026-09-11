@@ -33,6 +33,7 @@ from core.model import (
     ExternalIntegration,
     Identifier,
     IntegrationConfiguration,
+    Keyword,
     Library,
     LicensePool,
     LicensePoolDeliveryMechanism,
@@ -42,7 +43,6 @@ from core.model import (
     Subject,
     Timestamp,
     Work,
-    YSOSubject,
     create,
     get_one,
     get_one_or_create,
@@ -63,7 +63,7 @@ from core.util.personal_names import (
     display_name_to_sort_name,
 )
 from core.util.worker_pools import DatabasePool
-from core.yso_subject_extractor import YSOSubjectExtractor
+from core.keyword_extractor import KeywordExtractor
 
 
 class Script:
@@ -193,10 +193,10 @@ class TimestampScript(Script):
         timestamp_data.apply(self._db)
 
 
-class YSOSubjectExtractionScript(Script):
-    """Extract and persist YSO subjects for newly imported Works."""
+class KeywordExtractionScript(Script):
+    """Extract and persist keywords for newly imported Works."""
 
-    name = "YSO subject extraction script"
+    name = "Keyword extraction script"
 
     @classmethod
     def arg_parser(cls):
@@ -204,13 +204,13 @@ class YSOSubjectExtractionScript(Script):
         parser.add_argument(
             "--force",
             action="store_true",
-            help="re-extract subjects for works that already have YSO subjects",
+            help="re-extract keywords for works that already have keywords",
         )
         return parser
 
     def __init__(self, _db=None, extractor=None, cmd_args=None):
         super().__init__(_db=_db)
-        self.extractor = extractor or YSOSubjectExtractor()
+        self.extractor = extractor or KeywordExtractor()
         self.force = self.parse_command_line(_db, cmd_args=cmd_args).force
 
     def do_run(self):
@@ -221,7 +221,7 @@ class YSOSubjectExtractionScript(Script):
                 Work.summary_text.isnot(None),
             )
             if not self.force:
-                query = query.filter(~Work.yso_subjects.any())
+                query = query.filter(~Work.keywords.any())
 
             works = query.order_by(Work.id).limit(self.extractor.BATCH_SIZE).all()
             if not works:
@@ -233,11 +233,11 @@ class YSOSubjectExtractionScript(Script):
                 # avoids a unique-key conflict when the suggestions have not
                 # changed.
                 for work in works:
-                    work.yso_subjects.clear()
+                    work.keywords.clear()
                 self._db.flush()
             for work in works:
-                work.yso_subjects = [
-                    YSOSubject(
+                work.keywords = [
+                    Keyword(
                         uri=suggestion.uri,
                         label=suggestion.label,
                         score=suggestion.score,

@@ -12,10 +12,10 @@ if TYPE_CHECKING:
     from core.model.work import Work
 
 
-class YSOSubject(Base):
-    """A YSO subject suggestion returned by the Finto AI service."""
+class Keyword(Base):
+    """A keyword suggestion returned by the Finto AI service."""
 
-    __tablename__ = "ysosubjects"
+    __tablename__ = "keywords"
     id = Column(Integer, primary_key=True)
     work_id = Column(
         Integer,
@@ -27,6 +27,6 @@ class YSOSubject(Base):
     label = Column(Unicode, nullable=False)
     score: Mapped[Decimal | None] = Column(Numeric(6, 5), nullable=True)
 
-    work: Mapped[Work] = relationship("Work", back_populates="yso_subjects")
+    work: Mapped[Work] = relationship("Work", back_populates="keywords")
 
     __table_args__ = (UniqueConstraint("work_id", "uri"),)

@@ -344,13 +344,13 @@ class Annotator(ToFeedEntry):
                 category_tags.append(category_tag)
         computed.categories = category_tags
 
-        computed.yso_subjects = []
-        for subject in work.yso_subjects:
-            subject_tag = FeedEntryType(text=subject.label)
-            subject_tag.add_attributes({"uri": subject.uri})
-            if subject.score is not None:
-                subject_tag.add_attributes({"score": str(subject.score)})
-            computed.yso_subjects.append(subject_tag)
+        computed.keywords = []
+        for keyword in work.keywords:
+            keyword_tag = FeedEntryType(text=keyword.label)
+            keyword_tag.add_attributes({"uri": keyword.uri})
+            if keyword.score is not None:
+                keyword_tag.add_attributes({"score": str(keyword.score)})
+            computed.keywords.append(keyword_tag)
 
         if edition.language_code:
             computed.language = FeedEntryType(text=edition.language_code)

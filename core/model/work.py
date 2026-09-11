@@ -54,7 +54,7 @@ from core.util.datetime_helpers import utc_now
 # Import related models when doing type checking
 if TYPE_CHECKING:
     from core.external_search import ExternalSearchIndex
-    from core.model import CustomListEntry, Library, LicensePool, YSOSubject
+    from core.model import CustomListEntry, Keyword, Library, LicensePool
 
 
 class WorkGenre(Base):
@@ -122,9 +122,9 @@ class Work(Base):
         "LicensePool", backref="work", lazy="joined", uselist=True
     )
 
-    # YSO subject suggestions generated from the work's summary.
-    yso_subjects: Mapped[list[YSOSubject]] = relationship(
-        "YSOSubject", back_populates="work", cascade="all, delete-orphan"
+    # Keyword suggestions generated from the work's summary.
+    keywords: Mapped[list[Keyword]] = relationship(
+        "Keyword", back_populates="work", cascade="all, delete-orphan"
     )
 
     # A Work takes its presentation metadata from a single Edition.

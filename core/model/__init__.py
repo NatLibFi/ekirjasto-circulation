@@ -575,7 +575,7 @@ from core.model.resource import (
 )
 from core.model.time_tracking import PlaytimeEntry, PlaytimeSummary
 from core.model.work import Work, WorkGenre
-from core.model.ysosubject import YSOSubject
+from core.model.keyword import Keyword
 
 # Import order important here to avoid an import cycle.
 from core.lane import Lane, LaneGenre  # isort:skip

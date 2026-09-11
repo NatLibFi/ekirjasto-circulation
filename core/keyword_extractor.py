@@ -12,35 +12,23 @@ log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
-class YSOSubjectSuggestion:
+class KeywordSuggestion:
     uri: str
     label: str
     score: Decimal | None = None
 
 
-class YSOSubjectExtractor:
-    """Extract subject suggestions from a Work summary using Finto AI."""
+class KeywordExtractor:
+    """Extract keyword suggestions from a Work summary using Finto AI."""
 
     API_URL = "https://ai.finto.fi/v1"
     BATCH_SIZE = 32
     DEFAULT_THRESHOLD = 0.1
     PROJECTS = {
         "fin": "yso-fi",
-        "fi": "yso-fi",
         "swe": "yso-sv",
-        "sv": "yso-sv",
-        "eng": "yso-en",
         "en": "yso-en",
     }
-    LANGUAGES = {
-        "fin": "fi",
-        "fi": "fi",
-        "swe": "sv",
-        "sv": "sv",
-        "eng": "en",
-        "en": "en",
-    }
-
     def __init__(
         self,
         api_url: str | None = None,
@@ -60,19 +48,19 @@ class YSOSubjectExtractor:
 
     def suggestions_for(
         self, works: Sequence[Work]
-    ) -> dict[int, list[YSOSubjectSuggestion]]:
-        """Return subject suggestions for a batch of works.
+    ) -> dict[int, list[KeywordSuggestion]]:
+        """Return keyword suggestions for a batch of works.
 
         Finto AI accepts at most 32 documents per batch. Works are grouped by
-        language because each language uses a separate Finto AI project.
+        source language because each language uses a separate Finto AI project.
 
         Works without summary text or a supported language are returned with
         an empty suggestion list.
         """
-        suggestions_by_work: dict[int, list[YSOSubjectSuggestion]] = {
+        suggestions_by_work: dict[int, list[KeywordSuggestion]] = {
             work.id: [] for work in works
         }
-        works_by_project: dict[tuple[str, str], list[Work]] = {}
+        works_by_project: dict[str, list[Work]] = {}
         for work in works:
             # Finto AI cannot produce useful suggestions without both inputs.
             if not work.summary_text or not work.language:
@@ -80,28 +68,26 @@ class YSOSubjectExtractor:
 
             language_key = work.language.lower()
             project = self.PROJECTS.get(language_key)
-            language = self.LANGUAGES.get(language_key)
-            if project and language:
-                works_by_project.setdefault((project, language), []).append(work)
+            if project:
+                works_by_project.setdefault(project, []).append(work)
 
-        for (project, language), project_works in works_by_project.items():
+        for project, project_works in works_by_project.items():
             # Keep requests within Finto AI's maximum batch size.
             for start in range(0, len(project_works), self.BATCH_SIZE):
                 batch = project_works[start : start + self.BATCH_SIZE]
                 suggestions_by_work.update(
-                    self._suggestions_for_batch(project, language, batch)
+                    self._suggestions_for_batch(project, batch)
                 )
 
         return suggestions_by_work
 
     def _suggestions_for_batch(
-        self, project: str, language: str, works: Sequence[Work]
-    ) -> dict[int, list[YSOSubjectSuggestion]]:
+        self, project: str, works: Sequence[Work]
+    ) -> dict[int, list[KeywordSuggestion]]:
         """Request and normalize suggestions for one Finto AI project batch.
 
         Args:
             project: Finto AI project identifier, such as ``yso-fi``.
-            language: Language code passed to Finto AI.
             works: Works whose summaries are sent in this request.
 
         Returns:
@@ -113,44 +99,49 @@ class YSOSubjectExtractor:
             params={
                 "limit": self.limit,
                 "threshold": self.threshold,
-                "language": language,
+                # Always request Finnish subject labels, regardless of the
+                # source language used to select the Finto AI project.
+                "language": "fi",
             },
             json={
                 "documents": [
-                    {"document_id": str(work.id), "text": work.summary_text}
+                    {
+                        "document_id": str(work.id),
+                        "text": work.summary_text,
+                    }
                     for work in works
                 ]
             },
             headers={"Accept": "application/json"},
         )
-        results_by_work: dict[int, list[YSOSubjectSuggestion]] = {
+        results_by_work: dict[int, list[KeywordSuggestion]] = {
             work.id: [] for work in works
         }
         for result in response.json():
             work_id = int(result["document_id"])
-            suggestions_by_uri: dict[str, YSOSubjectSuggestion] = {}
+            suggestions_by_uri: dict[str, KeywordSuggestion] = {}
             for suggestion in result.get("results", []):
-                subject = YSOSubjectSuggestion(
+                keyword = KeywordSuggestion(
                     uri=suggestion["uri"],
                     label=suggestion["label"],
                     score=Decimal(str(suggestion["score"]))
                     if suggestion.get("score") is not None
                     else None,
                 )
-                previous = suggestions_by_uri.get(subject.uri)
+                previous = suggestions_by_uri.get(keyword.uri)
                 # A URI can occur more than once; retain the highest score.
                 if previous is None or (
-                    subject.score is not None
-                    and (previous.score is None or subject.score > previous.score)
+                    keyword.score is not None
+                    and (previous.score is None or keyword.score > previous.score)
                 ):
-                    suggestions_by_uri[subject.uri] = subject
+                    suggestions_by_uri[keyword.uri] = keyword
             suggestions = list(suggestions_by_uri.values())[: self.limit]
             results_by_work[work_id] = suggestions
 
         for work in works:
             identifier = work.presentation_edition.primary_identifier.identifier
             log.info(
-                "Extracted %s YSO subjects for work %s (%s)",
+                "Extracted %s keywords for work %s (%s)",
                 len(results_by_work[work.id]),
                 identifier,
                 work.title,
