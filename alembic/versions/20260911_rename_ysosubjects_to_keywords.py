@@ -17,9 +17,7 @@ depends_on = None
 def upgrade() -> None:
     op.rename_table("ysosubjects", "keywords")
     op.execute(
-        sa.text(
-            "ALTER INDEX ix_ysosubjects_work_id " "RENAME TO ix_keywords_work_id"
-        )
+        sa.text("ALTER INDEX ix_ysosubjects_work_id " "RENAME TO ix_keywords_work_id")
     )
     op.execute(
         sa.text(
@@ -39,8 +37,6 @@ def downgrade() -> None:
         )
     )
     op.execute(
-        sa.text(
-            "ALTER INDEX ix_keywords_work_id " "RENAME TO ix_ysosubjects_work_id"
-        )
+        sa.text("ALTER INDEX ix_keywords_work_id " "RENAME TO ix_ysosubjects_work_id")
     )
     op.rename_table("keywords", "ysosubjects")

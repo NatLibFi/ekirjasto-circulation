@@ -545,6 +545,7 @@ from core.model.integration import (
     IntegrationConfiguration,
     IntegrationLibraryConfiguration,
 )
+from core.model.keyword import Keyword
 from core.model.library import Library
 from core.model.licensing import (
     DeliveryMechanism,
@@ -575,7 +576,6 @@ from core.model.resource import (
 )
 from core.model.time_tracking import PlaytimeEntry, PlaytimeSummary
 from core.model.work import Work, WorkGenre
-from core.model.keyword import Keyword
 
 # Import order important here to avoid an import cycle.
 from core.lane import Lane, LaneGenre  # isort:skip

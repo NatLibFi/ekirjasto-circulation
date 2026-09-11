@@ -5,13 +5,13 @@ from sqlalchemy.orm import Session
 
 from api.metadata.base import MetadataService, MetadataServiceSettings
 from core.integration.base import HasLibraryIntegrationConfiguration
+from core.integration.goals import Goals
 from core.integration.settings import (
     BaseSettings,
     ConfigurationFormItem,
     ConfigurationFormItemType,
     FormField,
 )
-from core.integration.goals import Goals
 from core.model import IntegrationConfiguration
 
 

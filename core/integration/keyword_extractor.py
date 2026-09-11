@@ -28,6 +28,7 @@ class KeywordExtractor:
         "swe": "yso-sv",
         "eng": "yso-en",
     }
+
     def __init__(
         self,
         api_url: str | None = None,
@@ -75,9 +76,7 @@ class KeywordExtractor:
             # Keep requests within Finto AI's maximum batch size.
             for start in range(0, len(project_works), self.BATCH_SIZE):
                 batch = project_works[start : start + self.BATCH_SIZE]
-                suggestions_by_work.update(
-                    self._suggestions_for_batch(project, batch)
-                )
+                suggestions_by_work.update(self._suggestions_for_batch(project, batch))
 
         return suggestions_by_work
 
