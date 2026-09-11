@@ -64,7 +64,7 @@ from core.util.personal_names import (
     display_name_to_sort_name,
 )
 from core.util.worker_pools import DatabasePool
-from core.keyword_extractor import KeywordExtractor
+from core.integration.keyword_extractor import KeywordExtractor
 
 
 class Script:
