@@ -243,6 +243,17 @@ class TestAnnotator:
             record, "008", now.strftime("%y%m%d") + "s2018    xxu                 fre  "
         )
 
+    def test_add_control_fields_audiobook(self, db: DatabaseTransactionFixture):
+        edition, pool = db.edition(with_license_pool=True)
+        edition.medium = Edition.AUDIO_MEDIUM
+        record = Record(leader=Annotator.leader(False))
+
+        Annotator.add_control_fields(record, pool.identifier, pool, edition)
+
+        assert record.leader == "00000nim  2200000   4500"
+        # pymarc normalizes 007 to MARC's fixed 14-character length.
+        self._check_control_field(record, "007", "sr" + "|" * 12)
+
     def test_add_marc_organization_code(self):
         record = Record()
         Annotator.add_marc_organization_code(record, "US-MaBoDPL")

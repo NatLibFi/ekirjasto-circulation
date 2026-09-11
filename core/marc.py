@@ -185,6 +185,12 @@ class Annotator(LoggerMixin):
     def add_control_fields(
         cls, record: Record, identifier: Identifier, pool: LicensePool, edition: Edition
     ) -> None:
+        # Leader/06 identifies the general type of material. The default leader
+        # uses `a` (language material), which is correct for e-books but not for
+        # audiobooks (`i`, non-musical sound recording).
+        if edition.medium == Edition.AUDIO_MEDIUM:
+            record.leader = record.leader[:6] + "i" + record.leader[7:]
+
         # Unique identifier for this record.
         record.add_field(Field(tag="001", data=identifier.urn))
 
@@ -195,16 +201,23 @@ class Annotator(LoggerMixin):
         # Field 006: m = computer file, d = the file is a document
         record.add_field(Field(tag="006", data="m        d        "))
 
-        # Field 007: more details about electronic resource
-        # Since this depends on the pool, it might be better not to cache it.
-        # But it's probably not a huge problem if it's outdated.
-        # File formats: a=one format, m=multiple formats, u=unknown
-        if len(pool.delivery_mechanisms) == 1:
-            file_formats_code = "a"
+        # Field 007: more details about the material.
+        if edition.medium == Edition.AUDIO_MEDIUM:
+            # s = sound recording, r = remote/online resource. The remaining
+            # positions are not known for the online audiobook.
+            field_007 = "sr" + "|" * 12
         else:
-            file_formats_code = "m"
+            # c = electronic resource, r = remote/online resource.
+            # Since this depends on the pool, it might be better not to cache it.
+            # But it's probably not a huge problem if it's outdated.
+            # File formats: a=one format, m=multiple formats, u=unknown
+            if len(pool.delivery_mechanisms) == 1:
+                file_formats_code = "a"
+            else:
+                file_formats_code = "m"
+            field_007 = "cr cn ---" + file_formats_code + "nuuu"
         record.add_field(
-            Field(tag="007", data="cr cn ---" + file_formats_code + "nuuu")
+            Field(tag="007", data=field_007)
         )
 
         # Field 008 (fixed-length data elements):
