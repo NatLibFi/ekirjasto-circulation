@@ -400,7 +400,7 @@ class Annotator(LoggerMixin):
         elif edition.medium == Edition.AUDIO_MEDIUM:
             description = "verkkoaineisto"
             if edition.duration is not None:
-                description += f" ({cls.format_duration(edition.duration)})"
+                description += f" ({cls.format_duration(float(edition.duration))})"
             record.add_field(
                 Field(
                     tag="300",
