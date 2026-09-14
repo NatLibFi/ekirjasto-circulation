@@ -545,10 +545,10 @@ class TestAnnotator:
         Annotator.add_formats(record, pool)
         fields = record.get_fields("538")
         assert 2 == len(fields)
-        [pdf, epub] = sorted(fields, key=lambda x: x.get_subfields("a")[0])
-        assert "LCP EPUB e-kirja" == pdf.get_subfields("a")[0]
+        [epub, pdf] = sorted(fields, key=lambda x: x.get_subfields("a")[0])
+        assert "LCP-suojattu EPUB e-kirja" == epub.get_subfields("a")[0]
         assert [" ", " "] == pdf.indicators
-        assert "LCP PDF e-kirja" == epub.get_subfields("a")[0]
+        assert "LCP-suojattu PDF e-kirja" == pdf.get_subfields("a")[0]
         assert [" ", " "] == epub.indicators
 
     def test_add_summary(self, db: DatabaseTransactionFixture):
@@ -594,9 +594,7 @@ class TestAnnotator:
         assert field.indicators == ["1", "7"]
         assert field.get_subfields("a") == ["äänikirja"]
         assert field.get_subfields("2") == ["slm/fin"]
-        assert field.get_subfields("0") == [
-            "https://urn.fi/URN:NBN:fi:au:slm:s579"
-        ]
+        assert field.get_subfields("0") == ["https://urn.fi/URN:NBN:fi:au:slm:s579"]
 
         ebook, ignore = db.edition(with_license_pool=True)
         ebook.medium = Edition.BOOK_MEDIUM

@@ -73,16 +73,22 @@ class Annotator(LoggerMixin):
     # store this so it's easier to keep up-to-date.
     # There doesn't seem to be any particular vocabulary for this.
     FORMAT_TERMS: Mapping[tuple[str | None, str | None], str] = {
-        (Representation.EPUB_MEDIA_TYPE, DeliveryMechanism.LCP_DRM): "LCP EPUB e-kirja",
-        (Representation.PDF_MEDIA_TYPE, DeliveryMechanism.LCP_DRM): "LCP PDF e-kirja",
+        (
+            Representation.EPUB_MEDIA_TYPE,
+            DeliveryMechanism.LCP_DRM,
+        ): "LCP-suojattu EPUB e-kirja",
+        (
+            Representation.PDF_MEDIA_TYPE,
+            DeliveryMechanism.LCP_DRM,
+        ): "LCP-suojattu PDF e-kirja",
         (
             Representation.AUDIOBOOK_PACKAGE_LCP_MEDIA_TYPE,
             DeliveryMechanism.LCP_DRM,
-        ): "LCP äänikirja",
+        ): "LCP-suojattu äänikirja",
         (
             DeliveryMechanism.EKIRJASTO_STREAMING_PROFILE,
             DeliveryMechanism.LCP_DRM,
-        ): "LCP EPUB striimattava e-kirja",
+        ): "LCP-suojattu EPUB striimattava e-kirja",
     }
 
     def __init__(
@@ -216,9 +222,7 @@ class Annotator(LoggerMixin):
             else:
                 file_formats_code = "m"
             field_007 = "cr cn ---" + file_formats_code + "nuuu"
-        record.add_field(
-            Field(tag="007", data=field_007)
-        )
+        record.add_field(Field(tag="007", data=field_007))
 
         # Field 008 (fixed-length data elements):
         data = utc_now().strftime("%y%m%d")
