@@ -475,6 +475,18 @@ class TestAnnotator:
         )
         assert [] == record.get_fields("380")
 
+    def test_add_physical_description_audiobook_duration(
+        self, db: DatabaseTransactionFixture
+    ):
+        audiobook = db.edition()
+        audiobook.medium = Edition.AUDIO_MEDIUM
+        audiobook.duration = 3723  # 1 hour, 2 minutes, and 3 seconds
+
+        record = Record()
+        Annotator.add_physical_description(record, audiobook)
+
+        self._check_field(record, "300", {"a": "verkkoaineisto (1h 2min 3s)"})
+
     def test_add_audience(self, db: DatabaseTransactionFixture):
         for audience, term in list(Annotator.AUDIENCE_TERMS.items()):
             work = db.work(audience=audience)
