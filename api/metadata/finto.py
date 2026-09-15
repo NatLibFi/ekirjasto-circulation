@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Literal
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -17,6 +19,29 @@ from core.model import IntegrationConfiguration
 
 class FintoAISettings(MetadataServiceSettings):
     """Settings for the Finto AI keyword suggestion service."""
+
+    work_languages: list[Literal["fin", "swe", "eng"]] = FormField(
+        ["fin", "swe", "eng"],
+        form=ConfigurationFormItem(
+            label="Work languages",
+            type=ConfigurationFormItemType.MENU,
+            description="Extract keywords from summaries of works in these languages.",
+            options={
+                "fin": "Finnish",
+                "swe": "Swedish",
+                "eng": "English",
+            },
+        ),
+    )
+    keyword_language: Literal["fin", "book"] = FormField(
+        "fin",
+        form=ConfigurationFormItem(
+            label="Keyword language",
+            type=ConfigurationFormItemType.SELECT,
+            description="Language used for the extracted keyword labels.",
+            options={"fin": "Finnish", "book": "Book language"},
+        ),
+    )
 
     limit: int = FormField(
         10,

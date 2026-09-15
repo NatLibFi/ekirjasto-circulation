@@ -65,11 +65,56 @@ class TestKeywordExtractor:
         assert {1: [], 2: [], 3: []} == result
         request.assert_not_called()
 
+    def test_suggestions_for_filters_configured_work_languages(self):
+        """Avoid sending summaries for work languages disabled in the settings."""
+        works = [
+            make_work(1, language="fin"),
+            make_work(2, language="eng"),
+        ]
+
+        with patch.object(
+            KeywordExtractor, "_suggestions_for_batch", return_value={1: []}
+        ) as request:
+            result = KeywordExtractor(
+                api_url="https://example.test/v1",
+                limit=10,
+                threshold=0.1,
+                work_languages=["fin"],
+            ).suggestions_for(works)
+
+        assert result == {1: [], 2: []}
+        request.assert_called_once_with("yso-fi", "fi", [works[0]])
+
+    @pytest.mark.parametrize(
+        ("keyword_language", "expected_label_language"),
+        [("fin", "fi"), ("book", "en")],
+    )
+    def test_suggestions_for_batch_requests_configured_keyword_language(
+        self, keyword_language, expected_label_language
+    ):
+        """Request Finnish or book-language labels according to configuration."""
+        response = SimpleNamespace(json=lambda: [])
+
+        with patch(
+            "core.integration.keyword_extractor.HTTP.post_with_timeout",
+            return_value=response,
+        ) as post:
+            extractor = KeywordExtractor(
+                api_url="https://example.test/v1",
+                limit=10,
+                threshold=0.1,
+                keyword_language=keyword_language,
+            )
+            extractor._suggestions_for_batch("yso-en", "en", [make_work(1)])
+
+        assert (
+            post.call_args.kwargs["params"]["language"] == expected_label_language
+        )
+
     def test_suggestions_for_groups_by_language_and_batches_requests(self):
         """Group works by language and split each group into API-sized batches."""
         works = [
-            make_work(i, language="eng" if i <= 34 else "fin")
-            for i in range(1, 36)
+            make_work(i, language="eng" if i <= 34 else "fin") for i in range(1, 36)
         ]
         expected = {a_work.id: [] for a_work in works}
 
@@ -86,12 +131,12 @@ class TestKeywordExtractor:
         assert expected.keys() == result.keys()
         assert [suggestion.label for suggestion in result[1]] == ["1"]
         assert [suggestion.label for suggestion in result[34]] == ["34"]
-        assert [
-            call.args[0] for call in request.call_args_list
-        ] == ["yso-en", "yso-en", "yso-fi"]
-        assert [
-            call.args[1] for call in request.call_args_list
-        ] == ["en", "en", "fi"]
+        assert [call.args[0] for call in request.call_args_list] == [
+            "yso-en",
+            "yso-en",
+            "yso-fi",
+        ]
+        assert [call.args[1] for call in request.call_args_list] == ["en", "en", "fi"]
         assert [len(call.args[2]) for call in request.call_args_list] == [32, 2, 1]
 
     def test_suggestions_for_batch_sends_documents_and_normalizes_results(self):

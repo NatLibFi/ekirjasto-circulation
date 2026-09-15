@@ -41,6 +41,8 @@ class KeywordExtractor:
         *,
         limit: int,
         threshold: float,
+        work_languages: Sequence[str] | None = None,
+        keyword_language: str = "book",
     ):
         """Create an extractor configured for the Finto AI suggestion API.
 
@@ -48,10 +50,15 @@ class KeywordExtractor:
             api_url: Base URL of the Finto AI API, or the default Finto AI URL.
             limit: Maximum number of suggestions to retain per work.
             threshold: Minimum score for a suggestion to be included.
+            work_languages: Work languages whose summaries should be processed.
+            keyword_language: ``fin`` for Finnish labels, or ``book`` for labels
+                in the work's language.
         """
         self.api_url = (api_url or self.API_URL).rstrip("/")
         self.limit = limit
         self.threshold = threshold
+        self.work_languages = set(work_languages or self.PROJECTS)
+        self.keyword_language = keyword_language
 
     def suggestions_for(
         self, works: Sequence[Work]
@@ -74,10 +81,12 @@ class KeywordExtractor:
                 continue
 
             language_key = work.language.lower()
+            if language_key not in self.work_languages:
+                continue
             project = self.PROJECTS.get(language_key)
-            language = self.LANGUAGES.get(language_key)
-            if project and language:
-                works_by_project.setdefault((project, language), []).append(work)
+            source_language = self.LANGUAGES.get(language_key)
+            if project and source_language:
+                works_by_project.setdefault((project, source_language), []).append(work)
 
         for (project, language), project_works in works_by_project.items():
             # Keep requests within Finto AI's maximum batch size.
@@ -108,9 +117,7 @@ class KeywordExtractor:
             params={
                 "limit": self.limit,
                 "threshold": self.threshold,
-                # Always request Finnish subject labels, regardless of the
-                # source language used to select the Finto AI project.
-                "language": language,
+                "language": ("fi" if self.keyword_language == "fin" else language),
             },
             json={
                 "documents": [

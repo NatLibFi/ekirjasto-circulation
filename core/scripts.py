@@ -227,6 +227,8 @@ class KeywordExtractionScript(TimestampScript):
             extractor = KeywordExtractor(
                 limit=settings.limit,
                 threshold=settings.threshold,
+                work_languages=settings.work_languages,
+                keyword_language=settings.keyword_language,
             )
         self.extractor = extractor
         self.force = self.parse_command_line(_db, cmd_args=cmd_args).force
