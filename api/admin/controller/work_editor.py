@@ -438,12 +438,27 @@ class WorkController(CirculationManagerController, AdminPermissionsControllerMix
 
         data = []
         for result in results:
+            mapping = []
+            if result.subject.genre:
+                mapping.append(result.subject.genre.name)
+            if result.subject.audience:
+                mapping.append(result.subject.audience)
+            if result.subject.target_age:
+                mapping.append(result.subject.target_age_string)
+            if result.subject.fiction is not None:
+                mapping.append("Fiction" if result.subject.fiction else "Nonfiction")
+
             data.append(
                 dict(
                     {
                         "type": result.subject.type,
-                        "name": result.subject.identifier,
+                        "name": (
+                            f"{result.subject.identifier} / {result.subject.name}"
+                            if result.subject.name
+                            else result.subject.identifier
+                        ),
                         "source": result.data_source.name,
+                        "mapping": ", ".join(mapping),
                     }
                 )
             )
