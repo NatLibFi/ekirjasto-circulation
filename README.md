@@ -128,7 +128,8 @@ If you want to run the application locally without Docker, check out-of-date `do
 
 ### 1. Access
 
-By default, the application is configured to provide a built-in version of the [admin web interface](https://github.com/NatLibFi/ekirjasto-circulation-admin).
+By default, the application is configured to provide a built-in version of the
+[admin web interface](https://github.com/NatLibFi/ekirjasto-circulation-admin).
 The admin interface can be accessed by visiting the `/admin` endpoint:
 
 ```sh
@@ -209,8 +210,8 @@ Neither of the commands will produce any output if the operations succeed.
 
 ### 6. Patron authentication
 
-For patrons to access the service, configure authentication: `System Configuration → Patron Authentication`. In our case,
-select _E-kirjasto API environment: Development_ and attach the newly created library to the service.
+For patrons to access the service, configure authentication: `System Configuration → Patron Authentication`.
+In our case, select _E-kirjasto API environment: Development_ and attach the newly created library to the service.
 
 Navigating to `http://localhost:6500/` should now show an OPDS feed containing various books:
 
@@ -225,7 +226,8 @@ If books arent' showing up in the admin UI or the applications, running lanes re
 ```sh
 ../core/bin/run update_lane_size
 ../core/bin/run update_custom_list_size
-../core/bin/run reset_lanes # This should compile the default lanes from scratch but removes any custom lanes
+# This should compile the default lanes from scratch but removes any custom lanes
+../core/bin/run reset_lanes
 ```
 
 The `./bin/repair/where_are_my_books` command can produce output that may indicate why books are not appearing
@@ -266,13 +268,15 @@ the search index and feed caches.
 
 #### hold_notifications
 
-Requires one of [the Firebase Cloud Messaging credentials environment variables (described above)](#firebase-cloud-messaging)
+Requires one of
+[the Firebase Cloud Messaging credentials environment variables (described above)](#firebase-cloud-messaging)
 to be present and non-empty.
 In addition, the site-wide `PUSH_NOTIFICATIONS_STATUS` setting must be either `unset` or `true`.
 
 #### loan_notifications
 
-Requires one of [the Firebase Cloud Messaging credentials environment variables (described above](#firebase-cloud-messaging)
+Requires one of
+[the Firebase Cloud Messaging credentials environment variables (described above)](#firebase-cloud-messaging)
 to be present and non-empty.
 In addition, the site-wide `PUSH_NOTIFICATIONS_STATUS` setting must be either `unset` or `true`.
 
@@ -414,6 +418,7 @@ Here's what the script does:
 3) Updates existing translation files (`*.po`) with `pybabel update`
 
 Check the generated `.po` files and make the following changes if you see any:
+
 - In the English file, if `msgstr` is empty, replace it with the same string as the `msgid` string.
 - In the Finnish and Swedish files, if the `msgstr` is empty, replace with a placeholder string, e.g. "TRANSLATE".
 - Remove any `fuzzy` attributes or they won't show up in Transifex.
@@ -433,7 +438,8 @@ information about the WebReader and its usage.
 
 PALACE_DEMARQUE_WEBREADER_ISSUER_URL: JWT issuer URL (must be whitelisted by DeMarque).
 PALACE_DEMARQUE_WEBREADER_JWK_FILE: Path to an Ed25519 private key JWK file (JSON format).
-PALACE_DEMARQUE_WEBREADER_JWK: Inline Ed25519 private key JWK (JSON string). Takes precedence over JWK_FILE if both are set.
+PALACE_DEMARQUE_WEBREADER_JWK: Inline Ed25519 private key JWK (JSON string).
+Takes precedence over JWK_FILE if both are set.
 The JWK must be an Ed25519 key with a kid (key ID) field and the private key component (d).
 PALACE_DEMARQUE_WEBREADER_PUBLIC_JWKS_FILE: Path to public JWK file (JSON format).
 
@@ -559,19 +565,14 @@ pyinstrument -m pytest --no-cov tests/api/
         renderer.open_in_browser(session)
     ```
 
-# Codex ja AGENTS.md
+## Codex and AGENTS.md
 
-Käytämme `AGENTS.md`-tiedostoa yhteisten Codex-ohjeiden määrittelyyn. Tavoitteena on, että Codex noudattaa kaikissa projekteissamme samoja turvallisen kehittämisen periaatteita.
+We use `AGENTS.md` to define shared Codex instructions so that Codex follows the same secure development principles
+across our projects.
 
-## Yhteinen AGENTS.md
+### Shared AGENTS.md
 
-Jokaisen repositoryn juuressa on versionhallintaan kuuluva:
-
-```text
-AGENTS.md
-```
-
-Se sisältää kaikille kehittäjille yhteiset Codex-ohjeet, kuten turvallisuuteen, API- ja verkkokutsuihin sekä koodin kieleen liittyvät periaatteet.
+Each repository contains a version-controlled `AGENTS.md` in its root:
 
 ```text
 repository/
@@ -581,19 +582,13 @@ repository/
 └── ...
 ```
 
-Yhteistä `AGENTS.md`-tiedostoa ei tule muuttaa henkilökohtaisten asetusten vuoksi. Kaikkia kehittäjiä koskevat muutokset tehdään normaalisti versionhallinnan kautta.
+It contains shared instructions for all developers, including security, API and network requests, and code language.
+Do not change the shared file for personal preferences. Changes affecting all developers go through version control.
 
-## Kehittäjän omat paikalliset ohjeet
+### Personal local instructions
 
-Kehittäjä voi täydentää yhteisiä ohjeita repositorykohtaisilla henkilökohtaisilla ohjeilla.
-
-Luo repositoryn juureen:
-
-```text
-AGENTS.override.md
-```
-
-Rakenne on tällöin:
+Developers can supplement the shared instructions with personal, repository-specific instructions.
+Create `AGENTS.override.md` in the repository root:
 
 ```text
 repository/
@@ -604,26 +599,24 @@ repository/
 └── ...
 ```
 
-`AGENTS.override.md` on kehittäjäkohtainen eikä sitä tallenneta versionhallintaan.
-
-Lisää `.gitignore`-tiedostoon:
+`AGENTS.override.md` is personal and must not be committed to version control.
+Add the following to `.gitignore`:
 
 ```gitignore
 AGENTS.override.md
 **/AGENTS.override.md
 ```
 
-Paikallisen tiedoston voi tämän jälkeen luoda esimerkiksi:
+Then create the local file:
 
 ```bash
 touch AGENTS.override.md
 ```
 
-## Mitä AGENTS.override.md-tiedostoon voi laittaa?
+### What belongs in AGENTS.override.md?
 
-Override-tiedosto on tarkoitettu henkilökohtaisiin työskentelytapoihin ja Codexin käyttäytymistä koskeviin lisäohjeisiin.
-
-Esimerkiksi:
+Use the override file for personal working preferences and additional instructions about Codex behavior.
+For example:
 
 ```md
 # Personal Codex instructions
@@ -634,45 +627,35 @@ Esimerkiksi:
 - Do not run tests or write documentation unless I request it.
 ```
 
-Jos ohjeen pitäisi koskea kaikkia kehittäjiä, se kuuluu yhteiseen `AGENTS.md`-tiedostoon eikä henkilökohtaiseen override-tiedostoon.
+Instructions that should apply to all developers belong in the shared `AGENTS.md`, rather than a personal override file.
+Do not use local instructions to deliberately bypass shared security principles.
 
-Paikallisia ohjeita ei tule käyttää yhteisten turvallisuusperiaatteiden tarkoitukselliseen kiertämiseen.
+### Keep instructions short
 
-## Pidä ohjeet lyhyinä
+Keep `AGENTS.md` and `AGENTS.override.md` concise and focused.
+Codex reads applicable instructions into its working context, so long instruction files consume more tokens.
+Excessive detail can also make essential instructions harder to identify.
 
-`AGENTS.md` ja `AGENTS.override.md` kannattaa pitää mahdollisimman lyhyinä ja tarkoituksenmukaisina.
+Focus on information that Codex cannot easily infer from source code or other repository files.
+Avoid:
 
-Codex lukee soveltuvat ohjeet osaksi työskentelykontekstiaan, joten pitkät ohjetiedostot lisäävät tokenien kulutusta. Pitkä ja tarpeettoman yksityiskohtainen ohjeistus voi myös vaikeuttaa olennaisten ohjeiden erottamista.
+- Repeating the same information.
+- Including general programming knowledge.
+- Copying project documentation into `AGENTS.md`.
+- Adding unnecessary detail.
 
-Ohjeisiin kannattaa kirjoittaa ensisijaisesti asioita, joita Codex ei voi helposti päätellä lähdekoodista tai repositoryn muista tiedostoista.
+### Summary
 
-Vältä erityisesti:
+Shared instructions in `AGENTS.md`:
 
-* saman asian toistamista
-* yleisen ohjelmointitiedon kirjoittamista
-* projektidokumentaation kopioimista `AGENTS.md`
-* tarpeettoman yksityiskohtaisia ohjeita
+- Are version-controlled.
+- Use the same shared foundation across repositories.
+- Contain shared security and operating principles.
 
-## Lyhyesti
+Personal instructions in `AGENTS.override.md`:
 
-Yhteiset ohjeet:
+- Exist only on the developer's machine.
+- Are excluded from version control.
+- Contain personal working preferences and additional instructions.
 
-```text
-AGENTS.md
-```
-
-* kuuluu versionhallintaan
-* sama yhteinen pohja jokaisessa repositoryssa
-* sisältää yhteiset turvallisuus- ja toimintaperiaatteet
-
-Kehittäjän omat lisäohjeet:
-
-```text
-AGENTS.override.md
-```
-
-* vain kehittäjän omalla koneella
-* ei versionhallintaan
-* sisältää henkilökohtaiset työskentelytavat ja lisäohjeet
-
-**Nyrkkisääntö:** jos ohje koskee kaikkia, muuta `AGENTS.md`ä. Jos ohje koskee vain omaa työskentelyäsi, lisää se `AGENTS.override.md`.
+**Rule of thumb:** edit `AGENTS.md` for instructions that apply to everyone; use `AGENTS.override.md` for personal ones.
