@@ -97,6 +97,8 @@ class TestWorkController:
                 pool.identifier.type, pool.identifier.identifier
             )
 
+        assert loan.start is not None
+        assert loan.end is not None
         assert response["identifier"] == {
             "type": pool.identifier.type,
             "identifier": pool.identifier.identifier,
