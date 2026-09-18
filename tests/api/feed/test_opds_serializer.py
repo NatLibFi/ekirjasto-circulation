@@ -161,6 +161,7 @@ class TestOPDSSerializer:
             ],
             ratings=[FeedEntryType(text="rating")],
             duration=10,
+            selected_by_patrons=7,
         )
 
         element = OPDS1Serializer().serialize_work_entry(data)
@@ -247,6 +248,10 @@ class TestOPDSSerializer:
         child = element.findall(f"{{{OPDSFeed.DCTERMS_NS}}}duration")
         assert len(child) == 1
         assert child[0].text == "10"
+
+        child = element.findall(f"{{{OPDSFeed.SIMPLIFIED_NS}}}selected_by_patrons")
+        assert len(child) == 1
+        assert child[0].text == "7"
 
     def test_serialize_work_entry_empty(self):
         # A no-data work entry
