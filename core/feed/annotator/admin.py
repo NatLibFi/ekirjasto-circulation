@@ -20,6 +20,7 @@ class AdminAnnotator(LibraryAnnotator):
         if not entry.computed:
             return
         VerboseAnnotator.add_ratings(entry)
+        entry.computed.selected_by_patrons = len(entry.work.selected_by_patrons)
 
         identifier = entry.identifier
         active_license_pool = entry.license_pool

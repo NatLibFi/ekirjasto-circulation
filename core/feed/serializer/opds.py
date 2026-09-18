@@ -275,6 +275,13 @@ class OPDS1Serializer(SerializerInterface[etree._Element], OPDSFeed):
 
         if feed_entry.selected:
             entry.append(OPDSFeed.E("selected", feed_entry.selected))
+        if feed_entry.selected_by_patrons is not None:
+            entry.append(
+                OPDSFeed.E(
+                    f"{{{OPDSFeed.SIMPLIFIED_NS}}}selected_by_patrons",
+                    str(feed_entry.selected_by_patrons),
+                )
+            )
 
         return entry
 
