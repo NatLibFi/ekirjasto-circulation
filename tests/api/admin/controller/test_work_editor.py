@@ -915,9 +915,7 @@ class TestWorkController:
                 for item in response["classifications"]
             }
 
-            by_name = {
-                item["name"]: item for item in response["classifications"]
-            }
+            by_name = {item["name"]: item for item in response["classifications"]}
             assert by_name["subject1 / Named subject"]["mapping"] == (
                 f"{genres[0].name}, Fiction"
             )
