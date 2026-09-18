@@ -57,6 +57,127 @@ class WorkController(CirculationManagerController, AdminPermissionsControllerMix
             OPDSAcquisitionFeed.single_entry(work, annotator)
         )
 
+    def circulation_details(self, identifier_type, identifier):
+        """Return circulation state for every pool belonging to a book.
+
+        This is deliberately an admin-only JSON representation.  The normal
+        OPDS representation only contains aggregate availability and must not
+        expose patron information.
+        """
+        self.require_system_admin()
+
+        pools = self.load_licensepools(
+            flask.request.library, identifier_type, identifier
+        )
+        if isinstance(pools, ProblemDetail):
+            return pools
+
+        work = pools[0].work if pools else None
+
+        def timestamp(value):
+            return value.isoformat() if value is not None else None
+
+        def license_data(license):
+            return {
+                "id": license.id,
+                "identifier": license.identifier,
+                "status": license.status.value if license.status else None,
+                "expires": timestamp(license.expires),
+                "checkouts_left": license.checkouts_left,
+                "checkouts_available": license.checkouts_available,
+                "terms_concurrency": license.terms_concurrency,
+                "is_perpetual": license.is_perpetual,
+                "is_time_limited": license.is_time_limited,
+                "is_loan_limited": license.is_loan_limited,
+                "is_inactive": license.is_inactive,
+                "total_remaining_loans": license.total_remaining_loans,
+                "currently_available_loans": license.currently_available_loans,
+                "checkout_url": license.checkout_url,
+                "is_missing": license.is_missing,
+                "last_checked": timestamp(license.last_checked),
+                "loans": [loan_data(loan) for loan in loans_by_start(license.loans)],
+            }
+
+        def loan_data(loan):
+            return {
+                "id": loan.id,
+                "license_id": loan.license.identifier if loan.license else None,
+                "start": timestamp(loan.start),
+                "end": timestamp(loan.end),
+            }
+
+        def loans_by_start(loans):
+            # Loans without a known start (this should not happen, though) are shown last. Use the ID as a
+            # tie-breaker so the response order is deterministic.
+            return sorted(
+                loans,
+                key=lambda loan: (
+                    loan.start is None,
+                    loan.start if loan.start is not None else 0,
+                    loan.id,
+                ),
+            )
+
+        def hold_data(hold):
+            return {
+                "id": hold.id,
+                "start": timestamp(hold.start),
+                "end": timestamp(hold.end),
+                "position": hold.position,
+            }
+
+        def holds_by_position(pool):
+            # Holds without a known position (this should not happen, though) are shown last. Use the ID as a
+            # tie-breaker so the response order is deterministic.
+            return sorted(
+                pool.holds,
+                key=lambda hold: (
+                    hold.position is None,
+                    hold.position if hold.position is not None else 0,
+                    hold.id,
+                ),
+            )
+
+        return {
+            "identifier": {"type": identifier_type, "identifier": identifier},
+            "license_pools": [
+                {
+                    "pool_id": pool.id,
+                    "collection": {
+                        "id": pool.collection.id,
+                        "name": pool.collection.name,
+                    },
+                    "data_source": {
+                        "id": pool.data_source.id,
+                        "name": pool.data_source.name,
+                    },
+                    "pool_identifier": {
+                        "type": pool.identifier.type,
+                        "identifier": pool.identifier.identifier,
+                    },
+                    "presentation_edition_id": pool.presentation_edition_id,
+                    "open_access": pool.open_access,
+                    "unlimited_access": pool.unlimited_access,
+                    "suppressed": pool.suppressed,
+                    "licenses_owned": pool.licenses_owned,
+                    "licenses_available": pool.licenses_available,
+                    "licenses_reserved": pool.licenses_reserved,
+                    "patrons_in_hold_queue": pool.patrons_in_hold_queue,
+                    "availability_time": timestamp(pool.availability_time),
+                    "licenses": [license_data(license) for license in pool.licenses],
+                    # Some loans (for example open-access loans) are not
+                    # associated with an individual license.
+                    "loans": [
+                        loan_data(loan)
+                        for loan in loans_by_start(pool.loans)
+                        if loan.license is None
+                    ],
+                    "holds": [hold_data(hold) for hold in holds_by_position(pool)],
+                }
+                for pool in pools
+            ],
+        }
+
     def roles(self):
         """Return a mapping from MARC codes to contributor roles."""
         # TODO: The admin interface only allows a subset of the roles
