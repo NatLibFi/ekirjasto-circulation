@@ -73,16 +73,22 @@ class Annotator(LoggerMixin):
     # store this so it's easier to keep up-to-date.
     # There doesn't seem to be any particular vocabulary for this.
     FORMAT_TERMS: Mapping[tuple[str | None, str | None], str] = {
-        (Representation.EPUB_MEDIA_TYPE, DeliveryMechanism.LCP_DRM): "LCP EPUB e-kirja",
-        (Representation.PDF_MEDIA_TYPE, DeliveryMechanism.LCP_DRM): "LCP PDF e-kirja",
+        (
+            Representation.EPUB_MEDIA_TYPE,
+            DeliveryMechanism.LCP_DRM,
+        ): "LCP-suojattu EPUB e-kirja",
+        (
+            Representation.PDF_MEDIA_TYPE,
+            DeliveryMechanism.LCP_DRM,
+        ): "LCP-suojattu PDF e-kirja",
         (
             Representation.AUDIOBOOK_PACKAGE_LCP_MEDIA_TYPE,
             DeliveryMechanism.LCP_DRM,
-        ): "LCP äänikirja",
+        ): "LCP-suojattu äänikirja",
         (
             DeliveryMechanism.EKIRJASTO_STREAMING_PROFILE,
             DeliveryMechanism.LCP_DRM,
-        ): "LCP EPUB striimattava e-kirja",
+        ): "LCP-suojattu EPUB striimattava e-kirja",
     }
 
     def __init__(
@@ -136,7 +142,6 @@ class Annotator(LoggerMixin):
         self.add_physical_description(record, edition)
         self.add_audience(record, work)
         self.add_series(record, edition)
-        self.add_distributor(record, active_license_pool)
         self.add_formats(record, active_license_pool)
 
         if self.organization_code:
@@ -147,6 +152,8 @@ class Annotator(LoggerMixin):
 
         if self.include_genres:
             self.add_genres(record, work)
+
+        self.add_keywords(record, edition)
 
         self.add_web_client_urls(
             record,
@@ -184,6 +191,12 @@ class Annotator(LoggerMixin):
     def add_control_fields(
         cls, record: Record, identifier: Identifier, pool: LicensePool, edition: Edition
     ) -> None:
+        # Leader/06 identifies the general type of material. The default leader
+        # uses `a` (language material), which is correct for e-books but not for
+        # audiobooks (`i`, non-musical sound recording).
+        if edition.medium == Edition.AUDIO_MEDIUM:
+            record.leader = record.leader[:6] + "i" + record.leader[7:]
+
         # Unique identifier for this record.
         record.add_field(Field(tag="001", data=identifier.urn))
 
@@ -194,17 +207,22 @@ class Annotator(LoggerMixin):
         # Field 006: m = computer file, d = the file is a document
         record.add_field(Field(tag="006", data="m        d        "))
 
-        # Field 007: more details about electronic resource
-        # Since this depends on the pool, it might be better not to cache it.
-        # But it's probably not a huge problem if it's outdated.
-        # File formats: a=one format, m=multiple formats, u=unknown
-        if len(pool.delivery_mechanisms) == 1:
-            file_formats_code = "a"
+        # Field 007: more details about the material.
+        if edition.medium == Edition.AUDIO_MEDIUM:
+            # s = sound recording, r = remote/online resource. The remaining
+            # positions are not known for the online audiobook.
+            field_007 = "sr" + "|" * 12
         else:
-            file_formats_code = "m"
-        record.add_field(
-            Field(tag="007", data="cr cn ---" + file_formats_code + "nuuu")
-        )
+            # c = electronic resource, r = remote/online resource.
+            # Since this depends on the pool, it might be better not to cache it.
+            # But it's probably not a huge problem if it's outdated.
+            # File formats: a=one format, m=multiple formats, u=unknown
+            if len(pool.delivery_mechanisms) == 1:
+                file_formats_code = "a"
+            else:
+                file_formats_code = "m"
+            field_007 = "cr cn ---" + file_formats_code + "nuuu"
+        record.add_field(Field(tag="007", data=field_007))
 
         # Field 008 (fixed-length data elements):
         data = utc_now().strftime("%y%m%d")
@@ -355,17 +373,6 @@ class Annotator(LoggerMixin):
             )
 
     @classmethod
-    def add_distributor(cls, record: Record, pool: LicensePool) -> None:
-        # Distributor
-        record.add_field(
-            Field(
-                tag="264",
-                indicators=[" ", "2"],
-                subfields=[Subfield("b", str(pool.data_source.name))],
-            )
-        )
-
-    @classmethod
     def add_physical_description(cls, record: Record, edition: Edition) -> None:
         # These 3xx fields are for a physical description of the item.
         if edition.medium == Edition.BOOK_MEDIUM:
@@ -391,23 +398,22 @@ class Annotator(LoggerMixin):
                 )
             )
         elif edition.medium == Edition.AUDIO_MEDIUM:
+            description = "verkkoaineisto"
+            if edition.duration is not None:
+                description += f" ({cls.format_duration(float(edition.duration))})"
             record.add_field(
                 Field(
                     tag="300",
                     indicators=[" ", " "],
-                    subfields=[
-                        Subfield("a", "äänitiedosto"),
-                        Subfield("b", "digitaalinen"),
-                    ],
+                    subfields=[Subfield("a", description)],
                 )
             )
-
             record.add_field(
                 Field(
                     tag="336",
                     indicators=[" ", " "],
                     subfields=[
-                        Subfield("a", "puhuttu sana"),
+                        Subfield("a", "puhe"),
                         Subfield("b", "spw"),
                         Subfield("2", "rdacontent"),
                     ],
@@ -419,7 +425,7 @@ class Annotator(LoggerMixin):
                 tag="337",
                 indicators=[" ", " "],
                 subfields=[
-                    Subfield("a", "tietokone"),
+                    Subfield("a", "tietokonekäyttöinen"),
                     Subfield("b", "c"),
                     Subfield("2", "rdamedia"),
                 ],
@@ -468,11 +474,27 @@ class Annotator(LoggerMixin):
                     tag="380",
                     indicators=[" ", " "],
                     subfields=[
-                        Subfield("a", "eBook"),
+                        Subfield("a", "e-kirja"),
                         Subfield("2", "tlcgt"),
                     ],
                 )
             )
+
+    @staticmethod
+    def format_duration(duration: float) -> str:
+        """Format an audiobook duration in the units used by MARC 300."""
+        seconds = round(duration)
+        minutes, seconds = divmod(seconds, 60)
+        hours, minutes = divmod(minutes, 60)
+
+        parts = []
+        if hours:
+            parts.append(f"{hours}h")
+        if minutes:
+            parts.append(f"{minutes}min")
+        if seconds or not parts:
+            parts.append(f"{seconds}s")
+        return " ".join(parts)
 
     @classmethod
     def add_audience(cls, record: Record, work: Work) -> None:
@@ -541,10 +563,37 @@ class Annotator(LoggerMixin):
         for genre in genres:
             record.add_field(
                 Field(
-                    tag="655",
+                    tag="653",
                     indicators=[" ", "0"],
                     subfields=[
                         Subfield("a", _(genre.name)),
+                    ],
+                )
+            )
+
+    @classmethod
+    def add_keywords(cls, record: Record, edition: Edition) -> None:
+        """Create keyword fields for this work."""
+        if edition.medium == Edition.AUDIO_MEDIUM:
+            record.add_field(
+                Field(
+                    tag="655",
+                    indicators=["1", "7"],
+                    subfields=[
+                        Subfield("a", _("äänikirja")),
+                        Subfield("2", "slm/fin"),
+                        Subfield("0", "https://urn.fi/URN:NBN:fi:au:slm:s579"),
+                    ],
+                )
+            )
+        if edition.medium == Edition.BOOK_MEDIUM:
+            record.add_field(
+                Field(
+                    tag="655",
+                    indicators=["1", "7"],
+                    subfields=[
+                        Subfield("a", "e-kirja"),
+                        Subfield("2", "slm/fin"),
                     ],
                 )
             )

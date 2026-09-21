@@ -76,3 +76,5 @@ messages.po
 .DS_Store
 
 core/_version.py
+
+AGENTS.md
