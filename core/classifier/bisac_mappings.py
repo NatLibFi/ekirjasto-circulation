@@ -3007,7 +3007,7 @@ GENRES = {
         "genre": "Comics & Graphic Novels",
     },
     "CGN020000": {
-        "name": "COMICS & GRAPHIC NOVELS / European Style (incl. Bandes DessinŽes)",
+        "name": "COMICS & GRAPHIC NOVELS / European Style (incl. Bandes Dessinnes)",
         "genre": "Comics & Graphic Novels",
     },
     "CGN021000": {
