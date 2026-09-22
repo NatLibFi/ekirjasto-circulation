@@ -378,8 +378,6 @@ GENRES = {
     "ART015100": {"name": "ART / Movements / Modernism", "genre": "Art"},
     "ART015110": {"name": "ART / History / 20th & 21st Century", "genre": "Art"},
     "ART015120": {"name": "ART / Movements / Romanticism", "genre": "Art"},
-    "ART015130": {"name": "ART / History / European / General", "genre": "Art History"},
-    "ART015140": {"name": "ART / History / Indigenous", "genre": "Art History"},
     "ART015150": {"name": "ART / European / Dutch", "genre": "Art"},
     "ART015160": {"name": "ART / European / French", "genre": "Art"},
     "ART015170": {"name": "ART / European / German & Austrian", "genre": "Art"},
@@ -8146,10 +8144,6 @@ GENRES = {
         "name": "JUVENILE NONFICTION / Religion / Christianity",
         "genre": "Religion & Spirituality",
     },
-    "JNF049090": {
-        "name": "JUVENILE NONFICTION / Religion / Eastern",
-        "genre": "Religion & Spirituality",
-    },
     "JNF049100": {
         "name": "JUVENILE NONFICTION / Religion / Islam",
         "genre": "Religion & Spirituality",
@@ -11604,10 +11598,6 @@ GENRES = {
         "name": "MIND, BODY, SPIRIT / Magick Studies",
         "genre": "Body mind & spirit",
     },
-    "OCC029000": {
-        "name": "BODY, MIND & SPIRIT / Unexplained Phenomena",
-        "genre": "Body, Mind & Spirit",
-    },
     "OCC030000": {
         "name": "MIND, BODY, SPIRIT / Astrology / Chinese",
         "genre": "Body mind & spirit",
@@ -11975,10 +11965,6 @@ GENRES = {
         "genre": "Performing Arts",
     },
     "PER019000": {"name": "PERFORMING ARTS / Storytelling", "genre": "Performing Arts"},
-    "PER020000": {
-        "name": "PERFORMING ARTS / Monologues & Scenes",
-        "genre": "Performing Arts",
-    },
     "PER021000": {
         "name": "PERFORMING ARTS / Dance / Regional & Cultural",
         "genre": "Performing Arts",
@@ -14825,10 +14811,6 @@ GENRES = {
         "name": "STUDY AIDS / LSAT (Law School Admission Test)",
         "genre": "Education",
     },
-    "STU018000": {
-        "name": "STUDY AIDS / MAT (Miller Analogies Test)",
-        "genre": "Study Aids",
-    },
     "STU019000": {
         "name": "STUDY AIDS / Teacher Certification (incl. Praxis)",
         "genre": "Education",
@@ -17382,10 +17364,6 @@ GENRES = {
     },
     "YAN047040": {
         "name": "YOUNG ADULT NONFICTION / Religion / Christianity",
-        "genre": "Religion & Spirituality",
-    },
-    "YAN047050": {
-        "name": "YOUNG ADULT NONFICTION / Religion / Eastern",
         "genre": "Religion & Spirituality",
     },
     "YAN047060": {
