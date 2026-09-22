@@ -15,6 +15,7 @@ from core.model.datasource import DataSource
 from core.model.edition import Edition
 from core.model.identifier import Identifier
 from core.model.licensing import LicensePool
+from core.model.patron import SelectedBook
 from core.model.resource import Hyperlink, Representation, Resource
 from core.model.work import Work, WorkGenre
 from core.util.datetime_helpers import datetime_utc, from_timestamp, utc_now
@@ -1717,6 +1718,32 @@ class TestWork:
         assert [] == db.session.query(Work).filter(Work.id == work.id).all()
         assert 1 == len(s.removed)
         assert s.removed == [work]
+
+    def test_deleting_work_deletes_selected_book(self, db: DatabaseTransactionFixture):
+        """Test that when a work is deleted,
+        all associated selected books are also deleted."""
+
+        patron = db.patron()
+        work = db.work()
+
+        # Add the work to the patron's selected books
+        selected_book = patron.select_book(work)
+        db.session.commit()
+
+        assert selected_book in patron.selected_books
+
+        # Now delete the work
+        db.session.delete(work)
+        db.session.commit()
+
+        # Check that the selected books for this patron have been deleted as well
+        remaining_selected_books = (
+            db.session.query(SelectedBook)
+            .filter(SelectedBook.patron_id == patron.id)
+            .all()
+        )
+
+        assert len(remaining_selected_books) == 0
 
 
 class TestWorkConsolidation:

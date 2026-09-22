@@ -143,7 +143,9 @@ class TestSelectBooksController:
             "/", headers=dict(Authorization=selected_book_fixture.valid_auth)
         ):
             # A patron first selects a work
-            selected_book_fixture.manager.select_books.authenticated_patron_from_request()
+            patron = (
+                selected_book_fixture.manager.select_books.authenticated_patron_from_request()
+            )
             identifier_type = Identifier.GUTENBERG_ID
             identifier = "1234567890"
             edition, _ = selected_book_fixture.db.edition(
@@ -155,12 +157,25 @@ class TestSelectBooksController:
             work = selected_book_fixture.db.work(
                 "Test Book", presentation_edition=edition, with_license_pool=True
             )
-            selected_book_fixture.manager.select_books.select(
+            selected_response = selected_book_fixture.manager.select_books.select(
                 identifier_type, identifier
             )
+            assert len(patron.selected_books) == 1
+
             # And then later the selected books feed is requested
             response = selected_book_fixture.manager.select_books.fetch_books()
             # The feed contains the selected book
             assert response.status_code == 200
             feed = feedparser.parse(response.get_data())
             assert len(feed.entries) == 1
+
+            # Now, let's simulate a case where the selected book's work is, for some
+            # odd reason, None
+            patron.selected_books[0].work = None
+            response = selected_book_fixture.manager.select_books.fetch_books()
+            assert response.status_code == 200
+            feed = feedparser.parse(response.get_data())
+            # There's no entry in the feed because the work is None
+            assert len(feed.entries) == 0
+            # But the selected book is still in the patron's selected_books list
+            assert len(patron.selected_books) == 1
