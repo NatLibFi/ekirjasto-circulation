@@ -89,6 +89,8 @@ class OPDS2Serializer(SerializerInterface[dict[str, Any]]):
             metadata["published"] = data.published.text
         if data.summary:
             metadata["description"] = data.summary.text
+        if data.selected_by_patrons is not None:
+            metadata["selected_by_patrons"] = data.selected_by_patrons
 
         if data.publisher:
             metadata["publisher"] = dict(name=data.publisher.text)
