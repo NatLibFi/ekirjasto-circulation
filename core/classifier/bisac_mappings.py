@@ -1870,7 +1870,7 @@ GENRES = {
     },
     "BIO004000": {
         "name": "BIOGRAPHY & AUTOBIOGRAPHY / Music",
-        "genre": "Music Biographies",
+        "genre": "Musicians",
     },
     "BIO005000": {
         "name": "BIOGRAPHY & AUTOBIOGRAPHY / Entertainment & Performing Arts",
@@ -1918,7 +1918,7 @@ GENRES = {
     },
     "BIO016000": {
         "name": "BIOGRAPHY & AUTOBIOGRAPHY / Sports",
-        "genre": "Sports Biographies",
+        "genre": "Athletes",
     },
     "BIO017000": {
         "name": "BIOGRAPHY & AUTOBIOGRAPHY / Medical (incl. Patients)",
@@ -10031,199 +10031,199 @@ GENRES = {
     },
     "LAN000000": {
         "name": "LANGUAGE ARTS & DISCIPLINES / General",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN001000": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Alphabets & Writing Systems",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN002000": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Writing / Authorship",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN004000": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Communication Studies",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN005000": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Writing / General",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN005010": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Writing / Academic & Scholarly",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN005020": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Writing / Business Aspects",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN005030": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Writing / Children's & Young Adult",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN005040": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Writing / Composition",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN005050": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Writing / Fiction Writing",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN005060": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Writing / Nonfiction (incl. Memoirs)",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN005070": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Writing / Poetry",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN006000": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Grammar & Punctuation",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN007000": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Handwriting",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN008000": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Journalism",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN009000": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Linguistics / General",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN009010": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Linguistics / Historical & Comparative",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN009020": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Linguistics / Morphology",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN009030": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Linguistics / Pragmatics",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN009040": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Linguistics / Psycholinguistics / General",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN009050": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Linguistics / Sociolinguistics",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN009060": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Linguistics / Syntax",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN009070": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Linguistics / Psycholinguistics / Language Acquisition",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN009080": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Linguistics / Psycholinguistics / Neurolinguistics",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN010000": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Literacy",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN011000": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Linguistics / Phonetics & Phonology",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN012000": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Readers",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN013000": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Reading Skills",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN015000": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Rhetoric",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN016000": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Linguistics / Semantics",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN017000": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Sign Language",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN018000": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Speech & Pronunciation",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN020000": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Study & Teaching",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN021000": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Spelling & Vocabulary",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN022000": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Editing & Proofreading",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN023000": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Translating & Interpreting",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN024000": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Linguistics / Etymology",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN025000": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Library & Information Science / General",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN025010": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Library & Information Science / Administration & Management",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN025020": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Library & Information Science / Archives & Special Libraries",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN025030": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Library & Information Science / Cataloging & Classification",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN025040": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Library & Information Science / Collection Development",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN025050": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Library & Information Science / School Media",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN025060": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Library & Information Science / Digital & Online Resources",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN026000": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Public Speaking & Speech Writing",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN027000": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Publishers & Publishing Industry",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN028000": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Style Manuals",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN029000": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Lexicography",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAN030000": {
         "name": "LANGUAGE ARTS & DISCIPLINES / Orality",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LAW000000": {"name": "LAW / General", "genre": "Law"},
     "LAW001000": {
@@ -10502,271 +10502,271 @@ GENRES = {
     },
     "LIT000000": {
         "name": "LITERARY CRITICISM / General",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT003000": {
         "name": "LITERARY CRITICISM / Feminist",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT004010": {
         "name": "LITERARY CRITICISM / African",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT004020": {
         "name": "LITERARY CRITICISM / American / General",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT004030": {
         "name": "LITERARY CRITICISM / Asian American & Pacific Islander",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT004040": {
         "name": "LITERARY CRITICISM / African American & Black",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT004050": {
         "name": "LITERARY CRITICISM / Hispanic & Latino",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT004060": {
         "name": "LITERARY CRITICISM / Indigenous",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT004070": {
         "name": "LITERARY CRITICISM / Australian & Oceanian",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT004080": {
         "name": "LITERARY CRITICISM / Canadian",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT004100": {
         "name": "LITERARY CRITICISM / Caribbean & Latin American",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT004110": {
         "name": "LITERARY CRITICISM / European / Eastern (see also Russian & Soviet)",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT004120": {
         "name": "LITERARY CRITICISM / European / English, Irish, Scottish, Welsh",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT004130": {
         "name": "LITERARY CRITICISM / European / General",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT004150": {
         "name": "LITERARY CRITICISM / European / French",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT004160": {
         "name": "LITERARY CRITICISM / LGBTQ+",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT004170": {
         "name": "LITERARY CRITICISM / European / German",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT004180": {
         "name": "LITERARY CRITICISM / Gothic & Romance",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT004190": {
         "name": "LITERARY CRITICISM / Ancient & Classical",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT004200": {
         "name": "LITERARY CRITICISM / European / Italian",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT004210": {
         "name": "LITERARY CRITICISM / Jewish",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT004220": {
         "name": "LITERARY CRITICISM / Middle Eastern",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT004230": {
         "name": "LITERARY CRITICISM / Mystery & Detective",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT004240": {
         "name": "LITERARY CRITICISM / Russian & Soviet",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT004250": {
         "name": "LITERARY CRITICISM / European / Scandinavian",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT004260": {
         "name": "LITERARY CRITICISM / Science Fiction & Fantasy",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT004280": {
         "name": "LITERARY CRITICISM / European / Spanish & Portuguese",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT004290": {
         "name": "LITERARY CRITICISM / Women Authors",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT006000": {
         "name": "LITERARY CRITICISM / Semiotics & Theory",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT007000": {
         "name": "LITERARY CRITICISM / Books & Reading",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT008000": {
         "name": "LITERARY CRITICISM / Asian / General",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT008010": {
         "name": "LITERARY CRITICISM / Asian / Chinese",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT008020": {
         "name": "LITERARY CRITICISM / Asian / Indic",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT008030": {
         "name": "LITERARY CRITICISM / Asian / Japanese",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT009000": {
         "name": "LITERARY CRITICISM / Children's & Young Adult Literature",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT011000": {
         "name": "LITERARY CRITICISM / Medieval",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT012000": {
         "name": "LITERARY CRITICISM / Reference",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT013000": {
         "name": "LITERARY CRITICISM / Drama",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT014000": {
         "name": "LITERARY CRITICISM / Poetry",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT015000": {
         "name": "LITERARY CRITICISM / Shakespeare",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT016000": {
         "name": "LITERARY CRITICISM / Humor",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT017000": {
         "name": "LITERARY CRITICISM / Comics & Graphic Novels",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT018000": {
         "name": "LITERARY CRITICISM / Short Stories",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT019000": {
         "name": "LITERARY CRITICISM / Renaissance",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT020000": {
         "name": "LITERARY CRITICISM / Comparative Literature",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT021000": {
         "name": "LITERARY CRITICISM / Horror & Supernatural",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT022000": {
         "name": "LITERARY CRITICISM / Fairy Tales, Folk Tales, Legends & Mythology",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT023000": {
         "name": "LITERARY CRITICISM / American / Regional",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT024000": {
         "name": "LITERARY CRITICISM / Modern / General",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT024010": {
         "name": "LITERARY CRITICISM / Modern / 16th Century",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT024020": {
         "name": "LITERARY CRITICISM / Modern / 17th Century",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT024030": {
         "name": "LITERARY CRITICISM / Modern / 18th Century",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT024040": {
         "name": "LITERARY CRITICISM / Modern / 19th Century",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT024050": {
         "name": "LITERARY CRITICISM / Modern / 20th Century",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT024060": {
         "name": "LITERARY CRITICISM / Modern / 21st Century",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT025000": {
         "name": "LITERARY CRITICISM / Subjects & Themes / General",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT025010": {
         "name": "LITERARY CRITICISM / Subjects & Themes / Historical Events",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT025020": {
         "name": "LITERARY CRITICISM / Subjects & Themes / Nature",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT025030": {
         "name": "LITERARY CRITICISM / Subjects & Themes / Politics",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT025040": {
         "name": "LITERARY CRITICISM / Subjects & Themes / Religion",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT025050": {
         "name": "LITERARY CRITICISM / Subjects & Themes / Women",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT025060": {
         "name": "LITERARY CRITICISM / Subjects & Themes / Culture, Race & Ethnicity",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT025070": {
         "name": "LITERARY CRITICISM / Subjects & Themes / Gender Identity",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT025080": {
         "name": "LITERARY CRITICISM / Subjects & Themes / Love & Erotica",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT026000": {
         "name": "LITERARY CRITICISM / Novel as Form",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT027000": {
         "name": "LITERARY CRITICISM / Indigenous Peoples of Turtle Island",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "LIT028000": {
         "name": "LITERARY CRITICISM / Native American",
-        "genre": "Litterature & Linguistics",
+        "genre": "Literature & Linguistics",
     },
     "MAT000000": {"name": "MATHEMATICS / General", "genre": "Mathematics"},
     "MAT002000": {"name": "MATHEMATICS / Algebra / General", "genre": "Mathematics"},

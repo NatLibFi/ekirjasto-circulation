@@ -564,7 +564,9 @@ COMICS_AND_GRAPHIC_NOVELS = "Comics & Graphic Novels"
 # is for clarity.
 fiction_genres = [
     "Adventure",
+    # Children
     dict(name="Animal Stories", subgenres=["Horse Stories", "Pet Stories"]),
+    # Children, YA
     dict(
         name="Difficult Topics",
         subgenres=[
@@ -580,14 +582,13 @@ fiction_genres = [
     ),
     "Classics",
     COMICS_AND_GRAPHIC_NOVELS,
-    "Diary Stories",
+    "Computers & Technology", # Children
+    "Diary Stories", # YA
     "Drama",
     dict(name="Erotica", audiences=SubjectClassifier.AUDIENCE_ADULTS_ONLY),
-    "Family Stories",
-    dict(
-        name="Festivities & Holidays",
-        subgenres=[],
-    ),
+    "Family Stories", # Children
+    # Children
+    dict(name="Festivities & Holidays", subgenres=["Easter", "Halloween"]),
     dict(
         name="Fantasy",
         subgenres=[
@@ -596,21 +597,18 @@ fiction_genres = [
             "Magic Realism",
         ],
     ),
-    "Growing Up",
+    "Growing Up", # Children
     "Historical Fiction",
-    dict(
-        name="Horror",
-        subgenres=[
-        ],
-    ),
+    "Horror",
     "Humor",
-    "Humorous Fiction",
+    "Humorous Fiction", # Children, YA
     "General Fiction",
     "LGBTQ Fiction",
     dict(
         name="Mystery",
         subgenres=[
             "Crime & Detective Stories",
+            "Cozy Crime",
         ],
     ),
     "Poetry",
@@ -620,9 +618,10 @@ fiction_genres = [
         subgenres=[
             "Contemporary Romance",
             "Historical Romance",
+            "Romantasy",
         ],
     ),
-    "School & Study",
+    "School & Study", # Children, YA
     dict(
         name="Science Fiction",
         subgenres=[
@@ -631,15 +630,19 @@ fiction_genres = [
         ],
     ),
     "Short Stories",
+    # Children, YA
     dict(
         name="Sports Stories",
         subgenres=[
             "Football Stories",
             "Hockey Stories",
             "Dance Stories",
+            "Riding Stories",
+            "Skating Stories",
         ],
     ),
-    "Superheroes",
+    "Stories & Myths",
+    "Superheroes", # Children
     dict(
         name="Suspense/Thriller",
         subgenres=[
@@ -647,18 +650,28 @@ fiction_genres = [
             "Psychological Thriller",
         ],
     ),
+    # Children
     dict(name="Vehicles & Technology", subgenres=["Cars", "Trains", "Airplanes"]),
+    "War Fiction",
 ]
 
 nonfiction_genres = [
-    dict(name="Animals", subgenres=["Horses & Riding", "Pet Animals", "Dinosaurs"]),
+    # Children, YA
+    dict(
+        name="Animals",
+        subgenres=[
+            "Horses & Riding",
+            "Pet Animals",
+            "Dinosaurs",
+        ],
+    ),
     dict(
         name="Art & Culture",
         subgenres=[
             "Film & TV",
             "Music",
             "Performing Arts",
-            "Drawing",
+            "Drawing",  # Children, YA
             "Architecture",
             "Art",
             "Design",
@@ -666,31 +679,60 @@ nonfiction_genres = [
             "Photography",
         ],
     ),
-    dict(name="Biography & Memoir", subgenres=["Athletes", "Musicians"]),
-    "Careers",
-    "Computers & Digital Skills",
-    "Cooking & Baking",
-    "Climate & Sustainability",
-    "Continents & Countries",
-    "Diversity & Multicultural",
+    dict(
+        name="Biography & Memoir",
+        subgenres=[
+            "Athletes", # Children, YA
+            "Musicians", # Children, YA
+            "Activism (Biographies)",
+            "Actors (Biographies)",
+            "Artists (Biographies)",
+            "Authors (Biographies)",
+            "Crime & Law Enforcement (Biographies)",
+            "Emergency Services (Biographies)",
+            "Foreign Cultures (Biographies)",
+            "Journalists (Biographies)",
+            "Historical Biographies",
+            "LGBTQ Biographies",
+            "Medical Professionals (Biographies)",
+            "Music Biographies",
+            "Philosophical Biographies",
+            "Public Figures (Biographies)",
+            "Religious Biographies",
+            "Rulers & Politicians (Biographies)",
+            "Survival Stories (Biographies)",
+            "War (Biographies)",
+        ],
+    ),
+    "Careers", # YA
+    "Climate & Sustainability", # Children, YA
+    "Computers & Digital Skills", # Children, YA
+    "Continents & Countries", # Children, YA
+    "Cooking & Baking", # Children, YA
+    "Diversity & Multicultural", # Children, YA
+    dict(name="Economics", subgenres=["Investing", "Management & Leadership", "Marketing"]),
     "Education",
-    "Encyclopedias",
-    "Family",
-    "Fashion & Looks",
-    "Folklore",
-    dict(name="Games", subgenres=["Video Games", "Board Games & Strategic Games"]),
+    "Encyclopedias",  # Children
+    "Family",  # Children, YA
+    "Fashion & Looks",  # Children, YA
+    "Folklore",  # Children, YA
     dict(
         name="Food & Health",
         subgenres=[
+            "Cookbooks",
+            "Nutrition",
         ],
     ),
-    "General Nonfiction",
-    "Health & Wellness",
     dict(
-        name="History",
+        name="Games",  # Children, YA
         subgenres=[
+            "Board Games & Strategic Games",  # Children
+            "Video Games",  # Children, YA
         ],
     ),
+    "General Nonfiction", # Children, YA
+    "Health & Wellness",  # Children, YA
+    "History",
     dict(
         name="Hobbies & Home",
         subgenres=[
@@ -698,58 +740,102 @@ nonfiction_genres = [
             "Crafts & Hobbies",
             "Gardening",
             "Games & Activities",
+            "Interior Design",
             "Pets",
+            "Hobbies",  # YA
         ],
     ),
-    dict(name="Holidays & Celebrations", subgenres=["Christmas", "Birthdays"]),
-    "Humorous Nonfiction",
-    dict(name="Machinery & Equipment", subgenres=["Robots", "Vehicles"]),
+    # Children
     dict(
-        name="Parenting & Family",
+        name="Holidays & Celebrations",
         subgenres=[
+            "Christmas",
+            "Birthdays",
         ],
     ),
-    "Economics",
-    "Management & Leadership",
-    "Philosophy",
-    dict(name="Play & Hobbies", subgenres=["Crafts", "Camping"]),
+    "Humorous Nonfiction",  # YA
+    dict(name="Literature & Linguistics", subgenres=["Dictionaries", "Finnish Language", "Foreign Language Study"]),
+    # Children and YA only
+    dict(
+        name="Machinery & Equipment",
+        subgenres=[
+            "Equipment & Technology",
+            "Robots",
+            "Vehicles",
+        ],
+    ),
+    "Other Nonfiction",
+    "Parenting & Family",
+    dict(name="Philosophy", subgenres=[
+        "Ethics & Moral Philosophy",
+    ]),
+    # Children
+    dict(
+        name="Play & Hobbies",
+        subgenres=[
+            "Crafts",
+            "Camping",
+        ],
+    ),
     "Political Science",
     dict(
-        name="Reference & Study Aids",
-        subgenres=[
-            "Dictionaries",
-            "Foreign Language Study",
-            "Law",
-        ],
+        name="Psychology",
+        subgenres=["Life Management"]
     ),
+    "Puberty & Growing Up", # YA
+    "Reference & Study Aids",  # Children, YA
     dict(
         name="Religion & Spirituality",
         subgenres=[
+            "Body, Mind & Spirit",
+            "Metaphysics",
         ],
     ),
     dict(
         name="Science & Technology",
         subgenres=[
+            "Artificial Intelligence",
             "Computers",
+            "Geography",  # Children, YA
+            "Internet",
+            "Law",
             "Mathematics",
             "Medical",
             "Nature",
-            "Psychology",
+            "Plants",  # Children, YA
+            "Physics & Chemistry",  # Children, YA
+            "Programming",
             "Science",
             "Technology",
-            "Plants",
-            "Physics & Chemistry",
-            "Geography",
-            "Stars & Space",
+            "Stars & Space",  # Children, YA
         ],
     ),
-    "Self-Help",
-    dict(name="Society", subgenres=["Antiracism", "Human Rights"]),
-    dict(name="Sports", subgenres=["Football", "Hockey"]),
-    "Supernatural",
+    "Self-Help", # Children, YA
+    "Sexual Education", # YA
+    dict(
+        name="Society",
+        subgenres=[
+            "Antiracism",  # YA
+            "Human Rights",  # YA
+        ],
+    ),
+    dict(
+        name="Sports",
+        subgenres=[
+            "Ball Sports",
+            "Equestrian Sports",
+            "Football",  # Children, YA
+            "Hockey",  # Children, YA
+            "Motor Sports",
+            "Racquet Sports",
+            "Strength Sports",
+            "Winter Sports",
+        ],
+    ),
+    "Supernatural", # Children, YA
     "Travel",
     "True Crime",
-    "World Record Books",
+    "World Record Books", # Children, YA
 ]
 
 
