@@ -895,6 +895,8 @@ class GenreData:
     def variable_name(self):
         return (
             self.name.replace("-", "_")
+            .replace("(", "")
+            .replace(")", "")
             .replace(", & ", "_")
             .replace(", ", "_")
             .replace(" & ", "_")
