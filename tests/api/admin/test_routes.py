@@ -317,6 +317,16 @@ class TestAdminWork:
         )
         fixture.assert_supported_methods(url, "GET")
 
+    def test_circulation_details(self, fixture: AdminRouteFixture):
+        url = "/admin/works/<identifier_type>/an/identifier/circulation_data"
+        fixture.assert_authenticated_request_calls(
+            url,
+            fixture.controller.circulation_details,  # type: ignore
+            "<identifier_type>",
+            "an/identifier",
+        )
+        fixture.assert_supported_methods(url, "GET")
+
     def test_classifications(self, fixture: AdminRouteFixture):
         url = "/admin/works/<identifier_type>/an/identifier/classifications"
         fixture.assert_authenticated_request_calls(

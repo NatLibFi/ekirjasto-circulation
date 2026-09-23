@@ -152,6 +152,18 @@ def work_details(identifier_type, identifier):
 
 
 @library_route(
+    "/admin/works/<identifier_type>/<path:identifier>/circulation_data", methods=["GET"]
+)
+@has_library
+@returns_json_or_response_or_problem_detail
+@requires_admin
+def work_circulation_details(identifier_type, identifier):
+    return app.manager.admin_work_controller.circulation_details(
+        identifier_type, identifier
+    )
+
+
+@library_route(
     "/admin/works/<identifier_type>/<path:identifier>/classifications", methods=["GET"]
 )
 @has_library

@@ -83,6 +83,7 @@ class TestOPDS2Serializer:
             ],
             other_links=[Link(href="http://link", rel="rel")],
             duration=10,
+            selected_by_patrons=7,
         )
 
         serializer = OPDS2Serializer()
@@ -94,6 +95,7 @@ class TestOPDS2Serializer:
         assert metadata["title"] == data.title.text
         assert metadata["sortAs"] == data.sort_title.text
         assert metadata["duration"] == data.duration
+        assert metadata["selected_by_patrons"] == 7
         assert metadata["subtitle"] == data.subtitle.text
         assert metadata["identifier"] == data.identifier
         assert metadata["language"] == data.language.text

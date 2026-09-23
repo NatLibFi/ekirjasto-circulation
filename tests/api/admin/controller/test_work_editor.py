@@ -74,6 +74,55 @@ def work_fixture(
 
 
 class TestWorkController:
+    def test_circulation_details(self, work_fixture: WorkFixture):
+        work_fixture.admin.add_role(AdminRole.SYSTEM_ADMIN)
+        [pool] = work_fixture.english_1.license_pools
+        license_ = work_fixture.ctrl.db.license(
+            pool, identifier="license-1", checkouts_available=2
+        )
+        patron = work_fixture.ctrl.db.patron()
+        loan, _ = license_.loan_to(
+            patron,
+            start=datetime_utc(2024, 1, 2),
+            end=datetime_utc(2024, 1, 3),
+        )
+        hold, _ = pool.on_hold_to(
+            work_fixture.ctrl.db.patron(),
+            start=datetime_utc(2024, 1, 1),
+            position=1,
+        )
+
+        with work_fixture.request_context_with_library_and_admin("/"):
+            response = work_fixture.manager.admin_work_controller.circulation_details(
+                pool.identifier.type, pool.identifier.identifier
+            )
+
+        assert loan.start is not None
+        assert loan.end is not None
+        assert response["identifier"] == {
+            "type": pool.identifier.type,
+            "identifier": pool.identifier.identifier,
+        }
+        [pool_data] = response["license_pools"]
+        assert pool_data["pool_id"] == pool.id
+        assert pool_data["licenses"][0]["identifier"] == "license-1"
+        assert pool_data["licenses"][0]["loans"] == [
+            {
+                "id": loan.id,
+                "license_id": "license-1",
+                "start": loan.start.isoformat(),
+                "end": loan.end.isoformat(),
+            }
+        ]
+        assert pool_data["holds"] == [
+            {
+                "id": hold.id,
+                "start": hold.start.isoformat(),
+                "end": None,
+                "position": 1,
+            }
+        ]
+
     def test_details(self, work_fixture: WorkFixture):
         [lp] = work_fixture.english_1.license_pools
 
@@ -818,6 +867,8 @@ class TestWorkController:
         genres = work_fixture.ctrl.db.session.query(Genre).all()
         subject1 = work_fixture.ctrl.db.subject(type="type1", identifier="subject1")
         subject1.genre = genres[0]
+        subject1.name = "Named subject"
+        subject1.fiction = True
         subject2 = work_fixture.ctrl.db.subject(type="type2", identifier="subject2")
         subject2.genre = genres[1]
         subject3 = work_fixture.ctrl.db.subject(type="type2", identifier="subject3")
@@ -849,7 +900,11 @@ class TestWorkController:
 
             expected_set = {
                 (
-                    classification.subject.identifier,
+                    (
+                        f"{classification.subject.identifier} / {classification.subject.name}"
+                        if classification.subject.name
+                        else classification.subject.identifier
+                    ),
                     classification.subject.type,
                     classification.data_source.name,  # type: ignore
                 )
@@ -861,6 +916,11 @@ class TestWorkController:
                 (item["name"], item["type"], item["source"])
                 for item in response["classifications"]
             }
+
+            by_name = {item["name"]: item for item in response["classifications"]}
+            assert by_name["subject1 / Named subject"]["mapping"] == (
+                f"{genres[0].name}, Fiction"
+            )
 
             # Assert that both sets are equal
             assert expected_set == response_set

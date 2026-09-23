@@ -11,6 +11,28 @@ from tests.fixtures.search import ExternalSearchFixtureFake
 
 
 class TestOPDS:
+    def test_feed_includes_selected_by_patrons(
+        self,
+        db: DatabaseTransactionFixture,
+        patch_url_for: PatchedUrlFor,
+        external_search_fake_fixture: ExternalSearchFixtureFake,
+    ):
+        work = db.work(with_open_access_download=True)
+        db.patron().select_book(work)
+        db.patron().select_book(work)
+
+        feed = OPDSAcquisitionFeed(
+            "test",
+            "url",
+            [work],
+            AdminAnnotator(None, db.default_library()),
+        )
+        feed.generate_feed()
+
+        [entry] = feed._feed.entries
+        assert entry.computed is not None
+        assert entry.computed.selected_by_patrons == 2
+
     def links(self, feed: FeedData, rel=None):
         all_links = feed.links + feed.facet_links + feed.breadcrumbs
         links = sorted(all_links, key=lambda x: (x.rel, getattr(x, "title", None)))
