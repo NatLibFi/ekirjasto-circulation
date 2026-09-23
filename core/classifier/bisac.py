@@ -106,17 +106,21 @@ class BISACClassifier(SubjectClassifier):
         return identifier
 
     @classmethod
-    def scrub_name(cls, name):
+    def scrub_name(cls, name, identifier=None):
         """
-        Confirm the name matches with our BISAC code names.
+        Keep the name when the identifier is a known BISAC code.
+        DeMarque provides BISAC codes with different canonical names, but
+        we keep the name if the identifier is recognized.
 
         Returns:
             name: String: BISAC subject name.
         """
-        for identifier, mappings in GENRES.items():
-            # If the name does not match our list of codes, we don't want to classify it.
-            if mappings["name"].lower() == name.lower():
-                return name
+        if identifier in GENRES:
+            return name
+        else:
+            for mappings in GENRES.values():
+                if mappings["name"].lower() == name.lower():
+                    return name
         return None
 
 

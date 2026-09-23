@@ -173,7 +173,7 @@ class SubjectClassifier(ClassifierConstants):
         return Lowercased(identifier)
 
     @classmethod
-    def scrub_name(cls, name):
+    def scrub_name(cls, name, identifier=None):
         """
         Prepare a name from within a call to classify().
         """

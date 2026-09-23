@@ -1497,20 +1497,25 @@ class TestBISACClassifier:
         ) == BISACClassifier.scrub_identifier("FBFIC015000")
 
     def test_scrub_name(self):
-        """Sometimes a data provider sends BISAC names that contain extra or
-        nonstandard characters. We store the data as it was provided to us,
-        but when it"s time to classify things, we normalize it.
-        """
-
-        def scrubbed(before, after):
-            assert after == BISACClassifier.scrub_name(before)
-
-        scrubbed(
-            "BIOGRAPHY & AUTOBIOGRAPHY / Editors, Journalists, Publishers",
-            "BIOGRAPHY & AUTOBIOGRAPHY / Editors, Journalists, Publishers",
+        # A known identifier preserves the provider's original name, even
+        # when the name differs from the canonical BISAC name.
+        assert "Health & fitness" == BISACClassifier.scrub_name(
+            "Health & fitness", "HEA000000"
         )
-        # No such BISAC
-        scrubbed(
-            "JUVENILE FICTION / Family / General (see also headings under Social Issues)",
-            None,
+
+        # An unknown identifier returns the name if it matches a canonical BISAC name.
+        assert (
+            "BIOGRAPHY & AUTOBIOGRAPHY / Editors, Journalists, Publishers"
+            == BISACClassifier.scrub_name(
+                "BIOGRAPHY & AUTOBIOGRAPHY / Editors, Journalists, Publishers",
+                None,
+            )
+        )
+        # An unknown identifier with a name that does not match any canonical BISAC name returns None.
+        assert (
+            None
+            == BISACClassifier.scrub_name(
+                "BIOGRAPHY & AUTOBIOGRAPHY / Some dude",
+                None,
+            )
         )
