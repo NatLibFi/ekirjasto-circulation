@@ -588,7 +588,14 @@ fiction_genres = [
     dict(name="Erotica", audiences=SubjectClassifier.AUDIENCE_ADULTS_ONLY),
     "Family Stories",  # Children
     # Children
-    dict(name="Festivities & Holidays", subgenres=["Easter", "Halloween"]),
+    dict(
+        name="Festivities & Holidays",
+        subgenres=[
+            "Easter Stories",
+            "Halloween Stories",
+            "Christmas Stories",
+        ],
+    ),
     dict(
         name="Fantasy",
         subgenres=[
@@ -841,6 +848,7 @@ nonfiction_genres = [
     "Supernatural",  # Children, YA
     "Travel",
     "True Crime",
+    "War Nonfiction",
     "World Record Books",  # Children, YA
 ]
 
