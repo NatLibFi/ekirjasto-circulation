@@ -37,18 +37,20 @@ class TestBISACClassifier:
         genre_is(
             "CKB040000",
             "COOKING / Specific Ingredients / Herbs, Spices, Condiments",
-            'Cookbooks',
+            "Cookbooks",
         )
         genre_is(
-            "CKB002000", "COOKING / Regional & Cultural / American / General", 'Cookbooks'
+            "CKB002000",
+            "COOKING / Regional & Cultural / American / General",
+            "Cookbooks",
         )
-        genre_is("FIC033000", "FICTION / Westerns", 'Historical Fiction')
+        genre_is("FIC033000", "FICTION / Westerns", "Historical Fiction")
         genre_is(
             "FIC098050",
             "FICTION / World Literature / England / 20th Century",
             "General Fiction",
         )
-        genre_is("SEL036000", "SELF-HELP / Anxieties & Phobias", 'Life Management')
+        genre_is("SEL036000", "SELF-HELP / Anxieties & Phobias", "Life Management")
         genre_is("EDU062000", "EDUCATION / Cultural Pedagogies", "Education")
         genre_is("MED058150", "MEDICAL / Nursing / Nutrition", "Medical")
         genre_is("NAT019000", "NATURE / Animals / Mammals", "Nature")
@@ -56,16 +58,18 @@ class TestBISACClassifier:
         genre_is(
             "HIS037090",
             "HISTORY / Modern / 16th Century",
-            'History',
+            "History",
         )
-        genre_is("BIB019060", "BIBLES / Reina Valera / Text", 'Religion & Spirituality')
+        genre_is("BIB019060", "BIBLES / Reina Valera / Text", "Religion & Spirituality")
         genre_is(
             "FIC136000",
             "FICTION / LGBTQ+ / Two-Spirited & Indigiqueer",
             "LGBTQ Fiction",
         )
         genre_is(
-            "BIB003050", "BIBLES / English Standard Version / Study", 'Religion & Spirituality'
+            "BIB003050",
+            "BIBLES / English Standard Version / Study",
+            "Religion & Spirituality",
         )
         genre_is("MED075000", "MEDICAL / Physiology", "Medical")
         genre_is("DRA012000", "DRAMA / Australian & Oceanian", "Drama")
@@ -75,7 +79,7 @@ class TestBISACClassifier:
         genre_is(
             "BIB020030",
             "BIBLES / The Message / New Testament & Portions",
-            'Religion & Spirituality',
+            "Religion & Spirituality",
         )
         genre_is(
             "GAM002000",
@@ -102,15 +106,15 @@ class TestBISACClassifier:
         genre_is(
             "REF033000",
             "REFERENCE / Personal & Private Investigations",
-            'Other Nonfiction',
+            "Other Nonfiction",
         )
         genre_is(
-            "OCC041000", "BODY, MIND & SPIRIT / Sacred Sexuality", 'Body mind & spirit'
+            "OCC041000", "BODY, MIND & SPIRIT / Sacred Sexuality", "Body mind & spirit"
         )
         genre_is(
             "COM060170",
             "COMPUTERS / Internet / Content Management Systems",
-            'Internet',
+            "Internet",
         )
         genre_is("MUS054000", "MUSIC / Philosophy & Social Aspects", "Music")
         genre_is(
@@ -119,10 +123,10 @@ class TestBISACClassifier:
         genre_is(
             "ANT012000", "ANTIQUES & COLLECTIBLES / Comics", "Antiques & Collectibles"
         )
-        genre_is("CKB056000", "COOKING / Regional & Cultural / Mexican", 'Cookbooks')
+        genre_is("CKB056000", "COOKING / Regional & Cultural / Mexican", "Cookbooks")
         genre_is("LAW083000", "LAW / Securities", "Law")
         genre_is("MED094000", "MEDICAL / Pediatric Emergencies", "Medical")
-        genre_is("OCC015000", "BODY, MIND & SPIRIT / Numerology", 'Body mind & spirit')
+        genre_is("OCC015000", "BODY, MIND & SPIRIT / Numerology", "Body mind & spirit")
         genre_is("NAT042000", "NATURE / Animals / Big Cats", "Nature")
         genre_is("JNF006000", "JUVENILE NONFICTION / Art / General", "Art & Culture")
         genre_is(
@@ -130,12 +134,12 @@ class TestBISACClassifier:
             "ANTIQUES & COLLECTIBLES / Furniture",
             "Antiques & Collectibles",
         )
-        genre_is("SOC073000", "SOCIAL SCIENCE / Human Trafficking", 'Society')
+        genre_is("SOC073000", "SOCIAL SCIENCE / Human Trafficking", "Society")
         genre_is("TRV025040", "TRAVEL / United States / Northeast / General", "Travel")
         genre_is(
             "BIB016040",
             "BIBLES / New Revised Standard Version / Reference",
-            'Religion & Spirituality',
+            "Religion & Spirituality",
         )
         genre_is(
             "YAF001000",
@@ -151,7 +155,7 @@ class TestBISACClassifier:
         genre_is(
             "BUS070080",
             "BUSINESS & ECONOMICS / Industries / Service",
-            'Economics',
+            "Economics",
         )
         genre_is(
             "BIO028000", "BIOGRAPHY & AUTOBIOGRAPHY / Indigenous", "Biography & Memoir"
@@ -164,23 +168,21 @@ class TestBISACClassifier:
             "COMPUTERS / Software Development & Engineering / Systems Analysis & Design",
             "Computers",
         )
-        genre_is(
-            "ART038000", "ART / American / African American & Black", 'Art'
-        )
+        genre_is("ART038000", "ART / American / African American & Black", "Art")
         genre_is(
             "BUS036070",
             "BUSINESS & ECONOMICS / Investments & Securities / Analysis & Trading Strategies",
-            'Investing',
+            "Investing",
         )
         genre_is(
             "FIC059100",
             "FICTION / Indigenous / Oral Storytelling & Teachings",
-            'Stories & Myths',
+            "Stories & Myths",
         )
         genre_is(
             "HEA017000",
             "HEALTH & FITNESS / Diet & Nutrition / Nutrition",
-            'Nutrition',
+            "Nutrition",
         )
         genre_is(
             "JNF062020",
@@ -193,7 +195,7 @@ class TestBISACClassifier:
             "YOUNG ADULT NONFICTION / Social Topics / Death, Grief, Bereavement",
             "Health & Wellness",
         )
-        genre_is("HIS010020", "HISTORY / Europe / Western", 'History')
+        genre_is("HIS010020", "HISTORY / Europe / Western", "History")
         genre_is(
             "JUV015010",
             "JUVENILE FICTION / Health & Daily Living / Daily Activities",
@@ -202,7 +204,7 @@ class TestBISACClassifier:
         genre_is(
             "LAN008000",
             "LANGUAGE ARTS & DISCIPLINES / Journalism",
-            'Litterature & Linguistics',
+            "Literature & Linguistics",
         )
         genre_is(
             "JUV033100",
@@ -215,15 +217,17 @@ class TestBISACClassifier:
             None,
         )
         genre_is("TRV003100", "TRAVEL / Asia / East / Taiwan", "Travel")
-        genre_is("CKB095000", "COOKING / Courses & Dishes / Confectionery", 'Cookbooks')
+        genre_is("CKB095000", "COOKING / Courses & Dishes / Confectionery", "Cookbooks")
         genre_is(
-            "LIT008000", "LITERARY CRITICISM / Asian / General", 'Litterature & Linguistics'
+            "LIT008000",
+            "LITERARY CRITICISM / Asian / General",
+            "Literature & Linguistics",
         )
         genre_is(
             "FOR043000", "FOREIGN LANGUAGE STUDY / Swedish", "Foreign Language Study"
         )
         genre_is("FIC093000", "FICTION / World Literature / Chile", "General Fiction")
-        genre_is("COM051370", "COMPUTERS / Programming / Macintosh", 'Programming')
+        genre_is("COM051370", "COMPUTERS / Programming / Macintosh", "Programming")
         genre_is("HUM015000", "HUMOR / Form / Anecdotes & Quotations", "Humor")
         genre_is(
             "JUV008020",
@@ -236,16 +240,16 @@ class TestBISACClassifier:
             "PSY041000", "PSYCHOLOGY / Psychotherapy / Couples & Family", "Psychology"
         )
         genre_is("LAW015000", "LAW / Communications", "Law")
-        genre_is("ART050010", "ART / Subjects & Themes / Human Figure", 'Art')
+        genre_is("ART050010", "ART / Subjects & Themes / Human Figure", "Art")
         genre_is(
             "BUS118000",
             "BUSINESS & ECONOMICS / Diversity & Inclusion",
-            'Economics',
+            "Economics",
         )
         genre_is(
             "BIB015070",
             "BIBLES / New Living Translation / Youth & Teen",
-            'Religion & Spirituality',
+            "Religion & Spirituality",
         )
         genre_is(
             "FIC009120", "FICTION / Fantasy / Dragons & Mythical Creatures", "Fantasy"
@@ -262,7 +266,7 @@ class TestBISACClassifier:
             "JUVENILE NONFICTION / Biography & Autobiography / Women",
             "Biography & Memoir",
         )
-        genre_is("ART069000", "ART / American / Native American", 'Art')
+        genre_is("ART069000", "ART / American / Native American", "Art")
         genre_is("HUM009000", "HUMOR / Topic / Animals", "Humor")
         genre_is(
             "FIC054000",
@@ -273,7 +277,7 @@ class TestBISACClassifier:
         genre_is(
             "TRV029000", "TRAVEL / Special Interest / Amusement & Theme Parks", "Travel"
         )
-        genre_is("ART015060", "ART / History / Ancient & Classical", 'Art')
+        genre_is("ART015060", "ART / History / Ancient & Classical", "Art")
         genre_is("COM043040", "COMPUTERS / Networking / Network Protocols", "Computers")
         genre_is("YAN005000", "YOUNG ADULT NONFICTION / Art / General", "Art & Culture")
         genre_is("FIC004000", "FICTION / Classics", "Classics")
@@ -290,34 +294,42 @@ class TestBISACClassifier:
             "Foreign Language Study",
         )
         genre_is("MED103000", "MEDICAL / Parasitology", "Medical")
-        genre_is("HIS037060", "HISTORY / Modern / 19th Century", 'History')
+        genre_is("HIS037060", "HISTORY / Modern / 19th Century", "History")
         genre_is(
             "REL006630",
             "RELIGION / Biblical Studies / History & Culture",
-            'Religion & Spirituality',
+            "Religion & Spirituality",
         )
         genre_is(
             "REL055020",
             "RELIGION / Christian Rituals & Practice / Worship & Liturgy",
-            'Religion & Spirituality',
+            "Religion & Spirituality",
         )
-        genre_is("BIB009040", "BIBLES / New American Bible / Reference", 'Religion & Spirituality')
-        genre_is("HIS064000", "HISTORY / Europe / Portugal", 'History')
+        genre_is(
+            "BIB009040",
+            "BIBLES / New American Bible / Reference",
+            "Religion & Spirituality",
+        )
+        genre_is("HIS064000", "HISTORY / Europe / Portugal", "History")
         genre_is("MUS023020", "MUSIC / Musical Instruments / Percussion", "Music")
         genre_is(
             "HEA039150",
             "HEALTH & FITNESS / Diseases & Conditions / Chronic Fatigue Syndrome",
-            'Food & Health',
+            "Food & Health",
         )
         genre_is(
             "BIO002020",
             "BIOGRAPHY & AUTOBIOGRAPHY / Asian & Asian American",
-            'Foreign Cultures (Biographies)',
+            "Foreign Cultures (Biographies)",
         )
         genre_is(
-            "FAM016000", "FAMILY & RELATIONSHIPS / Education", 'Parenting & Family'
+            "FAM016000", "FAMILY & RELATIONSHIPS / Education", "Parenting & Family"
         )
-        genre_is("BIB008050", "BIBLES / Multiple Translations / Study", 'Religion & Spirituality')
+        genre_is(
+            "BIB008050",
+            "BIBLES / Multiple Translations / Study",
+            "Religion & Spirituality",
+        )
         genre_is("JUV075000", "JUVENILE FICTION / War & Military", "War")
         genre_is("EDU011000", "EDUCATION / Evaluation & Assessment", "Education")
         genre_is("LAW094000", "LAW / Discrimination", "Law")
@@ -334,30 +346,38 @@ class TestBISACClassifier:
         genre_is(
             "BIB012110",
             "BIBLES / New International Reader's Version / Reading",
-            'Religion & Spirituality',
+            "Religion & Spirituality",
         )
         genre_is(
             "JNF003110", "JUVENILE NONFICTION / Animals / Horses", "Horses & Riding"
         )
         genre_is("MED018000", "MEDICAL / Diagnosis", "Medical")
         genre_is("SCI090000", "SCIENCE / Cognitive Science", "Science")
-        genre_is("ART072000", "ART / Techniques / Beadwork", 'Art')
-        genre_is("SOC026000", "SOCIAL SCIENCE / Sociology / General", 'Society')
+        genre_is("ART072000", "ART / Techniques / Beadwork", "Art")
+        genre_is("SOC026000", "SOCIAL SCIENCE / Sociology / General", "Society")
         genre_is("TRV002010", "TRAVEL / Africa / Central", "Travel")
         genre_is("COM051480", "COMPUTERS / Languages / JSON", "Computers")
         genre_is(
-            "BIB001010", "BIBLES / Christian Standard Bible / Children", 'Religion & Spirituality'
+            "BIB001010",
+            "BIBLES / Christian Standard Bible / Children",
+            "Religion & Spirituality",
         )
         genre_is("MUS001000", "MUSIC / Instruction & Study / Appreciation", "Music")
         genre_is(
-            "BIB008080", "BIBLES / Multiple Translations / Dramatized", 'Religion & Spirituality'
+            "BIB008080",
+            "BIBLES / Multiple Translations / Dramatized",
+            "Religion & Spirituality",
         )
         genre_is(
             "FAM044000",
             "FAMILY & RELATIONSHIPS / Toilet Training",
-            'Parenting & Family',
+            "Parenting & Family",
         )
-        genre_is("REL007030", "RELIGION / Buddhism / Sacred Writings", 'Religion & Spirituality')
+        genre_is(
+            "REL007030",
+            "RELIGION / Buddhism / Sacred Writings",
+            "Religion & Spirituality",
+        )
         genre_is("FIC009100", "FICTION / Fantasy / Action & Adventure", "Fantasy")
         genre_is(
             "YAN051190", "YOUNG ADULT NONFICTION / Social Topics / Runaways", "Society"
@@ -365,7 +385,7 @@ class TestBISACClassifier:
         genre_is(
             "LAN006000",
             "LANGUAGE ARTS & DISCIPLINES / Grammar & Punctuation",
-            'Litterature & Linguistics',
+            "Literature & Linguistics",
         )
         genre_is("LAW086000", "LAW / Taxation", "Law")
         genre_is("SCI043000", "SCIENCE / Research & Methodology", "Science")
@@ -373,13 +393,13 @@ class TestBISACClassifier:
         genre_is(
             "BUS064010",
             "BUSINESS & ECONOMICS / Taxation / Corporate",
-            'Economics',
+            "Economics",
         )
         genre_is("SCI060000", "SCIENCE / Reference", "Science")
         genre_is(
             "BIB005100",
             "BIBLES / International Children's Bible / Outreach",
-            'Religion & Spirituality',
+            "Religion & Spirituality",
         )
         genre_is("MED070000", "MEDICAL / Perinatology & Neonatology", "Medical")
         genre_is(
@@ -387,7 +407,11 @@ class TestBISACClassifier:
         )
         genre_is("MED016060", "MEDICAL / Dentistry / Endodontics", "Medical")
         genre_is("TRV026010", "TRAVEL / Special Interest / Business", "Travel")
-        genre_is("BIB023110", "BIBLES / The Amplified Bible / Reading", 'Religion & Spirituality')
+        genre_is(
+            "BIB023110",
+            "BIBLES / The Amplified Bible / Reading",
+            "Religion & Spirituality",
+        )
         genre_is(
             "YAN061000",
             "YOUNG ADULT NONFICTION / Diversity & Multicultural",
@@ -396,7 +420,7 @@ class TestBISACClassifier:
         genre_is(
             "SOC008080",
             "SOCIAL SCIENCE / Cultural & Ethnic Studies / American / European American Studies",
-            'Society',
+            "Society",
         )
         genre_is("TRV026090", "TRAVEL / Special Interest / Literary", "Travel")
         genre_is(
@@ -410,10 +434,10 @@ class TestBISACClassifier:
         genre_is(
             "BUS050050",
             "BUSINESS & ECONOMICS / Personal Finance / Taxation",
-            'Economics',
+            "Economics",
         )
         genre_is("TRV010000", "TRAVEL / Essays & Travelogues", "Travel")
-        genre_is("CKB046000", "COOKING / Regional & Cultural / Irish", 'Cookbooks')
+        genre_is("CKB046000", "COOKING / Regional & Cultural / Irish", "Cookbooks")
         genre_is(
             "FOR004000", "FOREIGN LANGUAGE STUDY / Danish", "Foreign Language Study"
         )
@@ -425,12 +449,12 @@ class TestBISACClassifier:
             "POLITICAL SCIENCE / American Government / Legislative Branch",
             "Political Science",
         )
-        genre_is("HIS027160", "HISTORY / Military / Canada", 'War')
+        genre_is("HIS027160", "HISTORY / Military / Canada", "War")
         genre_is("MAT003000", "MATHEMATICS / Applied", "Mathematics")
         genre_is(
             "BUS033060",
             "BUSINESS & ECONOMICS / Insurance / Life",
-            'Economics',
+            "Economics",
         )
         genre_is("FIC047000", "FICTION / Sea Stories", "Adventure")
         genre_is(
@@ -443,21 +467,25 @@ class TestBISACClassifier:
         genre_is(
             "BUS030000",
             "BUSINESS & ECONOMICS / Human Resources & Personnel Management",
-            'Management & Leadership',
+            "Management & Leadership",
         )
         genre_is(
             "FAM015000",
             "FAMILY & RELATIONSHIPS / Divorce & Separation",
-            'Parenting & Family',
+            "Parenting & Family",
         )
         genre_is(
             "SEL026000",
             "SELF-HELP / Substance Abuse & Addictions / General",
-            'Life Management',
+            "Life Management",
         )
         genre_is("TEC045000", "TECHNOLOGY & ENGINEERING / Fire Science", "Technology")
         genre_is("GAR020000", "GARDENING / Shade", "Gardening")
-        genre_is("REL109030", "RELIGION / Christian Ministry / Youth", 'Religion & Spirituality')
+        genre_is(
+            "REL109030",
+            "RELIGION / Christian Ministry / Youth",
+            "Religion & Spirituality",
+        )
         genre_is("TEC072000", "TECHNOLOGY & ENGINEERING / Pharmaceutical", "Technology")
         genre_is("JNF019010", "JUVENILE NONFICTION / Family / Adoption", "Family")
         genre_is(
@@ -466,19 +494,19 @@ class TestBISACClassifier:
             "Sports Stories",
         )
         genre_is("SCI100000", "SCIENCE / Natural History", "Science")
-        genre_is("FIC056060", "FICTION / Hispanic & Latino / Horror", 'Horror')
-        genre_is(
-            "HIS027280", "HISTORY / Military / Guerrilla Warfare", 'War'
-        )
-        genre_is("FIC027330", "FICTION / Romance / Sports", 'Contemporary Romance')
+        genre_is("FIC056060", "FICTION / Hispanic & Latino / Horror", "Horror")
+        genre_is("HIS027280", "HISTORY / Military / Guerrilla Warfare", "War")
+        genre_is("FIC027330", "FICTION / Romance / Sports", "Contemporary Romance")
         genre_is("MED071000", "MEDICAL / Pharmacology", "Medical")
         genre_is(
-            "BIB015020", "BIBLES / New Living Translation / Devotional", 'Religion & Spirituality'
+            "BIB015020",
+            "BIBLES / New Living Translation / Devotional",
+            "Religion & Spirituality",
         )
         genre_is(
             "FIC027310",
             "FICTION / Romance / Paranormal / Shifters",
-            'Romantasy',
+            "Romantasy",
         )
         genre_is(
             "YAF046210",
@@ -488,7 +516,7 @@ class TestBISACClassifier:
         genre_is(
             "LAN002000",
             "LANGUAGE ARTS & DISCIPLINES / Writing / Authorship",
-            'Litterature & Linguistics',
+            "Literature & Linguistics",
         )
         genre_is(
             "PER011020",
@@ -503,19 +531,21 @@ class TestBISACClassifier:
         genre_is(
             "LIT004260",
             "LITERARY CRITICISM / Science Fiction & Fantasy",
-            'Litterature & Linguistics',
+            "Literature & Linguistics",
         )
         genre_is("YAF026000", "YOUNG ADULT FICTION / Horror", "Horror")
-        genre_is("SPO003040", "SPORTS & RECREATION / Baseball / Statistics", 'Ball Sports')
+        genre_is(
+            "SPO003040", "SPORTS & RECREATION / Baseball / Statistics", "Ball Sports"
+        )
         genre_is(
             "HIS027390",
             "HISTORY / Wars & Conflicts / World War II / Pacific Theater",
-            'War',
+            "War",
         )
         genre_is("SCI101000", "SCIENCE / Ethics", "Science")
         genre_is("LAW119000", "LAW / Islamic", "Law")
-        genre_is("HIS001020", "HISTORY / Africa / East", 'History')
-        genre_is("HIS062000", "HISTORY / Asia / South / India", 'History')
+        genre_is("HIS001020", "HISTORY / Africa / East", "History")
+        genre_is("HIS062000", "HISTORY / Asia / South / India", "History")
         genre_is(
             "CGN007020",
             "COMICS & GRAPHIC NOVELS / Nonfiction / History",
@@ -540,8 +570,8 @@ class TestBISACClassifier:
             "TRAVEL / South America / Ecuador & Galapagos Islands",
             "Travel",
         )
-        genre_is("SOC018000", "SOCIAL SCIENCE / Men's Studies", 'Society')
-        genre_is("REF032000", "REFERENCE / Event Planning", 'Other Nonfiction')
+        genre_is("SOC018000", "SOCIAL SCIENCE / Men's Studies", "Society")
+        genre_is("REF032000", "REFERENCE / Event Planning", "Other Nonfiction")
         genre_is("DRA005010", "DRAMA / Asian / Japanese", "Drama")
         genre_is(
             "JNF054030",
@@ -556,14 +586,14 @@ class TestBISACClassifier:
         genre_is(
             "BUS078000",
             "BUSINESS & ECONOMICS / Distribution",
-            'Economics',
+            "Economics",
         )
         genre_is(
             "BUS036020",
             "BUSINESS & ECONOMICS / Investments & Securities / Futures",
-            'Investing',
+            "Investing",
         )
-        genre_is("HIS002020", "HISTORY / Ancient / Rome", 'History')
+        genre_is("HIS002020", "HISTORY / Ancient / Rome", "History")
         genre_is("SCI013010", "SCIENCE / Chemistry / Analytic", "Science")
         genre_is("LAW056000", "LAW / Law Office Management", "Law")
         genre_is(
@@ -573,7 +603,7 @@ class TestBISACClassifier:
         genre_is(
             "BIB013020",
             "BIBLES / New International Version / Devotional",
-            'Religion & Spirituality',
+            "Religion & Spirituality",
         )
         genre_is(
             "REL016000",
@@ -583,7 +613,7 @@ class TestBISACClassifier:
         genre_is(
             "SEL049010",
             "SELF-HELP / Safety & Security / Survival & Emergency Preparedness",
-            'Life Management',
+            "Life Management",
         )
         genre_is("FIC009070", "FICTION / Fantasy / Dark Fantasy", "Fantasy")
         genre_is(
@@ -615,9 +645,9 @@ class TestBISACClassifier:
             "Diversity & Multicultural",
         )
         genre_is("EDU060040", "EDUCATION / Schools / Types / Public", "Education")
-        genre_is("ART063000", "ART / Environmental & Land Art", 'Art')
+        genre_is("ART063000", "ART / Environmental & Land Art", "Art")
         genre_is("COM048000", "COMPUTERS / Distributed Systems / General", "Computers")
-        genre_is("ART003000", "ART / Techniques / Calligraphy", 'Art')
+        genre_is("ART003000", "ART / Techniques / Calligraphy", "Art")
         genre_is("YAF078000", "YOUNG ADULT FICTION / Inuit", "General Fiction")
         genre_is(
             "PHI037000", "PHILOSOPHY / History & Surveys / Renaissance", "Philosophy"
@@ -630,7 +660,9 @@ class TestBISACClassifier:
             "Difficult Topics",
         )
         genre_is("SCI074000", "SCIENCE / Physics / Atomic & Molecular", "Science")
-        genre_is("BIB020000", "BIBLES / The Message / General", 'Religion & Spirituality')
+        genre_is(
+            "BIB020000", "BIBLES / The Message / General", "Religion & Spirituality"
+        )
         genre_is(
             "POL040020", "POLITICAL SCIENCE / World / General", "Political Science"
         )
@@ -639,14 +671,16 @@ class TestBISACClassifier:
         )
         genre_is("PHI018000", "PHILOSOPHY / Movements / Phenomenology", "Philosophy")
         genre_is("JNF011000", "JUVENILE NONFICTION / Careers", "Society")
-        genre_is("FIC027400", "FICTION / Romance / LGBTQ+ / Transgender", 'LGBTQ Fiction')
+        genre_is(
+            "FIC027400", "FICTION / Romance / LGBTQ+ / Transgender", "LGBTQ Fiction"
+        )
         genre_is(
             "YAF077000", "YOUNG ADULT FICTION / First Nations", "Multicultural Stories"
         )
-        genre_is("ART059000", "ART / Museum Studies", 'Art')
+        genre_is("ART059000", "ART / Museum Studies", "Art")
         genre_is("LAW001000", "LAW / Administrative Law & Regulatory Practice", "Law")
         genre_is("POE015000", "POETRY / Native American", "Poetry")
-        genre_is("CKB024000", "COOKING / Courses & Dishes / Desserts", 'Cookbooks')
+        genre_is("CKB024000", "COOKING / Courses & Dishes / Desserts", "Cookbooks")
         genre_is("YAF027020", "YOUNG ADULT FICTION / Satire", "General Fiction")
         genre_is(
             "YAN050100",
@@ -664,7 +698,7 @@ class TestBISACClassifier:
         genre_is(
             "BUS075000",
             "BUSINESS & ECONOMICS / Consulting",
-            'Economics',
+            "Economics",
         )
         genre_is(
             "FIC028080", "FICTION / Science Fiction / Time Travel", "Science Fiction"
@@ -672,19 +706,21 @@ class TestBISACClassifier:
         genre_is(
             "REL006780",
             "RELIGION / Biblical Commentary / Old Testament / Prophets",
-            'Religion & Spirituality',
+            "Religion & Spirituality",
         )
-        genre_is("SEL040000", "SELF-HELP / Communication & Social Skills", 'Life Management')
-        genre_is("CKB048000", "COOKING / Regional & Cultural / Japanese", 'Cookbooks')
+        genre_is(
+            "SEL040000", "SELF-HELP / Communication & Social Skills", "Life Management"
+        )
+        genre_is("CKB048000", "COOKING / Regional & Cultural / Japanese", "Cookbooks")
         genre_is(
             "BUS087000",
             "BUSINESS & ECONOMICS / Production & Operations Management",
-            'Management & Leadership',
+            "Management & Leadership",
         )
         genre_is(
             "BUS005000",
             "BUSINESS & ECONOMICS / Bookkeeping",
-            'Economics',
+            "Economics",
         )
         genre_is("MED089020", "MEDICAL / Veterinary Medicine / Food Animal", "Medical")
         genre_is("LAW009000", "LAW / Business & Financial", "Law")
@@ -698,11 +734,13 @@ class TestBISACClassifier:
         genre_is(
             "FIC022170",
             "FICTION / Mystery & Detective / Cozy / Books, Bookstores & Libraries",
-            'Cozy Crime',
+            "Cozy Crime",
         )
-        genre_is("REF009000", "REFERENCE / Directories", 'Other Nonfiction')
+        genre_is("REF009000", "REFERENCE / Directories", "Other Nonfiction")
         genre_is(
-            "BIB026070", "BIBLES / Catholic Translations / Reading", 'Religion & Spirituality'
+            "BIB026070",
+            "BIBLES / Catholic Translations / Reading",
+            "Religion & Spirituality",
         )
         genre_is(
             "FIC098010",
@@ -710,7 +748,7 @@ class TestBISACClassifier:
             "General Fiction",
         )
         genre_is("MED085000", "MEDICAL / Surgery / General", "Medical")
-        genre_is("BIB000000", "BIBLES / General", 'Religion & Spirituality')
+        genre_is("BIB000000", "BIBLES / General", "Religion & Spirituality")
         genre_is(
             "YAN024080",
             "YOUNG ADULT NONFICTION / Health & Daily Living / Sexuality & Pregnancy",
@@ -720,9 +758,9 @@ class TestBISACClassifier:
         genre_is(
             "REL091000",
             "RELIGION / Christian Education / Children & Youth",
-            'Religion & Spirituality',
+            "Religion & Spirituality",
         )
-        genre_is("CKB109000", "COOKING / Methods / Slow Cooking", 'Cookbooks')
+        genre_is("CKB109000", "COOKING / Methods / Slow Cooking", "Cookbooks")
         genre_is(
             "PHO023090", "PHOTOGRAPHY / Subjects & Themes / Lifestyles", "Photography"
         )
@@ -732,7 +770,7 @@ class TestBISACClassifier:
         genre_is(
             "BIB012050",
             "BIBLES / New International Reader's Version / Study",
-            'Religion & Spirituality',
+            "Religion & Spirituality",
         )
         genre_is(
             "YAN038140",
@@ -742,7 +780,7 @@ class TestBISACClassifier:
         genre_is(
             "HIS037050",
             "HISTORY / Modern / 18th Century",
-            'History',
+            "History",
         )
         genre_is("JNF009000", "JUVENILE NONFICTION / Boys & Men", "Health & Wellness")
         genre_is(
@@ -761,19 +799,21 @@ class TestBISACClassifier:
             "Short Stories",
         )
         genre_is(
-            "BIB018060", "BIBLES / Other English Translations / Text", 'Religion & Spirituality'
+            "BIB018060",
+            "BIBLES / Other English Translations / Text",
+            "Religion & Spirituality",
         )
         genre_is(
             "HIS015000",
             "HISTORY / Europe / Great Britain / General",
-            'History',
+            "History",
         )
         genre_is(
             "POL017000",
             "POLITICAL SCIENCE / Public Affairs & Administration",
             "Political Science",
         )
-        genre_is("CKB010000", "COOKING / Courses & Dishes / Breakfast", 'Cookbooks')
+        genre_is("CKB010000", "COOKING / Courses & Dishes / Breakfast", "Cookbooks")
         genre_is(
             "TEC021000",
             "TECHNOLOGY & ENGINEERING / Materials Science / General",
@@ -783,22 +823,24 @@ class TestBISACClassifier:
         genre_is(
             "OCC025000",
             "BODY, MIND & SPIRIT / UFOs & Extraterrestrials",
-            'Metaphysics',
+            "Metaphysics",
         )
         genre_is(
-            "BIB015080", "BIBLES / New Living Translation / Dramatized", 'Religion & Spirituality'
+            "BIB015080",
+            "BIBLES / New Living Translation / Dramatized",
+            "Religion & Spirituality",
         )
         genre_is("FIC110000", "FICTION / World Literature / Mexico", "General Fiction")
         genre_is("COM046000", "COMPUTERS / Operating Systems / General", "Computers")
         genre_is("MED089050", "MEDICAL / Veterinary Medicine / Surgery", "Medical")
         genre_is("SPO035000", "SPORTS & RECREATION / Running & Jogging", "Sports")
-        genre_is("SEL046000", "SELF-HELP / Gender & Sexuality", 'Life Management')
+        genre_is("SEL046000", "SELF-HELP / Gender & Sexuality", "Life Management")
         genre_is(
             "FIC027150",
             "FICTION / Romance / Historical / Medieval",
             "Historical Romance",
         )
-        genre_is("CKB030000", "COOKING / Essays & Narratives", 'Cookbooks')
+        genre_is("CKB030000", "COOKING / Essays & Narratives", "Cookbooks")
         genre_is(
             "TEC008050",
             "TECHNOLOGY & ENGINEERING / Electronics / Circuits / VLSI & ULSI",
@@ -809,16 +851,16 @@ class TestBISACClassifier:
         genre_is(
             "CKB138000",
             "COOKING / Regional & Cultural / Indigenous Food of Turtle Island",
-            'Cookbooks',
+            "Cookbooks",
         )
-        genre_is("CKB043000", "COOKING / Regional & Cultural / Hungarian", 'Cookbooks')
+        genre_is("CKB043000", "COOKING / Regional & Cultural / Hungarian", "Cookbooks")
         genre_is("JUV003000", "JUVENILE FICTION / Art", "General Fiction")
         genre_is(
             "BUS069020",
             "BUSINESS & ECONOMICS / International / Economics & Trade",
-            'Economics',
+            "Economics",
         )
-        genre_is("ART015050", "ART / History / Prehistoric", 'Art')
+        genre_is("ART015050", "ART / History / Prehistoric", "Art")
         genre_is(
             "COM060030", "COMPUTERS / Networking / Intranets & Extranets", "Computers"
         )
@@ -844,7 +886,7 @@ class TestBISACClassifier:
         genre_is(
             "FAM001020",
             "FAMILY & RELATIONSHIPS / Abuse / Elder Abuse",
-            'Parenting & Family',
+            "Parenting & Family",
         )
         genre_is("YAF031000", "YOUNG ADULT FICTION / LGBTQ+ / General", "LGBTQ Fiction")
         genre_is("COM037000", "COMPUTERS / Machine Theory", "Computers")
@@ -858,7 +900,7 @@ class TestBISACClassifier:
         genre_is(
             "BIB018100",
             "BIBLES / Other English Translations / Outreach",
-            'Religion & Spirituality',
+            "Religion & Spirituality",
         )
         genre_is(
             "FIC121010",
@@ -877,7 +919,7 @@ class TestBISACClassifier:
         genre_is(
             "PHO023020", "PHOTOGRAPHY / Subjects & Themes / Children", "Photography"
         )
-        genre_is("HEA002000", "HEALTH & FITNESS / Exercise / Aerobics", 'Food & Health')
+        genre_is("HEA002000", "HEALTH & FITNESS / Exercise / Aerobics", "Food & Health")
         genre_is(
             "COM050010", "COMPUTERS / Hardware / Personal Computers / PCs", "Computers"
         )
@@ -886,20 +928,20 @@ class TestBISACClassifier:
             "COMICS & GRAPHIC NOVELS / Historical Fiction / Medieval",
             "Comics & Graphic Novels",
         )
-        genre_is("SPO015000", "SPORTS & RECREATION / Football", 'Ball Sports')
+        genre_is("SPO015000", "SPORTS & RECREATION / Football", "Ball Sports")
         genre_is("LAW038010", "LAW / Family Law / Children", "Law")
         genre_is(
             "SOC008010",
             "SOCIAL SCIENCE / Cultural & Ethnic Studies / African Studies",
-            'Society',
+            "Society",
         )
         genre_is(
             "BUS057000",
             "BUSINESS & ECONOMICS / Industries / Retailing",
-            'Economics',
+            "Economics",
         )
         genre_is("DRA004010", "DRAMA / European / French", "Drama")
-        genre_is("ART067000", "ART / Forgeries", 'Art')
+        genre_is("ART067000", "ART / Forgeries", "Art")
         genre_is(
             "YAF058270",
             "YOUNG ADULT FICTION / Social Themes / Violence",
@@ -909,12 +951,12 @@ class TestBISACClassifier:
         genre_is(
             "BUS043040",
             "BUSINESS & ECONOMICS / Marketing / Multilevel",
-            'Marketing',
+            "Marketing",
         )
         genre_is(
             "LAN007000",
             "LANGUAGE ARTS & DISCIPLINES / Handwriting",
-            'Litterature & Linguistics',
+            "Literature & Linguistics",
         )
         genre_is("JNF003260", "JUVENILE NONFICTION / Animals / Cows", "Animals")
         genre_is(
@@ -924,19 +966,19 @@ class TestBISACClassifier:
         )
         genre_is("MAT011000", "MATHEMATICS / Game Theory", "Mathematics")
         genre_is("JNF003180", "JUVENILE NONFICTION / Animals / Rabbits", "Animals")
-        genre_is("CKB067000", "COOKING / Specific Ingredients / Poultry", 'Cookbooks')
+        genre_is("CKB067000", "COOKING / Specific Ingredients / Poultry", "Cookbooks")
         genre_is("MAT012010", "MATHEMATICS / Geometry / Algebraic", "Mathematics")
         genre_is("MUS036000", "MUSIC / Genres & Styles / Latin", "Music")
-        genre_is("SEL016000", "SELF-HELP / Personal Growth / Happiness", 'Life Management')
-        genre_is("LAW061000", "LAW / Legal Profession", "Law")
-        genre_is("HEA000000", "HEALTH & FITNESS / General", 'Food & Health')
         genre_is(
-            "ART050030", "ART / Subjects & Themes / Plants & Animals", 'Art'
+            "SEL016000", "SELF-HELP / Personal Growth / Happiness", "Life Management"
         )
+        genre_is("LAW061000", "LAW / Legal Profession", "Law")
+        genre_is("HEA000000", "HEALTH & FITNESS / General", "Food & Health")
+        genre_is("ART050030", "ART / Subjects & Themes / Plants & Animals", "Art")
         genre_is(
             "HIS007000",
             "HISTORY / Latin America / Central America",
-            'History',
+            "History",
         )
         genre_is(
             "TRV022000",
@@ -946,7 +988,7 @@ class TestBISACClassifier:
         genre_is(
             "BIO009000",
             "BIOGRAPHY & AUTOBIOGRAPHY / Philosophers",
-            'Philosophical Biographies',
+            "Philosophical Biographies",
         )
         genre_is("DRA016000", "DRAMA / Russian & Soviet", "Drama")
         genre_is(
@@ -956,7 +998,7 @@ class TestBISACClassifier:
         genre_is(
             "HIS027370",
             "HISTORY / Wars & Conflicts / World War II / European Theater",
-            'War',
+            "War",
         )
         genre_is("FIC042030", "FICTION / Christian / Historical", "Religious Fiction")
         genre_is(
@@ -964,7 +1006,7 @@ class TestBISACClassifier:
             "FICTION / World Literature / Canada / Colonial & 19th Century",
             "Historical Fiction",
         )
-        genre_is("CKB060000", "COOKING / Methods / Outdoor", 'Cookbooks')
+        genre_is("CKB060000", "COOKING / Methods / Outdoor", "Cookbooks")
         genre_is(
             "CRA044000",
             "CRAFTS & HOBBIES / Needlework / Cross-Stitch",
@@ -980,12 +1022,16 @@ class TestBISACClassifier:
             "FICTION / World Literature / India / 21st Century",
             "General Fiction",
         )
-        genre_is("BIB009010", "BIBLES / New American Bible / Children", 'Religion & Spirituality')
+        genre_is(
+            "BIB009010",
+            "BIBLES / New American Bible / Children",
+            "Religion & Spirituality",
+        )
         genre_is("JNF040000", "JUVENILE NONFICTION / Philosophy", "Philosophy")
         genre_is(
             "LIT024030",
             "LITERARY CRITICISM / Modern / 18th Century",
-            'Litterature & Linguistics',
+            "Literature & Linguistics",
         )
         genre_is(
             "FIC022080",
@@ -1000,7 +1046,7 @@ class TestBISACClassifier:
         genre_is(
             "BIO013000",
             "BIOGRAPHY & AUTOBIOGRAPHY / Rich & Famous",
-            'Public Figures (Biographies)',
+            "Public Figures (Biographies)",
         )
         genre_is(
             "POL074010",
@@ -1020,9 +1066,9 @@ class TestBISACClassifier:
         genre_is(
             "BIB010100",
             "BIBLES / New American Standard Bible / Outreach",
-            'Religion & Spirituality',
+            "Religion & Spirituality",
         )
-        genre_is("COM051260", "COMPUTERS / Languages / JavaScript", 'Programming')
+        genre_is("COM051260", "COMPUTERS / Languages / JavaScript", "Programming")
         genre_is("ARC000000", "ARCHITECTURE / General", "Architecture")
         genre_is(
             "TEC074000",
@@ -1037,17 +1083,15 @@ class TestBISACClassifier:
         genre_is(
             "LAN030000",
             "LANGUAGE ARTS & DISCIPLINES / Orality",
-            'Litterature & Linguistics',
+            "Literature & Linguistics",
         )
         genre_is(
             "YAF010140",
             "YOUNG ADULT FICTION / Comics & Graphic Novels / LGBTQ+",
             "LGBTQ Fiction",
         )
-        genre_is(
-            "REF007000", "REFERENCE / Curiosities & Wonders", 'Other Nonfiction'
-        )
-        genre_is("CKB029000", "COOKING / Entertaining", 'Cookbooks')
+        genre_is("REF007000", "REFERENCE / Curiosities & Wonders", "Other Nonfiction")
+        genre_is("CKB029000", "COOKING / Entertaining", "Cookbooks")
         genre_is(
             "TEC012000",
             "TECHNOLOGY & ENGINEERING / Food Science / General",
@@ -1062,7 +1106,9 @@ class TestBISACClassifier:
         )
         genre_is("POE013000", "POETRY / Middle Eastern", "Poetry")
         genre_is(
-            "BIB026020", "BIBLES / Catholic Translations / Devotional", 'Religion & Spirituality'
+            "BIB026020",
+            "BIBLES / Catholic Translations / Devotional",
+            "Religion & Spirituality",
         )
         genre_is("PHI020000", "PHILOSOPHY / Movements / Pragmatism", "Philosophy")
         genre_is(
@@ -1074,29 +1120,29 @@ class TestBISACClassifier:
         genre_is(
             "BUS090040",
             "BUSINESS & ECONOMICS / E-Commerce / Small Business",
-            'Economics',
+            "Economics",
         )
         genre_is("NAT045040", "NATURE / Ecosystems & Habitats / Wilderness", "Nature")
         genre_is("EDU039000", "EDUCATION / Computers & Technology", "Education")
         genre_is("MED029000", "MEDICAL / Family & General Practice", "Medical")
-        genre_is("HIS020000", "HISTORY / Europe / Italy", 'History')
+        genre_is("HIS020000", "HISTORY / Europe / Italy", "History")
         genre_is(
-            "HEA014000", "HEALTH & FITNESS / Massage & Reflexology", 'Food & Health'
+            "HEA014000", "HEALTH & FITNESS / Massage & Reflexology", "Food & Health"
         )
-        genre_is("SOC052000", "SOCIAL SCIENCE / Media Studies", 'Society')
+        genre_is("SOC052000", "SOCIAL SCIENCE / Media Studies", "Society")
         genre_is(
             "SPO034000", "SPORTS & RECREATION / Roller & In-Line Skating", "Sports"
         )
         genre_is(
             "BIB027030",
             "BIBLES / Other Spanish Translations / Dramatized",
-            'Religion & Spirituality',
+            "Religion & Spirituality",
         )
         genre_is("SPO008000", "SPORTS & RECREATION / Boxing", "Sports")
         genre_is(
             "SOC017000",
             "SOCIAL SCIENCE / LGBTQ+ Studies / Lesbian Studies",
-            'Society',
+            "Society",
         )
         genre_is("NAT002000", "NATURE / Animals / Primates", "Nature")
         genre_is("TEC052000", "TECHNOLOGY & ENGINEERING / Social Aspects", "Technology")
@@ -1115,14 +1161,14 @@ class TestBISACClassifier:
         genre_is(
             "ART006020",
             "ART / Collections, Catalogs, Exhibitions / Permanent Collections",
-            'Art',
+            "Art",
         )
         genre_is(
             "SCI036000",
             "SCIENCE / Life Sciences / Human Anatomy & Physiology",
             "Science",
         )
-        genre_is("HIS003000", "HISTORY / Asia / General", 'History')
+        genre_is("HIS003000", "HISTORY / Asia / General", "History")
         genre_is(
             "EDU041000", "EDUCATION / Distance, Open & Online Education", "Education"
         )
@@ -1136,12 +1182,12 @@ class TestBISACClassifier:
         genre_is(
             "BIB012000",
             "BIBLES / New International Reader's Version / General",
-            'Religion & Spirituality',
+            "Religion & Spirituality",
         )
         genre_is(
             "OCC011020",
             "BODY, MIND & SPIRIT / Healing / Prayer & Spiritual",
-            'Body mind & spirit',
+            "Body mind & spirit",
         )
         genre_is("DES009000", "DESIGN / Industrial", "Design")
         genre_is(
@@ -1153,12 +1199,12 @@ class TestBISACClassifier:
         genre_is(
             "BUS073000",
             "BUSINESS & ECONOMICS / Commerce",
-            'Economics',
+            "Economics",
         )
         genre_is(
             "BIB010080",
             "BIBLES / New American Standard Bible / Dramatized",
-            'Religion & Spirituality',
+            "Religion & Spirituality",
         )
         genre_is("DRA004000", "DRAMA / European / General", "Drama")
         genre_is("SCI013090", "SCIENCE / Chemistry / Toxicology", "Science")
@@ -1172,7 +1218,7 @@ class TestBISACClassifier:
         genre_is(
             "BUS064020",
             "BUSINESS & ECONOMICS / International / Taxation",
-            'Economics',
+            "Economics",
         )
         genre_is(
             "JNF055030",
@@ -1185,8 +1231,10 @@ class TestBISACClassifier:
             "MATHEMATICS / Probability & Statistics / Multivariate Analysis",
             "Mathematics",
         )
-        genre_is("HIS037080", "HISTORY / Modern / 21st Century", 'History')
-        genre_is("FIC027350", "FICTION / Romance / Firefighters", 'Contemporary Romance')
+        genre_is("HIS037080", "HISTORY / Modern / 21st Century", "History")
+        genre_is(
+            "FIC027350", "FICTION / Romance / Firefighters", "Contemporary Romance"
+        )
         genre_is("MED086000", "MEDICAL / Test Preparation & Review", "Medical")
         genre_is(
             "JUV028000",
@@ -1195,30 +1243,34 @@ class TestBISACClassifier:
         )
         genre_is("EDU029090", "EDUCATION / Teaching / Materials & Devices", "Education")
         genre_is("TRV009050", "TRAVEL / Europe / France", "Travel")
-        genre_is("ART057000", "ART / Film & Video", 'Art')
-        genre_is("SPO052000", "SPORTS & RECREATION / Winter Sports / General", 'Winter Sports')
+        genre_is("ART057000", "ART / Film & Video", "Art")
+        genre_is(
+            "SPO052000",
+            "SPORTS & RECREATION / Winter Sports / General",
+            "Winter Sports",
+        )
         genre_is(
             "JNF032000", "JUVENILE NONFICTION / Lifestyles / Country Life", "Society"
         )
         genre_is(
             "BUS024000",
             "BUSINESS & ECONOMICS / Education",
-            'Economics',
+            "Economics",
         )
         genre_is("JUV069000", "JUVENILE FICTION / Ghost Stories", "Horror")
         genre_is("MED087000", "MEDICAL / Transportation", "Medical")
-        genre_is("REF019000", "REFERENCE / Quotations", 'Other Nonfiction')
-        genre_is("COM051350", "COMPUTERS / Languages / Perl", 'Programming')
+        genre_is("REF019000", "REFERENCE / Quotations", "Other Nonfiction")
+        genre_is("COM051350", "COMPUTERS / Languages / Perl", "Programming")
         genre_is(
             "BIO021000",
             "BIOGRAPHY & AUTOBIOGRAPHY / Social Scientists & Psychologists",
             "Biography & Memoir",
         )
-        genre_is("SOC016000", "SOCIAL SCIENCE / Human Services", 'Society')
+        genre_is("SOC016000", "SOCIAL SCIENCE / Human Services", "Society")
         genre_is(
             "LIT024060",
             "LITERARY CRITICISM / Modern / 21st Century",
-            'Litterature & Linguistics',
+            "Literature & Linguistics",
         )
         genre_is(
             "COM062000",
@@ -1229,7 +1281,7 @@ class TestBISACClassifier:
         genre_is(
             "BUS036060",
             "BUSINESS & ECONOMICS / Investments & Securities / Stocks",
-            'Investing',
+            "Investing",
         )
         genre_is(
             "YAF046000", "YOUNG ADULT FICTION / Places / General", "General Fiction"
@@ -1245,37 +1297,43 @@ class TestBISACClassifier:
             "PERFORMING ARTS / Television / Genres / Documentary",
             "Film & TV",
         )
-        genre_is("SPO056000", "SPORTS & RECREATION / Rugby", 'Ball Sports')
+        genre_is("SPO056000", "SPORTS & RECREATION / Rugby", "Ball Sports")
         genre_is("DRA000000", "DRAMA / General", "Drama")
         genre_is("YAN019000", "YOUNG ADULT NONFICTION / Fashion", "Fashion & Looks")
         genre_is("YAF058070", "YOUNG ADULT FICTION / Disabilities", "Disabilities")
-        genre_is("BIB008060", "BIBLES / Multiple Translations / Text", 'Religion & Spirituality')
+        genre_is(
+            "BIB008060",
+            "BIBLES / Multiple Translations / Text",
+            "Religion & Spirituality",
+        )
         genre_is("TEC030000", "TECHNOLOGY & ENGINEERING / Optics", "Technology")
-        genre_is("SEL019000", "SELF-HELP / Meditations", 'Life Management')
-        genre_is("FIC036000", "FICTION / Thrillers / Technological", 'Suspense/Thriller')
+        genre_is("SEL019000", "SELF-HELP / Meditations", "Life Management")
+        genre_is(
+            "FIC036000", "FICTION / Thrillers / Technological", "Suspense/Thriller"
+        )
         genre_is(
             "CGN014000", "COMICS & GRAPHIC NOVELS / Humorous", "Comics & Graphic Novels"
         )
         genre_is(
             "BIB027110",
             "BIBLES / Other Spanish Translations / Youth & Teen",
-            'Religion & Spirituality',
+            "Religion & Spirituality",
         )
-        genre_is("SPO061030", "SPORTS & RECREATION / Coaching / Soccer", 'Ball Sports')
+        genre_is("SPO061030", "SPORTS & RECREATION / Coaching / Soccer", "Ball Sports")
         genre_is(
             "LIT024050",
             "LITERARY CRITICISM / Modern / 20th Century",
-            'Litterature & Linguistics',
+            "Literature & Linguistics",
         )
         genre_is("LAW078000", "LAW / Real Estate", "Law")
         genre_is("TRV003020", "TRAVEL / Asia / East / China", "Travel")
         genre_is(
             "SPO023000",
             "SPORTS & RECREATION / Winter Sports / Ice & Figure Skating",
-            'Winter Sports',
+            "Winter Sports",
         )
         genre_is("JNF006030", "JUVENILE NONFICTION / Art / Fashion", "Fashion & Looks")
-        genre_is("BIB004060", "BIBLES / God's Word / Text", 'Religion & Spirituality')
+        genre_is("BIB004060", "BIBLES / God's Word / Text", "Religion & Spirituality")
         genre_is("EDU046000", "EDUCATION / Professional Development", "Education")
         genre_is(
             "YAN005030", "YOUNG ADULT NONFICTION / Art / Fashion", "Fashion & Looks"
@@ -1283,18 +1341,18 @@ class TestBISACClassifier:
         genre_is(
             "BUS050010",
             "BUSINESS & ECONOMICS / Personal Finance / Budgeting",
-            'Economics',
+            "Economics",
         )
         genre_is("EDU022000", "EDUCATION / Parent Participation", "Education")
         genre_is(
             "BUS019000",
             "BUSINESS & ECONOMICS / Decision-Making & Problem Solving",
-            'Economics',
+            "Economics",
         )
         genre_is(
             "LIT004190",
             "LITERARY CRITICISM / Ancient & Classical",
-            'Litterature & Linguistics',
+            "Literature & Linguistics",
         )
         genre_is(
             "CRA015000", "CRAFTS & HOBBIES / Needlework / Knitting", "Crafts & Hobbies"
@@ -1302,13 +1360,13 @@ class TestBISACClassifier:
         genre_is(
             "BUS070050",
             "BUSINESS & ECONOMICS / Industries / Manufacturing",
-            'Economics',
+            "Economics",
         )
         genre_is("PHO017000", "PHOTOGRAPHY / Reference", "Photography")
         genre_is(
             "BUS119000",
             "BUSINESS & ECONOMICS / Indigenous Economies",
-            'Economics',
+            "Economics",
         )
         genre_is(
             "TRA002050",
@@ -1319,7 +1377,7 @@ class TestBISACClassifier:
         genre_is(
             "BIB018030",
             "BIBLES / Other English Translations / New Testament & Portions",
-            'Religion & Spirituality',
+            "Religion & Spirituality",
         )
         genre_is(
             "ARC005050", "ARCHITECTURE / History / Baroque & Rococo", "Architecture"
@@ -1327,8 +1385,8 @@ class TestBISACClassifier:
         genre_is(
             "FIC139000", "FICTION / World Literature / Central Asia", "General Fiction"
         )
-        genre_is("SOC020000", "SOCIAL SCIENCE / Minority Studies", 'Society')
-        genre_is("ART027000", "ART / Study & Teaching", 'Art')
+        genre_is("SOC020000", "SOCIAL SCIENCE / Minority Studies", "Society")
+        genre_is("ART027000", "ART / Study & Teaching", "Art")
         genre_is(
             "TEC016010",
             "TECHNOLOGY & ENGINEERING / Industrial Design / Packaging",
@@ -1337,18 +1395,22 @@ class TestBISACClassifier:
         genre_is(
             "HEA019000",
             "HEALTH & FITNESS / Diet & Nutrition / Weight Loss",
-            'Nutrition',
+            "Nutrition",
         )
         genre_is(
             "BIB012070",
             "BIBLES / New International Reader's Version / Youth & Teen",
-            'Religion & Spirituality',
+            "Religion & Spirituality",
         )
         genre_is("JNF058000", "JUVENILE NONFICTION / Travel", "Travel")
         genre_is("COM055000", "COMPUTERS / Certification Guides / General", "Computers")
         genre_is("HIS026040", "HISTORY / Middle East / Syria", "History")
-        genre_is("REL097000", "RELIGION / Christianity / Presbyterian", 'Religion & Spirituality')
-        genre_is("REF000000", "REFERENCE / General", 'Other Nonfiction')
+        genre_is(
+            "REL097000",
+            "RELIGION / Christianity / Presbyterian",
+            "Religion & Spirituality",
+        )
+        genre_is("REF000000", "REFERENCE / General", "Other Nonfiction")
         genre_is("COM059000", "COMPUTERS / Computer Engineering", "Computers")
 
     def test_fiction_spot_checks(self):
@@ -1432,9 +1494,7 @@ class TestBISACClassifier:
         assert (
             "FIC015000",
             "FICTION / Horror / General",
-        ) == BISACClassifier.scrub_identifier(
-            "FBFIC015000"
-        )
+        ) == BISACClassifier.scrub_identifier("FBFIC015000")
 
     def test_scrub_name(self):
         """Sometimes a data provider sends BISAC names that contain extra or
