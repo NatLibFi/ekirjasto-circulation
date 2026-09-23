@@ -180,17 +180,14 @@ class TestClassifierLookup:
 
 class TestNestedSubgenres:
     def test_parents(self):
-        assert list(classifier.Romantic_Suspense.parents) == [classifier.Romance]
-
-        # eq_([classifier.Crime_Thrillers_Mystery, classifier.Mystery],
-        #    list(classifier.Police_Procedurals.parents))
+        assert list(classifier.Cozy_Crime.parents) == [classifier.Mystery]
 
     def test_self_and_subgenres(self):
         assert set(list(classifier.Fantasy.self_and_subgenres)) == {
             classifier.Fantasy,
             classifier.Epic_Fantasy,
             classifier.Historical_Fantasy,
-            classifier.Urban_Fantasy,
+            classifier.Magic_Realism
         }
 
 
@@ -448,13 +445,13 @@ class TestWorkClassifier:
         work = work_classifier_fixture
         session = work.transaction.session
         genre1, is_new = Genre.lookup(session, "Psychology")
-        genre2, is_new = Genre.lookup(session, "Cooking")
+        genre2, is_new = Genre.lookup(session, "Society")
         subject1 = work.transaction.subject(
             type=SubjectClassifier.BISAC, identifier="PSY000000"
         )
         subject1.genre = genre1
         subject2 = work.transaction.subject(
-            type=Subject.SIMPLIFIED_GENRE, identifier="Cooking"
+            type=Subject.SIMPLIFIED_GENRE, identifier="Society"
         )
         subject2.genre = genre2
         source = DataSource.lookup(session, DataSource.AXIS_360)
