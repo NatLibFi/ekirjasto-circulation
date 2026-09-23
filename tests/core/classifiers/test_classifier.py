@@ -985,6 +985,44 @@ class TestWorkClassifier:
         assert audience == SubjectClassifier.AUDIENCE_YOUNG_ADULT
         assert target_age == (13, 17)
 
+    def test_assign_classification_adds_genre_to_work(
+        self, work_classifier_fixture: TestWorkClassifierFixture
+    ):
+        work = work_classifier_fixture
+        session = work.transaction.session
+        source = DataSource.lookup(session, DataSource.OVERDRIVE)
+
+        work.identifier.identifier_to_subject(
+            source, Subject.BISAC, "FIC028000", "FICTION / Science Fiction / General"
+        )
+
+        changed = work.work.assign_classification([work.identifier.id])
+
+        assert changed is True
+        assert [genre.name for genre in work.work.genres] == ["Science Fiction"]
+
+    def test_assign_classification_omits_general_fiction_with_other_genres(
+        self, work_classifier_fixture: TestWorkClassifierFixture
+    ):
+        work = work_classifier_fixture
+        session = work.transaction.session
+        source = DataSource.lookup(session, DataSource.OVERDRIVE)
+
+        for identifier, name in [
+            ("FIC000000", "FICTION / General"),
+            ("FIC028000", "FICTION / Science Fiction / General"),
+            ("FIC009120", "FICTION / Fantasy / Dragons & Mythical Creatures"),
+        ]:
+            work.identifier.identifier_to_subject(source, Subject.BISAC, identifier, name)
+
+        changed = work.work.assign_classification([work.identifier.id])
+
+        assert changed is True
+        assert {genre.name for genre in work.work.genres} == {
+            "Science Fiction",
+            "Fantasy",
+        }
+
     def test_classify_work_children(
         self, work_classifier_fixture: TestWorkClassifierFixture
     ):

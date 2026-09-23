@@ -967,6 +967,7 @@ class GenreData:
                 namespace, genres, sub, [], fiction, genre_data, audience_restriction
             )
 
+General_Fiction: GenreData
 genres = dict()
 GenreData.populate(globals(), genres, fiction_genres, nonfiction_genres)
 
@@ -1194,6 +1195,17 @@ class WorkClassifier:
                 # Ensure it's a Genre, not GenreData object.
                 genre, ignore = Genre.lookup(self._db, subject.genre.name)
                 self.genre_list.append(genre)
+
+        # E-kirjasto maps a large number of BISACs to "General Fiction". If there are
+        # at least three genres and at least two of them are not "General Fiction", we
+        # discard "General Fiction" to limit how many works are classified under this
+        # broad category to prevent the "General Fiction" lane from being overcrowded.
+        if len(self.genre_list) >= 3:
+            other_genres = [
+                item for item in self.genre_list if item.name != General_Fiction.name
+            ]
+            if len(other_genres) >= 2:
+                self.genre_list = other_genres
 
     def _add_fiction_count(self, from_staff, subject):
         """
