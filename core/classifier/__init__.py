@@ -967,13 +967,6 @@ class GenreData:
                 namespace, genres, sub, [], fiction, genre_data, audience_restriction
             )
 
-
-Fantasy: GenreData
-Romance: GenreData
-Science_Fiction: GenreData
-Contemporary_Romance: GenreData
-Epic_Fantasy: GenreData
-
 genres = dict()
 GenreData.populate(globals(), genres, fiction_genres, nonfiction_genres)
 
