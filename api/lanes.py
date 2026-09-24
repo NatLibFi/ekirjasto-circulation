@@ -274,9 +274,9 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
             library,
             display_name="Jännitys",
             genres=[
-            genres.Suspense_Thriller,
-            genres.Historical_Thriller,
-            genres.Psychological_Thriller
+                genres.Suspense_Thriller,
+                genres.Historical_Thriller,
+                genres.Psychological_Thriller,
             ],
             priority=1,
             **adult_common_args,
@@ -345,7 +345,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
                 genres.Epic_Fantasy,
                 genres.Historical_Fantasy,
                 genres.Romantasy,
-                genres.Magic_Realism
+                genres.Magic_Realism,
             ],
             priority=adult_fiction_priority,
             **adult_common_args,
@@ -358,9 +358,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
             _db,
             library,
             display_name="Kauhu",
-            genres=[
-                genres.Horror
-            ],
+            genres=[genres.Horror],
             priority=adult_fiction_priority,
             **adult_common_args,
         )
@@ -410,7 +408,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
                 genres.Contemporary_Romance,
                 genres.Historical_Romance,
                 genres.Erotica,
-                genres.Romantasy
+                genres.Romantasy,
             ],
             priority=adult_fiction_priority,
             **adult_common_args,
@@ -431,7 +429,6 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
         )
     )
     adult_fiction_priority += 1
-
 
     adult_fiction.sublanes.append(
         lane_from_genres(
@@ -730,10 +727,10 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
             library,
             display_name="Kaikki talous ja johtaminen",
             genres=[
-            genres.Investing,
-            genres.Marketing,
-            genres.Management_Leadership,
-            genres.Economics,
+                genres.Investing,
+                genres.Marketing,
+                genres.Management_Leadership,
+                genres.Economics,
             ],
             priority=4,
             **adult_common_args,
@@ -796,10 +793,10 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
             library,
             display_name="Kaikki psykologia ja elämäntaito",
             genres=[
-            genres.Psychology,
-            genres.Life_Management,
-            genres.Philosophy,
-            genres.Ethics_Moral_Philosophy,
+                genres.Psychology,
+                genres.Life_Management,
+                genres.Philosophy,
+                genres.Ethics_Moral_Philosophy,
             ],
             priority=4,
             **adult_common_args,
@@ -833,7 +830,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
         [
             genres.Body_Mind_Spirit.name,
             genres.Religion_Spirituality.name,
-            genres.Metaphysics.name
+            genres.Metaphysics.name,
         ]
     )
     adult_nonfiction.sublanes.append(adult_spirit)
@@ -867,7 +864,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
             genres=[
                 genres.Religion_Spirituality,
                 genres.Body_Mind_Spirit,
-                genres.Metaphysics
+                genres.Metaphysics,
             ],
             priority=3,
             **adult_common_args,
@@ -893,11 +890,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
             _db,
             library,
             display_name="Ruoka ja terveys",
-            genres=[
-                genres.Food_Health,
-                genres.Nutrition,
-                genres.Cookbooks
-            ],
+            genres=[genres.Food_Health, genres.Nutrition, genres.Cookbooks],
             priority=adult_nonfiction_priority,
             **adult_common_args,
         )
@@ -937,8 +930,8 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
                 genres.Strength_Sports,
                 genres.Equestrian_Sports,
                 genres.Motor_Sports,
-                genres.Winter_Sports
-                ],
+                genres.Winter_Sports,
+            ],
             priority=adult_nonfiction_priority,
             **adult_common_args,
         )
@@ -970,14 +963,14 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
     adult_nonfiction_priority += 1
     adult_science.add_genres(
         [
-                genres.Technology.name,
-                genres.Computers.name,
-                genres.Internet.name,
-                genres.Programming.name,
-                genres.Artificial_Intelligence.name,
-                genres.Medical.name,
-                genres.Mathematics.name,
-                genres.Science.name,
+            genres.Technology.name,
+            genres.Computers.name,
+            genres.Internet.name,
+            genres.Programming.name,
+            genres.Artificial_Intelligence.name,
+            genres.Medical.name,
+            genres.Mathematics.name,
+            genres.Science.name,
         ]
     )
     adult_nonfiction.sublanes.append(adult_science)
@@ -991,8 +984,8 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
                 genres.Computers,
                 genres.Internet,
                 genres.Programming,
-                genres.Artificial_Intelligence
-                ],
+                genres.Artificial_Intelligence,
+            ],
             priority=1,
             **adult_common_args,
         )
@@ -1041,7 +1034,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
         lane_from_genres(
             _db,
             library,
-            display_name="True Crime",
+            display_name="Rikostarinoita tosielämästä",
             genres=[genres.True_Crime],
             priority=adult_nonfiction_priority,
             **adult_common_args,
@@ -1080,7 +1073,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
                 genres.Dictionaries,
                 genres.Foreign_Language_Study,
                 genres.Finnish_Language,
-                genres.Literature_Linguistics
+                genres.Literature_Linguistics,
             ],
             priority=adult_nonfiction_priority,
             **adult_common_args,
@@ -1096,7 +1089,7 @@ def create_lanes_for_finnish_collection(_db, library, language="fin", priority=1
             genres=[
                 genres.Humorous_Nonfiction,
                 genres.Education,
-                genres.Other_Nonfiction
+                genres.Other_Nonfiction,
             ],
             priority=adult_nonfiction_priority,
             **adult_common_args,
@@ -1879,10 +1872,10 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
             library,
             display_name="Ekonomi och management",
             genres=[
-            genres.Investing,
-            genres.Marketing,
-            genres.Management_Leadership,
-            genres.Economics,
+                genres.Investing,
+                genres.Marketing,
+                genres.Management_Leadership,
+                genres.Economics,
             ],
             priority=1,
             **adult_common_args,
@@ -1895,9 +1888,9 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
             library,
             display_name="Psykologi och självhjälpsböcker",
             genres=[
-            genres.Psychology,
-            genres.Life_Management,
-                ],
+                genres.Psychology,
+                genres.Life_Management,
+            ],
             priority=1,
             **adult_common_args,
         )
@@ -2015,7 +2008,7 @@ def create_lanes_for_swedish_collection(_db, library, language="swe", priority=2
                 genres.Humorous_Nonfiction,
                 genres.Education,
                 genres.Other_Nonfiction,
-                genres.War_Nonfiction
+                genres.War_Nonfiction,
             ],
             priority=adult_nonfiction_priority,
             **adult_common_args,
@@ -2520,13 +2513,13 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
     adult_fiction_priority += 1
     adult_suspense.add_genres(
         [
-                genres.Suspense_Thriller.name,
-                genres.Historical_Thriller.name,
-                genres.Psychological_Thriller.name,
-                genres.Mystery.name,
-                genres.Crime_Detective_Stories.name,
-                genres.Cozy_Crime.name,
-                genres.Adventure.name,
+            genres.Suspense_Thriller.name,
+            genres.Historical_Thriller.name,
+            genres.Psychological_Thriller.name,
+            genres.Mystery.name,
+            genres.Crime_Detective_Stories.name,
+            genres.Cozy_Crime.name,
+            genres.Adventure.name,
         ]
     )
     adult_suspense.sublanes.append(
@@ -2817,10 +2810,10 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
             library,
             display_name="Economics & Management",
             genres=[
-            genres.Investing,
-            genres.Marketing,
-            genres.Management_Leadership,
-            genres.Economics,
+                genres.Investing,
+                genres.Marketing,
+                genres.Management_Leadership,
+                genres.Economics,
             ],
             priority=1,
             **adult_common_args,
@@ -2833,9 +2826,9 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
             library,
             display_name="Psychology & Self-Help",
             genres=[
-            genres.Psychology,
-            genres.Life_Management,
-                ],
+                genres.Psychology,
+                genres.Life_Management,
+            ],
             priority=1,
             **adult_common_args,
         )
@@ -2866,11 +2859,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
             _db,
             library,
             display_name="Health & Diet",
-            genres=[
-                genres.Food_Health,
-                genres.Nutrition,
-                genres.Cookbooks
-            ],
+            genres=[genres.Food_Health, genres.Nutrition, genres.Cookbooks],
             priority=adult_nonfiction_priority,
             **adult_common_args,
         )
@@ -2966,7 +2955,7 @@ def create_lanes_for_english_collection(_db, library, language="eng", priority=3
                 genres.Education,
                 genres.Metaphysics,
                 genres.Other_Nonfiction,
-                genres.War_Nonfiction
+                genres.War_Nonfiction,
             ],
             priority=adult_nonfiction_priority,
             **adult_common_args,

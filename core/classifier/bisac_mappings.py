@@ -6807,32 +6807,56 @@ GENRES = {
         "name": "HISTORY / Military / Biological & Chemical Warfare",
         "genre": "War Nonfiction",
     },
-    "HIS027020": {"name": "HISTORY / Wars & Conflicts / Korean War", "genre": "War Nonfiction"},
-    "HIS027030": {"name": "HISTORY / Military / Nuclear Warfare", "genre": "War Nonfiction"},
+    "HIS027020": {
+        "name": "HISTORY / Wars & Conflicts / Korean War",
+        "genre": "War Nonfiction",
+    },
+    "HIS027030": {
+        "name": "HISTORY / Military / Nuclear Warfare",
+        "genre": "War Nonfiction",
+    },
     "HIS027040": {
         "name": "HISTORY / Wars & Conflicts / Persian Gulf War (1991)",
         "genre": "War Nonfiction",
     },
     "HIS027050": {"name": "HISTORY / Military / Pictorial", "genre": "War Nonfiction"},
     "HIS027060": {"name": "HISTORY / Military / Strategy", "genre": "War Nonfiction"},
-    "HIS027070": {"name": "HISTORY / Wars & Conflicts / Vietnam War", "genre": "War Nonfiction"},
+    "HIS027070": {
+        "name": "HISTORY / Wars & Conflicts / Vietnam War",
+        "genre": "War Nonfiction",
+    },
     "HIS027080": {"name": "HISTORY / Military / Weapons", "genre": "War Nonfiction"},
-    "HIS027090": {"name": "HISTORY / Wars & Conflicts / World War I", "genre": "War Nonfiction"},
+    "HIS027090": {
+        "name": "HISTORY / Wars & Conflicts / World War I",
+        "genre": "War Nonfiction",
+    },
     "HIS027100": {
         "name": "HISTORY / Wars & Conflicts / World War II / General",
         "genre": "War Nonfiction",
     },
-    "HIS027110": {"name": "HISTORY / Military / United States", "genre": "War Nonfiction"},
+    "HIS027110": {
+        "name": "HISTORY / Military / United States",
+        "genre": "War Nonfiction",
+    },
     "HIS027120": {"name": "HISTORY / Military / Veterans", "genre": "War Nonfiction"},
-    "HIS027130": {"name": "HISTORY / Wars & Conflicts / General", "genre": "War Nonfiction"},
-    "HIS027140": {"name": "HISTORY / Military / Aviation & Space", "genre": "War Nonfiction"},
+    "HIS027130": {
+        "name": "HISTORY / Wars & Conflicts / General",
+        "genre": "War Nonfiction",
+    },
+    "HIS027140": {
+        "name": "HISTORY / Military / Aviation & Space",
+        "genre": "War Nonfiction",
+    },
     "HIS027150": {"name": "HISTORY / Military / Naval", "genre": "War Nonfiction"},
     "HIS027160": {"name": "HISTORY / Military / Canada", "genre": "War Nonfiction"},
     "HIS027170": {
         "name": "HISTORY / Wars & Conflicts / Iraq War (2003-2011)",
         "genre": "War Nonfiction",
     },
-    "HIS027180": {"name": "HISTORY / Military / Special Forces", "genre": "War Nonfiction"},
+    "HIS027180": {
+        "name": "HISTORY / Military / Special Forces",
+        "genre": "War Nonfiction",
+    },
     "HIS027190": {
         "name": "HISTORY / Wars & Conflicts / Afghan War (2001-2021)",
         "genre": "War Nonfiction",
@@ -6841,10 +6865,16 @@ GENRES = {
         "name": "HISTORY / Wars & Conflicts / Napoleonic Wars",
         "genre": "War Nonfiction",
     },
-    "HIS027210": {"name": "HISTORY / Wars & Conflicts / War of 1812", "genre": "War Nonfiction"},
+    "HIS027210": {
+        "name": "HISTORY / Wars & Conflicts / War of 1812",
+        "genre": "War Nonfiction",
+    },
     "HIS027220": {"name": "HISTORY / Military / Ancient", "genre": "War Nonfiction"},
     "HIS027230": {"name": "HISTORY / Military / Medieval", "genre": "War Nonfiction"},
-    "HIS027240": {"name": "HISTORY / Military / Vehicles / General", "genre": "War Nonfiction"},
+    "HIS027240": {
+        "name": "HISTORY / Military / Vehicles / General",
+        "genre": "War Nonfiction",
+    },
     "HIS027250": {
         "name": "HISTORY / Military / Civil Wars (see also United States / Civil War Period (1850-1877))",
         "genre": "War Nonfiction",
@@ -6853,21 +6883,39 @@ GENRES = {
         "name": "HISTORY / Military / Early Modern Warfare (1500-1800)",
         "genre": "War Nonfiction",
     },
-    "HIS027270": {"name": "HISTORY / Military / Fortifications", "genre": "War Nonfiction"},
-    "HIS027280": {"name": "HISTORY / Military / Guerrilla Warfare", "genre": "War Nonfiction"},
+    "HIS027270": {
+        "name": "HISTORY / Military / Fortifications",
+        "genre": "War Nonfiction",
+    },
+    "HIS027280": {
+        "name": "HISTORY / Military / Guerrilla Warfare",
+        "genre": "War Nonfiction",
+    },
     "HIS027290": {
         "name": "HISTORY / Military / Intelligence & Espionage",
         "genre": "War Nonfiction",
     },
-    "HIS027300": {"name": "HISTORY / Military / Land Forces", "genre": "War Nonfiction"},
+    "HIS027300": {
+        "name": "HISTORY / Military / Land Forces",
+        "genre": "War Nonfiction",
+    },
     "HIS027310": {"name": "HISTORY / Military / Uniforms", "genre": "War Nonfiction"},
-    "HIS027320": {"name": "HISTORY / Military / Vehicles / Air", "genre": "War Nonfiction"},
-    "HIS027330": {"name": "HISTORY / Military / Vehicles / Land", "genre": "War Nonfiction"},
+    "HIS027320": {
+        "name": "HISTORY / Military / Vehicles / Air",
+        "genre": "War Nonfiction",
+    },
+    "HIS027330": {
+        "name": "HISTORY / Military / Vehicles / Land",
+        "genre": "War Nonfiction",
+    },
     "HIS027340": {
         "name": "HISTORY / Military / Vehicles / Sea (see also TRANSPORTATION / Ships & Boats / Submarines)",
         "genre": "War Nonfiction",
     },
-    "HIS027350": {"name": "HISTORY / Wars & Conflicts / Crusades", "genre": "War Nonfiction"},
+    "HIS027350": {
+        "name": "HISTORY / Wars & Conflicts / Crusades",
+        "genre": "War Nonfiction",
+    },
     "HIS027360": {
         "name": "HISTORY / Wars & Conflicts / World War II / Eastern Front",
         "genre": "War Nonfiction",
