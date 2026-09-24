@@ -3894,16 +3894,16 @@ class TestLane:
                 "Fantasy",
                 "Epic Fantasy",
                 "Historical Fantasy",
-                "Urban Fantasy",
+                "Magic Realism",
             ]
         ]
         assert set(expect) == fantasy.genre_ids
 
         # Let's exclude one of the subgenres.
-        fantasy.add_genre("Urban Fantasy", inclusive=False)
-        urban_fantasy, ignore = Genre.lookup(db.session, "Urban Fantasy")
+        fantasy.add_genre("Magic Realism", inclusive=False)
+        magic_realism, ignore = Genre.lookup(db.session, "Magic Realism")
         # That genre's ID has disappeared from .genre_ids.
-        assert urban_fantasy.id not in fantasy.genre_ids
+        assert magic_realism.id not in fantasy.genre_ids
 
         # Let's add Science Fiction, but not its subgenres.
         fantasy.add_genre("Science Fiction", recursive=False)
@@ -4243,7 +4243,7 @@ class TestWorkListGroupsEndToEnd:
 
         # Add a lot of irrelevant genres to one of the works. This
         # won't affect the results.
-        for genre in ["Westerns", "Horror", "Erotica"]:
+        for genre in ["Magic Realism", "Horror", "Erotica"]:
             genre_obj, is_new = Genre.lookup(session, genre)
             get_one_or_create(session, WorkGenre, work=result.hq_sf, genre=genre_obj)
 

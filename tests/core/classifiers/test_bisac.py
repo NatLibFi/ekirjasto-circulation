@@ -449,7 +449,7 @@ class TestBISACClassifier:
             "POLITICAL SCIENCE / American Government / Legislative Branch",
             "Political Science",
         )
-        genre_is("HIS027160", "HISTORY / Military / Canada", "War")
+        genre_is("HIS027160", "HISTORY / Military / Canada", "War Nonfiction")
         genre_is("MAT003000", "MATHEMATICS / Applied", "Mathematics")
         genre_is(
             "BUS033060",
@@ -495,7 +495,9 @@ class TestBISACClassifier:
         )
         genre_is("SCI100000", "SCIENCE / Natural History", "Science")
         genre_is("FIC056060", "FICTION / Hispanic & Latino / Horror", "Horror")
-        genre_is("HIS027280", "HISTORY / Military / Guerrilla Warfare", "War")
+        genre_is(
+            "HIS027280", "HISTORY / Military / Guerrilla Warfare", "War Nonfiction"
+        )
         genre_is("FIC027330", "FICTION / Romance / Sports", "Contemporary Romance")
         genre_is("MED071000", "MEDICAL / Pharmacology", "Medical")
         genre_is(
@@ -540,7 +542,7 @@ class TestBISACClassifier:
         genre_is(
             "HIS027390",
             "HISTORY / Wars & Conflicts / World War II / Pacific Theater",
-            "War",
+            "War Nonfiction",
         )
         genre_is("SCI101000", "SCIENCE / Ethics", "Science")
         genre_is("LAW119000", "LAW / Islamic", "Law")
@@ -998,7 +1000,7 @@ class TestBISACClassifier:
         genre_is(
             "HIS027370",
             "HISTORY / Wars & Conflicts / World War II / European Theater",
-            "War",
+            "War Nonfiction",
         )
         genre_is("FIC042030", "FICTION / Christian / Historical", "Religious Fiction")
         genre_is(
@@ -1512,10 +1514,7 @@ class TestBISACClassifier:
             )
         )
         # An unknown identifier with a name that does not match any canonical BISAC name returns None.
-        assert (
-            None
-            == BISACClassifier.scrub_name(
-                "BIOGRAPHY & AUTOBIOGRAPHY / Some dude",
-                None,
-            )
+        assert None == BISACClassifier.scrub_name(
+            "BIOGRAPHY & AUTOBIOGRAPHY / Some dude",
+            None,
         )

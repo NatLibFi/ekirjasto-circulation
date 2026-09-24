@@ -187,7 +187,7 @@ class TestNestedSubgenres:
             classifier.Fantasy,
             classifier.Epic_Fantasy,
             classifier.Historical_Fantasy,
-            classifier.Magic_Realism
+            classifier.Magic_Realism,
         }
 
 
@@ -1013,7 +1013,9 @@ class TestWorkClassifier:
             ("FIC028000", "FICTION / Science Fiction / General"),
             ("FIC009120", "FICTION / Fantasy / Dragons & Mythical Creatures"),
         ]:
-            work.identifier.identifier_to_subject(source, Subject.BISAC, identifier, name)
+            work.identifier.identifier_to_subject(
+                source, Subject.BISAC, identifier, name
+            )
 
         changed = work.work.assign_classification([work.identifier.id])
 
