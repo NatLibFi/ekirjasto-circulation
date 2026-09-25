@@ -188,6 +188,7 @@ class TestNestedSubgenres:
             classifier.Epic_Fantasy,
             classifier.Historical_Fantasy,
             classifier.Magic_Realism,
+            classifier.Romantasy,
         }
 
 
@@ -372,6 +373,43 @@ class TestWorkClassifier:
         )
         work.classifier.prepare_classification(c3)
         assert len(work.classifier.genre_list) == 1
+
+    @pytest.mark.parametrize("parent_first", [True, False])
+    def test_prepare_classification_omits_parent_genre_when_subgenre_is_present(
+        self,
+        work_classifier_fixture: TestWorkClassifierFixture,
+        parent_first,
+    ):
+        """Keep only the most specific genre regardless of classification order."""
+        work = work_classifier_fixture
+        session = work.transaction.session
+        source = DataSource.lookup(session, DataSource.AXIS_360)
+        parent, is_new = Genre.lookup(session, "Fantasy")
+        subgenre, is_new = Genre.lookup(session, "Epic Fantasy")
+        general_fiction, is_new = Genre.lookup(session, "General Fiction")
+
+        subjects = []
+        for genre in (
+            [parent, subgenre, general_fiction]
+            if parent_first
+            else [subgenre, parent, general_fiction]
+        ):
+            subject = work.transaction.subject(
+                type=Subject.SIMPLIFIED_GENRE,
+                identifier=genre.name,
+            )
+            subject.genre = genre
+            subjects.append(subject)
+        for subject in subjects:
+            classification = work.transaction.classification(
+                identifier=work.identifier,
+                subject=subject,
+                data_source=source,
+            )
+            work.classifier.prepare_classification(classification)
+
+        assert len(work.classifier.genre_list) == 1
+        assert [genre.name for genre in work.classifier.genre_list] == ["Epic Fantasy"]
 
     def test_prepare_classification_target_age(
         self, work_classifier_fixture: TestWorkClassifierFixture
