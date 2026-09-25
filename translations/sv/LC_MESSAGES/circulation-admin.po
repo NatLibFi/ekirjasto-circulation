@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2025-12-04 09:12+0200\n"
+"POT-Creation-Date: 2026-09-24 15:47+0300\n"
 "PO-Revision-Date: 2024-03-01 11:34+0000\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: sv\n"
@@ -17,14 +17,14 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.13.0\n"
+"Generated-By: Babel 2.18.0\n"
 
-#: api/admin/announcement_list_validator.py:35
+#: api/admin/announcement_list_validator.py:36
 #, python-format
 msgid "Invalid announcement list format: %(announcements)r"
 msgstr "Ogiltigt format för meddelandelista: %(announcements)r"
 
-#: api/admin/announcement_list_validator.py:50
+#: api/admin/announcement_list_validator.py:51
 #, python-format
 msgid "Too many announcements: maximum is %(maximum)d"
 msgstr "För många meddelanden: max. %(maximum)d"
@@ -34,7 +34,7 @@ msgstr "För många meddelanden: max. %(maximum)d"
 msgid "Duplicate announcement ID: %s"
 msgstr "Dubbla meddelande-ID: %s"
 
-#: api/admin/announcement_list_validator.py:71
+#: api/admin/announcement_list_validator.py:72
 #, python-format
 msgid "Invalid announcement format: %(announcement)r"
 msgstr "Ogiltigt meddelandeformat: %(announcement)r"
@@ -49,22 +49,22 @@ msgstr "Ogiltigt meddelande-ID: %(id)s"
 msgid "Missing required field: %(field)s"
 msgstr "Obligatoriskt fält saknas: %(field)s"
 
-#: api/admin/announcement_list_validator.py:141
+#: api/admin/announcement_list_validator.py:140
 #, python-format
 msgid "Value too short (%(length)d versus %(limit)d characters): %(value)s"
 msgstr "Värdet är för kort (%(length)d vs %(limit)d tecken): %(value)s"
 
-#: api/admin/announcement_list_validator.py:153
+#: api/admin/announcement_list_validator.py:152
 #, python-format
 msgid "Value too long (%(length)d versus %(limit)d characters): %(value)s"
 msgstr "Värdet är för långt (%(length)d vs %(limit)d tecken): %(value)s"
 
-#: api/admin/announcement_list_validator.py:188
+#: api/admin/announcement_list_validator.py:189
 #, python-format
 msgid "Value for %(field)s is not a date: %(date)s"
 msgstr "Värdet för %(field)s är inte ett datum: %(date)s"
 
-#: api/admin/announcement_list_validator.py:201
+#: api/admin/announcement_list_validator.py:199
 #, python-format
 msgid "Value for %(field)s must be no earlier than %(minimum)s"
 msgstr "Värdet för %(field)s får inte vara tidigare än %(minimum)s"
@@ -83,7 +83,7 @@ msgstr ""
 msgid "Admin auth mechanism not configured"
 msgstr "Mekanismen för autentisering av administratörer har inte konfigurerats"
 
-#: api/admin/problem_details.py:17
+#: api/admin/problem_details.py:18
 msgid ""
 "This circulation manager has not been configured to authenticate admins "
 "with the mechanism you used"
@@ -227,7 +227,7 @@ msgstr "Den angivna bilden är ogiltig."
 msgid "Library short name already in use"
 msgstr "Bibliotekets kortnamn används redan"
 
-#: api/admin/problem_details.py:145
+#: api/admin/problem_details.py:146
 msgid ""
 "The library short name must be unique, and there's already a library with"
 " the specified short name."
@@ -255,7 +255,7 @@ msgstr "Du måste identifiera analystjänsten med dess namn."
 msgid "Cannot delete collection with children"
 msgstr "Det går inte att radera en samling med barn"
 
-#: api/admin/problem_details.py:168
+#: api/admin/problem_details.py:169
 msgid ""
 "The collection is the parent of at least one other collection, so it "
 "can't be deleted."
@@ -267,7 +267,7 @@ msgstr ""
 msgid "No protocol for new service"
 msgstr "Protokoll saknas för ny tjänst"
 
-#: api/admin/problem_details.py:177
+#: api/admin/problem_details.py:178
 msgid ""
 "The specified service doesn't exist. You can create it, but you must "
 "specify a protocol."
@@ -303,7 +303,7 @@ msgstr "Du måste identifiera tjänsten med dess namn."
 msgid "Protocol does not support parents"
 msgstr "Protokollet stöder inte föräldrar"
 
-#: api/admin/problem_details.py:207
+#: api/admin/problem_details.py:208
 msgid "You attempted to add a parent but the protocol does not support parents."
 msgstr "Du försökte lägga till en förälder men protokollet stöder inte föräldrar."
 
@@ -311,7 +311,7 @@ msgstr "Du försökte lägga till en förälder men protokollet stöder inte fö
 msgid "Protocol does not support settings"
 msgstr "Protokollet stöder inte inställningar"
 
-#: api/admin/problem_details.py:216
+#: api/admin/problem_details.py:217
 msgid ""
 "You attempted to update settings for a protocol that does not support "
 "settings."
@@ -355,7 +355,7 @@ msgstr "En given webbplats kan endast stöda en integration av den här typen."
 msgid "Integration name already in use"
 msgstr "Integrationens namn används redan"
 
-#: api/admin/problem_details.py:253
+#: api/admin/problem_details.py:254
 msgid ""
 "The integration name must be unique, and there's already an integration "
 "with the specified name."
@@ -375,7 +375,7 @@ msgstr "Det finns redan en integration med den här typen av URL."
 msgid "Incompatible use of integration"
 msgstr "Integrationen används på ett inkompatibelt sätt"
 
-#: api/admin/problem_details.py:269
+#: api/admin/problem_details.py:270
 msgid ""
 "You tried to use an integration in a way incompatible with the goal of "
 "that integration"
@@ -395,7 +395,7 @@ msgstr "Denna integration finns inte."
 msgid "Missing pgcrypto database extension"
 msgstr "Databastillägget pgcrypto saknas"
 
-#: api/admin/problem_details.py:285
+#: api/admin/problem_details.py:286
 msgid ""
 "You tried to store a password for an individual admin, but the database "
 "does not have the pgcrypto extension installed."
@@ -463,7 +463,7 @@ msgstr "Detta reguljära uttryck av extern typ går inte att kompilera."
 msgid "Invalid library identifier restriction regular expression"
 msgstr "Ogiltigt reguljärt uttryck för begränsning av biblioteksidentifierare"
 
-#: api/admin/problem_details.py:343
+#: api/admin/problem_details.py:344
 msgid ""
 "The specified library identifier restriction regular expression does not "
 "compile."
@@ -475,7 +475,7 @@ msgstr ""
 msgid "Multiple basic authentication services"
 msgstr "Flera grundläggande autentiseringstjänster"
 
-#: api/admin/problem_details.py:352
+#: api/admin/problem_details.py:353
 msgid ""
 "Each library can only have one patron authentication service using basic "
 "auth."
@@ -487,7 +487,7 @@ msgstr ""
 msgid "No such patron"
 msgstr "Det finns inte någon sådan kund"
 
-#: api/admin/problem_details.py:361
+#: api/admin/problem_details.py:362
 msgid ""
 "The specified patron doesn't exist, or is associated with a different "
 "library."
@@ -513,7 +513,7 @@ msgstr "Det behövs ett värde för att ändra en inställning för hela webbpla
 msgid "Multiple sitewide services"
 msgstr "Flera likadana tjänster för hela webbplatsen"
 
-#: api/admin/problem_details.py:384
+#: api/admin/problem_details.py:385
 msgid ""
 "You tried to create a new sitewide service, but a sitewide service of the"
 " same type is already configured."
@@ -569,7 +569,7 @@ msgstr ""
 msgid "Collection not associated with library"
 msgstr "Samlingen är inte associerad med ett bibliotek"
 
-#: api/admin/problem_details.py:428
+#: api/admin/problem_details.py:429
 msgid ""
 "You can't add a collection to a list unless it is associated with the "
 "list's library."
@@ -581,7 +581,7 @@ msgstr ""
 msgid "Missing lane"
 msgstr "Band saknas"
 
-#: api/admin/problem_details.py:437
+#: api/admin/problem_details.py:438
 msgid ""
 "The specified lane doesn't exist, or is associated with a different "
 "library."
@@ -615,7 +615,7 @@ msgstr "Ett anpassat band måste ha minst en associerad lista."
 msgid "Lane with parent and display name already exists"
 msgstr "Ett band med förälder och skärmnamn finns redan"
 
-#: api/admin/problem_details.py:467
+#: api/admin/problem_details.py:468
 msgid ""
 "You cannot create a lane with the same parent and display name as an "
 "existing lane."
@@ -663,7 +663,7 @@ msgstr "Det saknas en källsamling i biblioteket."
 msgid "Entry not valid for library"
 msgstr "Posten är ogiltig för biblioteket"
 
-#: api/admin/problem_details.py:511
+#: api/admin/problem_details.py:512
 msgid ""
 "An entry in the customlist was not valid for the library being shared "
 "with."
@@ -694,12 +694,12 @@ msgstr "\"%(url)s\" är inte en giltig URL."
 msgid "\"%(number)s\" is not a number."
 msgstr "\"%(number)s\" är inte ett nummer."
 
-#: api/admin/validator.py:125
+#: api/admin/validator.py:124
 #, python-format
 msgid "%(field)s must be greater than %(min)s."
 msgstr "%(field)s måste vara större än %(min)s."
 
-#: api/admin/validator.py:133
+#: api/admin/validator.py:132
 #, python-format
 msgid "%(field)s cannot be greater than %(max)s."
 msgstr "%(field)s får inte vara större än %(max)s."
