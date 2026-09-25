@@ -1720,6 +1720,23 @@ class WorkClassificationScript(WorkPresentationScript):
     )
 
 
+class ResetWorkClassificationCoverageScript(Script):
+    """Mark every Work as needing classification coverage."""
+
+    name = "Reset work classification coverage"
+
+    def do_run(self):
+        works = self._db.query(Work).all()
+        self.log.info(
+            "Resetting work classification coverage for %d works.", len(works)
+        )
+
+        for work in works:
+            work.needs_full_presentation_recalculation()
+
+        self._db.commit()
+
+
 class ReclassifyWorksForUncheckedSubjectsScript(WorkClassificationScript):
     """Reclassify all Works whose current classifications appear to
     depend on Subjects in the 'unchecked' state.
