@@ -602,6 +602,7 @@ fiction_genres = [
             "Epic Fantasy",
             "Historical Fantasy",
             "Magic Realism",
+            "Romantasy",
         ],
     ),
     "Growing Up",  # Children
@@ -625,7 +626,6 @@ fiction_genres = [
         subgenres=[
             "Contemporary Romance",
             "Historical Romance",
-            "Romantasy",
         ],
     ),
     "School & Study",  # Children, YA
