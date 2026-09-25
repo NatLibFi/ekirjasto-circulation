@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-09-24 15:47+0300\n"
+"POT-Creation-Date: 2026-09-25 14:37+0300\n"
 "PO-Revision-Date: 2024-02-19 22:15+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -157,7 +157,7 @@ msgstr "Integration error communicating with %(service_name)s"
 msgid "Lane does not exist"
 msgstr "Lane does not exist"
 
-#: api/circulation_manager.py:384 api/lanes.py:3398
+#: api/circulation_manager.py:384 api/lanes.py:3400
 msgid "All Books"
 msgstr "All Books"
 
@@ -297,23 +297,23 @@ msgstr "URL"
 msgid "Integrate an Enki collection."
 msgstr "Integrate an Enki collection."
 
-#: api/lanes.py:3305
+#: api/lanes.py:3307
 msgid "Books in Other Languages"
 msgstr "Books in Other Languages"
 
-#: api/lanes.py:3325
+#: api/lanes.py:3327
 msgid "All Books in Other Languages"
 msgstr "All Books in Other Languages"
 
-#: api/lanes.py:3365
+#: api/lanes.py:3367
 msgid "Books for Adults"
 msgstr "Books for Adults"
 
-#: api/lanes.py:3376
+#: api/lanes.py:3378
 msgid "Books for Young Adults"
 msgstr "Books for Young Adults"
 
-#: api/lanes.py:3387
+#: api/lanes.py:3389
 msgid "Books for Children"
 msgstr "Books for Children"
 

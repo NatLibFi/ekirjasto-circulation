@@ -10,7 +10,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-09-24 15:47+0300\n"
+"POT-Creation-Date: 2026-09-25 14:37+0300\n"
 "PO-Revision-Date: 2025-10-16 10:07+0000\n"
 "Last-Translator: Kaisa Kuivalahti, 2025\n"
 "Language: fi\n"
@@ -278,6 +278,10 @@ msgstr "Virheellinen offset: %(offset)s"
 #, python-format
 msgid "All %(worklist)s"
 msgstr "Kaikki %(worklist)s"
+
+#: core/marc.py:583
+msgid "äänikirja"
+msgstr ""
 
 #: core/opds2_import.py:72 core/opds_import.py:178
 msgid "Custom accept header"
@@ -609,68 +613,68 @@ msgid "Magic Realism"
 msgstr "Maaginen realismi"
 
 #: core/classifier/localized_names.py:35
+msgid "Romantasy"
+msgstr "Romantasia"
+
+#: core/classifier/localized_names.py:36
 msgid "Growing Up"
 msgstr "Aikuistuminen"
 
-#: core/classifier/localized_names.py:36
+#: core/classifier/localized_names.py:37
 msgid "Historical Fiction"
 msgstr "Historiallinen kaunokirjallisuus"
 
-#: core/classifier/localized_names.py:37
+#: core/classifier/localized_names.py:38
 msgid "Horror"
 msgstr "Kauhu"
 
-#: core/classifier/localized_names.py:38
+#: core/classifier/localized_names.py:39
 msgid "Humor"
 msgstr "Huumori"
 
-#: core/classifier/localized_names.py:39
+#: core/classifier/localized_names.py:40
 msgid "Humorous Fiction"
 msgstr "Humoristinen kaunokirjallisuus"
 
-#: core/classifier/localized_names.py:40
+#: core/classifier/localized_names.py:41
 msgid "General Fiction"
 msgstr "Yleinen kaunokirjallisuus"
 
-#: core/classifier/localized_names.py:41
+#: core/classifier/localized_names.py:42
 msgid "LGBTQ Fiction"
 msgstr "HLBTQ+"
 
-#: core/classifier/localized_names.py:42
+#: core/classifier/localized_names.py:43
 msgid "Mystery"
 msgstr "Dekkarit"
 
-#: core/classifier/localized_names.py:43
+#: core/classifier/localized_names.py:44
 msgid "Crime & Detective Stories"
 msgstr "Rikos- ja salapoliisiromaanit"
 
-#: core/classifier/localized_names.py:44
+#: core/classifier/localized_names.py:45
 msgid "Cozy Crime"
 msgstr "Hyvän mielen dekkarit"
 
-#: core/classifier/localized_names.py:45
+#: core/classifier/localized_names.py:46
 msgid "Poetry"
 msgstr "Runous"
 
-#: core/classifier/localized_names.py:46
+#: core/classifier/localized_names.py:47
 msgid "Religious Fiction"
 msgstr "Uskonnollinen kaunokirjallisuus"
 
-#: core/classifier/localized_names.py:47
+#: core/classifier/localized_names.py:48
 msgid "Romance"
 msgstr "Romantiikka"
 
-#: core/classifier/localized_names.py:48
+#: core/classifier/localized_names.py:49
 msgid "Contemporary Romance"
 msgstr "Nykyajan romantiikka"
 
-#: core/classifier/localized_names.py:49
+#: core/classifier/localized_names.py:50
 msgid "Historical Romance"
 msgstr "Historiallinen romantiikka"
-
-#: core/classifier/localized_names.py:50
-msgid "Romantasy"
-msgstr "Romantasia"
 
 #: core/classifier/localized_names.py:51
 msgid "School & Study"

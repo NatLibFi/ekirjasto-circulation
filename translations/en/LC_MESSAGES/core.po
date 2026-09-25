@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-09-24 15:47+0300\n"
+"POT-Creation-Date: 2026-09-25 14:37+0300\n"
 "PO-Revision-Date: 2024-02-19 22:14+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -274,6 +274,10 @@ msgstr "Invalid offset: %(offset)s"
 #, python-format
 msgid "All %(worklist)s"
 msgstr "All %(worklist)s"
+
+#: core/marc.py:583
+msgid "äänikirja"
+msgstr ""
 
 #: core/opds2_import.py:72 core/opds_import.py:178
 msgid "Custom accept header"
@@ -605,69 +609,69 @@ msgid "Magic Realism"
 msgstr "Magic Realism"
 
 #: core/classifier/localized_names.py:35
-msgid "Growing Up"
-msgstr "Growing Up"
-
-#: core/classifier/localized_names.py:36
-msgid "Historical Fiction"
-msgstr "Historical Fiction"
-
-#: core/classifier/localized_names.py:37
-msgid "Horror"
-msgstr "Horror"
-
-#: core/classifier/localized_names.py:38
-msgid "Humor"
-msgstr "Humor"
-
-#: core/classifier/localized_names.py:39
-msgid "Humorous Fiction"
-msgstr "Humorous Fiction"
-
-#: core/classifier/localized_names.py:40
-msgid "General Fiction"
-msgstr "General Fiction"
-
-#: core/classifier/localized_names.py:41
-msgid "LGBTQ Fiction"
-msgstr "LGBTQ Fiction"
-
-#: core/classifier/localized_names.py:42
-msgid "Mystery"
-msgstr "Mystery"
-
-#: core/classifier/localized_names.py:43
-msgid "Crime & Detective Stories"
-msgstr "Crime & Detective Stories"
-
-#: core/classifier/localized_names.py:44
-msgid "Cozy Crime"
-msgstr "Cozy Crime"
-
-#: core/classifier/localized_names.py:45
-msgid "Poetry"
-msgstr "Poetry"
-
-#: core/classifier/localized_names.py:46
-msgid "Religious Fiction"
-msgstr "Religious Fiction"
-
-#: core/classifier/localized_names.py:47
-msgid "Romance"
-msgstr "Romance"
-
-#: core/classifier/localized_names.py:48
-msgid "Contemporary Romance"
-msgstr "Contemporary Romance"
-
-#: core/classifier/localized_names.py:49
-msgid "Historical Romance"
-msgstr "Historical Romance"
-
-#: core/classifier/localized_names.py:50
 #, fuzzy
 msgid "Romantasy"
 msgstr "Romantasy"
+
+#: core/classifier/localized_names.py:36
+msgid "Growing Up"
+msgstr "Growing Up"
+
+#: core/classifier/localized_names.py:37
+msgid "Historical Fiction"
+msgstr "Historical Fiction"
+
+#: core/classifier/localized_names.py:38
+msgid "Horror"
+msgstr "Horror"
+
+#: core/classifier/localized_names.py:39
+msgid "Humor"
+msgstr "Humor"
+
+#: core/classifier/localized_names.py:40
+msgid "Humorous Fiction"
+msgstr "Humorous Fiction"
+
+#: core/classifier/localized_names.py:41
+msgid "General Fiction"
+msgstr "General Fiction"
+
+#: core/classifier/localized_names.py:42
+msgid "LGBTQ Fiction"
+msgstr "LGBTQ Fiction"
+
+#: core/classifier/localized_names.py:43
+msgid "Mystery"
+msgstr "Mystery"
+
+#: core/classifier/localized_names.py:44
+msgid "Crime & Detective Stories"
+msgstr "Crime & Detective Stories"
+
+#: core/classifier/localized_names.py:45
+msgid "Cozy Crime"
+msgstr "Cozy Crime"
+
+#: core/classifier/localized_names.py:46
+msgid "Poetry"
+msgstr "Poetry"
+
+#: core/classifier/localized_names.py:47
+msgid "Religious Fiction"
+msgstr "Religious Fiction"
+
+#: core/classifier/localized_names.py:48
+msgid "Romance"
+msgstr "Romance"
+
+#: core/classifier/localized_names.py:49
+msgid "Contemporary Romance"
+msgstr "Contemporary Romance"
+
+#: core/classifier/localized_names.py:50
+msgid "Historical Romance"
+msgstr "Historical Romance"
 
 #: core/classifier/localized_names.py:51
 msgid "School & Study"
@@ -1433,3 +1437,4 @@ msgstr "Timeout"
 #, python-format
 msgid "The server made a request to %(service)s, and that request timed out."
 msgstr "The server made a request to %(service)s, and that request timed out."
+

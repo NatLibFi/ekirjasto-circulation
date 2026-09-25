@@ -10,7 +10,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-09-24 15:47+0300\n"
+"POT-Creation-Date: 2026-09-25 14:37+0300\n"
 "PO-Revision-Date: 2025-10-16 10:07+0000\n"
 "Last-Translator: Kaisa Kuivalahti, 2025\n"
 "Language: sv\n"
@@ -278,6 +278,10 @@ msgstr "Ogiltigt offset: %(offset)s"
 #, python-format
 msgid "All %(worklist)s"
 msgstr "Alla %(worklist)s"
+
+#: core/marc.py:583
+msgid "äänikirja"
+msgstr ""
 
 #: core/opds2_import.py:72 core/opds_import.py:178
 msgid "Custom accept header"
@@ -608,68 +612,68 @@ msgid "Magic Realism"
 msgstr " Magisk realism"
 
 #: core/classifier/localized_names.py:35
+msgid "Romantasy"
+msgstr "Romantasy"
+
+#: core/classifier/localized_names.py:36
 msgid "Growing Up"
 msgstr "Växa upp"
 
-#: core/classifier/localized_names.py:36
+#: core/classifier/localized_names.py:37
 msgid "Historical Fiction"
 msgstr "Historisk fiktion"
 
-#: core/classifier/localized_names.py:37
+#: core/classifier/localized_names.py:38
 msgid "Horror"
 msgstr "Skräcklitteratur"
 
-#: core/classifier/localized_names.py:38
+#: core/classifier/localized_names.py:39
 msgid "Humor"
 msgstr "Humor"
 
-#: core/classifier/localized_names.py:39
+#: core/classifier/localized_names.py:40
 msgid "Humorous Fiction"
 msgstr "Humoristisk skönlitteratur"
 
-#: core/classifier/localized_names.py:40
+#: core/classifier/localized_names.py:41
 msgid "General Fiction"
 msgstr "Allmän skönlitteratur"
 
-#: core/classifier/localized_names.py:41
+#: core/classifier/localized_names.py:42
 msgid "LGBTQ Fiction"
 msgstr "HBTQ skönlitteratur"
 
-#: core/classifier/localized_names.py:42
+#: core/classifier/localized_names.py:43
 msgid "Mystery"
 msgstr "Mystik"
 
-#: core/classifier/localized_names.py:43
+#: core/classifier/localized_names.py:44
 msgid "Crime & Detective Stories"
 msgstr "Deckare & Kriminalromaner"
 
-#: core/classifier/localized_names.py:44
+#: core/classifier/localized_names.py:45
 msgid "Cozy Crime"
 msgstr "Cozy Crime"
 
-#: core/classifier/localized_names.py:45
+#: core/classifier/localized_names.py:46
 msgid "Poetry"
 msgstr "Poesi"
 
-#: core/classifier/localized_names.py:46
+#: core/classifier/localized_names.py:47
 msgid "Religious Fiction"
 msgstr "Religiös skönlitteratur"
 
-#: core/classifier/localized_names.py:47
+#: core/classifier/localized_names.py:48
 msgid "Romance"
 msgstr "Romantik"
 
-#: core/classifier/localized_names.py:48
+#: core/classifier/localized_names.py:49
 msgid "Contemporary Romance"
 msgstr "Samtida romantik"
 
-#: core/classifier/localized_names.py:49
+#: core/classifier/localized_names.py:50
 msgid "Historical Romance"
 msgstr "Historisk romantik"
-
-#: core/classifier/localized_names.py:50
-msgid "Romantasy"
-msgstr "Romantasy"
 
 #: core/classifier/localized_names.py:51
 msgid "School & Study"
@@ -1436,3 +1440,4 @@ msgid "The server made a request to %(service)s, and that request timed out."
 msgstr ""
 "Servern skickade en begäran till %(service)s och tidsgränsen för begäran "
 "överskreds."
+
