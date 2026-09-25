@@ -577,7 +577,6 @@ class TestWorkController:
                     ("audience", "Adult"),
                     ("fiction", "fiction"),
                     ("genres", "Drama"),
-                    ("genres", "Urban Fantasy"),
                     ("genres", "General Fiction"),
                 ]
             )
@@ -603,7 +602,7 @@ class TestWorkController:
                     ("target_age_min", "16"),
                     ("target_age_max", "18"),
                     ("fiction", "fiction"),
-                    ("genres", "Urban Fantasy"),
+                    ("genres", "Fantasy"),
                 ]
             )
             requested_genres = flask.request.form.getlist("genres")
@@ -630,7 +629,7 @@ class TestWorkController:
                     ("target_age_min", "16"),
                     ("target_age_max", "18"),
                     ("fiction", "fiction"),
-                    ("genres", "Cooking"),
+                    ("genres", "Cookbooks"),
                     ("genres", "Urban Fantasy"),
                 ]
             )
@@ -655,7 +654,7 @@ class TestWorkController:
                     ("target_age_max", "18"),
                     ("fiction", "fiction"),
                     ("genres", "Erotica"),
-                    ("genres", "Urban Fantasy"),
+                    ("genres", "Fantasy"),
                 ]
             )
             response = work_fixture.manager.admin_work_controller.edit_classifications(
@@ -679,7 +678,7 @@ class TestWorkController:
                     ("target_age_min", "16"),
                     ("target_age_max", "14"),
                     ("fiction", "nonfiction"),
-                    ("genres", "Cooking"),
+                    ("genres", "Cookbooks"),
                 ]
             )
             response = work_fixture.manager.admin_work_controller.edit_classifications(
@@ -700,7 +699,7 @@ class TestWorkController:
                     ("target_age_min", "15"),
                     ("target_age_max", "17"),
                     ("fiction", "nonfiction"),
-                    ("genres", "Cooking"),
+                    ("genres", "Cookbooks"),
                 ]
             )
             requested_genres = flask.request.form.getlist("genres")
@@ -721,7 +720,7 @@ class TestWorkController:
                 [
                     ("audience", "Adult"),
                     ("fiction", "nonfiction"),
-                    ("genres", "Cooking"),
+                    ("genres", "Cookbooks"),
                 ]
             )
             requested_genres = flask.request.form.getlist("genres")

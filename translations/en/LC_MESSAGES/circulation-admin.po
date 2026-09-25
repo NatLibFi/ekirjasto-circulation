@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2025-12-04 09:12+0200\n"
+"POT-Creation-Date: 2026-09-24 15:47+0300\n"
 "PO-Revision-Date: 2024-02-19 22:15+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -16,14 +16,14 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.13.0\n"
+"Generated-By: Babel 2.18.0\n"
 
-#: api/admin/announcement_list_validator.py:35
+#: api/admin/announcement_list_validator.py:36
 #, python-format
 msgid "Invalid announcement list format: %(announcements)r"
 msgstr ""
 
-#: api/admin/announcement_list_validator.py:50
+#: api/admin/announcement_list_validator.py:51
 #, python-format
 msgid "Too many announcements: maximum is %(maximum)d"
 msgstr ""
@@ -33,7 +33,7 @@ msgstr ""
 msgid "Duplicate announcement ID: %s"
 msgstr ""
 
-#: api/admin/announcement_list_validator.py:71
+#: api/admin/announcement_list_validator.py:72
 #, python-format
 msgid "Invalid announcement format: %(announcement)r"
 msgstr ""
@@ -48,22 +48,22 @@ msgstr ""
 msgid "Missing required field: %(field)s"
 msgstr ""
 
-#: api/admin/announcement_list_validator.py:141
+#: api/admin/announcement_list_validator.py:140
 #, python-format
 msgid "Value too short (%(length)d versus %(limit)d characters): %(value)s"
 msgstr ""
 
-#: api/admin/announcement_list_validator.py:153
+#: api/admin/announcement_list_validator.py:152
 #, python-format
 msgid "Value too long (%(length)d versus %(limit)d characters): %(value)s"
 msgstr ""
 
-#: api/admin/announcement_list_validator.py:188
+#: api/admin/announcement_list_validator.py:189
 #, python-format
 msgid "Value for %(field)s is not a date: %(date)s"
 msgstr ""
 
-#: api/admin/announcement_list_validator.py:201
+#: api/admin/announcement_list_validator.py:199
 #, python-format
 msgid "Value for %(field)s must be no earlier than %(minimum)s"
 msgstr ""
@@ -80,7 +80,7 @@ msgstr ""
 msgid "Admin auth mechanism not configured"
 msgstr ""
 
-#: api/admin/problem_details.py:17
+#: api/admin/problem_details.py:18
 msgid ""
 "This circulation manager has not been configured to authenticate admins "
 "with the mechanism you used"
@@ -222,7 +222,7 @@ msgstr ""
 msgid "Library short name already in use"
 msgstr ""
 
-#: api/admin/problem_details.py:145
+#: api/admin/problem_details.py:146
 msgid ""
 "The library short name must be unique, and there's already a library with"
 " the specified short name."
@@ -248,7 +248,7 @@ msgstr ""
 msgid "Cannot delete collection with children"
 msgstr ""
 
-#: api/admin/problem_details.py:168
+#: api/admin/problem_details.py:169
 msgid ""
 "The collection is the parent of at least one other collection, so it "
 "can't be deleted."
@@ -258,7 +258,7 @@ msgstr ""
 msgid "No protocol for new service"
 msgstr ""
 
-#: api/admin/problem_details.py:177
+#: api/admin/problem_details.py:178
 msgid ""
 "The specified service doesn't exist. You can create it, but you must "
 "specify a protocol."
@@ -292,7 +292,7 @@ msgstr ""
 msgid "Protocol does not support parents"
 msgstr ""
 
-#: api/admin/problem_details.py:207
+#: api/admin/problem_details.py:208
 msgid "You attempted to add a parent but the protocol does not support parents."
 msgstr ""
 
@@ -300,7 +300,7 @@ msgstr ""
 msgid "Protocol does not support settings"
 msgstr ""
 
-#: api/admin/problem_details.py:216
+#: api/admin/problem_details.py:217
 msgid ""
 "You attempted to update settings for a protocol that does not support "
 "settings."
@@ -342,7 +342,7 @@ msgstr ""
 msgid "Integration name already in use"
 msgstr ""
 
-#: api/admin/problem_details.py:253
+#: api/admin/problem_details.py:254
 msgid ""
 "The integration name must be unique, and there's already an integration "
 "with the specified name."
@@ -360,7 +360,7 @@ msgstr ""
 msgid "Incompatible use of integration"
 msgstr ""
 
-#: api/admin/problem_details.py:269
+#: api/admin/problem_details.py:270
 msgid ""
 "You tried to use an integration in a way incompatible with the goal of "
 "that integration"
@@ -378,7 +378,7 @@ msgstr ""
 msgid "Missing pgcrypto database extension"
 msgstr ""
 
-#: api/admin/problem_details.py:285
+#: api/admin/problem_details.py:286
 msgid ""
 "You tried to store a password for an individual admin, but the database "
 "does not have the pgcrypto extension installed."
@@ -444,7 +444,7 @@ msgstr ""
 msgid "Invalid library identifier restriction regular expression"
 msgstr ""
 
-#: api/admin/problem_details.py:343
+#: api/admin/problem_details.py:344
 msgid ""
 "The specified library identifier restriction regular expression does not "
 "compile."
@@ -454,7 +454,7 @@ msgstr ""
 msgid "Multiple basic authentication services"
 msgstr ""
 
-#: api/admin/problem_details.py:352
+#: api/admin/problem_details.py:353
 msgid ""
 "Each library can only have one patron authentication service using basic "
 "auth."
@@ -464,7 +464,7 @@ msgstr ""
 msgid "No such patron"
 msgstr ""
 
-#: api/admin/problem_details.py:361
+#: api/admin/problem_details.py:362
 msgid ""
 "The specified patron doesn't exist, or is associated with a different "
 "library."
@@ -490,7 +490,7 @@ msgstr ""
 msgid "Multiple sitewide services"
 msgstr ""
 
-#: api/admin/problem_details.py:384
+#: api/admin/problem_details.py:385
 msgid ""
 "You tried to create a new sitewide service, but a sitewide service of the"
 " same type is already configured."
@@ -540,7 +540,7 @@ msgstr ""
 msgid "Collection not associated with library"
 msgstr ""
 
-#: api/admin/problem_details.py:428
+#: api/admin/problem_details.py:429
 msgid ""
 "You can't add a collection to a list unless it is associated with the "
 "list's library."
@@ -550,7 +550,7 @@ msgstr ""
 msgid "Missing lane"
 msgstr ""
 
-#: api/admin/problem_details.py:437
+#: api/admin/problem_details.py:438
 msgid ""
 "The specified lane doesn't exist, or is associated with a different "
 "library."
@@ -584,7 +584,7 @@ msgstr ""
 msgid "Lane with parent and display name already exists"
 msgstr ""
 
-#: api/admin/problem_details.py:467
+#: api/admin/problem_details.py:468
 msgid ""
 "You cannot create a lane with the same parent and display name as an "
 "existing lane."
@@ -630,7 +630,7 @@ msgstr ""
 msgid "Entry not valid for library"
 msgstr ""
 
-#: api/admin/problem_details.py:511
+#: api/admin/problem_details.py:512
 msgid ""
 "An entry in the customlist was not valid for the library being shared "
 "with."
@@ -659,12 +659,12 @@ msgstr ""
 msgid "\"%(number)s\" is not a number."
 msgstr ""
 
-#: api/admin/validator.py:125
+#: api/admin/validator.py:124
 #, python-format
 msgid "%(field)s must be greater than %(min)s."
 msgstr ""
 
-#: api/admin/validator.py:133
+#: api/admin/validator.py:132
 #, python-format
 msgid "%(field)s cannot be greater than %(max)s."
 msgstr ""

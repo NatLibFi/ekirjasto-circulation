@@ -180,17 +180,15 @@ class TestClassifierLookup:
 
 class TestNestedSubgenres:
     def test_parents(self):
-        assert list(classifier.Romantic_Suspense.parents) == [classifier.Romance]
-
-        # eq_([classifier.Crime_Thrillers_Mystery, classifier.Mystery],
-        #    list(classifier.Police_Procedurals.parents))
+        assert list(classifier.Cozy_Crime.parents) == [classifier.Mystery]
 
     def test_self_and_subgenres(self):
         assert set(list(classifier.Fantasy.self_and_subgenres)) == {
             classifier.Fantasy,
             classifier.Epic_Fantasy,
             classifier.Historical_Fantasy,
-            classifier.Urban_Fantasy,
+            classifier.Magic_Realism,
+            classifier.Romantasy,
         }
 
 
@@ -376,6 +374,43 @@ class TestWorkClassifier:
         work.classifier.prepare_classification(c3)
         assert len(work.classifier.genre_list) == 1
 
+    @pytest.mark.parametrize("parent_first", [True, False])
+    def test_prepare_classification_omits_parent_genre_when_subgenre_is_present(
+        self,
+        work_classifier_fixture: TestWorkClassifierFixture,
+        parent_first,
+    ):
+        """Keep only the most specific genre regardless of classification order."""
+        work = work_classifier_fixture
+        session = work.transaction.session
+        source = DataSource.lookup(session, DataSource.AXIS_360)
+        parent, is_new = Genre.lookup(session, "Fantasy")
+        subgenre, is_new = Genre.lookup(session, "Epic Fantasy")
+        general_fiction, is_new = Genre.lookup(session, "General Fiction")
+
+        subjects = []
+        for genre in (
+            [parent, subgenre, general_fiction]
+            if parent_first
+            else [subgenre, parent, general_fiction]
+        ):
+            subject = work.transaction.subject(
+                type=Subject.SIMPLIFIED_GENRE,
+                identifier=genre.name,
+            )
+            subject.genre = genre
+            subjects.append(subject)
+        for subject in subjects:
+            classification = work.transaction.classification(
+                identifier=work.identifier,
+                subject=subject,
+                data_source=source,
+            )
+            work.classifier.prepare_classification(classification)
+
+        assert len(work.classifier.genre_list) == 1
+        assert [genre.name for genre in work.classifier.genre_list] == ["Epic Fantasy"]
+
     def test_prepare_classification_target_age(
         self, work_classifier_fixture: TestWorkClassifierFixture
     ):
@@ -448,13 +483,13 @@ class TestWorkClassifier:
         work = work_classifier_fixture
         session = work.transaction.session
         genre1, is_new = Genre.lookup(session, "Psychology")
-        genre2, is_new = Genre.lookup(session, "Cooking")
+        genre2, is_new = Genre.lookup(session, "Society")
         subject1 = work.transaction.subject(
             type=SubjectClassifier.BISAC, identifier="PSY000000"
         )
         subject1.genre = genre1
         subject2 = work.transaction.subject(
-            type=Subject.SIMPLIFIED_GENRE, identifier="Cooking"
+            type=Subject.SIMPLIFIED_GENRE, identifier="Society"
         )
         subject2.genre = genre2
         source = DataSource.lookup(session, DataSource.AXIS_360)
@@ -987,6 +1022,46 @@ class TestWorkClassifier:
         assert fiction == True
         assert audience == SubjectClassifier.AUDIENCE_YOUNG_ADULT
         assert target_age == (13, 17)
+
+    def test_assign_classification_adds_genre_to_work(
+        self, work_classifier_fixture: TestWorkClassifierFixture
+    ):
+        work = work_classifier_fixture
+        session = work.transaction.session
+        source = DataSource.lookup(session, DataSource.OVERDRIVE)
+
+        work.identifier.identifier_to_subject(
+            source, Subject.BISAC, "FIC028000", "FICTION / Science Fiction / General"
+        )
+
+        changed = work.work.assign_classification([work.identifier.id])
+
+        assert changed is True
+        assert [genre.name for genre in work.work.genres] == ["Science Fiction"]
+
+    def test_assign_classification_omits_general_fiction_with_other_genres(
+        self, work_classifier_fixture: TestWorkClassifierFixture
+    ):
+        work = work_classifier_fixture
+        session = work.transaction.session
+        source = DataSource.lookup(session, DataSource.OVERDRIVE)
+
+        for identifier, name in [
+            ("FIC000000", "FICTION / General"),
+            ("FIC028000", "FICTION / Science Fiction / General"),
+            ("FIC009120", "FICTION / Fantasy / Dragons & Mythical Creatures"),
+        ]:
+            work.identifier.identifier_to_subject(
+                source, Subject.BISAC, identifier, name
+            )
+
+        changed = work.work.assign_classification([work.identifier.id])
+
+        assert changed is True
+        assert {genre.name for genre in work.work.genres} == {
+            "Science Fiction",
+            "Fantasy",
+        }
 
     def test_classify_work_children(
         self, work_classifier_fixture: TestWorkClassifierFixture

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-08-26 15:06+0300\n"
+"POT-Creation-Date: 2026-09-24 15:47+0300\n"
 "PO-Revision-Date: 2024-02-19 22:15+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -157,7 +157,7 @@ msgstr "Integration error communicating with %(service_name)s"
 msgid "Lane does not exist"
 msgstr "Lane does not exist"
 
-#: api/circulation_manager.py:384 api/lanes.py:3476
+#: api/circulation_manager.py:384 api/lanes.py:3398
 msgid "All Books"
 msgstr "All Books"
 
@@ -297,23 +297,23 @@ msgstr "URL"
 msgid "Integrate an Enki collection."
 msgstr "Integrate an Enki collection."
 
-#: api/lanes.py:3383
+#: api/lanes.py:3305
 msgid "Books in Other Languages"
 msgstr "Books in Other Languages"
 
-#: api/lanes.py:3403
+#: api/lanes.py:3325
 msgid "All Books in Other Languages"
 msgstr "All Books in Other Languages"
 
-#: api/lanes.py:3443
+#: api/lanes.py:3365
 msgid "Books for Adults"
 msgstr "Books for Adults"
 
-#: api/lanes.py:3454
+#: api/lanes.py:3376
 msgid "Books for Young Adults"
 msgstr "Books for Young Adults"
 
-#: api/lanes.py:3465
+#: api/lanes.py:3387
 msgid "Books for Children"
 msgstr "Books for Children"
 
@@ -960,3 +960,4 @@ msgstr "Patron membership has expired"
 #: api/sirsidynix_authentication_provider.py:33
 msgid "Patron has been blocked."
 msgstr "Patron has been blocked."
+

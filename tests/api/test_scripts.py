@@ -917,38 +917,37 @@ class TestGenerateShortTokenScript:
 class TestGenerateKeysScript:
     """Tests for the GenerateKeysScript that creates Ed25519 JWT keys."""
 
-    def test_auto_generates_key_id_from_date(self, caplog):
+    @pytest.fixture
+    def generated_key_files(self, monkeypatch):
+        written_files = {}
+
+        def write_text(path, contents):
+            written_files[path.name] = contents
+
+        monkeypatch.setattr(Path, "write_text", write_text)
+        return written_files
+
+    def test_auto_generates_key_id_from_date(self, caplog, generated_key_files):
         """Test that key ID is auto-generated from today's date with timestamp when not provided."""
 
-        current_dir = Path(".").resolve()
         with caplog.at_level(logging.INFO):
             script = GenerateKeysScript(None)
             script.do_run()
 
-        private_key_file = current_dir / "demarque-private-key.json"
-
-        assert private_key_file.exists()
-
-        private_key_json = json.loads(private_key_file.read_text())
+        private_key_json = json.loads(generated_key_files["demarque-private-key.json"])
 
         today = datetime.date.today().isoformat()
         # Kid should start with date (YYYY-MM-DD)
         assert private_key_json["kid"].startswith(f"demarque-key-{today}")
         assert "demarque-key-" in caplog.text
 
-    def test_generates_valid_keys(self):
+    def test_generates_valid_keys(self, generated_key_files):
         """Test that the script generates valid Ed25519 keys."""
-        current_dir = Path(".").resolve()
         script = GenerateKeysScript(None)
         script.do_run()
 
-        private_key_file = current_dir / "demarque-private-key.json"
-        jwks_file = Path(current_dir) / "r.cantook.com-jwks.json"
-        assert private_key_file.exists()
-        assert jwks_file.exists()
-
         # Verify private key is valid JWK
-        private_key_json = json.loads(private_key_file.read_text())
+        private_key_json = json.loads(generated_key_files["demarque-private-key.json"])
         assert private_key_json["kty"] == "OKP"
         assert private_key_json["crv"] == "Ed25519"
         assert private_key_json["kid"].startswith("demarque-key-")
@@ -957,7 +956,7 @@ class TestGenerateKeysScript:
         assert private_key_json["use"] == "sig"
         assert private_key_json["alg"] == "EdDSA"
 
-        jwks_json = json.loads(jwks_file.read_text())
+        jwks_json = json.loads(generated_key_files["r.cantook.com-jwks.json"])
 
         # Verify public key in JWKS doesn't have private component
         assert jwks_json["keys"][0]["kty"] == "OKP"
@@ -965,31 +964,23 @@ class TestGenerateKeysScript:
         assert "d" not in jwks_json["keys"][0]  # Private key should NOT be in JWKS
         assert "x" in jwks_json["keys"][0]  # Public key component should be present
 
-    def test_public_key_matches_private_key(self):
+    def test_public_key_matches_private_key(self, generated_key_files):
         """Test that the public key in JWKS matches the private key."""
-        current_dir = Path(".").resolve()
         script = GenerateKeysScript(None)
         script.do_run()
 
-        private_key_json = json.loads(
-            (Path(current_dir) / "demarque-private-key.json").read_text()
-        )
-        jwks_json = json.loads(
-            (Path(current_dir) / "r.cantook.com-jwks.json").read_text()
-        )
+        private_key_json = json.loads(generated_key_files["demarque-private-key.json"])
+        jwks_json = json.loads(generated_key_files["r.cantook.com-jwks.json"])
 
         # The public key component 'x' should match
         assert private_key_json["x"] == jwks_json["keys"][0]["x"]
 
-    def test_key_can_be_used_with_jwcrypto(self):
+    def test_key_can_be_used_with_jwcrypto(self, generated_key_files):
         """Test that the generated keys can be used with jwcrypto library."""
-        current_dir = Path(".").resolve()
         script = GenerateKeysScript(None)
         script.do_run()
 
-        private_key_json = json.loads(
-            (Path(current_dir) / "demarque-private-key.json").read_text()
-        )
+        private_key_json = json.loads(generated_key_files["demarque-private-key.json"])
         private_key = jwk.JWK(**private_key_json)
 
         # The key should be valid for signing
@@ -998,9 +989,7 @@ class TestGenerateKeysScript:
         assert private_key.get("kty") == "OKP"
 
         # Load public key from JWKS
-        jwks_json = json.loads(
-            (Path(current_dir) / "r.cantook.com-jwks.json").read_text()
-        )
+        jwks_json = json.loads(generated_key_files["r.cantook.com-jwks.json"])
         public_key = jwk.JWK(**jwks_json["keys"][0])
 
         # Public key should not have private component

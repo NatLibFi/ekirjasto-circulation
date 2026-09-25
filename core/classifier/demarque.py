@@ -16,7 +16,7 @@ class DeMarqueClassifier(SubjectClassifier):
             return identifier
 
     @classmethod
-    def scrub_name(cls, name):
+    def scrub_name(cls, name, identifier=None):
         """
         Read in the De Marque name of the subject code.
         :param name: The name of the subject.

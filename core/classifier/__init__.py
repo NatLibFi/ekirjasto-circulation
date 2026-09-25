@@ -173,7 +173,7 @@ class SubjectClassifier(ClassifierConstants):
         return Lowercased(identifier)
 
     @classmethod
-    def scrub_name(cls, name):
+    def scrub_name(cls, name, identifier=None):
         """
         Prepare a name from within a call to classify().
         """
@@ -564,7 +564,9 @@ COMICS_AND_GRAPHIC_NOVELS = "Comics & Graphic Novels"
 # is for clarity.
 fiction_genres = [
     "Adventure",
+    # Children
     dict(name="Animal Stories", subgenres=["Horse Stories", "Pet Stories"]),
+    # Children, YA
     dict(
         name="Difficult Topics",
         subgenres=[
@@ -580,49 +582,41 @@ fiction_genres = [
     ),
     "Classics",
     COMICS_AND_GRAPHIC_NOVELS,
-    "Diary Stories",
+    "Computers & Technology",  # Children
+    "Diary Stories",  # YA
     "Drama",
     dict(name="Erotica", audiences=SubjectClassifier.AUDIENCE_ADULTS_ONLY),
-    "Family Stories",
+    "Family Stories",  # Children
+    # Children
     dict(
         name="Festivities & Holidays",
-        subgenres=["Easter Stories", "Christmas Stories", "Halloween Stories"],
+        subgenres=[
+            "Easter Stories",
+            "Halloween Stories",
+            "Christmas Stories",
+        ],
     ),
     dict(
         name="Fantasy",
         subgenres=[
             "Epic Fantasy",
             "Historical Fantasy",
-            "Urban Fantasy",
+            "Magic Realism",
+            "Romantasy",
         ],
     ),
-    "Folklore Stories",
-    "Growing Up",
+    "Growing Up",  # Children
     "Historical Fiction",
-    dict(
-        name="Horror",
-        subgenres=[
-            "Gothic Horror",
-            "Ghost Stories",
-            "Vampires",
-            "Werewolves",
-            "Occult Horror",
-        ],
-    ),
+    "Horror",
     "Humor",
-    "Humorous Fiction",
+    "Humorous Fiction",  # Children, YA
     "General Fiction",
     "LGBTQ Fiction",
     dict(
         name="Mystery",
         subgenres=[
             "Crime & Detective Stories",
-            "Hard-Boiled Mystery",
-            "Police Procedural",
-            "Cozy Mystery",
-            "Historical Mystery",
-            "Paranormal Mystery",
-            "Women Detectives",
+            "Cozy Crime",
         ],
     ),
     "Poetry",
@@ -631,28 +625,19 @@ fiction_genres = [
         name="Romance",
         subgenres=[
             "Contemporary Romance",
-            "Gothic Romance",
             "Historical Romance",
-            "Paranormal Romance",
-            "Western Romance",
-            "Romantic Suspense",
         ],
     ),
-    "School & Study",
+    "School & Study",  # Children, YA
     dict(
         name="Science Fiction",
         subgenres=[
             "Dystopian SF",
             "Space Opera",
-            "Cyberpunk",
-            "Military SF",
-            "Alternative History",
-            "Steampunk",
-            "Romantic SF",
-            "Media Tie-in SF",
         ],
     ),
     "Short Stories",
+    # Children, YA
     dict(
         name="Sports Stories",
         subgenres=[
@@ -663,86 +648,101 @@ fiction_genres = [
             "Skating Stories",
         ],
     ),
-    "Superheroes",
+    "Stories & Myths",
+    "Superheroes",  # Children
     dict(
         name="Suspense/Thriller",
         subgenres=[
             "Historical Thriller",
-            "Espionage",
-            "Supernatural Thriller",
-            "Medical Thriller",
-            "Political Thriller",
             "Psychological Thriller",
-            "Technothriller",
-            "Legal Thriller",
-            "Military Thriller",
         ],
     ),
-    "Urban Fiction",
+    # Children
     dict(name="Vehicles & Technology", subgenres=["Cars", "Trains", "Airplanes"]),
-    "Westerns",
+    "War Fiction",
 ]
 
 nonfiction_genres = [
-    dict(name="Animals", subgenres=["Horses & Riding", "Pet Animals", "Dinosaurs"]),
+    # Children, YA
+    dict(
+        name="Animals",
+        subgenres=[
+            "Horses & Riding",
+            "Pet Animals",
+            "Dinosaurs",
+        ],
+    ),
     dict(
         name="Art & Culture",
         subgenres=[
             "Film & TV",
             "Music",
             "Performing Arts",
-            "Drawing",
+            "Drawing",  # Children, YA
             "Architecture",
             "Art",
-            "Art Criticism & Theory",
-            "Art History",
             "Design",
             "Fashion",
             "Photography",
         ],
     ),
-    dict(name="Biography & Memoir", subgenres=["Athletes", "Musicians"]),
-    "Careers",
-    "Computers & Digital Skills",
-    "Cooking & Baking",
-    "Climate & Sustainability",
-    "Continents & Countries",
-    "Diversity & Multicultural",
+    dict(
+        name="Biography & Memoir",
+        subgenres=[
+            "Athletes",  # Children, YA
+            "Musicians",  # Children, YA
+            "Activism (Biographies)",
+            "Actors (Biographies)",
+            "Artists (Biographies)",
+            "Authors (Biographies)",
+            "Crime & Law Enforcement (Biographies)",
+            "Emergency Services (Biographies)",
+            "Foreign Cultures (Biographies)",
+            "Journalists (Biographies)",
+            "Historical Biographies",
+            "LGBTQ Biographies",
+            "Medical Professionals (Biographies)",
+            "Music Biographies",
+            "Philosophical Biographies",
+            "Public Figures (Biographies)",
+            "Religious Biographies",
+            "Rulers & Politicians (Biographies)",
+            "Survival Stories (Biographies)",
+            "War (Biographies)",
+        ],
+    ),
+    "Careers",  # YA
+    "Climate & Sustainability",  # Children, YA
+    "Computers & Digital Skills",  # Children, YA
+    "Continents & Countries",  # Children, YA
+    "Cooking & Baking",  # Children, YA
+    "Diversity & Multicultural",  # Children, YA
+    dict(
+        name="Economics",
+        subgenres=["Investing", "Management & Leadership", "Marketing"],
+    ),
     "Education",
-    "Encyclopedias",
-    "Family",
-    "Fashion & Looks",
-    "Folklore",
-    dict(name="Games", subgenres=["Video Games", "Board Games & Strategic Games"]),
+    "Encyclopedias",  # Children
+    "Family",  # Children, YA
+    "Fashion & Looks",  # Children, YA
+    "Folklore",  # Children, YA
     dict(
         name="Food & Health",
         subgenres=[
-            "Bartending & Cocktails",
-            "Cooking",
-            "Health & Diet",
-            "Vegetarian & Vegan",
+            "Cookbooks",
+            "Nutrition",
         ],
     ),
-    "General Nonfiction",
-    "Health & Wellness",
     dict(
-        name="History",
+        name="Games",  # Children, YA
         subgenres=[
-            "African History",
-            "Ancient History",
-            "Asian History",
-            "Civil War History",
-            "European History",
-            "Latin American History",
-            "Medieval History",
-            "Middle East History",
-            "Military History",
-            "Modern History",
-            "Renaissance & Early Modern History",
-            "United States History",
-            "World History",
+            "Board Games & Strategic Games",  # Children
+            "Video Games",  # Children, YA
         ],
     ),
+    "General Nonfiction",  # Children, YA
+    "Health & Wellness",  # Children, YA
+    "History",
     dict(
         name="Hobbies & Home",
         subgenres=[
@@ -750,80 +750,106 @@ nonfiction_genres = [
             "Crafts & Hobbies",
             "Gardening",
             "Games & Activities",
-            "House & Home",
+            "Interior Design",
             "Pets",
+            "Hobbies",  # YA
         ],
     ),
-    dict(name="Holidays & Celebrations", subgenres=["Christmas", "Birthdays"]),
-    "Humorous Nonfiction",
-    "Life Strategies",
-    "Literary Criticism",
-    dict(name="Machinery & Equipment", subgenres=["Robots", "Vehicles"]),
+    # Children
     dict(
-        name="Parenting & Family",
+        name="Holidays & Celebrations",
         subgenres=[
-            "Family & Relationships",
-            "Parenting",
+            "Christmas",
+            "Birthdays",
         ],
     ),
-    "Periodicals",
+    "Humorous Nonfiction",  # YA
     dict(
-        name="Personal Finance & Business",
+        name="Literature & Linguistics",
+        subgenres=["Dictionaries", "Finnish Language", "Foreign Language Study"],
+    ),
+    # Children and YA only
+    dict(
+        name="Machinery & Equipment",
         subgenres=[
-            "Business",
-            "Economics",
-            "Management & Leadership",
-            "Personal Finance & Investing",
-            "Real Estate",
+            "Equipment & Technology",
+            "Robots",
+            "Vehicles",
         ],
     ),
-    "Philosophy",
-    dict(name="Play & Hobbies", subgenres=["Toys", "Crafts", "Camping"]),
+    "Other Nonfiction",
+    "Parenting & Family",
+    dict(
+        name="Philosophy",
+        subgenres=[
+            "Ethics & Moral Philosophy",
+        ],
+    ),
+    # Children
+    dict(
+        name="Play & Hobbies",
+        subgenres=[
+            "Crafts",
+            "Camping",
+        ],
+    ),
     "Political Science",
-    dict(
-        name="Reference & Study Aids",
-        subgenres=[
-            "Dictionaries",
-            "Foreign Language Study",
-            "Law",
-            "Study Aids",
-        ],
-    ),
+    dict(name="Psychology", subgenres=["Life Management"]),
+    "Puberty & Growing Up",  # YA
+    "Reference & Study Aids",  # Children, YA
     dict(
         name="Religion & Spirituality",
         subgenres=[
             "Body, Mind & Spirit",
-            "Buddhism",
-            "Christianity",
-            "Hinduism",
-            "Islam",
-            "Judaism",
+            "Metaphysics",
         ],
     ),
     dict(
         name="Science & Technology",
         subgenres=[
+            "Artificial Intelligence",
             "Computers",
+            "Geography",  # Children, YA
+            "Internet",
+            "Law",
             "Mathematics",
             "Medical",
             "Nature",
-            "Psychology",
+            "Plants",  # Children, YA
+            "Physics & Chemistry",  # Children, YA
+            "Programming",
             "Science",
-            "Social Sciences",
             "Technology",
-            "Plants",
-            "Physics & Chemistry",
-            "Geography",
-            "Stars & Space",
+            "Stars & Space",  # Children, YA
         ],
     ),
-    "Self-Help",
-    dict(name="Society", subgenres=["Antiracism", "Human Rights"]),
-    dict(name="Sports", subgenres=["Football", "Hockey", "Dance", "Riding", "Skating"]),
-    "Supernatural",
+    "Self-Help",  # Children, YA
+    "Sexual Education",  # YA
+    dict(
+        name="Society",
+        subgenres=[
+            "Antiracism",  # YA
+            "Human Rights",  # YA
+        ],
+    ),
+    dict(
+        name="Sports",
+        subgenres=[
+            "Ball Sports",
+            "Equestrian Sports",
+            "Football",  # Children, YA
+            "Hockey",  # Children, YA
+            "Motor Sports",
+            "Racquet Sports",
+            "Strength Sports",
+            "Winter Sports",
+        ],
+    ),
+    "Supernatural",  # Children, YA
     "Travel",
     "True Crime",
-    "World Record Books",
+    "War Nonfiction",
+    "World Record Books",  # Children, YA
 ]
 
 
@@ -869,6 +895,8 @@ class GenreData:
     def variable_name(self):
         return (
             self.name.replace("-", "_")
+            .replace("(", "")
+            .replace(")", "")
             .replace(", & ", "_")
             .replace(", ", "_")
             .replace(" & ", "_")
@@ -950,12 +978,7 @@ class GenreData:
             )
 
 
-Fantasy: GenreData
-Romance: GenreData
-Science_Fiction: GenreData
-Contemporary_Romance: GenreData
-Epic_Fantasy: GenreData
-
+General_Fiction: GenreData
 genres = dict()
 GenreData.populate(globals(), genres, fiction_genres, nonfiction_genres)
 
@@ -1183,6 +1206,33 @@ class WorkClassifier:
                 # Ensure it's a Genre, not GenreData object.
                 genre, ignore = Genre.lookup(self._db, subject.genre.name)
                 self.genre_list.append(genre)
+        self._remove_parent_genres()
+        self._remove_general_fiction()
+
+    def _remove_parent_genres(self):
+        """Remove a genre when one of its subgenres is also present."""
+        subgenres_by_genre = {
+            item.name: {subgenre.name for subgenre in item.subgenres}
+            for item in self.genre_list
+        }
+        self.genre_list = [
+            item
+            for item in self.genre_list
+            if not any(
+                other.name in subgenres_by_genre[item.name]
+                for other in self.genre_list
+                if other != item
+            )
+        ]
+
+    def _remove_general_fiction(self):
+        """Remove broad General Fiction when any other genre is present."""
+        if len(self.genre_list) >= 2:
+            other_genres = [
+                item for item in self.genre_list if item.name != General_Fiction.name
+            ]
+            if len(other_genres) >= 1:
+                self.genre_list = other_genres
 
     def _add_fiction_count(self, from_staff, subject):
         """

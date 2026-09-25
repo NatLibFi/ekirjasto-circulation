@@ -10,7 +10,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-08-26 15:06+0300\n"
+"POT-Creation-Date: 2026-09-24 15:47+0300\n"
 "PO-Revision-Date: 2025-08-20 09:06+0000\n"
 "Last-Translator: Kaisa Kuivalahti, 2025\n"
 "Language: sv\n"
@@ -150,7 +150,9 @@ msgstr "Det går inte att hitta ditt aktiva lån för detta verk."
 #: api/circulation.py:1584
 #, python-format
 msgid "Something went wrong with  %(requested_delivery_mechanism)s"
-msgstr "Något gick fel med fullgörandet av ditt lån  %(requested_delivery_mechanism)s"
+msgstr ""
+"Något gick fel med fullgörandet av ditt lån  "
+"%(requested_delivery_mechanism)s"
 
 #: api/circulation_exceptions.py:60
 #, python-format
@@ -161,7 +163,7 @@ msgstr "Integrationsfel vid kommunikation med %(service_name)s"
 msgid "Lane does not exist"
 msgstr "Bandet finns inte"
 
-#: api/circulation_manager.py:384 api/lanes.py:3476
+#: api/circulation_manager.py:384 api/lanes.py:3398
 msgid "All Books"
 msgstr "Alla böcker"
 
@@ -301,23 +303,23 @@ msgstr "URL"
 msgid "Integrate an Enki collection."
 msgstr "Integrera en Enki-samling"
 
-#: api/lanes.py:3383
+#: api/lanes.py:3305
 msgid "Books in Other Languages"
 msgstr "Böcker för andra språk"
 
-#: api/lanes.py:3403
+#: api/lanes.py:3325
 msgid "All Books in Other Languages"
 msgstr "Alla böcker för andra spräk"
 
-#: api/lanes.py:3443
+#: api/lanes.py:3365
 msgid "Books for Adults"
 msgstr "Böcker för vuxen"
 
-#: api/lanes.py:3454
+#: api/lanes.py:3376
 msgid "Books for Young Adults"
 msgstr "Böcker för ungdomar"
 
-#: api/lanes.py:3465
+#: api/lanes.py:3387
 msgid "Books for Children"
 msgstr "Böcker för barn"
 
@@ -970,3 +972,4 @@ msgstr "Kundens medlemskap har löpt ut"
 #: api/sirsidynix_authentication_provider.py:33
 msgid "Patron has been blocked."
 msgstr "Kunden har blockerats."
+
