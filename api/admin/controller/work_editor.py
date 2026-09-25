@@ -564,8 +564,9 @@ class WorkController(CirculationManagerController, AdminPermissionsControllerMix
                 mapping.append(result.subject.genre.name)
             if result.subject.audience:
                 mapping.append(result.subject.audience)
-            if result.subject.target_age:
-                mapping.append(result.subject.target_age_string)
+            target_age = result.subject.target_age_string
+            if target_age:
+                mapping.append(target_age)
             if result.subject.fiction is not None:
                 mapping.append("Fiction" if result.subject.fiction else "Nonfiction")
 
