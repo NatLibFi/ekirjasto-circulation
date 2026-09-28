@@ -505,7 +505,38 @@ class TestWorkClassifier:
         work.classifier.prepare_classification(classification1)
         work.classifier.prepare_classification(classification2)
         (genres, fiction, audience, target_age) = work.classifier.classify_work()
+        # Only staff genre are present
         assert [genre.name for genre in genres] == [genre2.name]
+
+    def test_prepare_classification_keeps_staff_general_fiction(
+        self, work_classifier_fixture: TestWorkClassifierFixture
+    ):
+        """Staff-selected General Fiction should not be removed from other staff genres."""
+        work = work_classifier_fixture
+        session = work.transaction.session
+        drama, is_new = Genre.lookup(session, "Drama")
+        general_fiction, is_new = Genre.lookup(session, "General Fiction")
+        staff_source = DataSource.lookup(session, DataSource.LIBRARY_STAFF)
+
+        subjects = []
+        for genre in (drama, general_fiction):
+            subject = work.transaction.subject(
+                type=Subject.SIMPLIFIED_GENRE, identifier=genre.name
+            )
+            subject.genre = genre
+            subjects.append(subject)
+
+        for subject in subjects:
+            classification = work.transaction.classification(
+                identifier=work.identifier,
+                subject=subject,
+                data_source=staff_source,
+            )
+            work.classifier.prepare_classification(classification)
+
+        genres, fiction, audience, target_age = work.classifier.classify_work()
+
+        assert sorted(genre.name for genre in genres) == ["Drama", "General Fiction"]
 
     def test_prepare_classification_staff_none_genre_overrides_others(
         self, work_classifier_fixture: TestWorkClassifierFixture
