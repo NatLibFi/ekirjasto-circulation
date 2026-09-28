@@ -3895,6 +3895,7 @@ class TestLane:
                 "Epic Fantasy",
                 "Historical Fantasy",
                 "Magic Realism",
+                "Romantasy",
             ]
         ]
         assert set(expect) == fantasy.genre_ids

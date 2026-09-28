@@ -408,8 +408,9 @@ class TestWorkClassifier:
             )
             work.classifier.prepare_classification(classification)
 
-        assert len(work.classifier.genre_list) == 1
-        assert [genre.name for genre in work.classifier.genre_list] == ["Epic Fantasy"]
+        genres, fiction = work.classifier._genres(None)
+        assert fiction is None
+        assert [genre.name for genre in genres] == ["Epic Fantasy"]
 
     def test_prepare_classification_target_age(
         self, work_classifier_fixture: TestWorkClassifierFixture
