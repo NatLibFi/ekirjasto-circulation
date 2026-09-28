@@ -1162,7 +1162,7 @@ class WorkClassifier:
 
         # Collect information about genre.
         if is_genre or is_none:
-            self._add_genres(from_staff, is_genre, subject)
+            self._add_genre(from_staff, is_genre, subject)
 
         # Collect information about fiction.
         if not self.using_staff_fiction_status:
@@ -1176,12 +1176,12 @@ class WorkClassifier:
         if not self.using_staff_target_age:
             self._add_target_age(from_staff, subject)
 
-    def _add_genres(self, from_staff, is_genre, subject):
+    def _add_genre(self, from_staff, is_genre, subject):
         """
-        Append a genre to the classifier's genres if it's BISAC or from staff.
-        Args:
-            from_staff: Boolean: Indicates if the classification has been modified in
-            the admin UI.
+        Add genre to the classifier.
+
+        Library-staff genres override other classifications. Redundant genres
+        are removed later, once all classifications for the work are collected.
         Returns:
             None
         """
@@ -1206,33 +1206,31 @@ class WorkClassifier:
                 # Ensure it's a Genre, not GenreData object.
                 genre, ignore = Genre.lookup(self._db, subject.genre.name)
                 self.genre_list.append(genre)
-        self._remove_parent_genres()
-        self._remove_general_fiction()
 
-    def _remove_parent_genres(self):
+    def _remove_parent_genres(self, genres):
         """Remove a genre when one of its subgenres is also present."""
         subgenres_by_genre = {
-            item.name: {subgenre.name for subgenre in item.subgenres}
-            for item in self.genre_list
+            item.name: {subgenre.name for subgenre in item.subgenres} for item in genres
         }
-        self.genre_list = [
+        return [
             item
-            for item in self.genre_list
+            for item in genres
             if not any(
                 other.name in subgenres_by_genre[item.name]
-                for other in self.genre_list
+                for other in genres
                 if other != item
             )
         ]
 
-    def _remove_general_fiction(self):
+    def _remove_general_fiction(self, genres):
         """Remove broad General Fiction when any other genre is present."""
-        if len(self.genre_list) >= 2:
+        if len(genres) >= 2:
             other_genres = [
-                item for item in self.genre_list if item.name != General_Fiction.name
+                item for item in genres if item.name != General_Fiction.name
             ]
-            if len(other_genres) >= 1:
-                self.genre_list = other_genres
+            if other_genres:
+                return other_genres
+        return genres
 
     def _add_fiction_count(self, from_staff, subject):
         """
@@ -1515,12 +1513,19 @@ class WorkClassifier:
             list: List of genres.
             boolean: Fiction status.
         """
-        genres = self.genre_list
+        genres = list(self.genre_list)
 
         if not genres:
             # We have absolutely no idea, and it would be
             # irresponsible to guess.
             return [], fiction
+
+        # These are work-level decisions: wait until all classifications have
+        # been collected before removing redundant genres. Staff-selected
+        # genres intentionally bypass this cleanup.
+        if not self.using_staff_genres:
+            genres = self._remove_parent_genres(genres)
+            genres = self._remove_general_fiction(genres)
 
         self.log.info(f"Collected genres: {genres} Initial fiction: {fiction}")
 
