@@ -2,12 +2,15 @@ import json
 
 import flask
 from flask import Response
+from flask_babel import force_locale
 from flask_babel import lazy_gettext as _
 
 from api.admin.controller.base import AdminPermissionsControllerMixin
 from api.admin.problem_details import *
+from api.config import Configuration
 from api.controller.circulation_manager import CirculationManagerController
 from core.classifier import NO_NUMBER, NO_VALUE, SimplifiedGenreClassifier, genres
+from core.classifier.localized_names import genres as localized_genres
 from core.feed.acquisition import OPDSAcquisitionFeed
 from core.feed.annotator.admin import AdminAnnotator
 from core.lane import Lane
@@ -619,7 +622,19 @@ class WorkController(CirculationManagerController, AdminPermissionsControllerMix
         old_computed_genres = [work_genre.genre.name for work_genre in work.work_genres]
 
         # New genres should be compared to previously computed genres
-        new_genres = flask.request.form.getlist("genres")
+        # The genre tree endpoint returns localized labels, and older admin
+        # clients submit those labels back to this endpoint. Convert them to
+        # the canonical genre names used by the database before validating or
+        # persisting them. Canonical names remain valid as well.
+        localized_to_canonical = {name: name for name in genres}
+        for locale in Configuration.localization_languages():
+            with force_locale(locale):
+                for name in genres:
+                    localized_to_canonical.setdefault(str(localized_genres[name]), name)
+        new_genres = [
+            localized_to_canonical.get(name, name)
+            for name in flask.request.form.getlist("genres")
+        ]
         genres_changed = sorted(new_genres) != sorted(old_computed_genres)
 
         # Update audience
