@@ -5,7 +5,6 @@ import os
 import subprocess
 import sys
 import time
-import uuid
 from collections.abc import Sequence
 from datetime import timedelta
 from pathlib import Path
@@ -58,7 +57,6 @@ from core.model import (
     MarcFile,
     Patron,
     SessionManager,
-    create,
     get_one,
     pg_advisory_lock,
 )
@@ -497,7 +495,17 @@ class CollectTranslationsScript(Script):
 
         subprocess.run(["./bin/util/generate_translation_template"], check=True)
         subprocess.run(
-            ["pybabel", "update", "--no-fuzzy-matching", "-i", "core.pot", "-d", "translations", "-D", "core"],
+            [
+                "pybabel",
+                "update",
+                "--no-fuzzy-matching",
+                "-i",
+                "core.pot",
+                "-d",
+                "translations",
+                "-D",
+                "core",
+            ],
             check=True,
         )
         subprocess.run(

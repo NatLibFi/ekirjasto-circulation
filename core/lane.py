@@ -9,7 +9,8 @@ from urllib.parse import quote_plus
 
 from dependency_injector.wiring import Provide, inject
 from flask import has_app_context
-from flask_babel import gettext, lazy_gettext as _
+from flask_babel import gettext
+from flask_babel import lazy_gettext as _
 from opensearchpy.exceptions import OpenSearchException
 from sqlalchemy import (
     Boolean,

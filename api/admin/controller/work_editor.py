@@ -2,8 +2,7 @@ import json
 
 import flask
 from flask import Response
-from flask_babel import force_locale
-from flask_babel import gettext
+from flask_babel import force_locale, gettext
 from flask_babel import lazy_gettext as _
 
 from api.admin.controller.base import AdminPermissionsControllerMixin

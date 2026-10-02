@@ -1,4 +1,5 @@
 import logging
+
 import core.classifier as genres
 from api.config import CannotLoadConfiguration, Configuration
 from api.metadata.novelist import NoveListAPI

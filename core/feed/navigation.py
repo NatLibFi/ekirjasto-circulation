@@ -4,7 +4,6 @@ from typing import Any, Self
 
 from sqlalchemy.orm import Session
 from werkzeug.datastructures import MIMEAccept
-from flask_babel import lazy_gettext as _
 
 from core.feed.annotator.circulation import CirculationManagerAnnotator
 from core.feed.opds import BaseOPDSFeed, NavigationFacets
