@@ -14,9 +14,9 @@ from api.integration.registry.metadata import MetadataRegistry
 from api.lanes import ContributorLane
 from api.metadata.novelist import NoveListAPI, NoveListApiSettings
 from core.classifier import (  # type: ignore[attr-defined]
+    Epic_Fantasy,
     Fantasy,
     SubjectClassifier,
-    Urban_Fantasy,
 )
 from core.entrypoint import AudiobooksEntryPoint, EbooksEntryPoint, EverythingEntryPoint
 from core.feed.acquisition import OPDSAcquisitionFeed
@@ -169,9 +169,9 @@ class TestLibraryAnnotator:
         )
         fantasy_lane_with_sublanes.add_genre(Fantasy.name)
 
-        urban_fantasy_lane = annotator_fixture.db.lane(display_name="Urban Fantasy")
-        urban_fantasy_lane.add_genre(Urban_Fantasy.name)
-        fantasy_lane_with_sublanes.sublanes.append(urban_fantasy_lane)
+        epic_fantasy_lane = annotator_fixture.db.lane(display_name="Urban Fantasy")
+        epic_fantasy_lane.add_genre(Epic_Fantasy.name)
+        fantasy_lane_with_sublanes.sublanes.append(epic_fantasy_lane)
 
         fantasy_lane_without_sublanes = annotator_fixture.db.lane(
             display_name="Fantasy without sublanes", languages=["eng"]

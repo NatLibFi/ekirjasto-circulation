@@ -32,7 +32,7 @@ class TestSimplifiedGenreClassifier:
         is_fiction = SimplifiedGenreClassifier.is_fiction(scrubbed, genre_name)
         assert is_fiction == True
 
-        genre_name = "Cooking"
+        genre_name = "Society"
         scrubbed = SimplifiedGenreClassifier.scrub_identifier(genre_name)
         is_fiction = SimplifiedGenreClassifier.is_fiction(scrubbed, genre_name)
         assert is_fiction == False

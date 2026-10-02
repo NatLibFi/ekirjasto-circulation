@@ -5,7 +5,7 @@ import pytest
 import pytz
 from psycopg2.extras import NumericRange
 
-from core.classifier import Fantasy, Romance, SubjectClassifier
+from core.classifier import SubjectClassifier
 from core.equivalents_coverage import EquivalentIdentifiersCoverageProvider
 from core.model import get_one_or_create, tuple_to_numericrange
 from core.model.classification import Genre, Subject
@@ -542,15 +542,17 @@ class TestWork:
 
     def test_update_genres(self, db: DatabaseTransactionFixture):
         work = db.work()
+        romance, ignore = Genre.lookup(db.session, "Romance")
+        fantasy, ignore = Genre.lookup(db.session, "Fantasy")
 
         # This work was once classified under Fantasy and Romance.
-        work.update_genres([Romance, Fantasy])
+        work.update_genres([romance, fantasy])
         db.session.commit()
         assert work.work_genres[0].genre.name == "Romance"
         assert work.work_genres[1].genre.name == "Fantasy"
 
         # But now Fantasy is no longer in this work's genres.
-        work.update_genres([Romance])
+        work.update_genres([romance])
         db.session.commit()
         assert len(work.work_genres) == 1
         assert work.work_genres[0].genre.name == "Romance"

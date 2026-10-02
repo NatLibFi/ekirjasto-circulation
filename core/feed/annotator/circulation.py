@@ -823,7 +823,7 @@ class LibraryAnnotator(CirculationManagerAnnotator):
             return lane, lane_name
 
         if hasattr(lane, "display_name") and not title:
-            title = lane.display_name
+            title = lane.localized_display_name
 
         if show_feed:
             return self.feed_url(lane, self.facets), title

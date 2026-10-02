@@ -57,12 +57,12 @@ class NavigationFeed(BaseOPDSFeed):
             # We can't generate links to children, since this Worklist
             # has no children, so we'll generate a link to the
             # Worklist's page-type feed instead.
-            title = "All " + self.lane.display_name
+            title = self.lane.display_name
             page_url = self.annotator.feed_url(self.lane)
             self.add_entry(page_url, title, OPDSFeed.ACQUISITION_FEED_TYPE)
 
         for child in self.lane.visible_children:
-            title = child.display_name
+            title = child.localized_display_name
             if child.children:
                 child_url = self.annotator.navigation_url(child)
                 self.add_entry(child_url, title, OPDSFeed.NAVIGATION_FEED_TYPE)
