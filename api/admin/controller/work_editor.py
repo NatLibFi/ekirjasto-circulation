@@ -3,6 +3,7 @@ import json
 import flask
 from flask import Response
 from flask_babel import force_locale
+from flask_babel import gettext
 from flask_babel import lazy_gettext as _
 
 from api.admin.controller.base import AdminPermissionsControllerMixin
@@ -564,14 +565,16 @@ class WorkController(CirculationManagerController, AdminPermissionsControllerMix
         for result in results:
             mapping = []
             if result.subject.genre:
-                mapping.append(result.subject.genre.name)
+                mapping.append(str(localized_genres[result.subject.genre.name]))
             if result.subject.audience:
-                mapping.append(result.subject.audience)
+                mapping.append(str(gettext(result.subject.audience)))
             target_age = result.subject.target_age_string
             if target_age:
                 mapping.append(target_age)
             if result.subject.fiction is not None:
-                mapping.append("Fiction" if result.subject.fiction else "Nonfiction")
+                mapping.append(
+                    str(gettext("Fiction" if result.subject.fiction else "Nonfiction"))
+                )
 
             data.append(
                 dict(
