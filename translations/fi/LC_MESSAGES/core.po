@@ -10,7 +10,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-09-25 14:37+0300\n"
+"POT-Creation-Date: 2026-10-02 13:42+0300\n"
 "PO-Revision-Date: 2025-10-16 10:07+0000\n"
 "Last-Translator: Kaisa Kuivalahti, 2025\n"
 "Language: fi\n"
@@ -21,6 +21,30 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
+
+#: default_lane_names_to_localize.py:7
+msgid "All Books"
+msgstr "Kaikki kirjat"
+
+#: default_lane_names_to_localize.py:8
+msgid "All Books in Other Languages"
+msgstr "Kaikki kirjat muilla kielillä"
+
+#: default_lane_names_to_localize.py:9
+msgid "Books for Adults"
+msgstr "Aikuisten kirjat"
+
+#: default_lane_names_to_localize.py:10
+msgid "Books for Children"
+msgstr "Lasten kirjat"
+
+#: default_lane_names_to_localize.py:11
+msgid "Books for Young Adults"
+msgstr "Nuorten kirjat"
+
+#: default_lane_names_to_localize.py:12
+msgid "Books in Other Languages"
+msgstr "Kirjat muilla kielillä"
 
 #: core/config.py:95
 msgid "Debug"
@@ -239,42 +263,42 @@ msgstr "Kaikki"
 msgid "Popular Books"
 msgstr "Suositut kirjat"
 
-#: core/lane.py:385
+#: core/lane.py:401
 #, python-format
 msgid "I don't know how to order a feed by '%(order)s'"
 msgstr "En tiedä, miten syöte järjestetään seuraavan mukaan: %(order)s"
 
-#: core/lane.py:394
+#: core/lane.py:410
 #, python-format
 msgid "I don't understand the availability term '%(availability)s'"
 msgstr "En ymmärrä saatavuustermiä %(availability)s"
 
-#: core/lane.py:406
+#: core/lane.py:422
 #, python-format
 msgid "I don't understand what '%(collection)s' refers to."
 msgstr "En ymmärrä, mitä %(collection)s tarkoittaa."
 
-#: core/lane.py:422
+#: core/lane.py:438
 #, python-format
 msgid "I don't understand which distributor '%(distributor)s' refers to."
 msgstr "En ymmärrä, mihin jakelijaan %(distributor)s viittaa."
 
-#: core/lane.py:438
+#: core/lane.py:454
 #, python-format
 msgid "I don't understand which collection '%(collection_name)s' refers to."
 msgstr "En ymmärrä, mihin kokoelmaan %(collection_name)s viittaa."
 
-#: core/lane.py:1258
+#: core/lane.py:1274
 #, python-format
 msgid "Invalid page size: %(size)s"
 msgstr "Virheellinen sivukoko: %(size)s"
 
-#: core/lane.py:1276
+#: core/lane.py:1292
 #, python-format
 msgid "Invalid offset: %(offset)s"
 msgstr "Virheellinen offset: %(offset)s"
 
-#: core/lane.py:1600
+#: core/lane.py:1616
 #, python-format
 msgid "All %(worklist)s"
 msgstr "Kaikki %(worklist)s"
@@ -1539,4 +1563,3 @@ msgstr "Palvelin teki pyynnön palveluun %(service)s, ja pyyntö aikakatkaistiin
 
 #~ msgid "Others"
 #~ msgstr "muut"
-

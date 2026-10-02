@@ -8,7 +8,8 @@ from typing import TYPE_CHECKING, Any
 from urllib.parse import quote_plus
 
 from dependency_injector.wiring import Provide, inject
-from flask_babel import lazy_gettext as _
+from flask import has_app_context
+from flask_babel import gettext, lazy_gettext as _
 from opensearchpy.exceptions import OpenSearchException
 from sqlalchemy import (
     Boolean,
@@ -71,6 +72,21 @@ from core.util.problem_detail import ProblemDetail
 
 if TYPE_CHECKING:
     from core.external_search import ExternalSearchIndex, WorkSearchResult
+
+
+# These names are stored in English as stable message IDs. They are translated
+# when a patron-facing feed is generated, so the result follows the request's
+# locale instead of the locale active when the lane was created.
+LOCALIZABLE_LANE_NAMES = frozenset(
+    {
+        "Books in Other Languages",
+        "All Books in Other Languages",
+        "Books for Adults",
+        "Books for Young Adults",
+        "Books for Children",
+        "All Books",
+    }
+)
 
 
 class BaseFacets(FacetConstants):
@@ -1695,6 +1711,18 @@ class WorkList:
             if value not in (None, []):
                 values.append(value)
         return values
+
+    @property
+    def localized_display_name(self):
+        """Return the lane name translated for the current request.
+
+        User-created lane names are returned unchanged. Only the built-in
+        names listed in ``LOCALIZABLE_LANE_NAMES`` are message IDs.
+        """
+        display_name = self.display_name
+        if has_app_context() and display_name in LOCALIZABLE_LANE_NAMES:
+            return str(gettext(display_name))
+        return display_name
 
     @property
     def full_identifier(self):

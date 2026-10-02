@@ -1,7 +1,4 @@
 import logging
-
-from flask_babel import gettext as _
-
 import core.classifier as genres
 from api.config import CannotLoadConfiguration, Configuration
 from api.metadata.novelist import NoveListAPI
@@ -3304,7 +3301,7 @@ def create_world_languages_lane(
         _db,
         Lane,
         library=library,
-        display_name=_("Books in Other Languages"),
+        display_name="Books in Other Languages",
         fiction=None,
         priority=priority,
         languages=small_languages,
@@ -3324,7 +3321,7 @@ def create_world_languages_lane(
         _db,
         Lane,
         library=library,
-        display_name=_("All Books in Other Languages"),
+        display_name="All Books in Other Languages",
         priority=language_priority,
         languages=small_languages,
     )
@@ -3364,7 +3361,7 @@ def create_lane_for_small_collection(_db, library, parent, language, priority=0)
         _db,
         Lane,
         library=library,
-        display_name=_("Books for Adults"),
+        display_name="Books for Adults",
         audiences=ADULT,
         priority=sublane_priority,
         **common_args,
@@ -3375,7 +3372,7 @@ def create_lane_for_small_collection(_db, library, parent, language, priority=0)
         _db,
         Lane,
         library=library,
-        display_name=_("Books for Young Adults"),
+        display_name="Books for Young Adults",
         audiences=YA,
         priority=sublane_priority,
         **common_args,
@@ -3386,7 +3383,7 @@ def create_lane_for_small_collection(_db, library, parent, language, priority=0)
         _db,
         Lane,
         library=library,
-        display_name=_("Books for Children"),
+        display_name="Books for Children",
         audiences=CHILDREN,
         priority=sublane_priority,
         **common_args,
@@ -3397,7 +3394,7 @@ def create_lane_for_small_collection(_db, library, parent, language, priority=0)
         _db,
         Lane,
         library=library,
-        display_name=_("All Books"),
+        display_name="All Books",
         priority=sublane_priority,
         **common_args,
     )
