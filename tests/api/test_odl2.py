@@ -496,7 +496,7 @@ class TestODL2Importer:
         assert maahan_katketty_licensepool == maahan_katketty_work.license_pools[0]
 
         # The entry contained two subjects that maps to a genre
-        assert 2 == len(maahan_katketty_work.genres)
+        assert 1 == len(maahan_katketty_work.genres)  # General Fiction is omitted
         assert "Adult" == maahan_katketty_work.audience
         assert True == maahan_katketty_work.fiction
 

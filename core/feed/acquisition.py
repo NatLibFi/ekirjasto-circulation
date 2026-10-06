@@ -296,7 +296,7 @@ class OPDSAcquisitionFeed(BaseOPDSFeed):
         if isinstance(lane, Lane):
             parent = lane.parent
         if parent and parent.display_name:
-            parent_title = parent.display_name
+            parent_title = parent.localized_display_name
         else:
             parent_title = top_level_title
 
@@ -368,7 +368,7 @@ class OPDSAcquisitionFeed(BaseOPDSFeed):
             root_title = annotator.top_level_title()
         else:
             root_url = annotator.lane_url(site_root_lane)
-            root_title = site_root_lane.display_name
+            root_title = site_root_lane.localized_display_name
         root_link = Link(href=root_url, title=root_title)
         breadcrumbs.append(root_link)
 
@@ -392,7 +392,7 @@ class OPDSAcquisitionFeed(BaseOPDSFeed):
             breadcrumbs.append(
                 Link(
                     href=lane_url + entrypoint_query,
-                    title=ancestor.display_name,
+                    title=ancestor.localized_display_name,
                 )
             )
 
@@ -782,7 +782,7 @@ class OPDSAcquisitionFeed(BaseOPDSFeed):
                 #
                 # We want to assign this work to a group derived
                 # from the sublane.
-                v = dict(lane=sublane)
+                v = dict(lane=sublane, label=sublane.localized_display_name)
 
             annotator.lanes_by_work[work].append(v)
             all_works.append(work)
@@ -898,7 +898,7 @@ class OPDSAcquisitionFeed(BaseOPDSFeed):
         feed.add_link(
             annotator.lane_url(lane),
             rel="up",
-            title=str(lane.display_name),
+            title=str(lane.localized_display_name),
         )
 
         # We do not add breadcrumbs to this feed since you're not

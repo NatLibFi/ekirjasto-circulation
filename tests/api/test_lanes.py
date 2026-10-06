@@ -90,8 +90,8 @@ class TestLaneCreation:
         assert 1 == len(lanes)
         assert lanes[0].display_name == "Böcker på svenska"
         assert [
-            "Skönlitteratur för vuxen",
-            "Facklitteratur för vuxen",
+            "Skönlitteratur för vuxna",
+            "Facklitteratur för vuxna",
             "Böcker för ungdomar",
             "Böcker för barn",
             "Alla böcker på svenska",

@@ -1436,7 +1436,7 @@ class TestNavigationFeed:
         assert "http://navigation" == parsed.metadata.id
         [fantasy] = parsed.data_entries
 
-        assert "All " + data.fantasy.display_name == fantasy.title
+        assert data.fantasy.display_name == fantasy.title
         assert "http://%s/" % data.fantasy.id == fantasy.id
         [fantasy_link] = fantasy.links
         assert "http://%s/" % data.fantasy.id == fantasy_link.href

@@ -889,7 +889,7 @@ class Identifier(Base, IdentifierConstants):
         )
 
         logging.info(
-            "CLASSIFICATION: %s on %s/%s: %s %s/%s (wt=%d)",
+            "CLASSIFICATION: %s on %s/%s: %s %s/%s",
             data_source.name,
             self.type,
             self.identifier,
