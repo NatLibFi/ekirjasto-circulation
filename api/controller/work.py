@@ -82,7 +82,7 @@ class WorkController(CirculationManagerController):
 
         return feed_class.page(
             _db=self._db,
-            title=lane.display_name,
+            title=lane.localized_display_name,
             url=url,
             worklist=lane,
             facets=facets,
@@ -282,7 +282,7 @@ class WorkController(CirculationManagerController):
         url = annotator.feed_url(lane, facets=facets, pagination=pagination)
         return feed_class.page(
             _db=self._db,
-            title=lane.display_name,
+            title=lane.localized_display_name,
             url=url,
             worklist=lane,
             facets=facets,

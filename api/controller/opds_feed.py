@@ -88,7 +88,7 @@ class OPDSFeedController(CirculationManagerController):
         annotator = self.manager.annotator(lane, facets)
         return feed_class.groups(
             _db=self._db,
-            title=lane.display_name,
+            title=lane.localized_display_name,
             url=url,
             worklist=lane,
             annotator=annotator,
@@ -129,7 +129,7 @@ class OPDSFeedController(CirculationManagerController):
         max_age = flask.request.args.get("max_age")
         feed = feed_class.page(
             _db=self._db,
-            title=lane.display_name,
+            title=lane.localized_display_name,
             url=url,
             worklist=lane,
             annotator=annotator,
@@ -157,7 +157,7 @@ class OPDSFeedController(CirculationManagerController):
             _external=True,
         )
 
-        title = lane.display_name
+        title = lane.localized_display_name
         facet_class_kwargs = dict(
             minimum_featured_quality=library.settings.minimum_featured_quality,
         )

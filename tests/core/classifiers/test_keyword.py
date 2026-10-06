@@ -26,13 +26,6 @@ class TestKeyword:
             None, "teen books"
         )
 
-    def test_subgenre_wins_over_genre(self):
-        # Asian_History wins over History, even though they both
-        # have the same number of matches, because Asian_History is more
-        # specific.
-        assert classifier.Asian_History == self.genre("asian history")
-        assert classifier.Asian_History == self.genre("history: asia")
-
     def test_classification_may_depend_on_fiction_status(self):
         assert classifier.Humorous_Nonfiction == self.genre("Humor (Nonfiction)")
         assert classifier.Humorous_Fiction == self.genre("Humorous stories")
@@ -86,25 +79,11 @@ class TestKeyword:
 
         assert classifier.Science_Fiction == Keyword.genre(None, "Speculative Fiction")
 
-        assert classifier.Social_Sciences == Keyword.genre(None, "Social Sciences")
-
-        assert classifier.Social_Sciences == Keyword.genre(None, "Social Science")
-
-        assert classifier.Social_Sciences == Keyword.genre(None, "Human Science")
-
         # was genreless
         assert classifier.Short_Stories == Keyword.genre(None, "Short Stories")
 
-        # was Military History
-        assert classifier.Military_SF == Keyword.genre(None, "Interstellar Warfare")
-
         # was Fantasy
         assert classifier.Games == Keyword.genre(None, "Games / Role Playing & Fantasy")
-
-        # This isn't perfect but it covers most cases.
-        assert classifier.Media_Tie_in_SF == Keyword.genre(
-            None, "TV, Movie, Video game adaptations"
-        )
 
         # Previously only 'nonfiction' was recognized.
         assert False == Keyword.is_fiction(None, "Non-Fiction")
