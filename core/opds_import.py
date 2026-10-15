@@ -9,6 +9,7 @@ from collections.abc import Callable, Generator, Iterable, Mapping, Sequence
 from datetime import datetime
 from enum import Enum
 from io import BytesIO
+from textwrap import indent
 from typing import TYPE_CHECKING, Any, Generic, TypeVar, overload
 from urllib.parse import urljoin, urlparse
 from xml.etree.ElementTree import Element
@@ -1974,11 +1975,19 @@ class OPDSImportMonitor(CollectionMonitor):
             total_imported += len(imported_editions)
             total_failures += len(failures)
             for failure_id, failure_details in failures.items():
-                failure_summary.append(f"ISBN: {failure_id}: {failure_details}")
+                # Failure details contain CoverageFailure objects whose
+                # exception may be a multi-line traceback. Avoid rendering the
+                # list with repr(), which turns the traceback into one long line.
+                details = "\n".join(
+                    str(getattr(failure, "exception", failure))
+                    for failure in failure_details
+                )
+                failure_summary.append(
+                    f"- ISBN: {failure_id}\n" f"  Details:\n{indent(details, '    ')}"
+                )
             self._db.commit()
-        achievements = (
-            "Items imported: %d. Failures: %d.\nFailed IDs and details:\n%s"
-            % (total_imported, total_failures, "\n".join(failure_summary))
-        )
+        achievements = f"Items imported: {total_imported}. Failures: {total_failures}."
+        if failure_summary:
+            achievements += "\nFailed IDs and details:\n" + "\n".join(failure_summary)
 
         return TimestampData(achievements=achievements)
