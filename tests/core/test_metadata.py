@@ -665,6 +665,10 @@ class TestMetadata:
         edition, pool = db.edition(with_license_pool=True)
         edition.series = "Harry Otter and the Mollusk of Infamy"
         edition.series_position = "14"
+        edition.abridged = False
+        edition.number_of_pages = 208
+        edition.layout = "reflowable"
+        edition.collection = "The Azrieli Series of Holocaust Survivor Memoirs"
         edition.primary_identifier.add_link(
             Hyperlink.IMAGE, "image", edition.data_source
         )
@@ -695,6 +699,10 @@ class TestMetadata:
         edition.series_position = 0
         metadata = Metadata.from_edition(edition)
         assert edition.series_position == metadata.series_position
+        assert edition.abridged == metadata.abridged
+        assert edition.number_of_pages == metadata.number_of_pages
+        assert edition.layout == metadata.layout
+        assert edition.collection == metadata.collection
 
     def test_update(self, db: DatabaseTransactionFixture):
         # Tests that Metadata.update correctly prefers new fields to old, unless
@@ -742,6 +750,10 @@ class TestMetadata:
             published=datetime.date(1987, 5, 4),
             issued=datetime.date(1989, 4, 5),
             duration=10,
+            abridged=False,
+            number_of_pages=208,
+            layout="reflowable",
+            collection="The Azrieli Series of Holocaust Survivor Memoirs",
         )
 
         edition_new, changed = metadata.apply(edition_old, pool.collection)
@@ -759,6 +771,12 @@ class TestMetadata:
         assert edition_new.published == datetime.date(1987, 5, 4)
         assert edition_new.issued == datetime.date(1989, 4, 5)
         assert edition_new.duration == 10
+        assert edition_new.abridged is False
+        assert edition_new.number_of_pages == 208
+        assert edition_new.layout == "reflowable"
+        assert (
+            edition_new.collection == "The Azrieli Series of Holocaust Survivor Memoirs"
+        )
 
         edition_new, changed = metadata.apply(edition_new, pool.collection)
         assert changed == False

@@ -1140,6 +1140,10 @@ class Metadata:
         "imprint",
         "issued",
         "published",
+        "abridged",
+        "number_of_pages",
+        "layout",
+        "collection",
     ]
 
     def __init__(
@@ -1165,6 +1169,10 @@ class Metadata:
         links=None,
         data_source_last_updated=None,
         duration=None,
+        abridged=None,
+        number_of_pages=None,
+        layout=None,
+        collection=None,
         accessibility=None,
         # Note: brought back to keep callers of bibliographic extraction process_one() methods simple.
         circulation=None,
@@ -1193,6 +1201,10 @@ class Metadata:
         self.issued = issued
         self.published = published
         self.duration = duration
+        self.abridged = abridged
+        self.number_of_pages = number_of_pages
+        self.layout = layout
+        self.collection = collection
         self.accessibility = accessibility
 
         self.primary_identifier = primary_identifier
