@@ -6,6 +6,7 @@ from collections import defaultdict
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
+    Boolean,
     Column,
     Date,
     Enum,
@@ -142,6 +143,10 @@ class Edition(Base, EditionConstants):
     # The playtime duration of an audiobook (seconds)
     # https://github.com/readium/webpub-manifest/tree/master/contexts/default#duration-and-number-of-pages
     duration = Column(Float, nullable=True)
+    abridged = Column(Boolean, nullable=True)
+    number_of_pages = Column(Integer, nullable=True)
+    layout = Column(Unicode, nullable=True)
+    collection = Column(Unicode, nullable=True)
 
     cover_id = Column(
         Integer,
@@ -203,7 +208,6 @@ class Edition(Base, EditionConstants):
         etc. However it happens, your name only shows up once on the
         front of the book.
         """
-        seen_authors = set()
         primary_author = None
         other_authors = []
         acceptable_substitutes = defaultdict(list)

@@ -83,6 +83,10 @@ class TestOPDS2Serializer:
             ],
             other_links=[Link(href="http://link", rel="rel")],
             duration=10,
+            abridged=True,
+            number_of_pages=208,
+            layout="reflowable",
+            collection="A collection",
             selected_by_patrons=7,
         )
 
@@ -95,6 +99,9 @@ class TestOPDS2Serializer:
         assert metadata["title"] == data.title.text
         assert metadata["sortAs"] == data.sort_title.text
         assert metadata["duration"] == data.duration
+        assert metadata["abridged"] is True
+        assert metadata["numberOfPages"] == 208
+        assert metadata["presentation"] == {"layout": "reflowable"}
         assert metadata["selected_by_patrons"] == 7
         assert metadata["subtitle"] == data.subtitle.text
         assert metadata["identifier"] == data.identifier
@@ -107,7 +114,9 @@ class TestOPDS2Serializer:
         assert metadata["subject"] == [
             dict(scheme="scheme", name="label", sortAs="label")
         ]
-        assert metadata["belongsTo"] == dict(name="Series", position=3)
+        assert metadata["belongsTo"] == dict(
+            name="Series", position=3, collection="A collection"
+        )
 
         assert entry["links"] == [
             dict(href="http://link", rel="rel"),

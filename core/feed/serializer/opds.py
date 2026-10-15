@@ -161,6 +161,24 @@ class OPDS1Serializer(SerializerInterface[etree._Element], OPDSFeed):
                     f"{{{OPDSFeed.DCTERMS_NS}}}duration", str(feed_entry.duration)
                 )
             )
+        if feed_entry.number_of_pages is not None:
+            entry.append(
+                OPDSFeed.E(
+                    f"{{{OPDSFeed.SCHEMA_NS}}}numberOfPages",
+                    str(feed_entry.number_of_pages),
+                )
+            )
+        if feed_entry.abridged is not None:
+            entry.append(
+                OPDSFeed.E(
+                    f"{{{OPDSFeed.SCHEMA_NS}}}abridged",
+                    str(feed_entry.abridged).lower(),
+                )
+            )
+        if feed_entry.layout:
+            entry.append(
+                OPDSFeed.E(f"{{{OPDSFeed.SCHEMA_NS}}}layout", feed_entry.layout)
+            )
         if feed_entry.summary:
             entry.append(OPDSFeed.E("summary", feed_entry.summary.text))
         if feed_entry.pwid:
@@ -237,7 +255,12 @@ class OPDS1Serializer(SerializerInterface[etree._Element], OPDSFeed):
             entry.append(OPDSFeed.E("published", feed_entry.published.text))
         if feed_entry.updated:
             entry.append(OPDSFeed.E("updated", feed_entry.updated.text))
-
+        if feed_entry.collection:
+            entry.append(
+                OPDSFeed.E(
+                    f"{{{OPDSFeed.SCHEMA_NS}}}isPartOfCollection", feed_entry.collection
+                )
+            )
         if feed_entry.series:
             entry.append(self._serialize_series_entry(feed_entry.series))
 

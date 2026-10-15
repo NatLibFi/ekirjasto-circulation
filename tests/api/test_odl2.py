@@ -249,10 +249,23 @@ class TestODL2Importer:
         assert "eng" == moby_dick_edition.language
         assert "eng" == moby_dick_edition.language
         assert EditionConstants.BOOK_MEDIUM == moby_dick_edition.medium
-        assert "Herman Melville" == moby_dick_edition.author
+        assert "Herman Melville, Nathaniel Hawthorne" == moby_dick_edition.author
+        assert moby_dick_edition.abridged is False
+        assert moby_dick_edition.number_of_pages == 208
+        assert moby_dick_edition.layout == "reflowable"
+        assert (
+            moby_dick_edition.collection
+            == "The Azrieli Series of Holocaust Survivor Memoirs"
+        )
+        assert (
+            moby_dick_edition.series
+            == "The Azrieli Series of Holocaust Survivor Memoirs"
+        )
+        assert moby_dick_edition.series_position == 15
 
-        assert 1 == len(moby_dick_edition.author_contributors)
-        [moby_dick_author] = moby_dick_edition.author_contributors
+        assert 2 == len(moby_dick_edition.author_contributors)
+        moby_dick_authors = moby_dick_edition.author_contributors
+        moby_dick_author = moby_dick_authors[0]
         assert isinstance(moby_dick_author, Contributor)
         assert "Herman Melville" == moby_dick_author.display_name
         assert "Melville, Herman" == moby_dick_author.sort_name
@@ -262,7 +275,9 @@ class TestODL2Importer:
         assert isinstance(moby_dick_author_author_contribution, Contribution)
         assert moby_dick_author == moby_dick_author_author_contribution.contributor
         assert moby_dick_edition == moby_dick_author_author_contribution.edition
-        assert Contributor.Role.AUTHOR == moby_dick_author_author_contribution.role
+        assert (
+            Contributor.Role.PRIMARY_AUTHOR == moby_dick_author_author_contribution.role
+        )
 
         assert "Feedbooks" == moby_dick_edition.data_source.name
 
