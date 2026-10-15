@@ -325,6 +325,15 @@ class Annotator(ToFeedEntry):
 
         if edition.duration is not None:
             computed.duration = float(edition.duration)
+        if edition.collection:
+            computed.collection = edition.collection
+        if edition.abridged:
+            computed.abridged = edition.abridged
+        if edition.number_of_pages:
+            print("PAGES", edition.number_of_pages)
+            computed.number_of_pages = edition.number_of_pages
+        if edition.layout:
+            computed.layout = edition.layout
 
         content = self.content(work)
         if content:

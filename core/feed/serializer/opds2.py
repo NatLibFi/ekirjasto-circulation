@@ -76,6 +76,12 @@ class OPDS2Serializer(SerializerInterface[dict[str, Any]]):
             metadata["sortAs"] = data.sort_title.text
         if data.duration is not None:
             metadata["duration"] = data.duration
+        if data.abridged is not None:
+            metadata["abridged"] = data.abridged
+        if data.number_of_pages is not None:
+            metadata["numberOfPages"] = data.number_of_pages
+        if data.layout:
+            metadata["presentation"] = {"layout": data.layout}
 
         if data.subtitle:
             metadata["subtitle"] = data.subtitle.text
@@ -114,6 +120,8 @@ class OPDS2Serializer(SerializerInterface[dict[str, Any]]):
             position = int(getattr(data.series, "position", 1))
             if name:
                 metadata["belongsTo"] = dict(name=name, position=position)
+        if data.collection:
+            metadata.setdefault("belongsTo", {})["collection"] = data.collection
 
         if len(data.authors):
             metadata["author"] = self._serialize_contributor(data.authors[0])

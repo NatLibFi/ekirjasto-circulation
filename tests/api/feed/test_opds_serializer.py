@@ -161,6 +161,10 @@ class TestOPDSSerializer:
             ],
             ratings=[FeedEntryType(text="rating")],
             duration=10,
+            abridged=True,
+            number_of_pages=208,
+            layout="reflowable",
+            collection="A collection",
             selected_by_patrons=7,
         )
 
@@ -248,6 +252,22 @@ class TestOPDSSerializer:
         child = element.findall(f"{{{OPDSFeed.DCTERMS_NS}}}duration")
         assert len(child) == 1
         assert child[0].text == "10"
+
+        child = element.findall(f"{{{OPDSFeed.SCHEMA_NS}}}numberOfPages")
+        assert len(child) == 1
+        assert child[0].text == "208"
+
+        child = element.findall(f"{{{OPDSFeed.SCHEMA_NS}}}abridged")
+        assert len(child) == 1
+        assert child[0].text == "true"
+
+        child = element.findall(f"{{{OPDSFeed.SCHEMA_NS}}}layout")
+        assert len(child) == 1
+        assert child[0].text == "reflowable"
+
+        child = element.findall(f"{{{OPDSFeed.SCHEMA_NS}}}isPartOfCollection")
+        assert len(child) == 1
+        assert child[0].text == "A collection"
 
         child = element.findall(f"{{{OPDSFeed.SIMPLIFIED_NS}}}selected_by_patrons")
         assert len(child) == 1

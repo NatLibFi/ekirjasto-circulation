@@ -159,6 +159,10 @@ class WorkEntryData(BaseModel):
     pwid: str | None = None
     issued: datetime | date | None = None
     duration: float | None = None
+    abridged: bool | None = None
+    number_of_pages: int | None = None
+    layout: str | None = None
+    collection: str | None = None
 
     summary: FeedEntryType | None = None
     language: FeedEntryType | None = None
