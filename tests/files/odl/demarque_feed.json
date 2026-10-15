@@ -17,7 +17,14 @@
       "metadata": {
         "@type": "http://schema.org/Book",
         "title": "Moby-Dick",
-        "author": "Herman Melville",
+        "author": [
+          {
+            "name": "Herman Melville"
+          },
+          {
+            "name": "Nathaniel Hawthorne"
+          }
+        ],
         "identifier": "urn:isbn:978-3-16-148410-0",
         "schema:encodingFormat": "application/audiobook+json",
         "schema:workExample": [
@@ -33,6 +40,30 @@
             }
         ],
         "language": "en",
+        "abridged": "false",
+        "numberOfPages": 208,
+        "presentation": {
+          "layout": "reflowable"
+        },
+        "belongsTo": {
+          "collection": "Some collection",
+          "series": [
+            {
+              "name": "Some series",
+              "position": "1",
+              "links": [
+                {
+                  "type": "application/opds+json",
+                  "href": "https://example.com/series/1"
+                }
+              ]
+            },
+            {
+              "name": "Another Series",
+              "position": "2"
+            }
+          ]
+        },
         "publisher": {
           "name": "Test Publisher"
         },
