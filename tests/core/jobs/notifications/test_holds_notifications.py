@@ -157,3 +157,33 @@ class TestHoldsNotifications:
             holds_fixture.monitor.process_items([hold])
 
         assert mock_notf.send_holds_notifications.call_count == 0
+
+    @pytest.mark.parametrize("change", ["waiting", "expired", "deleted"])
+    def test_process_items_rechecks_hold_after_availability_refresh(
+        self, holds_fixture: HoldsNotificationFixture, change: str
+    ):
+        db = holds_fixture.db
+        patron = holds_fixture.patron_with_token()
+        pool = db.work(with_license_pool=True).active_license_pool()
+        hold, _ = pool.on_hold_to(patron, position=0)
+
+        def refresh_availability(pool):
+            if change == "waiting":
+                hold.position = 1
+            elif change == "expired":
+                hold.end = utc_now() - datetime.timedelta(seconds=1)
+            else:
+                db.session.delete(hold)
+            return {hold.id}
+
+        with patch.object(
+            holds_fixture.monitor,
+            "_refresh_availability",
+            side_effect=refresh_availability,
+        ), patch(
+            "core.jobs.notifications.holds_notification.PushNotifications"
+        ) as notifications:
+            holds_fixture.monitor.process_items([hold])
+
+        notifications.send_holds_notifications.assert_not_called()
+        assert hold.patron_last_notified is None

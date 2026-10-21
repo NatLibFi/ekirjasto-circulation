@@ -273,6 +273,27 @@ Requires one of
 to be present and non-empty.
 In addition, the site-wide `PUSH_NOTIFICATIONS_STATUS` setting must be either `unset` or `true`.
 
+For ODL and ODL2 collections, the job reads the current License Info Documents
+before sending a hold notification. Each license pool is checked once per job
+run, starting with licenses that are locally available for borrowing. Checks stop
+when verified capacity covers every unexpired pickup reservation. Successful
+responses are saved; failed licenses keep their previous data and do not
+contribute to the verified capacity used for notifications. That capacity covers
+the first unexpired pickup reservations, including patrons already notified or
+without push tokens.
+Notification checks never change queue positions, pool totals, or pickup
+deadlines. If no capacity can be verified, no notifications are sent.
+Failed checks are retried on the next run. Expired holds are excluded.
+Queue maintenance preserves existing pickup reservations until their original
+deadline, checkout, or cancellation, even when reported capacity decreases.
+New pickup deadlines use the admin-configured reservation period.
+These checks do not create a loan or reserve a copy at the distributor; availability
+can still change after the check. Other collection protocols keep their existing
+availability behavior. For hold notifications, the daily notification date is
+recorded only if at least one device accepts the message. If every device send
+fails, the next scheduled run can retry. The sitewide notification switch still
+skips the job before processing holds.
+
 #### loan_notifications
 
 Requires one of

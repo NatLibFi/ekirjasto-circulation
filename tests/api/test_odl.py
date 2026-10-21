@@ -570,11 +570,19 @@ class TestODLAPI:
         "response_type",
         ["application/api-problem+json", "application/problem+json"],
     )
+    @pytest.mark.parametrize(
+        "problem_type",
+        [
+            "http://opds-spec.org/odl/error/checkout/unavailable",
+            "http://opds-spec.org/odl/error/checkout/loan",
+        ],
+    )
     def test_checkout_no_available_copies_unknown_to_us(
         self,
         db: DatabaseTransactionFixture,
         opds2_with_odl_api_fixture: OPDS2WithODLApiFixture,
         response_type: str,
+        problem_type: str,
     ) -> None:
         """
         The title has no available copies, but we are out of sync with the distributor, so we think there
@@ -588,15 +596,19 @@ class TestODLAPI:
         pool.update_availability_from_licenses()
 
         # But the distributor says there are no available copies.
+        problem = json.loads(
+            opds2_with_odl_api_fixture.files.sample_text("unavailable.json")
+        )
+        problem["type"] = problem_type
         opds2_with_odl_api_fixture.mock_http.queue_response(
             400,
             response_type,
-            content=opds2_with_odl_api_fixture.files.sample_text("unavailable.json"),
+            content=json.dumps(problem),
         )
         opds2_with_odl_api_fixture.mock_http.queue_response(
             400,
             response_type,
-            content=opds2_with_odl_api_fixture.files.sample_text("unavailable.json"),
+            content=json.dumps(problem),
         )
 
         with opds2_with_odl_api_fixture.mock_http.patch():
@@ -712,10 +724,6 @@ class TestODLAPI:
             },
         )
         opds2_with_odl_api_fixture.db.session.commit()
-        loan_period = now + datetime.timedelta(
-            days=opds2_with_odl_api_fixture.collection.default_loan_period(library)
-        )
-
         opds2_with_odl_api_fixture.setup_license(concurrency=1, available=1)
 
         assert opds2_with_odl_api_fixture.pool.licenses_available == 0
@@ -725,7 +733,7 @@ class TestODLAPI:
         # We have another hold in the queue.
         hold2, _ = opds2_with_odl_api_fixture.pool.on_hold_to(
             db.patron(),
-            start=now - datetime.timedelta(days=1),
+            start=now,
             end=now + datetime.timedelta(days=365),
             position=1,
         )
@@ -745,6 +753,49 @@ class TestODLAPI:
         assert opds2_with_odl_api_fixture.pool.licenses_available == 0
         assert opds2_with_odl_api_fixture.pool.licenses_reserved == 0
         assert opds2_with_odl_api_fixture.pool.patrons_in_hold_queue == 2
+        assert hold.position == 0
+        assert hold.end == now + datetime.timedelta(days=1)
+        assert hold2.position == 1
+
+    @pytest.mark.parametrize(
+        "response_type",
+        ["application/api-problem+json", "application/problem+json"],
+    )
+    def test_checkout_unrelated_problem_preserves_ready_hold(
+        self,
+        opds2_with_odl_api_fixture: OPDS2WithODLApiFixture,
+        response_type: str,
+    ) -> None:
+        """Unrelated distributor errors must not send a ready hold back to the queue."""
+        fixture = opds2_with_odl_api_fixture
+        fixture.setup_license(concurrency=1, available=1)
+        end = utc_now() + datetime.timedelta(days=1)
+        hold, _ = fixture.pool.on_hold_to(
+            fixture.patron,
+            start=utc_now() - datetime.timedelta(days=1),
+            end=end,
+            position=0,
+        )
+        fixture.api.update_licensepool_and_hold_queue(fixture.pool)
+        problem_type = "http://opds-spec.org/odl/error/checkout/forbidden"
+        fixture.mock_http.queue_response(
+            403,
+            response_type,
+            content=json.dumps(
+                dict(type=problem_type, title="Checkout forbidden", status=403)
+            ),
+        )
+
+        with fixture.mock_http.patch():
+            with pytest.raises(OpdsWithOdlException) as exc_info:
+                fixture.api_checkout()
+
+        assert exc_info.value.type == problem_type
+        assert exc_info.value.response.status_code == 403
+        assert fixture.license.checkouts_available == 1
+        assert fixture.pool.licenses_reserved == 1
+        assert hold.position == 0
+        assert hold.end == end
 
     def test_checkout_failures(
         self,

@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING
 from sqlalchemy import and_, exists, func, or_
 from sqlalchemy.orm import joinedload
 
+from api.odl import ODLAPI, BaseODLAPI
+from api.odl2 import ODL2API
 from core.config import Configuration, ConfigurationConstants
 from core.model import Base
 from core.model.configuration import ConfigurationSetting
@@ -31,7 +33,14 @@ class HoldsNotificationMonitor(SweepMonitor):
     # I/O (FCM), so smaller batches keep per-batch blocking and memory low.
     DEFAULT_BATCH_SIZE = 25
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._availability_checks: dict[int, set[int]] = {}
+        self._odl_apis: dict[int, BaseODLAPI] = {}
+
     def run_once(self, *ignore):
+        self._availability_checks.clear()
+        self._odl_apis.clear()
         # Honor the sitewide kill switch before doing any DB work.
         setting = ConfigurationSetting.sitewide(
             self._db, Configuration.PUSH_NOTIFICATIONS_STATUS
@@ -69,6 +78,7 @@ class HoldsNotificationMonitor(SweepMonitor):
             .filter(
                 # Only holds ready for checkout.
                 Hold.position == 0,
+                or_(Hold.end == None, Hold.end > utc_now()),
                 # Cooldown: at most one notification per calendar day per hold.
                 # We compare on the date portion only (func.date) so legacy
                 # rows that stored a full timestamp in patron_last_notified
@@ -97,15 +107,45 @@ class HoldsNotificationMonitor(SweepMonitor):
         )
         return query
 
+    def _refresh_availability(self, pool: LicensePool) -> set[int] | None:
+        """Check each ODL pool once per sweep, including across batch boundaries."""
+        collection = pool.collection
+        api_class = {ODLAPI.label(): ODLAPI, ODL2API.label(): ODL2API}.get(
+            collection.protocol
+        )
+        if api_class is None:
+            # Other providers do not use the local ODL license/queue model.
+            return None
+        pool_id = pool.id
+        collection_id = collection.id
+        if pool_id is None or collection_id is None:
+            return set()
+        if pool_id not in self._availability_checks:
+            try:
+                if collection_id not in self._odl_apis:
+                    self._odl_apis[collection_id] = api_class(self._db, collection)
+                self._availability_checks[pool_id] = self._odl_apis[
+                    collection_id
+                ].refresh_hold_availability(pool)
+            except Exception:
+                self.log.exception(
+                    "Unable to verify hold availability for license pool %s", pool.id
+                )
+                self._availability_checks[pool_id] = set()
+            if not self._availability_checks[pool_id]:
+                self.log.info(
+                    "No ready holds covered by verified capacity for license pool %s",
+                    pool.id,
+                )
+        return self._availability_checks[pool_id]
+
     def process_items(self, items: list[Hold]) -> None:
-        # Race-safety re-check in Python: between the SQL fetch and now,
-        # another worker (or an earlier batch in the same run) could have
-        # already notified this patron today. Re-filter on the same
-        # calendar-day cooldown the SQL filter uses so we never send a
-        # second push on the same day.
         today = utc_now().date()
-        eligible: list[Hold] = []
+        candidate_ids: list[int] = []
         for hold in items:
+            hold_id = hold.id
+            if hold_id is None:
+                continue
             raw = hold.patron_last_notified
             last_notified: datetime.date | None
             if isinstance(raw, datetime.datetime):
@@ -115,6 +155,21 @@ class HoldsNotificationMonitor(SweepMonitor):
                 last_notified = raw
             if last_notified is not None and last_notified >= today:
                 continue
-            eligible.append(hold)
+            verified_hold_ids = self._refresh_availability(hold.license_pool)
+            if verified_hold_ids is None or hold_id in verified_hold_ids:
+                candidate_ids.append(hold_id)
+
+        if not candidate_ids:
+            return
+
+        # Re-query after refreshing the licenses and queue. A hold may have
+        # moved back to a waiting position, expired, or been deleted since
+        # fetch_batch(). populate_existing also replaces stale ORM state.
+        eligible = (
+            self.item_query()
+            .filter(Hold.id.in_(candidate_ids))
+            .populate_existing()
+            .all()
+        )
         if eligible:
             PushNotifications.send_holds_notifications(eligible)

@@ -174,14 +174,13 @@ class TestPushNotifications:
             # last notified gets updated
             assert loan.patron_last_notified == datetime(2020, 1, 1).date()
 
-            # Now hold expiry — same contract: update happens regardless of
-            # whether any FCM send actually succeeded.
+            # Hold notifications are retried on the next scheduled run if no
+            # device accepted the message.
             mock_send.return_value = []
             responses = PushNotifications.send_holds_notifications([hold])
             assert responses == []
-            assert hold.patron_last_notified == datetime(2020, 1, 1).date()
+            assert hold.patron_last_notified is None
 
-            hold.patron_last_notified = None
             mock_send.return_value = ["mock-mid"]
             responses = PushNotifications.send_holds_notifications([hold])
             assert responses == ["mock-mid"]
