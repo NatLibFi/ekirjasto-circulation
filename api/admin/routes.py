@@ -8,6 +8,7 @@ from api.admin.config import Configuration as AdminClientConfig
 from api.admin.config import OperationalMode
 from api.admin.dashboard_stats import generate_statistics
 from api.admin.model.dashboard_statistics import StatisticsResponse
+from api.admin.problem_details import ADMIN_NOT_AUTHORIZED
 from api.admin.templates import admin_sign_in_again as sign_in_again_template
 from api.app import app
 from api.controller.static_file import StaticFileController
@@ -410,6 +411,17 @@ def municipality_code_name_map():
     """Returns finnish municipality code-name mapping."""
     codes = EkirjastoConsortiumMonitor.get_municipality_code_name_map()
     return codes
+
+
+@library_route("/admin/consortium_municipalities")
+@returns_json_or_response_or_problem_detail
+@requires_admin
+def consortium_municipalities():
+    """Returns current Kirkanta consortium and municipality data on demand."""
+    admin = getattr(flask.request, "admin", None)
+    if not admin or not admin.is_system_admin():
+        return ADMIN_NOT_AUTHORIZED.response
+    return EkirjastoConsortiumMonitor.get_consortium_municipality_list()
 
 
 @library_route("/admin/events/terms")
