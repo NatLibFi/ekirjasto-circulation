@@ -7,7 +7,11 @@ from flask import Response, make_response, request
 from flask_cors.core import get_cors_options, set_cors_headers
 
 from api.app import app
-from core.app_server import compressible, raises_problem_detail, returns_problem_detail
+from core.app_server import (
+    compressible,
+    raises_problem_detail,
+    returns_problem_detail,
+)
 from core.model import HasSessionCache
 from core.util.problem_detail import ProblemDetail
 
@@ -334,6 +338,14 @@ def marc_page():
 @compressible
 def lane_search(lane_identifier):
     return app.manager.opds_feeds.search(lane_identifier)
+
+
+@library_route("/search_filter_values", methods=["GET"])
+@has_library
+@allows_patron_web
+@returns_problem_detail
+def search_filter_values():
+    return app.manager.opds_feeds.search_filter_values()
 
 
 @library_dir_route("/patrons/me", methods=["GET", "PUT"])
