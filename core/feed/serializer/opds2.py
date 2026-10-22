@@ -91,6 +91,8 @@ class OPDS2Serializer(SerializerInterface[dict[str, Any]]):
             metadata["language"] = data.language.text
         if data.updated:
             metadata["modified"] = data.updated.text
+        if data.data_source_modified:
+            metadata["data_source_modified"] = data.data_source_modified.text
         if data.published:
             metadata["published"] = data.published.text
         if data.summary:
@@ -102,6 +104,8 @@ class OPDS2Serializer(SerializerInterface[dict[str, Any]]):
             metadata["publisher"] = dict(name=data.publisher.text)
         if data.imprint:
             metadata["imprint"] = dict(name=data.imprint.text)
+        if data.awards:
+            metadata["award"] = data.awards
 
         subjects = []
         if data.categories:

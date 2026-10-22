@@ -163,12 +163,14 @@ class WorkEntryData(BaseModel):
     number_of_pages: int | None = None
     layout: str | None = None
     collection: str | None = None
+    awards: list[str] = field(default_factory=list)
 
     summary: FeedEntryType | None = None
     language: FeedEntryType | None = None
     publisher: FeedEntryType | None = None
     published: FeedEntryType | None = None
     updated: FeedEntryType | None = None
+    data_source_modified: FeedEntryType | None = None
     title: FeedEntryType | None = None
     sort_title: FeedEntryType | None = None
     subtitle: FeedEntryType | None = None

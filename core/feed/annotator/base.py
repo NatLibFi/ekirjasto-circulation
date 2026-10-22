@@ -327,6 +327,7 @@ class Annotator(ToFeedEntry):
             computed.duration = float(edition.duration)
         if edition.collection:
             computed.collection = edition.collection
+        computed.awards = [str(award) for award in (edition.awards or [])]
         if edition.abridged:
             computed.abridged = edition.abridged
         if edition.number_of_pages:
@@ -403,6 +404,11 @@ class Annotator(ToFeedEntry):
             updated = entry.work.last_update_time
         if updated:
             computed.updated = FeedEntryType(text=strftime(updated))
+
+        if edition.data_source_modified:
+            computed.data_source_modified = FeedEntryType(
+                text=strftime(edition.data_source_modified)
+            )
 
         computed.image_links = image_links
         computed.other_links = other_links

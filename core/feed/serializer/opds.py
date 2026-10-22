@@ -255,12 +255,18 @@ class OPDS1Serializer(SerializerInterface[etree._Element], OPDSFeed):
             entry.append(OPDSFeed.E("published", feed_entry.published.text))
         if feed_entry.updated:
             entry.append(OPDSFeed.E("updated", feed_entry.updated.text))
+        if feed_entry.data_source_modified:
+            entry.append(
+                OPDSFeed.E("data_source_modified", feed_entry.data_source_modified.text)
+            )
         if feed_entry.collection:
             entry.append(
                 OPDSFeed.E(
                     f"{{{OPDSFeed.SCHEMA_NS}}}isPartOfCollection", feed_entry.collection
                 )
             )
+        for award in feed_entry.awards:
+            entry.append(OPDSFeed.E(f"{{{OPDSFeed.SCHEMA_NS}}}award", award))
         if feed_entry.series:
             entry.append(self._serialize_series_entry(feed_entry.series))
 
