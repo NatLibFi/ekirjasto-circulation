@@ -1,6 +1,7 @@
 import hmac
+import logging
 import os
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from functools import wraps
 
 import flask
@@ -26,6 +27,7 @@ from core.util.problem_detail import BaseProblemDetailException, ProblemDetail
 # An admin's session will expire after this amount of time and
 # the admin will have to log in again.
 app.permanent_session_lifetime = timedelta(hours=9)
+logger = logging.getLogger(__name__)
 
 
 @app.route("/internal/feedback/municipalities")
@@ -492,6 +494,11 @@ def consortium_municipalities():
     admin = getattr(flask.request, "admin", None)
     if not admin or not admin.is_system_admin():
         return ADMIN_NOT_AUTHORIZED.response
+    logger.info(
+        "Kirkanta and Koodisto municipality list refresh requested by admin=%s at=%s",
+        admin.email,
+        datetime.now(timezone.utc).isoformat(),
+    )
     data = dict(EkirjastoConsortiumMonitor.get_consortium_municipality_list())
     data["email_settings"] = get_consortium_municipality_emails(app.manager._db)
     return data
@@ -512,7 +519,7 @@ def consortium_municipality_emails():
 
     data = flask.request.get_json(silent=True) or {}
     try:
-        return save_consortium_municipality_email(
+        result = save_consortium_municipality_email(
             app.manager._db,
             data.get("kind"),
             data.get("key"),
@@ -522,6 +529,17 @@ def consortium_municipality_emails():
         response = flask.jsonify(detail=str(error))
         response.status_code = 400
         return response
+
+    action = "removed" if not data["email"].strip() else "saved"
+    logger.info(
+        "Feedback recipient email %s by admin=%s kind=%s key=%s at=%s",
+        action,
+        admin.email,
+        data["kind"],
+        data["key"],
+        datetime.now(timezone.utc).isoformat(),
+    )
+    return result
 
 
 @library_route("/admin/events/terms")
