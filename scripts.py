@@ -44,6 +44,7 @@ from core.model import (
     Collection,
     ConfigurationSetting,
     Contribution,
+    Contributor,
     DataSource,
     DiscoveryServiceRegistration,
     Edition,
@@ -871,16 +872,30 @@ class LicenseReportScript(Script):
         first_row = [
             "Work/Licensepool Identifier",
             "Title",
+            "Primary author",
             "Author",
             "Collection",
             "Language",
-            "First seen",
+            "Format",
+            "Audiobook duration",
+            "Ebook pages",
+            "Series",
+            "Book Collection",
+            "Abridged",
+            "Awards",
+            "Data source modified",
+            "Work last modified",
+            "Title/Licensepool Created",
             "Last seen (best guess)",
+            "Licensepool Status",
+            "Licensepool exhausted date",
             "Current copies owned",
             "Current copies available",
             "Patrons in hold queue",
             "License identifier",
+            "License created",
             "License status",
+            "License type",
             "License missing?",
             "License last checked",
             "License checkouts left",
@@ -889,6 +904,12 @@ class LicenseReportScript(Script):
             "Active loans",
             "License expiration",
             "License status url",
+            "License exhausted date",
+            "License availability reason",
+            "License price",
+            "License price currency",
+            "License order name",
+            "License purchased checkouts",
         ]
         print(",".join(first_row))
 
@@ -954,26 +975,59 @@ class LicenseReportScript(Script):
 
     format = "%Y-%m-%d"
 
+    @staticmethod
+    def primary_author(edition):
+        for contribution in edition.contributions:
+            if contribution.role == Contributor.Role.PRIMARY_AUTHOR:
+                contributor = contribution.contributor
+                return contributor.display_name
+        return ""
+
     def explain(self, licensepool):
         edition = licensepool.presentation_edition
         identifier = licensepool.identifier
         last_seen = self.investigate(licensepool)
 
-        data = [identifier.identifier]
+        data = [f'"{identifier.identifier}"']
         if edition:
-            data.extend([f'"{edition.title}"', f'"{edition.author}"'])
+            data.extend(
+                [
+                    f'"{edition.title}"',
+                    f'"{self.primary_author(edition)}"',
+                    f'"{edition.author}"',
+                ]
+            )
         data.append(f'"{licensepool.collection.name}"')
-        data.append(f'"{edition.language}"')
+        data.append(f'"{edition.language}"' if edition.language else "")
+        data.append(f'"{edition.medium}"' if edition.medium else "")
+        data.append(f'"{edition.duration}"' if edition.duration else "")
+        data.append(f'"{edition.number_of_pages}"' if edition.number_of_pages else "")
+        series = edition.series or ""
+        if edition.series_position is not None:
+            series += f": {edition.series_position}"
+        data.append(f'"{series}"' if series else "")
+        data.append(f'"{edition.collection}"' if edition.collection else "")
+        data.append(f'"{"abridged"}' if edition.abridged == True else "not abridged")
+        awards = "; ".join(edition.awards or [])
+        data.append(f'"{awards}"' if awards else "")
+        data.append(f'"{edition.data_source_modified.strftime(self.format)}"')
+        data.append(f'"{edition.work.last_update_time.strftime(self.format)}"')
         if licensepool.availability_time:
-            first_seen = licensepool.availability_time.strftime(self.format)
+            created = licensepool.availability_time.strftime(self.format)
         else:
-            first_seen = ""
-        data.append(first_seen)
+            created = ""
+        data.append(created)
         if last_seen:
             last_seen = last_seen.strftime(self.format)
         else:
             last_seen = ""
         data.append(last_seen)
+        data.append(licensepool.status.value)
+        data.append(
+            f'"{licensepool.exhausted_date.strftime(self.format)}"'
+            if licensepool.exhausted_date
+            else ""
+        )
         data.append(licensepool.licenses_owned)
         data.append(licensepool.licenses_available)
         data.append(licensepool.patrons_in_hold_queue)
@@ -984,12 +1038,10 @@ class LicenseReportScript(Script):
         # Then fetch each license in the pool
         for license in licensepool.licenses:
             # Append each field's data as a separate entry in the data list
-            expire_date = (
-                license.expires.strftime(self.format) if license.expires else ""
-            )
             license_data = [
                 f'"{identifier.identifier}"',
                 f'"{edition.title}"',
+                f'"{self.primary_author(edition)}"',
                 f'"{edition.author}"',
                 f'"{licensepool.collection.name}"',
                 f'"{edition.language}"',
@@ -998,16 +1050,39 @@ class LicenseReportScript(Script):
                 "",
                 "",
                 "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                f'"{licensepool.status.value}"',
+                "",
+                "",
+                "",
+                "",
                 license.identifier,
+                license.created.strftime(self.format) if license.created else "",
                 license.status.value,
+                license.license_type.value if license.license_type else "",
                 license.is_missing,
-                license.last_checked,
+                license.last_checked.strftime(self.format),
                 license.checkouts_left,
                 license.checkouts_available,
                 license.terms_concurrency,
                 len(license.loans),
-                expire_date,
+                license.expires.strftime(self.format) if license.expires else "",
                 license.status_url,
+                license.availability_since.strftime(self.format)
+                if license.availability_since
+                else "",
+                license.availability_reason
+                if license.availability_reason is not None
+                else "",
+                license.price_value if license.price_value else "",
+                license.price_currency if license.price_currency is not None else "",
+                license.order_name if license.order_name else "",
+                license.total_checkouts if license.total_checkouts else "",
             ]
             # And print each license on a new line
             print(",".join(str(item) for item in license_data))
