@@ -40,7 +40,12 @@ from core.model import (
     get_one,
     get_one_or_create,
 )
-from core.model.licensing import LicenseFunctions, LicenseStatus
+from core.model.licensing import (
+    LicenseFunctions,
+    LicensePoolStatus,
+    LicenseStatus,
+    license_type_for,
+)
 from core.util import LanguageCodes
 from core.util.datetime_helpers import to_utc, utc_now
 from core.util.median import median
@@ -549,6 +554,17 @@ class LicenseData(LicenseFunctions):
         expires: datetime.datetime | None = None,
         checkouts_left: int | None = None,
         terms_concurrency: int | None = None,
+        total_checkouts: int | None = None,
+        created: datetime.datetime | None = None,
+        price_currency: str | None = None,
+        price_value: float | None = None,
+        order_name: str | None = None,
+        order_identifier: str | None = None,
+        order_href: str | None = None,
+        availability_state: str | None = None,
+        availability_status: str | None = None,
+        availability_since: datetime.datetime | None = None,
+        availability_reason: str | None = None,
         content_types: list[str] | None = None,
     ):
         self.identifier = identifier
@@ -559,6 +575,17 @@ class LicenseData(LicenseFunctions):
         self.checkouts_left = checkouts_left
         self.checkouts_available = checkouts_available
         self.terms_concurrency = terms_concurrency
+        self.total_checkouts = total_checkouts
+        self.created = created
+        self.price_currency = price_currency
+        self.price_value = price_value
+        self.order_name = order_name
+        self.order_identifier = order_identifier
+        self.order_href = order_href
+        self.availability_state = availability_state
+        self.availability_status = availability_status
+        self.availability_since = availability_since
+        self.availability_reason = availability_reason
         self.content_types = content_types
 
     def add_to_pool(self, db: Session, pool: LicensePool) -> License:
@@ -571,6 +598,7 @@ class LicenseData(LicenseFunctions):
         for key, value in vars(self).items():
             if key != "content_types":
                 setattr(license_obj, key, value)
+        license_obj.license_type = license_type_for(license_obj)
         # Update the license details
         license_obj.is_missing = False
         license_obj.last_checked = utc_now()
@@ -1054,7 +1082,7 @@ class CirculationData:
                     license.add_to_pool(_db, pool) for license in self.licenses
                 ]
                 # Exaggerate import duration a bit
-                import_duration = utc_now() - datetime.timedelta(hours=2)
+                import_duration = utc_now() - datetime.timedelta(hours=4)
                 for old_license in old_licenses:
                     if old_license not in new_licenses:
                         # A work can appear several times in the feed with a different license each time. If a license
@@ -1079,6 +1107,24 @@ class CirculationData:
                 changed_availability = pool.update_availability_from_licenses(
                     as_of=self.last_checked,
                 )
+                licenses = list(pool.licenses or [])
+                # If all licenses are unavailable, mark the pool as exhausted.
+                if licenses and all(
+                    license_.status == LicenseStatus.unavailable
+                    for license_ in licenses
+                ):
+                    pool.status = LicensePoolStatus.exhausted
+                    # Set the exhausted_date to the most recent among the licenses.
+                    pool.exhausted_date = max(
+                        (
+                            license_.availability_since
+                            for license_ in licenses
+                            if license_.availability_since is not None
+                        ),
+                        default=None,
+                    )
+                else:
+                    pool.status = LicensePoolStatus.active
             else:
                 # Otherwise update the availability directly
                 changed_availability = pool.update_availability(
@@ -1173,6 +1219,7 @@ class Metadata:
         number_of_pages=None,
         layout=None,
         collection=None,
+        awards=None,
         accessibility=None,
         # Note: brought back to keep callers of bibliographic extraction process_one() methods simple.
         circulation=None,
@@ -1205,6 +1252,7 @@ class Metadata:
         self.number_of_pages = number_of_pages
         self.layout = layout
         self.collection = collection
+        self.awards = awards
         self.accessibility = accessibility
 
         self.primary_identifier = primary_identifier
@@ -1288,6 +1336,7 @@ class Metadata:
             primary_identifier=primary_identifier,
             contributors=contributors,
             links=links,
+            awards=edition.awards,
             **kwargs,
         )
 
@@ -1555,6 +1604,11 @@ class Metadata:
                     # The metadata has not changed since last time. Do nothing.
                     return edition, False
 
+        # Keep the source modification timestamp on the edition after the
+        # freshness check has accepted this metadata update.
+        if self.data_source_last_updated:
+            edition.data_source_modified = self.data_source_last_updated
+
         identifier = edition.primary_identifier
 
         self.log.info("APPLYING METADATA TO EDITION: %s", self.title)
@@ -1573,6 +1627,9 @@ class Metadata:
                     new_metadata_value = None
                 setattr(edition, field, new_metadata_value)
                 work_requires_new_presentation_edition = True
+
+        if self.awards:
+            edition.awards = list(self.awards)
 
         # Create equivalencies between all given identifiers and
         # the edition's primary identifier.

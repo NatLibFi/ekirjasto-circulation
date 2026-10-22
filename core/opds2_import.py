@@ -779,6 +779,10 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
             publication.metadata.belongs_to
         )
 
+        awards = (
+            list(publication.metadata.award) if publication.metadata.award else None
+        )
+
         presentation = publication.metadata.presentation
         layout = None
         if presentation and presentation.layout:
@@ -834,6 +838,7 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
             number_of_pages=publication.metadata.number_of_pages,
             layout=layout,
             collection=collection,
+            awards=awards,
             accessibility=accessibility,
             circulation=circulation_data,
         )

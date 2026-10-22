@@ -6,9 +6,11 @@ from collections import defaultdict
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
+    ARRAY,
     Boolean,
     Column,
     Date,
+    DateTime,
     Enum,
     Float,
     ForeignKey,
@@ -60,6 +62,9 @@ class Edition(Base, EditionConstants):
     data_source: Mapped[DataSource] = relationship(
         "DataSource", back_populates="editions"
     )
+
+    # The source modification timestamp from the OPDS publication metadata.
+    data_source_modified = Column(DateTime(timezone=True), nullable=True)
 
     MAX_THUMBNAIL_HEIGHT = 300
     MAX_THUMBNAIL_WIDTH = 200
@@ -147,6 +152,7 @@ class Edition(Base, EditionConstants):
     number_of_pages = Column(Integer, nullable=True)
     layout = Column(Unicode, nullable=True)
     collection = Column(Unicode, nullable=True)
+    awards = Column(ARRAY(Unicode), nullable=True)
 
     cover_id = Column(
         Integer,
@@ -788,7 +794,10 @@ class Edition(Base, EditionConstants):
             display_names.append([family_name, display_name])
             sort_names.append(author.sort_name)
         if display_names:
-            author = ", ".join([x[1] for x in sorted(display_names)])
+            primary_author_display_name = display_names[0][1]
+            other_display_names = sorted(x[1] for x in display_names[1:])
+            # The primary author's display name comes first, followed by other authors in alphabetical order.
+            author = ", ".join([primary_author_display_name, *other_display_names])
         else:
             author = self.UNKNOWN_AUTHOR
         if sort_names:
