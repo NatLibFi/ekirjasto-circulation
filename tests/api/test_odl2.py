@@ -27,7 +27,13 @@ from core.model import (
     Work,
 )
 from core.model.constants import IdentifierConstants
-from core.model.licensing import DeliveryMechanism, LicensePool, LicenseStatus
+from core.model.licensing import (
+    DeliveryMechanism,
+    LicensePool,
+    LicensePoolStatus,
+    LicenseStatus,
+    LicenseType,
+)
 from core.model.resource import Hyperlink
 from core.util.datetime_helpers import utc_now
 from tests.fixtures.api_odl import (
@@ -232,11 +238,14 @@ class TestODL2Importer:
 
         # Assert
 
-        # 1. Make sure that there is a single edition only
+        # 1. There are two acceptable editions imported from the feed.
         assert isinstance(imported_editions, list)
-        assert 1 == len(imported_editions)
+        assert 2 == len(imported_editions)
 
-        [moby_dick_edition] = imported_editions
+        [
+            moby_dick_edition,
+            _,
+        ] = imported_editions  # The second edition is ignored for this test.
         assert isinstance(moby_dick_edition, Edition)
         assert moby_dick_edition.primary_identifier.identifier == "978-3-16-148410-0"
         assert moby_dick_edition.primary_identifier.type == "ISBN"
@@ -249,19 +258,14 @@ class TestODL2Importer:
         assert "eng" == moby_dick_edition.language
         assert "eng" == moby_dick_edition.language
         assert EditionConstants.BOOK_MEDIUM == moby_dick_edition.medium
+        # Primary author comes first in the author string.
         assert "Herman Melville, Nathaniel Hawthorne" == moby_dick_edition.author
         assert moby_dick_edition.abridged is False
         assert moby_dick_edition.number_of_pages == 208
         assert moby_dick_edition.layout == "reflowable"
-        assert (
-            moby_dick_edition.collection
-            == "The Azrieli Series of Holocaust Survivor Memoirs"
-        )
-        assert (
-            moby_dick_edition.series
-            == "The Azrieli Series of Holocaust Survivor Memoirs"
-        )
-        assert moby_dick_edition.series_position == 15
+        assert moby_dick_edition.collection == "Some collection"
+        assert moby_dick_edition.series == "Some series"
+        assert moby_dick_edition.series_position == 1
 
         assert 2 == len(moby_dick_edition.author_contributors)
         moby_dick_authors = moby_dick_edition.author_contributors
@@ -270,16 +274,29 @@ class TestODL2Importer:
         assert "Herman Melville" == moby_dick_author.display_name
         assert "Melville, Herman" == moby_dick_author.sort_name
 
-        assert 1 == len(moby_dick_author.contributions)
-        [moby_dick_author_author_contribution] = moby_dick_author.contributions
+        assert 2 == len(moby_dick_author.contributions)
+        [
+            moby_dick_primary_author_contribution,
+            moby_dick_author_author_contribution,
+        ] = moby_dick_author.contributions
+        assert isinstance(moby_dick_primary_author_contribution, Contribution)
+        assert moby_dick_author == moby_dick_primary_author_contribution.contributor
+        assert moby_dick_edition == moby_dick_primary_author_contribution.edition
+        assert (
+            Contributor.Role.PRIMARY_AUTHOR
+            == moby_dick_primary_author_contribution.role
+        )
+
         assert isinstance(moby_dick_author_author_contribution, Contribution)
         assert moby_dick_author == moby_dick_author_author_contribution.contributor
         assert moby_dick_edition == moby_dick_author_author_contribution.edition
-        assert (
-            Contributor.Role.PRIMARY_AUTHOR == moby_dick_author_author_contribution.role
-        )
+        assert Contributor.Role.AUTHOR == moby_dick_author_author_contribution.role
 
         assert "Feedbooks" == moby_dick_edition.data_source.name
+        assert (
+            datetime.datetime(2015, 9, 29, 17, 0, tzinfo=datetime.UTC)
+            == moby_dick_edition.data_source_modified
+        )
 
         assert "Test Publisher" == moby_dick_edition.publisher
         assert datetime.date(2015, 9, 29) == moby_dick_edition.published
@@ -292,9 +309,9 @@ class TestODL2Importer:
 
         # 2. Make sure that license pools have correct configuration
         assert isinstance(pools, list)
-        assert 1 == len(pools)
+        assert 2 == len(pools)
 
-        [moby_dick_license_pool] = pools
+        [moby_dick_license_pool, _] = pools  # The second pool is ignored for this test.
         assert isinstance(moby_dick_license_pool, LicensePool)
         assert moby_dick_license_pool.identifier.identifier == "978-3-16-148410-0"
         assert moby_dick_license_pool.identifier.type == "ISBN"
@@ -344,9 +361,9 @@ class TestODL2Importer:
 
         # 3. Make sure that work objects contain all the required metadata
         assert isinstance(works, list)
-        assert 1 == len(works)
+        assert 2 == len(works)
 
-        [moby_dick_work] = works
+        [moby_dick_work, _] = works  # The second work is ignored for this test.
         assert isinstance(moby_dick_work, Work)
         assert moby_dick_edition == moby_dick_work.presentation_edition
         assert 1 == len(moby_dick_work.license_pools)
@@ -368,6 +385,179 @@ class TestODL2Importer:
         assert "9781234567897" == huck_finn_failure.obj.identifier
 
         assert "2 validation errors" in huck_finn_failure.exception
+
+    def test_import_publication_licenses_data(
+        self,
+        db: DatabaseTransactionFixture,
+        odl2_importer: ODL2Importer,
+        odl_mock_get: MockGet,
+        api_odl_files_fixture: ODLAPIFilesFixture,
+    ) -> None:
+        """Ensure that available and unavailable licenses' data are saved correctly."""
+        unavailable_license_info = LicenseInfoHelper(
+            license=LicenseHelper(
+                identifier="urn:uuid:eexx11",
+                concurrency=1,
+                checkouts=26,
+            ),
+            available=0,
+            left=0,
+            status="unavailable",
+        )
+        odl_mock_get.add(unavailable_license_info)
+        available_license_info = LicenseInfoHelper(
+            license=LicenseHelper(
+                identifier="urn:uuid:eexx22",
+                concurrency=1,
+                checkouts=26,
+            ),
+            available=1,
+            left=20,
+            status="available",
+        )
+        odl_mock_get.add(available_license_info)
+
+        feed_data = json.loads(api_odl_files_fixture.sample_text("demarque_feed.json"))
+        midnight_angel = next(
+            publication
+            for publication in feed_data["publications"]
+            if publication["metadata"]["identifier"] == "urn:ISBN:9780061747762"
+        )
+        feed_data["publications"] = [midnight_angel]
+
+        imported_editions, pools, works, failures = odl2_importer.import_from_feed(
+            json.dumps(feed_data)
+        )
+
+        assert len(imported_editions) == 1
+        assert len(pools) == 1
+        assert len(works) == 1
+        assert not failures
+
+        [edition] = imported_editions
+        assert edition.primary_identifier.identifier == "9780061747762"
+        assert edition.primary_identifier.type == "ISBN"
+
+        [license_pool] = pools
+        assert license_pool.identifier.identifier == "9780061747762"
+        assert license_pool.identifier.type == "ISBN"
+        assert license_pool.licenses_owned == 1
+        assert license_pool.licenses_available == 1
+        assert len(license_pool.licenses) == 2
+        # There is a an active license pool.
+        assert license_pool.status == LicensePoolStatus.active
+
+        licenses = {license_.identifier: license_ for license_ in license_pool.licenses}
+
+        unavailable_license = licenses["urn:uuid:eexx11"]
+        assert unavailable_license.status == LicenseStatus.unavailable
+        assert (
+            unavailable_license.checkout_url
+            == "https://license.feedbooks.net/loan/status/{?id,checkout_id,expires,patron_id,notification_url,passphrase,hint,hint_url}"
+        )
+        assert (
+            unavailable_license.status_url
+            == "https://license.feedbooks.net/copy/status/?uuid=eexx11"
+        )
+        assert unavailable_license.terms_concurrency == 1
+        assert unavailable_license.checkouts_available == 0
+        assert unavailable_license.checkouts_left == 0
+        assert unavailable_license.total_checkouts == 26
+        assert unavailable_license.created is not None
+        assert unavailable_license.created.isoformat() == "2025-07-03T08:22:26+02:00"
+        assert unavailable_license.price_currency == "USD"
+        assert unavailable_license.price_value == 11.79
+        assert unavailable_license.order_name == "Varatuimmat heinäkuu1"
+        assert unavailable_license.order_identifier == "202507-1095-072789"
+        assert (
+            unavailable_license.order_href == "https://market.cantook.com/carts/72789"
+        )
+        assert unavailable_license.availability_state == "unavailable"
+        assert unavailable_license.availability_status == "unavailable"
+        assert unavailable_license.availability_since is not None
+        assert (
+            unavailable_license.availability_since.isoformat()
+            == "2026-01-11T17:12:21+01:00"
+        )
+        assert (
+            unavailable_license.availability_reason
+            == "https://registry.opds.io/reason#exhausted"
+        )
+        assert unavailable_license.license_type == LicenseType.loan_limited
+
+        available_license = licenses["urn:uuid:eexx22"]
+        assert available_license.status == LicenseStatus.available
+        assert (
+            available_license.checkout_url
+            == "https://license.feedbooks.net/loan/status/{?id,checkout_id,expires,patron_id,notification_url,passphrase,hint,hint_url}"
+        )
+        assert (
+            available_license.status_url
+            == "https://license.feedbooks.net/copy/status/?uuid=eexx22"
+        )
+        assert available_license.terms_concurrency == 1
+        assert available_license.checkouts_left == 20
+        assert available_license.checkouts_available == 1
+        assert available_license.total_checkouts == 26
+        assert available_license.created is not None
+        assert available_license.created.isoformat() == "2026-02-25T15:17:50+01:00"
+        assert available_license.price_currency == "USD"
+        assert available_license.price_value == 12.75
+        assert available_license.order_name == "Uusittavat ja varaukset helmi 2"
+        assert available_license.order_identifier == "202602-1095-081114"
+        assert available_license.order_href == "https://market.cantook.com/carts/81114"
+        assert available_license.availability_state == "available"
+        assert available_license.availability_status == "available"
+        assert available_license.availability_since is None
+        assert available_license.availability_reason is None
+        assert available_license.license_type == LicenseType.loan_limited
+
+        # Simulate a change in the license availability from the ODL server of the available license.
+        loan, is_new = available_license.loan_to(db.patron())
+        assert is_new
+        assert loan.license == available_license
+        assert loan.end is None
+
+        # First mock the unavailable license info fetch.
+        odl_mock_get.add(unavailable_license_info)
+        # And then the available license info fetch with changes.
+        odl_mock_get.add(
+            LicenseInfoHelper(
+                license=LicenseHelper(
+                    identifier="urn:uuid:eexx22",
+                    concurrency=1,
+                    checkouts=26,
+                ),
+                available=0,
+                left=5,
+                status="available",
+            )
+        )
+
+        imported_editions, pools, works, failures = odl2_importer.import_from_feed(
+            json.dumps(feed_data)
+        )
+
+        assert len(imported_editions) == 1
+        assert len(pools) == 1
+        assert len(works) == 1
+        assert not failures
+
+        [reimported_pool] = pools
+        assert reimported_pool == license_pool
+        assert len(reimported_pool.loans) == 1
+        assert reimported_pool.licenses_owned == 1
+        assert reimported_pool.licenses_available == 0
+
+        reimported_available_license = next(
+            license_
+            for license_ in reimported_pool.licenses
+            if license_.identifier == "urn:uuid:eexx22"
+        )
+        assert reimported_available_license.checkouts_left == 5
+        assert reimported_available_license.checkouts_available == 0
+        # Total number of checkouts should match the initial value from the feed.
+        assert reimported_available_license.total_checkouts == 26
 
     @freeze_time("2016-01-01T00:00:00+00:00")
     def test_import_from_feed_ellibs(
@@ -412,6 +602,10 @@ class TestODL2Importer:
         assert "Maahan kätketty" == maahan_katketty_edition.title
         assert not maahan_katketty_edition.subtitle
         assert "fin" == maahan_katketty_edition.language
+        assert (
+            datetime.datetime(2025, 9, 8, 7, 9, 22, tzinfo=datetime.UTC)
+            == maahan_katketty_edition.data_source_modified
+        )
         assert EditionConstants.BOOK_MEDIUM == maahan_katketty_edition.medium
         assert "John Ajvide Lindqvist" == maahan_katketty_edition.author
 
@@ -421,10 +615,24 @@ class TestODL2Importer:
         assert "John Ajvide Lindqvist" == maahan_katketty_author.display_name
         assert "Lindqvist, John Ajvide" == maahan_katketty_author.sort_name
 
-        assert 1 == len(maahan_katketty_author.contributions)
+        assert 2 == len(maahan_katketty_author.contributions)
         [
-            maahan_katketty_author_author_contribution
+            maahan_katketty_primary_author_contribution,
+            maahan_katketty_author_author_contribution,
         ] = maahan_katketty_author.contributions
+        assert isinstance(maahan_katketty_primary_author_contribution, Contribution)
+        assert (
+            maahan_katketty_author
+            == maahan_katketty_primary_author_contribution.contributor
+        )
+        assert (
+            maahan_katketty_edition
+            == maahan_katketty_primary_author_contribution.edition
+        )
+        assert (
+            Contributor.Role.PRIMARY_AUTHOR
+            == maahan_katketty_primary_author_contribution.role
+        )
         assert isinstance(maahan_katketty_author_author_contribution, Contribution)
         assert (
             maahan_katketty_author
@@ -783,6 +991,8 @@ class TestODL2Importer:
             concurrency: int = 10,
             checkouts: int | None = 30,
             expires: str | None = "2016-04-25T12:25:21+02:00",
+            status: str = "available",
+            available: int | None = None,
         ) -> LicenseInfoHelper:
             return LicenseInfoHelper(
                 license=LicenseHelper(
@@ -792,11 +1002,19 @@ class TestODL2Importer:
                     expires=expires,
                 ),
                 left=checkouts,
-                available=concurrency,
+                available=concurrency if available is None else available,
+                status=status,
             )
 
         odl_mock_get.add(license_status_reply(MOBY_DICK_LICENSE_ID))
         odl_mock_get.add(license_status_reply(HUCK_FINN_LICENSE_ID))
+        odl_mock_get.add(
+            license_status_reply(
+                TEST_BOOK_LICENSE_ID,
+                status="unavailable",
+                available=0,
+            )
+        )
 
         (
             imported_editions,
@@ -806,9 +1024,9 @@ class TestODL2Importer:
         ) = odl2_importer.import_from_feed(json.dumps(feed_json))
 
         assert isinstance(pools, list)
-        assert 3 == len(pools)
+        assert 4 == len(pools)
 
-        [moby_dick_pool, huck_finn_pool, test_book_pool] = pools
+        [moby_dick_pool, huck_finn_pool, test_book_pool, test4_pool] = pools
 
         def assert_pool(
             pool: LicensePool,
@@ -819,6 +1037,7 @@ class TestODL2Importer:
             license_id: str,
             available_for_borrowing: bool,
             license_status: LicenseStatus,
+            pool_status: LicensePoolStatus,
         ) -> None:
             assert pool.identifier.identifier == identifier
             assert pool.identifier.type == identifier_type
@@ -829,6 +1048,7 @@ class TestODL2Importer:
             assert license_info.identifier == license_id
             assert license_info.is_available_for_borrowing is available_for_borrowing
             assert license_info.status == license_status
+            assert pool.status == pool_status
 
         assert_moby_dick_pool = functools.partial(
             assert_pool,
@@ -855,6 +1075,7 @@ class TestODL2Importer:
             licenses_available=10,
             available_for_borrowing=True,
             license_status=LicenseStatus.available,
+            pool_status=LicensePoolStatus.active,
         )
 
         assert_test_book_pool(
@@ -863,6 +1084,7 @@ class TestODL2Importer:
             licenses_available=0,
             available_for_borrowing=False,
             license_status=LicenseStatus.unavailable,
+            pool_status=LicensePoolStatus.exhausted,
         )
 
         assert_huck_finn_pool(
@@ -871,6 +1093,7 @@ class TestODL2Importer:
             licenses_available=10,
             available_for_borrowing=True,
             license_status=LicenseStatus.available,
+            pool_status=LicensePoolStatus.active,
         )
 
         # Harvest the feed again, but this time the status has changed
@@ -883,6 +1106,20 @@ class TestODL2Importer:
         }
 
         # Mock responses from license status server
+        odl_mock_get.add(
+            license_status_reply(
+                MOBY_DICK_LICENSE_ID,
+                status="unavailable",
+                available=0,
+            )
+        )
+        odl_mock_get.add(
+            license_status_reply(
+                HUCK_FINN_LICENSE_ID,
+                status="unavailable",
+                available=0,
+            )
+        )
         odl_mock_get.add(license_status_reply(TEST_BOOK_LICENSE_ID))
 
         # Harvest the feed again
@@ -894,9 +1131,9 @@ class TestODL2Importer:
         ) = odl2_importer.import_from_feed(json.dumps(feed_json))
 
         assert isinstance(pools, list)
-        assert 3 == len(pools)
+        assert 4 == len(pools)
 
-        [moby_dick_pool, huck_finn_pool, test_book_pool] = pools
+        [moby_dick_pool, huck_finn_pool, test_book_pool, test4_pool] = pools
 
         assert_moby_dick_pool(
             moby_dick_pool,
@@ -904,6 +1141,7 @@ class TestODL2Importer:
             licenses_available=0,
             available_for_borrowing=False,
             license_status=LicenseStatus.unavailable,
+            pool_status=LicensePoolStatus.exhausted,
         )
 
         assert_test_book_pool(
@@ -912,6 +1150,7 @@ class TestODL2Importer:
             licenses_available=10,
             available_for_borrowing=True,
             license_status=LicenseStatus.available,
+            pool_status=LicensePoolStatus.active,
         )
 
         assert_huck_finn_pool(
@@ -920,6 +1159,7 @@ class TestODL2Importer:
             licenses_available=0,
             available_for_borrowing=False,
             license_status=LicenseStatus.unavailable,
+            pool_status=LicensePoolStatus.exhausted,
         )
 
     def test_import_accessibility_success(

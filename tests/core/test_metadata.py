@@ -668,7 +668,7 @@ class TestMetadata:
         edition.abridged = False
         edition.number_of_pages = 208
         edition.layout = "reflowable"
-        edition.collection = "The Azrieli Series of Holocaust Survivor Memoirs"
+        edition.collection = "Some collection"
         edition.primary_identifier.add_link(
             Hyperlink.IMAGE, "image", edition.data_source
         )
@@ -753,7 +753,9 @@ class TestMetadata:
             abridged=False,
             number_of_pages=208,
             layout="reflowable",
-            collection="The Azrieli Series of Holocaust Survivor Memoirs",
+            collection="Some collection",
+            awards=["Some award"],
+            data_source_last_updated=datetime.datetime(2022, 4, 5, tzinfo=datetime.UTC),
         )
 
         edition_new, changed = metadata.apply(edition_old, pool.collection)
@@ -774,8 +776,10 @@ class TestMetadata:
         assert edition_new.abridged is False
         assert edition_new.number_of_pages == 208
         assert edition_new.layout == "reflowable"
-        assert (
-            edition_new.collection == "The Azrieli Series of Holocaust Survivor Memoirs"
+        assert edition_new.collection == "Some collection"
+        assert edition_new.awards == ["Some award"]
+        assert edition_new.data_source_modified == datetime.datetime(
+            2022, 4, 5, tzinfo=datetime.UTC
         )
 
         edition_new, changed = metadata.apply(edition_new, pool.collection)
@@ -783,6 +787,9 @@ class TestMetadata:
 
         # The series position can also be 0.
         metadata.series_position = 0
+        metadata.data_source_last_updated = datetime.datetime(
+            2022, 4, 6, tzinfo=datetime.UTC
+        )
         edition_new, changed = metadata.apply(edition_new, pool.collection)
         assert changed == True
         assert edition_new.series_position == 0

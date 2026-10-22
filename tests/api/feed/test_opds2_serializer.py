@@ -69,6 +69,7 @@ class TestOPDS2Serializer:
             identifier="urn:id",
             language=FeedEntryType(text="de"),
             updated=FeedEntryType(text="2022-02-02"),
+            data_source_modified=FeedEntryType(text="2022-02-03"),
             published=FeedEntryType(text="2020-02-02"),
             summary=FeedEntryType(text="Summary"),
             publisher=FeedEntryType(text="Publisher"),
@@ -87,6 +88,7 @@ class TestOPDS2Serializer:
             number_of_pages=208,
             layout="reflowable",
             collection="A collection",
+            awards=["An award", "Another award"],
             selected_by_patrons=7,
         )
 
@@ -107,6 +109,7 @@ class TestOPDS2Serializer:
         assert metadata["identifier"] == data.identifier
         assert metadata["language"] == data.language.text
         assert metadata["modified"] == data.updated.text
+        assert metadata["data_source_modified"] == data.data_source_modified.text
         assert metadata["published"] == data.published.text
         assert metadata["description"] == data.summary.text
         assert metadata["publisher"] == dict(name=data.publisher.text)
@@ -117,6 +120,7 @@ class TestOPDS2Serializer:
         assert metadata["belongsTo"] == dict(
             name="Series", position=3, collection="A collection"
         )
+        assert metadata["award"] == ["An award", "Another award"]
 
         assert entry["links"] == [
             dict(href="http://link", rel="rel"),

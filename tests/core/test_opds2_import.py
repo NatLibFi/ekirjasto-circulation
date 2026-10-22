@@ -146,6 +146,12 @@ class TestOPDS2Importer(OPDS2Test):
         )
         content_server_feed_text = opds2_files_fixture.sample_text("feed.json")
         content_server_feed: str | bytes
+        feed_json = json.loads(content_server_feed_text)
+        feed_json["publications"][0]["metadata"]["award"] = [
+            "An award",
+            "Another award",
+        ]
+        content_server_feed_text = json.dumps(feed_json)
 
         if manifest_type == "bytes":
             content_server_feed = content_server_feed_text.encode()
@@ -175,6 +181,7 @@ class TestOPDS2Importer(OPDS2Test):
         assert EditionConstants.AUDIO_MEDIUM == moby_dick_edition.medium
         assert "Herman Melville" == moby_dick_edition.author
         assert moby_dick_edition.duration == 100.2
+        assert moby_dick_edition.awards == ["An award", "Another award"]
 
         assert 1 == len(moby_dick_edition.author_contributors)
         [moby_dick_author] = moby_dick_edition.author_contributors
@@ -197,6 +204,10 @@ class TestOPDS2Importer(OPDS2Test):
         assert Contributor.Role.AUTHOR == moby_dick_author_contribution.role
 
         assert data.data_source == moby_dick_edition.data_source
+        assert (
+            datetime.datetime(2015, 9, 29, 17, 0, tzinfo=datetime.UTC)
+            == moby_dick_edition.data_source_modified
+        )
 
         assert "Test Publisher" == moby_dick_edition.publisher
         assert datetime.date(2015, 9, 29) == moby_dick_edition.published
@@ -215,9 +226,13 @@ class TestOPDS2Importer(OPDS2Test):
 
         assert "Adventures of Huckleberry Finn" == huckleberry_finn_edition.title
         assert "eng" == huckleberry_finn_edition.language
+        assert (
+            datetime.datetime(2015, 9, 29, 17, 0, tzinfo=datetime.UTC)
+            == huckleberry_finn_edition.data_source_modified
+        )
         assert EditionConstants.BOOK_MEDIUM == huckleberry_finn_edition.medium
-        # Two authors
-        assert "Samuel Langhorne Clemens, Mark Twain" == huckleberry_finn_edition.author
+        # Two authors of which Mark Twain is the primary author and comes first.
+        assert "Mark Twain, Samuel Langhorne Clemens" == huckleberry_finn_edition.author
         # And authors are contributors
         assert 2 == len(huckleberry_finn_edition.author_contributors)
 
@@ -782,8 +797,8 @@ class TestOPDS2Importer(OPDS2Test):
             == LicensePool.UNLIMITED_ACCESS
         )
 
-        # Politics of postmodernism is unavailable, but it is past the until date, so it
-        # should be available
+        # Politics of postmodernism is unavailable. The past until date does not
+        # override the unavailable state. E-kirjasto does not have such "until" dates for availability.
         postmodernism_edition = self._get_edition_by_identifier(
             imported_editions, self.POSTMODERNISM_PROQUEST_IDENTIFIER
         )
@@ -796,11 +811,8 @@ class TestOPDS2Importer(OPDS2Test):
         )
         assert isinstance(postmodernism_license_pool, LicensePool) is True
         assert postmodernism_license_pool.open_access is False
-        assert postmodernism_license_pool.licenses_owned == LicensePool.UNLIMITED_ACCESS
-        assert (
-            postmodernism_license_pool.licenses_available
-            == LicensePool.UNLIMITED_ACCESS
-        )
+        assert postmodernism_license_pool.licenses_owned == 0
+        assert postmodernism_license_pool.licenses_available == 0
 
         # We harvest the feed again but this time the availability has changed
         moby_dick_metadata["availability"]["state"] = "available"

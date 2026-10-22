@@ -23,7 +23,7 @@ from core.model import (
     RightsStatus,
     Subject,
 )
-from core.model.licensing import LicenseStatus
+from core.model.licensing import LicensePoolStatus, LicenseStatus
 from core.util.datetime_helpers import utc_now
 from tests.fixtures.database import DatabaseTransactionFixture
 
@@ -298,6 +298,41 @@ class TestCirculationData:
         new_license = pool.licenses[0]
         assert new_license.id == old_license.id
         assert old_license.status == LicenseStatus.unavailable
+
+    def test_apply_sets_exhausted_date_to_latest_unavailable_license(
+        self, db: DatabaseTransactionFixture
+    ):
+        edition, pool = db.edition(with_license_pool=True)
+        earlier = datetime.datetime(2025, 3, 13, 7, 0, tzinfo=datetime.UTC)
+        latest = datetime.datetime(2025, 3, 14, 7, 0, tzinfo=datetime.UTC)
+
+        circulation_data = CirculationData(
+            licenses=[
+                LicenseData(
+                    identifier="earlier",
+                    checkout_url="whatever",
+                    status_url="whatever",
+                    checkouts_available=0,
+                    status=LicenseStatus.unavailable,
+                    availability_since=earlier,
+                ),
+                LicenseData(
+                    identifier="latest",
+                    checkout_url="whatever",
+                    status_url="whatever",
+                    checkouts_available=0,
+                    status=LicenseStatus.unavailable,
+                    availability_since=latest,
+                ),
+            ],
+            data_source=edition.data_source,
+            primary_identifier=edition.primary_identifier,
+        )
+
+        circulation_data.apply(db.session, pool.collection)
+
+        assert pool.status == LicensePoolStatus.exhausted
+        assert pool.exhausted_date == latest
 
     @freeze_time("2025-03-13T07:00:00+00:00")
     def test_apply_updates_multiple_licenses_with_partial_imports(

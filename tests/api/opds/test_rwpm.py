@@ -30,6 +30,7 @@ def test_publication_metadata_accepts_and_normalizes_new_fields():
     assert metadata.belongs_to.series[0].name == "A series"
     assert metadata.belongs_to.series[0].position == "15"
 
+
 def test_publication_metadata_accepts_correct_types():
     metadata = Metadata.model_validate(
         {
@@ -46,7 +47,6 @@ def test_publication_metadata_accepts_correct_types():
                         "links": [{"href": "https://example.com"}],
                     },
                     {"name": "No position"},
-
                 ],
             },
         }
@@ -60,6 +60,7 @@ def test_publication_metadata_accepts_correct_types():
     assert metadata.belongs_to.series[0].position == "15"
     assert metadata.belongs_to.series[1].name == "No position"
     assert metadata.belongs_to.series[1].position is None
+
 
 def test_invalid_new_metadata_is_logged_and_dropped(caplog):
     caplog.set_level(logging.ERROR)
