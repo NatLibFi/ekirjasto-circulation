@@ -10,7 +10,6 @@ from pydantic import (
     Field,
     NonNegativeFloat,
     NonNegativeInt,
-    PastDatetime,
     PositiveInt,
     field_validator,
     model_validator,
@@ -23,7 +22,6 @@ from api.opds.types.currency import CurrencyCode
 from api.opds.types.language import LanguageMap
 from api.opds.types.link import CompactCollection, LinkT
 from api.opds.util import StrOrTuple, obj_or_tuple_to_tuple
-from core.util.datetime_helpers import utc_now
 
 
 def validate_self_link(value: CompactCollection[LinkT]) -> CompactCollection[LinkT]:
@@ -107,27 +105,19 @@ class Availability(BaseOpdsModel):
     https://drafts.opds.io/schema/properties.schema.json
     """
 
-    state: AvailabilityState = AvailabilityState.available
-    since: Annotated[AwareDatetime, PastDatetime] | None = None
+    state: AvailabilityState | None = AvailabilityState.available
+    status: AvailabilityState | None = AvailabilityState.available
+    since: AwareDatetime | None = None
     until: AwareDatetime | None = None
+    reason: str | None = None
 
     @property
     def available(self) -> bool:
         """
         Does the data indicate that this item is available?
-
-        We default being available if no availability information is provided or if the provided
-        availability information is past the time specified in its `until` field. The `since` field on the
-        availability information is not used, it is assumed to be informational and always in the past if it is
-        present. This is based on a discussion with the OPDS 2.0 working group.
-
-        TODO: Update our handling of the `since` field based on the resolution of the discussion here:
-          https://github.com/opds-community/drafts/discussions/63#discussioncomment-9806140
         """
 
-        return self.state == AvailabilityState.available or (
-            self.until is not None and self.until < utc_now()
-        )
+        return self.state is AvailabilityState.available
 
 
 class LinkProperties(rwpm.LinkProperties):

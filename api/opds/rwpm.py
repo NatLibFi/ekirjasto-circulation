@@ -147,7 +147,7 @@ class AltIdentifier(BaseOpdsModel):
     scheme: str | None = None
 
 
-class Named(BaseOpdsModel):
+class Named(BaseOpdsModel, LoggerMixin):
     """
     An object with a required translatable name.
     """
@@ -158,6 +158,7 @@ class Named(BaseOpdsModel):
     @field_validator("name", mode="before")
     def validate_name(cls, value):
         if value is None or value == "":
+            cls.logger().info("Name is missing or empty, defaulting to '[Unknown]'")
             return "[Unknown]"
         return value
 
@@ -272,6 +273,7 @@ class BelongsTo(BaseOpdsModel, LoggerMixin):
 
             if isinstance(position, int):
                 position = str(position)
+                cls.logger().info("Coercing series position to string: %r", position)
 
             if isinstance(name, str) and (
                 position is None
@@ -330,6 +332,7 @@ class Metadata(BaseOpdsModel, LoggerMixin):
         """
         if isinstance(value, str) and value.isdigit() and len(value) == 4:
             year = int(value)
+            cls.logger().info("Coercing year value to datetime: %r", year)
             return datetime(year, 1, 1)
         return value
 
@@ -438,6 +441,7 @@ class Metadata(BaseOpdsModel, LoggerMixin):
             return value
         if isinstance(value, str):
             try:
+                cls.logger().info("Coercing numberOfPages value to integer: %r", value)
                 return int(value)
             except ValueError:
                 pass
@@ -453,6 +457,7 @@ class Metadata(BaseOpdsModel, LoggerMixin):
         if isinstance(value, bool):
             return value
         if isinstance(value, str) and value.lower() in {"true", "false"}:
+            cls.logger().info("Coercing abridged value to boolean: %r", value)
             return value.lower() == "true"
         cls.logger().error("Invalid abridged value: %r", value)
         return None
@@ -487,6 +492,19 @@ class Metadata(BaseOpdsModel, LoggerMixin):
         if isinstance(value, dict):
             return Accessibility(**value)
         cls.logger().error("Invalid accessibility value: %r", value)
+        return None
+
+    award: list[str] | str | None = None
+
+    @field_validator("award", mode="before")
+    def check_award_type(cls, value):
+        """Normalize the award value to a list of strings."""
+        if isinstance(value, list) and all(isinstance(item, str) for item in value):
+            return value
+        if isinstance(value, str):
+            cls.logger().info("Coercing award value to list: %r", value)
+            return [value]
+        cls.logger().error("Invalid award value: %r", value)
         return None
 
 
