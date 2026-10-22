@@ -8,9 +8,7 @@ def test_license_metadata_validation(
     opds2_with_odl_files_fixture: OPDS2WithODLFilesFixture,
 ) -> None:
     """Validate the license metadata included in the DeMarque feed."""
-    feed = json.loads(
-        opds2_with_odl_files_fixture.sample_data("demarque_feed.json")
-    )
+    feed = json.loads(opds2_with_odl_files_fixture.sample_data("demarque_feed.json"))
 
     publication = Publication.model_validate(feed["publications"][3])
     [license1, license2] = publication.licenses
@@ -33,10 +31,7 @@ def test_license_metadata_validation(
     assert availability.state.value == "unavailable"
     assert availability.status.value == "unavailable"
     assert availability.since.isoformat() == "2026-01-11T17:12:21+01:00"
-    assert (
-        metadata.availability.reason
-        == "https://registry.opds.io/reason#exhausted"
-    )
+    assert metadata.availability.reason == "https://registry.opds.io/reason#exhausted"
     assert metadata.protection.formats == (
         "application/vnd.adobe.adept+xml",
         "application/vnd.readium.lcp.license.v1.0+json",
