@@ -391,6 +391,33 @@ class TestEkirjastoAuthentication:
         assert decoded_payload_decrypted["iat"] < timestamp_now
         assert decoded_payload["iat"] < timestamp_now
 
+    @pytest.mark.parametrize("missing_claim", ["token", "iss", "sub", "iat", "exp"])
+    def test_delegate_token_requires_claims(
+        self,
+        missing_claim: str,
+        create_provider: Callable[..., MockEkirjastoAuthenticationAPI],
+        controller_fixture: ControllerFixture,
+    ):
+        provider = create_provider()
+        provider.set_secrets(controller_fixture.db.session)
+
+        # Create an otherwise valid token and remove one required claim at a time.
+        payload = {
+            "token": "test_token",
+            "iss": provider.label(),
+            "sub": "test_delegate_id",
+            "iat": int(utc_now().timestamp()),
+            "exp": int(utc_now().timestamp()) + 500,
+        }
+        del payload[missing_claim]
+        delegate_token = jwt.encode(
+            payload, provider.delegate_token_signing_secret, algorithm="HS256"
+        )
+
+        # A valid signature must not allow an incomplete token to be accepted.
+        with pytest.raises(jwt.exceptions.MissingRequiredClaimError):
+            provider.decode_ekirjasto_delegate_token(delegate_token)
+
     @pytest.mark.parametrize(
         "wrong_signing_secret,wrong_encrypting_secret",
         [

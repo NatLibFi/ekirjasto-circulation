@@ -431,12 +431,13 @@ class EkirjastoAuthenticationAPI(AuthenticationProvider, ABC):
             algorithms=["HS256"],
             issuer=self.label(),
             options={
+                # PyJWT requires mandatory claims through the options dictionary.
+                "require": ["token", "iss", "sub", "iat", "exp"],
                 "verify_signature": True,
                 "verify_exp": validate_expire,
                 "verify_iat": True,
                 "verify_iss": True,
             },
-            required_claims=["token", "iss", "sub", "iat", "exp"],
         )
 
         if decrypt_ekirjasto_token:
