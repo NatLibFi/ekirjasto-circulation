@@ -1,5 +1,4 @@
 import json
-from contextlib import nullcontext
 from unittest.mock import MagicMock
 
 import flask
@@ -172,8 +171,6 @@ class TestCatalogServicesController:
         else:
             make_request = flask_app_fixture.test_request_context
 
-        context_manager = pytest.raises(raises) if raises is not None else nullcontext()
-
         service = db.integration_configuration(
             "fake protocol",
             Goals.CATALOG_GOAL,
@@ -186,7 +183,10 @@ class TestCatalogServicesController:
 
         with make_request("/", method="POST"):
             flask.request.form = ImmutableMultiDict(post_data)
-            with context_manager:
+            if raises is not None:
+                with pytest.raises(raises):
+                    controller.process_catalog_services()
+            else:
                 response = controller.process_catalog_services()
                 assert isinstance(response, ProblemDetail)
                 assert isinstance(expected, ProblemDetail)
