@@ -199,6 +199,14 @@ class Edition(Base, EditionConstants):
         return {x.contributor for x in self.contributions}
 
     @property
+    def primary_author(self):
+        """The contributor explicitly marked as the primary author, if any."""
+        for contribution in self.contributions:
+            if contribution.role == Contributor.Role.PRIMARY_AUTHOR:
+                return contribution.contributor.sort_name
+        return None
+
+    @property
     def author_contributors(self):
         """All distinct 'author'-type contributors, with the primary author
         first, other authors sorted by sort name.

@@ -44,7 +44,6 @@ from core.model import (
     Collection,
     ConfigurationSetting,
     Contribution,
-    Contributor,
     DataSource,
     DiscoveryServiceRegistration,
     Edition,
@@ -975,14 +974,6 @@ class LicenseReportScript(Script):
 
     format = "%Y-%m-%d"
 
-    @staticmethod
-    def primary_author(edition):
-        for contribution in edition.contributions:
-            if contribution.role == Contributor.Role.PRIMARY_AUTHOR:
-                contributor = contribution.contributor
-                return contributor.display_name
-        return ""
-
     def explain(self, licensepool):
         edition = licensepool.presentation_edition
         identifier = licensepool.identifier
@@ -993,7 +984,7 @@ class LicenseReportScript(Script):
             data.extend(
                 [
                     f'"{edition.title}"',
-                    f'"{self.primary_author(edition)}"',
+                    f'"{edition.primary_author}"' if edition.primary_author else "",
                     f'"{edition.author}"',
                 ]
             )
@@ -1007,7 +998,7 @@ class LicenseReportScript(Script):
             series += f": {edition.series_position}"
         data.append(f'"{series}"' if series else "")
         data.append(f'"{edition.collection}"' if edition.collection else "")
-        data.append(f'"{"abridged"}' if edition.abridged == True else "not abridged")
+        data.append(f'"{"abridged"}"' if edition.abridged == True else "not abridged")
         awards = "; ".join(edition.awards or [])
         data.append(f'"{awards}"' if awards else "")
         data.append(f'"{edition.data_source_modified.strftime(self.format)}"')
@@ -1041,7 +1032,7 @@ class LicenseReportScript(Script):
             license_data = [
                 f'"{identifier.identifier}"',
                 f'"{edition.title}"',
-                f'"{self.primary_author(edition)}"',
+                f'"{edition.primary_author}"' if edition.primary_author else "",
                 f'"{edition.author}"',
                 f'"{licensepool.collection.name}"',
                 f'"{edition.language}"',
