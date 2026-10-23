@@ -14,9 +14,8 @@ def test_feedback_municipality_route_requires_service_token(monkeypatch):
         raising=False,
     )
     monkeypatch.setattr(app, "_db", SimpleNamespace(info={}), raising=False)
-    client = app.test_client()
-
-    response = client.get("/internal/feedback/municipalities")
+    with app.test_request_context("/internal/feedback/municipalities"):
+        response = routes.feedback_municipalities()
 
     assert response.status_code == 401
     assert response.headers["Cache-Control"] == "no-store"
@@ -58,12 +57,11 @@ def test_feedback_municipality_route_returns_effective_recipient_emails(monkeypa
             "municipalities": {"002": "city@example.fi", "003": "solo@example.fi"},
         },
     )
-    client = app.test_client()
-
-    response = client.get(
+    with app.test_request_context(
         "/internal/feedback/municipalities",
         headers={"Authorization": "Bearer test-service-token"},
-    )
+    ):
+        response = routes.feedback_municipalities()
 
     assert response.status_code == 200
     assert response.headers["Cache-Control"] == "no-store"
