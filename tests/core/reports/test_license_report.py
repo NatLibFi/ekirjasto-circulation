@@ -68,7 +68,9 @@ class TestLicenseReport:
 
         assert len(rows) == 2
         assert identifiers.count(pool.identifier.identifier) == 2
-        assert open_access_work.license_pools[0].identifier.identifier not in identifiers
+        assert (
+            open_access_work.license_pools[0].identifier.identifier not in identifiers
+        )
 
         pool_row = next(row for row in rows if not row["License identifier"])
         assert pool_row["Title"] == "The Report Book"
