@@ -1,7 +1,10 @@
+import json
 from datetime import timedelta
 
 import feedparser
 import pytest
+from lxml import etree
+from werkzeug.datastructures import MIMEAccept
 
 from core.classifier import SubjectClassifier
 from core.external_search import WorkSearchResult
@@ -25,6 +28,7 @@ from core.model.measurement import Measurement
 from core.model.resource import Hyperlink, Resource
 from core.model.work import Work
 from core.util.datetime_helpers import datetime_utc, utc_now
+from core.util.opds_writer import OPDSFeed
 from tests.api.feed.conftest import PatchedUrlFor, patch_url_for  # noqa
 from tests.fixtures.database import (  # noqa
     DatabaseTransactionFixture,
@@ -33,6 +37,37 @@ from tests.fixtures.database import (  # noqa
 
 
 class TestAnnotators:
+    def test_generated_feeds_include_new_edition_metadata(
+        self, db: DatabaseTransactionFixture
+    ):
+        work = db.work(with_open_access_download=True)
+        edition = work.presentation_edition
+        edition.awards = ["An award", "Another award"]
+        edition.data_source_modified = datetime_utc(2024, 1, 2, 3, 4, 5)
+        expected_source_modified = strftime(edition.data_source_modified)
+        annotator = CirculationManagerAnnotator(None)
+
+        xml_response = OPDSAcquisitionFeed(
+            "test", "http://feed", [work], annotator
+        ).as_response(mime_types=MIMEAccept([("application/atom+xml", 1)]))
+        xml_root = etree.fromstring(xml_response.get_data())
+        xml_entry = xml_root.find(f"{{{OPDSFeed.ATOM_NS}}}entry")
+        assert xml_entry is not None
+        assert (
+            xml_entry.findtext(f"{{{OPDSFeed.ATOM_NS}}}data_source_modified")
+            == expected_source_modified
+        )
+        assert [
+            award.text for award in xml_entry.findall(f"{{{OPDSFeed.SCHEMA_NS}}}award")
+        ] == ["An award", "Another award"]
+
+        json_response = OPDSAcquisitionFeed(
+            "test", "http://feed", [work], annotator
+        ).as_response(mime_types=MIMEAccept([("application/opds+json", 1)]))
+        metadata = json.loads(str(json_response))["publications"][0]["metadata"]
+        assert metadata["data_source_modified"] == expected_source_modified
+        assert metadata["award"] == ["An award", "Another award"]
+
     def test_all_subjects(self, db: DatabaseTransactionFixture):
         session = db.session
 
@@ -404,6 +439,7 @@ class TestAnnotator:
         edition.imprint = "imprint"
         edition.issued = utc_now().date()
         edition.duration = 10
+        edition.data_source_modified = now
 
         # datetime for > today
         pool.availability_time = (utc_now() + timedelta(days=1)).date()
@@ -436,6 +472,8 @@ class TestAnnotator:
         assert data.publisher == FeedEntryType(text="publisher")
         assert data.issued == edition.issued
         assert data.duration == edition.duration
+        assert data.data_source_modified is not None
+        assert data.data_source_modified.text == strftime(now)
 
         # Missing values
         assert data.language == None

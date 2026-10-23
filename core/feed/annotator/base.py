@@ -325,6 +325,15 @@ class Annotator(ToFeedEntry):
 
         if edition.duration is not None:
             computed.duration = float(edition.duration)
+        if edition.collection:
+            computed.collection = edition.collection
+        computed.awards = [str(award) for award in (edition.awards or [])]
+        if edition.abridged:
+            computed.abridged = edition.abridged
+        if edition.number_of_pages:
+            computed.number_of_pages = edition.number_of_pages
+        if edition.layout:
+            computed.layout = edition.layout
 
         content = self.content(work)
         if content:
@@ -394,6 +403,11 @@ class Annotator(ToFeedEntry):
             updated = entry.work.last_update_time
         if updated:
             computed.updated = FeedEntryType(text=strftime(updated))
+
+        if edition.data_source_modified:
+            computed.data_source_modified = FeedEntryType(
+                text=strftime(edition.data_source_modified)
+            )
 
         computed.image_links = image_links
         computed.other_links = other_links
