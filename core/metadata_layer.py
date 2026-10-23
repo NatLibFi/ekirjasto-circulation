@@ -1107,24 +1107,6 @@ class CirculationData:
                 changed_availability = pool.update_availability_from_licenses(
                     as_of=self.last_checked,
                 )
-                licenses = list(pool.licenses or [])
-                # If all licenses are unavailable, mark the pool as exhausted.
-                if licenses and all(
-                    license_.status == LicenseStatus.unavailable
-                    for license_ in licenses
-                ):
-                    pool.status = LicensePoolStatus.exhausted
-                    # Set the exhausted_date to the most recent among the licenses.
-                    pool.exhausted_date = max(
-                        (
-                            license_.availability_since
-                            for license_ in licenses
-                            if license_.availability_since is not None
-                        ),
-                        default=None,
-                    )
-                else:
-                    pool.status = LicensePoolStatus.active
             else:
                 # Otherwise update the availability directly
                 changed_availability = pool.update_availability(
@@ -1134,6 +1116,8 @@ class CirculationData:
                     new_patrons_in_hold_queue=self.patrons_in_hold_queue,
                     as_of=self.last_checked,
                 )
+        if pool:
+            self._set_licensepool_status(pool)
 
         # If this is the first time we've seen this pool, or we never
         # made a Work for it, make one now.
@@ -1152,6 +1136,29 @@ class CirculationData:
         )
 
         return pool, made_changes
+
+    def _set_licensepool_status(self, pool: LicensePool) -> None:
+        """Set a LicensePool's status based on the statuses of its licenses."""
+        licenses = list(pool.licenses or [])
+        # If there are no licenses, mark the pool as having no licenses. This should not
+        # happen under normal circumstances, but data says otherwise.
+        if not licenses:
+            pool.status = LicensePoolStatus.no_licenses
+            self.log.warning("LicensePool %s has no licenses.", pool)
+        # If all licenses are unavailable, mark the pool as exhausted.
+        elif all(license_.status == LicenseStatus.unavailable for license_ in licenses):
+            pool.status = LicensePoolStatus.exhausted
+            # Set the exhausted_date to the most recent among the licenses.
+            pool.exhausted_date = max(
+                (
+                    license_.availability_since
+                    for license_ in licenses
+                    if license_.availability_since is not None
+                ),
+                default=None,
+            )
+        else:
+            pool.status = LicensePoolStatus.active
 
     def _availability_needs_update(self, pool):
         """Does this CirculationData represent information more recent than

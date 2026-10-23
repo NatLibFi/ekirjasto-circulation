@@ -259,6 +259,7 @@ class License(Base, LicenseFunctions):
 class LicensePoolStatus(PythonEnum):
     active = "active"
     exhausted = "exhausted"
+    no_licenses = "no_licenses"
 
 
 class LicensePool(Base):

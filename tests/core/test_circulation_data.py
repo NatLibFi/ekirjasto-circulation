@@ -29,6 +29,39 @@ from tests.fixtures.database import DatabaseTransactionFixture
 
 
 class TestCirculationData:
+    def test_set_licensepool_status(self, db: DatabaseTransactionFixture):
+        circulation_data = CirculationData(
+            DataSource.OVERDRIVE,
+            primary_identifier=IdentifierData(Identifier.OVERDRIVE_ID, "1"),
+        )
+        pool = db.licensepool(None)
+
+        circulation_data._set_licensepool_status(pool)
+        assert LicensePoolStatus.no_licenses == pool.status
+
+        first_unavailable = db.license(
+            pool,
+            status=LicenseStatus.unavailable,
+        )
+        first_unavailable.availability_since = datetime.datetime(
+            2026, 1, 1, tzinfo=datetime.UTC
+        )
+        second_unavailable = db.license(
+            pool,
+            status=LicenseStatus.unavailable,
+        )
+        second_unavailable.availability_since = datetime.datetime(
+            2026, 1, 2, tzinfo=datetime.UTC
+        )
+
+        circulation_data._set_licensepool_status(pool)
+        assert LicensePoolStatus.exhausted == pool.status
+        assert second_unavailable.availability_since == pool.exhausted_date
+
+        db.license(pool, status=LicenseStatus.available)
+        circulation_data._set_licensepool_status(pool)
+        assert LicensePoolStatus.active == pool.status
+
     def test_circulationdata_may_require_collection(
         self, db: DatabaseTransactionFixture
     ):

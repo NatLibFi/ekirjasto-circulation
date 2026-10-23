@@ -19,6 +19,7 @@ depends_on = None
 license_pool_status = sa.Enum(
     "active",
     "exhausted",
+    "no_licenses",
     name="licensepoolstatus",
 )
 license_type = sa.Enum(
