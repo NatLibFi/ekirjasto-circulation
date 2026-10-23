@@ -430,8 +430,24 @@ class Metadata(BaseOpdsModel, LoggerMixin):
         "ltr", alias="readingProgression"
     )
     description: str | None = None
-    duration: PositiveFloat | None = None
+    duration: float | None = None
     number_of_pages: PositiveInt | None = Field(None, alias="numberOfPages")
+
+    @field_validator("duration", mode="before")
+    @classmethod
+    def validate_duration(cls, value):
+        """Validate that the duration is a non-negative float."""
+        if value is None:
+            return None
+        try:
+            duration = float(value)
+        except (TypeError, ValueError):
+            cls.logger().error("Invalid duration value: %r", value)
+            return None
+        if duration < 0:
+            cls.logger().error("Invalid negative duration value: %r", value)
+            return None
+        return duration
 
     @field_validator("number_of_pages", mode="before")
     @classmethod

@@ -1,5 +1,7 @@
 import logging
 
+import pytest
+
 from api.opds.rwpm import BelongsTo, Metadata, PresentationProperties
 
 
@@ -118,3 +120,28 @@ def test_belongs_to_defaults_all_fields_to_none_or_empty():
 
 def test_presentation_layout_is_optional():
     assert PresentationProperties.model_validate({}).layout is None
+
+
+@pytest.mark.parametrize(
+    "duration, expected_duration, expected_log",
+    [
+        pytest.param(35.6, 35.6, None, id="positive float"),
+        pytest.param("970", 970.0, None, id="positive string"),
+        pytest.param("0", 0.0, None, id="string zero"),
+        pytest.param(0, 0.0, None, id="zero"),
+        pytest.param(-1, None, "Invalid negative duration value: -1", id="negative"),
+        pytest.param(
+            "many", None, "Invalid duration value: 'many'", id="invalid string"
+        ),
+    ],
+)
+def test_duration_is_validated(duration, expected_duration, expected_log, caplog):
+    caplog.set_level(logging.ERROR)
+
+    data = Metadata.model_validate({"title": "Test", "duration": duration})
+
+    if expected_log:
+        assert expected_log in caplog.text
+    else:
+        assert not caplog.text
+    assert data.duration == expected_duration
