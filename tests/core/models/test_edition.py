@@ -72,6 +72,19 @@ class TestEdition:
         # only shows up once.
         assert [alice] == edition.author_contributors
 
+    def test_primary_author(self, db: DatabaseTransactionFixture):
+        edition = db.edition(authors=[])
+        [alice], ignore = Contributor.lookup(db.session, "Adder, Alice")
+        edition.add_contributor(alice, Contributor.Role.PRIMARY_AUTHOR)
+
+        assert "Adder, Alice" == edition.primary_author
+
+        edition = db.edition(authors=[])
+        [bob], ignore = Contributor.lookup(db.session, "Bitshifter, Bob")
+        edition.add_contributor(bob, Contributor.Role.AUTHOR)
+
+        assert edition.primary_author is None
+
     def test_for_foreign_id(self, db: DatabaseTransactionFixture):
         """Verify we can get a data source's view of a foreign id."""
         data_source = DataSource.lookup(db.session, DataSource.GUTENBERG)
@@ -323,8 +336,8 @@ class TestEdition:
         kelly, ignore = db.contributor(sort_name="Accumulator, Kelly")
         wr.add_contributor(kelly, Contributor.Role.AUTHOR)
         wr.calculate_presentation()
-        assert "Kelly Accumulator, Bob A. Bitshifter" == wr.author
-        assert "Accumulator, Kelly ; Bitshifter, Bob" == wr.sort_author
+        assert "Bob A. Bitshifter, Kelly Accumulator" == wr.author
+        assert "Bitshifter, Bob ; Accumulator, Kelly" == wr.sort_author
 
     def test_calculate_presentation_very_long_author(
         self, db: DatabaseTransactionFixture

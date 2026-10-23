@@ -260,6 +260,7 @@ class TestODL2Importer:
         assert EditionConstants.BOOK_MEDIUM == moby_dick_edition.medium
         # Primary author comes first in the author string.
         assert "Herman Melville, Nathaniel Hawthorne" == moby_dick_edition.author
+        assert moby_dick_edition.primary_author == "Melville, Herman"
         assert moby_dick_edition.abridged is False
         assert moby_dick_edition.number_of_pages == 208
         assert moby_dick_edition.layout == "reflowable"
@@ -614,6 +615,7 @@ class TestODL2Importer:
         assert isinstance(maahan_katketty_author, Contributor)
         assert "John Ajvide Lindqvist" == maahan_katketty_author.display_name
         assert "Lindqvist, John Ajvide" == maahan_katketty_author.sort_name
+        assert "Lindqvist, John Ajvide" == maahan_katketty_edition.primary_author
 
         assert 2 == len(maahan_katketty_author.contributions)
         [

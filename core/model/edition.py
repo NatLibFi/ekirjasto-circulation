@@ -809,7 +809,8 @@ class Edition(Base, EditionConstants):
         else:
             author = self.UNKNOWN_AUTHOR
         if sort_names:
-            sort_author = " ; ".join(sorted(sort_names))
+            # The primary author's sort name comes first, followed by other authors in alphabetical order.
+            sort_author = " ; ".join([sort_names[0], *sorted(sort_names[1:])])
         else:
             sort_author = self.UNKNOWN_AUTHOR
 
