@@ -331,7 +331,6 @@ class Annotator(ToFeedEntry):
         if edition.abridged:
             computed.abridged = edition.abridged
         if edition.number_of_pages:
-            print("PAGES", edition.number_of_pages)
             computed.number_of_pages = edition.number_of_pages
         if edition.layout:
             computed.layout = edition.layout
