@@ -1,4 +1,7 @@
-from datetime import timedelta
+import hmac
+import logging
+import os
+from datetime import datetime, timedelta, timezone
 from functools import wraps
 
 import flask
@@ -6,8 +9,13 @@ from flask import Response, make_response, redirect, request, url_for
 
 from api.admin.config import Configuration as AdminClientConfig
 from api.admin.config import OperationalMode
+from api.admin.consortium_municipality_emails import (
+    get_consortium_municipality_emails,
+    save_consortium_municipality_email,
+)
 from api.admin.dashboard_stats import generate_statistics
 from api.admin.model.dashboard_statistics import StatisticsResponse
+from api.admin.problem_details import ADMIN_NOT_AUTHORIZED
 from api.admin.templates import admin_sign_in_again as sign_in_again_template
 from api.app import app
 from api.controller.static_file import StaticFileController
@@ -19,6 +27,74 @@ from core.util.problem_detail import BaseProblemDetailException, ProblemDetail
 # An admin's session will expire after this amount of time and
 # the admin will have to log in again.
 app.permanent_session_lifetime = timedelta(hours=9)
+logger = logging.getLogger(__name__)
+
+
+@app.route("/internal/feedback/municipalities")
+def feedback_municipalities():
+    """Return municipality feedback recipients to the feedback service."""
+    configured_token = os.environ.get("FEEDBACK_SERVICE_TOKEN", "")
+    authorization = request.headers.get("Authorization", "")
+    scheme, _, supplied_token = authorization.partition(" ")
+    if (
+        not configured_token
+        or scheme.lower() != "bearer"
+        or not supplied_token
+        or not hmac.compare_digest(supplied_token, configured_token)
+    ):
+        response = flask.jsonify(detail="Unauthorized")
+        response.status_code = 401
+        response.headers["Cache-Control"] = "no-store"
+        return response
+
+    registry = EkirjastoConsortiumMonitor.get_consortium_municipality_list()
+    email_settings = get_consortium_municipality_emails(app.manager._db)
+    consortiums = []
+    municipalities = []
+
+    for consortium in registry["consortiums"]:
+        consortium_email = email_settings["consortiums"].get(consortium["slug"])
+        consortiums.append(
+            {
+                "id": consortium["id"],
+                "name": consortium["name"],
+                "slug": consortium["slug"],
+                "email": consortium_email,
+            }
+        )
+        for municipality in consortium["municipalities"]:
+            municipality_email = email_settings["municipalities"].get(
+                municipality["code"]
+            )
+            municipalities.append(
+                {
+                    **municipality,
+                    "consortium_slug": consortium["slug"],
+                    "consortium_name": consortium["name"],
+                    "email": municipality_email or consortium_email,
+                }
+            )
+
+    for municipality in registry["unassigned_municipalities"]:
+        municipalities.append(
+            {
+                **municipality,
+                "consortium_slug": None,
+                "consortium_name": None,
+                "email": email_settings["municipalities"].get(municipality["code"]),
+            }
+        )
+
+    municipalities.sort(key=lambda item: item["name"].casefold())
+    response = flask.jsonify(
+        {
+            "generated_at": registry["generated_at"],
+            "consortiums": consortiums,
+            "municipalities": municipalities,
+        }
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 def allows_admin_auth_setup(f):
@@ -410,6 +486,62 @@ def municipality_code_name_map():
     """Returns finnish municipality code-name mapping."""
     codes = EkirjastoConsortiumMonitor.get_municipality_code_name_map()
     return codes
+
+
+@library_route("/admin/consortium_municipalities")
+@returns_json_or_response_or_problem_detail
+@requires_admin
+def consortium_municipalities():
+    """Returns current Kirkanta consortium and municipality data on demand."""
+    admin = getattr(flask.request, "admin", None)
+    if not admin or not admin.is_system_admin():
+        return ADMIN_NOT_AUTHORIZED.response
+    logger.info(
+        "Kirkanta and Koodisto municipality list refresh requested by admin=%s at=%s",
+        admin.email,
+        datetime.now(timezone.utc).isoformat(),
+    )
+    data = dict(EkirjastoConsortiumMonitor.get_consortium_municipality_list())
+    data["email_settings"] = get_consortium_municipality_emails(app.manager._db)
+    return data
+
+
+@library_route("/admin/consortium_municipality_emails", methods=["GET", "PUT"])
+@returns_json_or_response_or_problem_detail
+@requires_admin
+@requires_csrf_token
+def consortium_municipality_emails():
+    """Read or update an email address for a consortium or municipality."""
+    admin = getattr(flask.request, "admin", None)
+    if not admin or not admin.is_system_admin():
+        return ADMIN_NOT_AUTHORIZED.response
+
+    if flask.request.method == "GET":
+        return get_consortium_municipality_emails(app.manager._db)
+
+    data = flask.request.get_json(silent=True) or {}
+    try:
+        result = save_consortium_municipality_email(
+            app.manager._db,
+            data.get("kind"),
+            data.get("key"),
+            data.get("email"),
+        )
+    except ValueError as error:
+        response = flask.jsonify(detail=str(error))
+        response.status_code = 400
+        return response
+
+    action = "removed" if not data["email"].strip() else "saved"
+    logger.info(
+        "Feedback recipient email %s by admin=%s kind=%s key=%s at=%s",
+        action,
+        admin.email,
+        data["kind"],
+        data["key"],
+        datetime.now(timezone.utc).isoformat(),
+    )
+    return result
 
 
 @library_route("/admin/events/terms")

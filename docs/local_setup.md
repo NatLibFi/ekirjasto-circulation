@@ -124,6 +124,13 @@ To let the application know which Opensearch instance to use, you can set the fo
 export PALACE_SEARCH_URL="http://localhost:9200"
 ```
 
+The internal feedback municipality registry endpoint is disabled unless
+`FEEDBACK_SERVICE_TOKEN` is set. Configure it as a secret in the Circulation
+environment and set the same token in the feedback service. For local Docker
+Compose development, export a development-only token before starting
+`docker-compose-dev.yml`. The feedback service should use the corresponding
+`/internal/feedback/municipalities` URL and send the token as a Bearer token.
+
 ### Storage Service
 
 The application optionally uses a s3 compatible storage service to store files. To configure the application to use
