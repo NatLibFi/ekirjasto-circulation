@@ -47,9 +47,7 @@ def test_feedback_municipality_route_returns_effective_recipient_emails(monkeypa
                     ],
                 }
             ],
-            "unassigned_municipalities": [
-                {"code": "003", "name": "Unassigned City"}
-            ],
+            "unassigned_municipalities": [{"code": "003", "name": "Unassigned City"}],
         },
     )
     monkeypatch.setattr(

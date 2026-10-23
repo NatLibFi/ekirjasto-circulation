@@ -25,9 +25,7 @@ class TestConsortiumMunicipalityEmails:
             "municipalities": {"853": "turku@example.fi"},
         } == get_consortium_municipality_emails(db.session)
 
-        save_consortium_municipality_email(
-            db.session, "municipalities", "853", "  "
-        )
+        save_consortium_municipality_email(db.session, "municipalities", "853", "  ")
 
         assert {
             "consortiums": {"vaski-kirjastot": "team@example.fi"},

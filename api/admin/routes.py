@@ -9,12 +9,12 @@ from flask import Response, make_response, redirect, request, url_for
 
 from api.admin.config import Configuration as AdminClientConfig
 from api.admin.config import OperationalMode
-from api.admin.dashboard_stats import generate_statistics
-from api.admin.model.dashboard_statistics import StatisticsResponse
 from api.admin.consortium_municipality_emails import (
     get_consortium_municipality_emails,
     save_consortium_municipality_email,
 )
+from api.admin.dashboard_stats import generate_statistics
+from api.admin.model.dashboard_statistics import StatisticsResponse
 from api.admin.problem_details import ADMIN_NOT_AUTHORIZED
 from api.admin.templates import admin_sign_in_again as sign_in_again_template
 from api.app import app
@@ -86,11 +86,13 @@ def feedback_municipalities():
         )
 
     municipalities.sort(key=lambda item: item["name"].casefold())
-    response = flask.jsonify({
-        "generated_at": registry["generated_at"],
-        "consortiums": consortiums,
-        "municipalities": municipalities,
-    })
+    response = flask.jsonify(
+        {
+            "generated_at": registry["generated_at"],
+            "consortiums": consortiums,
+            "municipalities": municipalities,
+        }
+    )
     response.headers["Cache-Control"] = "no-store"
     return response
 
