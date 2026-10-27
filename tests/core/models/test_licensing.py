@@ -180,13 +180,15 @@ class TestDeliveryMechanism:
         with_drm_args = dict(content_type="type1", drm_scheme="scheme1")
         without_drm_args = dict(content_type="type1", drm_scheme=None)
         with_drm = create(session, dm, **with_drm_args)
-        pytest.raises(IntegrityError, create, session, dm, **with_drm_args)
+        with pytest.raises(IntegrityError):
+            create(session, dm, **with_drm_args)
         session.rollback()
 
         # You can't create two DeliveryMechanisms with the same value
         # for content_type and a null value for drm_scheme.
         without_drm = create(session, dm, **without_drm_args)
-        pytest.raises(IntegrityError, create, session, dm, **without_drm_args)
+        with pytest.raises(IntegrityError):
+            create(session, dm, **without_drm_args)
         session.rollback()
 
 

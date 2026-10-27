@@ -695,11 +695,9 @@ class TestLibrarySettings:
         library = db.library()
 
         with flask_app_fixture.test_request_context("/", method="DELETE"):
-            pytest.raises(
-                AdminNotAuthorized,
-                controller.process_delete,
-                library.uuid,
-            )
+            assert library.uuid is not None
+            with pytest.raises(AdminNotAuthorized):
+                controller.process_delete(library.uuid)
 
         with flask_app_fixture.test_request_context_system_admin("/", method="DELETE"):
             response = controller.process_delete(str(library.uuid))

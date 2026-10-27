@@ -410,6 +410,7 @@ class TestEkirjastoAuthentication:
             "exp": int(utc_now().timestamp()) + 500,
         }
         del payload[missing_claim]
+        assert provider.delegate_token_signing_secret is not None
         delegate_token = jwt.encode(
             payload, provider.delegate_token_signing_secret, algorithm="HS256"
         )

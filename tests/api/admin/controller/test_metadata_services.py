@@ -452,11 +452,9 @@ class TestMetadataServices:
 
         controller = metadata_services_fixture.controller
         with flask_app_fixture.test_request_context("/", method="DELETE"):
-            pytest.raises(
-                AdminNotAuthorized,
-                controller.process_delete,
-                novelist_service.id,
-            )
+            assert novelist_service.id is not None
+            with pytest.raises(AdminNotAuthorized):
+                controller.process_delete(novelist_service.id)
 
         with flask_app_fixture.test_request_context_system_admin("/", method="DELETE"):
             service_id = novelist_service.id

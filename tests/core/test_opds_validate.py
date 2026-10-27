@@ -1,5 +1,3 @@
-from contextlib import nullcontext
-
 import pytest
 from pydantic import ValidationError
 
@@ -42,10 +40,11 @@ class TestOPDS2Validation:
             import_class=OPDS2Importer,
         )
 
-        context = pytest.raises(ValidationError) if fail else nullcontext()
-
         feed = opds2_files_fixture.sample_text(feed_name)
-        with context:
+        if fail:
+            with pytest.raises(ValidationError):
+                validator.import_one_feed(feed)
+        else:
             validator.import_one_feed(feed)
 
 
@@ -79,9 +78,10 @@ class TestOPDS2WithODLValidation:
             import_class=ODL2Importer,
         )
 
-        context = pytest.raises(ValidationError) if fail else nullcontext()
-
         feed = opds2_with_odl_files_fixture.sample_text(feed_name)
-        with context:
+        if fail:
+            with pytest.raises(ValidationError):
+                validator.import_one_feed(feed)
+        else:
             imported, failures = validator.import_one_feed(feed)
             assert (len(imported), len(failures)) == (0, 0)

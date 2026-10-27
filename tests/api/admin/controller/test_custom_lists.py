@@ -540,11 +540,11 @@ class TestCustomListsController:
             AdminRole.LIBRARIAN, admin_librarian_fixture.ctrl.db.default_library()
         )
         with admin_librarian_fixture.request_context_with_library_and_admin("/"):
-            pytest.raises(
-                AdminNotAuthorized,
-                admin_librarian_fixture.manager.admin_custom_lists_controller.custom_list,
-                list.id,
-            )
+            assert list.id is not None
+            with pytest.raises(AdminNotAuthorized):
+                admin_librarian_fixture.manager.admin_custom_lists_controller.custom_list(
+                    list.id
+                )
 
     def test_custom_list_edit(self, admin_librarian_fixture: AdminLibrarianFixture):
         data_source = DataSource.lookup(
@@ -864,11 +864,11 @@ class TestCustomListsController:
         with admin_librarian_fixture.request_context_with_library_and_admin(
             "/", method="DELETE"
         ):
-            pytest.raises(
-                AdminNotAuthorized,
-                admin_librarian_fixture.manager.admin_custom_lists_controller.custom_list,
-                list.id,
-            )
+            assert list.id is not None
+            with pytest.raises(AdminNotAuthorized):
+                admin_librarian_fixture.manager.admin_custom_lists_controller.custom_list(
+                    list.id
+                )
 
         admin_librarian_fixture.admin.add_role(
             AdminRole.LIBRARY_MANAGER, admin_librarian_fixture.ctrl.db.default_library()

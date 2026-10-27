@@ -203,9 +203,8 @@ class TestCirculationEvent:
 
         # Reuse the timestamp and you get an IntegrityError which ruins the
         # entire transaction.
-        pytest.raises(
-            IntegrityError, create, session, CirculationEvent, start=now, **kwargs
-        )
+        with pytest.raises(IntegrityError):
+            create(session, CirculationEvent, start=now, **kwargs)
         session.rollback()
 
     def test_uniqueness_constraints_with_library(self, db: DatabaseTransactionFixture):
@@ -227,7 +226,6 @@ class TestCirculationEvent:
 
         # Reuse the timestamp and you get an IntegrityError which ruins the
         # entire transaction.
-        pytest.raises(
-            IntegrityError, create, db.session, CirculationEvent, start=now, **kwargs
-        )
+        with pytest.raises(IntegrityError):
+            create(db.session, CirculationEvent, start=now, **kwargs)
         db.session.rollback()
