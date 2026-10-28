@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import date, timedelta
 from functools import wraps
 
 import flask
@@ -283,6 +283,19 @@ def suppressed():
 def genres():
     """Returns a JSON representation of complete genre tree."""
     return app.manager.admin_feed_controller.genres()
+
+
+@app.route("/admin/licenses", methods=["GET"])
+@returns_problem_detail
+@requires_admin
+def licenses():
+    """Returns a CSV report of all non-open-access license pools."""
+    response = make_response(app.manager.admin_dashboard_controller.license_report())
+    response.headers["Content-Type"] = "text/csv"
+    response.headers[
+        "Content-Disposition"
+    ] = f"attachment; filename=license_report_{date.today().isoformat()}.csv"
+    return response
 
 
 @library_route("/admin/bulk_circulation_events")

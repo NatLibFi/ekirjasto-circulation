@@ -69,6 +69,7 @@ class TestOPDS2Serializer:
             identifier="urn:id",
             language=FeedEntryType(text="de"),
             updated=FeedEntryType(text="2022-02-02"),
+            data_source_modified=FeedEntryType(text="2022-02-03"),
             published=FeedEntryType(text="2020-02-02"),
             summary=FeedEntryType(text="Summary"),
             publisher=FeedEntryType(text="Publisher"),
@@ -83,6 +84,11 @@ class TestOPDS2Serializer:
             ],
             other_links=[Link(href="http://link", rel="rel")],
             duration=10,
+            abridged=True,
+            number_of_pages=208,
+            layout="reflowable",
+            collection="A collection",
+            awards=["An award", "Another award"],
             selected_by_patrons=7,
         )
 
@@ -95,11 +101,15 @@ class TestOPDS2Serializer:
         assert metadata["title"] == data.title.text
         assert metadata["sortAs"] == data.sort_title.text
         assert metadata["duration"] == data.duration
+        assert metadata["abridged"] is True
+        assert metadata["numberOfPages"] == 208
+        assert metadata["presentation"] == {"layout": "reflowable"}
         assert metadata["selected_by_patrons"] == 7
         assert metadata["subtitle"] == data.subtitle.text
         assert metadata["identifier"] == data.identifier
         assert metadata["language"] == data.language.text
         assert metadata["modified"] == data.updated.text
+        assert metadata["data_source_modified"] == data.data_source_modified.text
         assert metadata["published"] == data.published.text
         assert metadata["description"] == data.summary.text
         assert metadata["publisher"] == dict(name=data.publisher.text)
@@ -107,7 +117,10 @@ class TestOPDS2Serializer:
         assert metadata["subject"] == [
             dict(scheme="scheme", name="label", sortAs="label")
         ]
-        assert metadata["belongsTo"] == dict(name="Series", position=3)
+        assert metadata["belongsTo"] == dict(
+            name="Series", position=3, collection="A collection"
+        )
+        assert metadata["award"] == ["An award", "Another award"]
 
         assert entry["links"] == [
             dict(href="http://link", rel="rel"),

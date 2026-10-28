@@ -649,6 +649,33 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
             return accessibility_metadata
         return None
 
+    def _extract_belongs_to(
+        self, belongs_to: rwpm.BelongsTo | None
+    ) -> tuple[str | None, int | None, str | None]:
+        """Extract the series, series position, and collection from a BelongsTo object.
+
+        :param belongs_to: BelongsTo object
+        :return: Tuple containing series name, series position, and collection name
+        """
+        series = None
+        series_position = None
+        collection = None
+
+        if belongs_to:
+            # Extract only the first series
+            if belongs_to.series:
+                first_series = first_or_default(belongs_to.series)
+                series = first_series.name if first_series else None
+                series_position = (
+                    int(first_series.position)
+                    if first_series and first_series.position
+                    else None
+                )
+            if belongs_to.collection:
+                collection = belongs_to.collection
+
+        return series, series_position, collection
+
     def _extract_publication_metadata(
         self,
         publication: opds2.BasePublication,
@@ -684,10 +711,14 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
 
         published = publication.metadata.published
         subjects = self._extract_subjects(publication.metadata.subjects)
+        authors = publication.metadata.authors
+        # The first author is considered the primary author. This information is
+        # needed for FINNA and statistics.
+        primary_author = authors[:1]
         contributors = (
-            self._extract_contributors(
-                publication.metadata.authors, Contributor.Role.AUTHOR
-            )
+            self._extract_contributors(primary_author, Contributor.Role.PRIMARY_AUTHOR)
+            # The primary author is kept as an author.
+            + self._extract_contributors(authors, Contributor.Role.AUTHOR)
             + self._extract_contributors(
                 publication.metadata.translators, Contributor.Role.TRANSLATOR
             )
@@ -744,9 +775,18 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
         # FIXME: There are no measurements in OPDS 2.0
         measurements: list[Any] = []
 
-        # FIXME: There is no series information in OPDS 2.0
-        series = None
-        series_position = None
+        series, series_position, collection = self._extract_belongs_to(
+            publication.metadata.belongs_to
+        )
+
+        awards = (
+            list(publication.metadata.award) if publication.metadata.award else None
+        )
+
+        presentation = publication.metadata.presentation
+        layout = None
+        if presentation and presentation.layout:
+            layout = presentation.layout
 
         # FIXME: It seems that OPDS 2.0 spec doesn't contain information about rights so we use the default one
         rights_uri = RightsStatus.rights_uri_from_string("")
@@ -794,6 +834,11 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
             links=links,
             data_source_last_updated=last_opds_update,
             duration=duration,
+            abridged=publication.metadata.abridged,
+            number_of_pages=publication.metadata.number_of_pages,
+            layout=layout,
+            collection=collection,
+            awards=awards,
             accessibility=accessibility,
             circulation=circulation_data,
         )

@@ -147,6 +147,7 @@ class TestOPDSSerializer:
             issued=datetime.datetime(2020, 2, 2, tzinfo=pytz.UTC),
             published=FeedEntryType(text="published"),
             updated=FeedEntryType(text="updated"),
+            data_source_modified=FeedEntryType(text="data source modified"),
             title=FeedEntryType(text="title"),
             subtitle=FeedEntryType(text="subtitle"),
             series=FeedEntryType.create(
@@ -161,6 +162,11 @@ class TestOPDSSerializer:
             ],
             ratings=[FeedEntryType(text="rating")],
             duration=10,
+            abridged=True,
+            number_of_pages=208,
+            layout="reflowable",
+            collection="A collection",
+            awards=["An award", "Another award"],
             selected_by_patrons=7,
         )
 
@@ -202,6 +208,10 @@ class TestOPDSSerializer:
         child = element.findall(f"updated")
         assert len(child) == 1
         assert child[0].text == data.updated.text
+
+        child = element.findall("data_source_modified")
+        assert len(child) == 1
+        assert child[0].text == data.data_source_modified.text
 
         child = element.findall(f"title")
         assert len(child) == 1
@@ -248,6 +258,25 @@ class TestOPDSSerializer:
         child = element.findall(f"{{{OPDSFeed.DCTERMS_NS}}}duration")
         assert len(child) == 1
         assert child[0].text == "10"
+
+        child = element.findall(f"{{{OPDSFeed.SCHEMA_NS}}}numberOfPages")
+        assert len(child) == 1
+        assert child[0].text == "208"
+
+        child = element.findall(f"{{{OPDSFeed.SCHEMA_NS}}}abridged")
+        assert len(child) == 1
+        assert child[0].text == "true"
+
+        child = element.findall(f"{{{OPDSFeed.SCHEMA_NS}}}layout")
+        assert len(child) == 1
+        assert child[0].text == "reflowable"
+
+        child = element.findall(f"{{{OPDSFeed.SCHEMA_NS}}}isPartOfCollection")
+        assert len(child) == 1
+        assert child[0].text == "A collection"
+
+        children = element.findall(f"{{{OPDSFeed.SCHEMA_NS}}}award")
+        assert [child.text for child in children] == ["An award", "Another award"]
 
         child = element.findall(f"{{{OPDSFeed.SIMPLIFIED_NS}}}selected_by_patrons")
         assert len(child) == 1

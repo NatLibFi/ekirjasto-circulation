@@ -60,6 +60,7 @@ from core.model import (
     get_one,
     pg_advisory_lock,
 )
+from core.reports.license_report import LicenseReport
 from core.scripts import (
     IdentifierInputScript,
     LibraryInputScript,
@@ -862,155 +863,8 @@ class LicenseReportScript(Script):
 
     """Print a CSV-format report of all our licensepools and their licenses."""
 
-    def do_run(self):
-        qu = (
-            self._db.query(LicensePool)
-            .filter(LicensePool.open_access == False)
-            .order_by(LicensePool.availability_time.desc())
-        )
-        first_row = [
-            "Work/Licensepool Identifier",
-            "Title",
-            "Author",
-            "Collection",
-            "Language",
-            "First seen",
-            "Last seen (best guess)",
-            "Current copies owned",
-            "Current copies available",
-            "Patrons in hold queue",
-            "License identifier",
-            "License status",
-            "License missing?",
-            "License last checked",
-            "License checkouts left",
-            "License checkouts available",
-            "License concurrency",
-            "Active loans",
-            "License expiration",
-            "License status url",
-        ]
-        print(",".join(first_row))
-
-        for pool in qu:
-            self.explain(pool)
-
-    def investigate(self, licensepool):
-        """Show events about all our licensepools and information
-        about each license in the pool.
-
-        :param licensepool: A LicensePool.
-
-        :return: last_seen date.
-
-        `last_seen` is the latest point at which we knew the book was
-        circulating. If we never knew the book to be circulating, this
-        is the first time we ever saw the LicensePool.
-        """
-        # If we have absolutely no information about the book ever
-        # circulating, we act like we lost track of the book
-        # immediately after seeing it for the first time.
-        last_seen = licensepool.availability_time
-
-        # If there's a recorded loan or hold on the book, that can
-        # push up the last time the book was known to be circulating.
-        for l in (licensepool.loans, licensepool.holds):
-            for item in l:
-                if not last_seen or item.start > last_seen:
-                    last_seen = item.start
-
-        # Now we look for relevant circulation events. First, an event
-        # where the title was explicitly removed is pretty clearly
-        # a 'last seen'.
-        base_query = (
-            self._db.query(CirculationEvent)
-            .filter(CirculationEvent.license_pool == licensepool)
-            .order_by(CirculationEvent.start.desc())
-        )
-        title_removal_events = base_query.filter(
-            CirculationEvent.type == CirculationEvent.DISTRIBUTOR_TITLE_REMOVE
-        )
-        if title_removal_events.count():
-            candidate = title_removal_events[-1].start
-            if not last_seen or candidate > last_seen:
-                last_seen = candidate
-
-        # Also look for an event where the title went from a nonzero
-        # number of licenses to a zero number of licenses. That's a
-        # good 'last seen'.
-        license_removal_events = (
-            base_query.filter(
-                CirculationEvent.type == CirculationEvent.DISTRIBUTOR_LICENSE_REMOVE,
-            )
-            .filter(CirculationEvent.old_value > 0)
-            .filter(CirculationEvent.new_value <= 0)
-        )
-        if license_removal_events.count():
-            candidate = license_removal_events[-1].start
-            if not last_seen or candidate > last_seen:
-                last_seen = candidate
-
-        return last_seen
-
-    format = "%Y-%m-%d"
-
-    def explain(self, licensepool):
-        edition = licensepool.presentation_edition
-        identifier = licensepool.identifier
-        last_seen = self.investigate(licensepool)
-
-        data = [identifier.identifier]
-        if edition:
-            data.extend([f'"{edition.title}"', f'"{edition.author}"'])
-        data.append(f'"{licensepool.collection.name}"')
-        data.append(f'"{edition.language}"')
-        if licensepool.availability_time:
-            first_seen = licensepool.availability_time.strftime(self.format)
-        else:
-            first_seen = ""
-        data.append(first_seen)
-        if last_seen:
-            last_seen = last_seen.strftime(self.format)
-        else:
-            last_seen = ""
-        data.append(last_seen)
-        data.append(licensepool.licenses_owned)
-        data.append(licensepool.licenses_available)
-        data.append(licensepool.patrons_in_hold_queue)
-
-        # Print the main license pool information
-        print(",".join(str(item) for item in data))  # Convert all items to strings
-
-        # Then fetch each license in the pool
-        for license in licensepool.licenses:
-            # Append each field's data as a separate entry in the data list
-            expire_date = (
-                license.expires.strftime(self.format) if license.expires else ""
-            )
-            license_data = [
-                f'"{identifier.identifier}"',
-                f'"{edition.title}"',
-                f'"{edition.author}"',
-                f'"{licensepool.collection.name}"',
-                f'"{edition.language}"',
-                "",
-                "",
-                "",
-                "",
-                "",
-                license.identifier,
-                license.status.value,
-                license.is_missing,
-                license.last_checked,
-                license.checkouts_left,
-                license.checkouts_available,
-                license.terms_concurrency,
-                len(license.loans),
-                expire_date,
-                license.status_url,
-            ]
-            # And print each license on a new line
-            print(",".join(str(item) for item in license_data))
+    def do_run(self, output=sys.stdout):
+        LicenseReport(self._db).write(output)
 
 
 class NYTBestSellerListsScript(TimestampScript):
