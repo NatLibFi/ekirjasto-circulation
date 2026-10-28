@@ -67,7 +67,7 @@ jobs:
         run: |
           mkdir -p base-digests
           printf '%s@%s\n' "$REPOSITORY" "$DIGEST" > "base-digests/$ARCH.txt"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: base-digest-${{ matrix.arch }}
           path: base-digests/*.txt
@@ -77,7 +77,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         with:
           pattern: base-digest-*
           path: base-digests

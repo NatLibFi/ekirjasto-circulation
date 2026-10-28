@@ -54,7 +54,7 @@ jobs:
             echo "short-commit=${commit:0:7}"
             echo "version=$version"
           } >> "$GITHUB_OUTPUT"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: image-version
           path: core/_version.py
@@ -84,7 +84,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes libxmlsec1-dev libxml2-dev
       - uses: ./.github/actions/poetry
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: |
             ~/.cache/pip
@@ -128,7 +128,7 @@ jobs:
         with:
           ref: ${{ needs.metadata.outputs.commit }}
           persist-credentials: false
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         with:
           name: image-version
           path: core
@@ -188,7 +188,7 @@ jobs:
       - name: Save webapp for untrusted PR migration tests
         if: github.event_name == 'pull_request' && matrix.arch == 'amd64'
         run: docker save circulation-ci-webapp:local -o "${RUNNER_TEMP}/webapp.tar"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         if: github.event_name == 'pull_request' && matrix.arch == 'amd64'
         with:
           name: migration-webapp
@@ -212,7 +212,7 @@ jobs:
             [[ "$pinned" == "$repository"@sha256:* ]]
             printf '%s\n' "$pinned" > "image-digests/${image}-${ARCH}.txt"
           done
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         if: github.event_name != 'pull_request'
         with:
           name: image-digests-${{ matrix.arch }}
@@ -248,7 +248,7 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         if: github.event_name != 'pull_request'
         with:
           name: image-digests-amd64
@@ -259,7 +259,7 @@ jobs:
           image=$(cat image-digests/webapp-amd64.txt)
           docker pull "$image"
           echo "CI_WEBAPP_IMAGE=$image" >> "$GITHUB_ENV"
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         if: github.event_name == 'pull_request'
         with:
           name: migration-webapp
@@ -296,7 +296,7 @@ jobs:
       matrix:
         image: [scripts, webapp, exec]
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         with:
           pattern: image-digests-*
           path: image-digests
