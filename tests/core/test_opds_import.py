@@ -2004,7 +2004,17 @@ class TestOPDSImportMonitor:
 
         # Every page of the import had two successes and one failure.
         assert (
-            "Items imported: 6. Failures: 3.\nFailed IDs and details:\nISBN: identifier: Failure\nISBN: identifier: Failure\nISBN: identifier: Failure"
+            "Items imported: 6. Failures: 3.\n"
+            "Failed IDs and details:\n"
+            "- ISBN: identifier\n"
+            "  Details:\n"
+            "    Failure\n"
+            "- ISBN: identifier\n"
+            "  Details:\n"
+            "    Failure\n"
+            "- ISBN: identifier\n"
+            "  Details:\n"
+            "    Failure"
         ) == progress.achievements
 
         # The TimestampData returned by run_once does not include any

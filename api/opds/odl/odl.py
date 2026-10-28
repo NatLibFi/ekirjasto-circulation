@@ -14,6 +14,14 @@ from api.opds.types.link import CompactCollection
 from api.opds.util import StrOrTuple, obj_or_tuple_to_tuple
 
 
+class LicenseOrder(BaseOpdsModel):
+    """Ordering metadata for an ODL license."""
+
+    name: str | None = None
+    identifier: str | None = None
+    href: str | None = None
+
+
 class LicenseMetadata(BaseOpdsModel):
     """
     https://drafts.opds.io/odl-1.0#32-describing-a-license
@@ -31,6 +39,7 @@ class LicenseMetadata(BaseOpdsModel):
     protection: Protection = Field(default_factory=Protection)
     price: opds2.Price | None = None
     source: str | None = None
+    order: LicenseOrder | None = None
 
     # OPDS2 + ODL proposed property. See here for more detail:
     # https://github.com/opds-community/drafts/discussions/63

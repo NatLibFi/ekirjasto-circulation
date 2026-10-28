@@ -89,10 +89,42 @@ class WorkController(CirculationManagerController, AdminPermissionsControllerMix
                 "checkouts_left": license.checkouts_left,
                 "checkouts_available": license.checkouts_available,
                 "terms_concurrency": license.terms_concurrency,
+                "total_checkouts": license.total_checkouts,
+                "created": timestamp(license.created),
+                "price": (
+                    {
+                        "currency": license.price_currency,
+                        "value": license.price_value,
+                    }
+                    if license.price_currency is not None
+                    or license.price_value is not None
+                    else None
+                ),
+                "order": (
+                    {
+                        "name": license.order_name,
+                        "identifier": license.order_identifier,
+                        "href": license.order_href,
+                    }
+                    if license.order_name is not None
+                    or license.order_identifier is not None
+                    or license.order_href is not None
+                    else None
+                ),
+                "license type": license.license_type.value,
                 "is_perpetual": license.is_perpetual,
                 "is_time_limited": license.is_time_limited,
                 "is_loan_limited": license.is_loan_limited,
                 "is_inactive": license.is_inactive,
+                "feed status": license.availability_status
+                if license.availability_status is not None
+                else None,
+                "exhausted date": timestamp(license.availability_since)
+                if license.availability_since is not None
+                else None,
+                "reason": license.availability_reason
+                if license.availability_reason is not None
+                else None,
                 "total_remaining_loans": license.total_remaining_loans,
                 "currently_available_loans": license.currently_available_loans,
                 "checkout_url": license.checkout_url,
@@ -158,6 +190,10 @@ class WorkController(CirculationManagerController, AdminPermissionsControllerMix
                         "type": pool.identifier.type,
                         "identifier": pool.identifier.identifier,
                     },
+                    "licensepool_status": pool.status.value if pool.status else None,
+                    "licensepool_exhausted_date": timestamp(pool.exhausted_date)
+                    if pool.exhausted_date
+                    else None,
                     "presentation_edition_id": pool.presentation_edition_id,
                     "open_access": pool.open_access,
                     "unlimited_access": pool.unlimited_access,

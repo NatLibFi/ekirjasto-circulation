@@ -9,6 +9,7 @@ from requests import Response
 
 from api.circulation import CirculationAPI, FulfillmentInfo
 from api.circulation_exceptions import CannotFulfill
+from api.opds import rwpm
 from core.model import (
     Contribution,
     Contributor,
@@ -145,6 +146,12 @@ class TestOPDS2Importer(OPDS2Test):
         )
         content_server_feed_text = opds2_files_fixture.sample_text("feed.json")
         content_server_feed: str | bytes
+        feed_json = json.loads(content_server_feed_text)
+        feed_json["publications"][0]["metadata"]["award"] = [
+            "An award",
+            "Another award",
+        ]
+        content_server_feed_text = json.dumps(feed_json)
 
         if manifest_type == "bytes":
             content_server_feed = content_server_feed_text.encode()
@@ -174,6 +181,9 @@ class TestOPDS2Importer(OPDS2Test):
         assert EditionConstants.AUDIO_MEDIUM == moby_dick_edition.medium
         assert "Herman Melville" == moby_dick_edition.author
         assert moby_dick_edition.duration == 100.2
+        assert moby_dick_edition.awards == ["An award", "Another award"]
+
+        assert moby_dick_edition.primary_author == "Melville, Herman"
 
         assert 1 == len(moby_dick_edition.author_contributors)
         [moby_dick_author] = moby_dick_edition.author_contributors
@@ -181,14 +191,25 @@ class TestOPDS2Importer(OPDS2Test):
         assert "Herman Melville" == moby_dick_author.display_name
         assert "Melville, Herman" == moby_dick_author.sort_name
 
-        assert 1 == len(moby_dick_author.contributions)
-        [moby_dick_author_contribution] = moby_dick_author.contributions
+        assert 2 == len(moby_dick_author.contributions)
+        [
+            moby_dick_author_primary_contribution,
+            moby_dick_author_contribution,
+        ] = moby_dick_author.contributions
         assert isinstance(moby_dick_author_contribution, Contribution)
         assert moby_dick_author == moby_dick_author_contribution.contributor
         assert moby_dick_edition == moby_dick_author_contribution.edition
+        assert (
+            Contributor.Role.PRIMARY_AUTHOR
+            == moby_dick_author_primary_contribution.role
+        )
         assert Contributor.Role.AUTHOR == moby_dick_author_contribution.role
 
         assert data.data_source == moby_dick_edition.data_source
+        assert (
+            datetime.datetime(2015, 9, 29, 17, 0, tzinfo=datetime.UTC)
+            == moby_dick_edition.data_source_modified
+        )
 
         assert "Test Publisher" == moby_dick_edition.publisher
         assert datetime.date(2015, 9, 29) == moby_dick_edition.published
@@ -207,26 +228,41 @@ class TestOPDS2Importer(OPDS2Test):
 
         assert "Adventures of Huckleberry Finn" == huckleberry_finn_edition.title
         assert "eng" == huckleberry_finn_edition.language
+        assert (
+            datetime.datetime(2015, 9, 29, 17, 0, tzinfo=datetime.UTC)
+            == huckleberry_finn_edition.data_source_modified
+        )
         assert EditionConstants.BOOK_MEDIUM == huckleberry_finn_edition.medium
-        assert "Samuel Langhorne Clemens, Mark Twain" == huckleberry_finn_edition.author
-
+        # Two authors of which Mark Twain is the primary author and comes first.
+        assert "Mark Twain, Samuel Langhorne Clemens" == huckleberry_finn_edition.author
+        assert "Twain, Mark" == huckleberry_finn_edition.primary_author
+        # And authors are contributors
         assert 2 == len(huckleberry_finn_edition.author_contributors)
+
         huckleberry_finn_authors = huckleberry_finn_edition.author_contributors
 
         assert isinstance(huckleberry_finn_authors[0], Contributor)
+        # The first author is Mark Twain who is also the primary author
         assert "Mark Twain" == huckleberry_finn_authors[0].display_name
         assert "Twain, Mark" == huckleberry_finn_authors[0].sort_name
-
-        assert 1 == len(huckleberry_finn_authors[0].contributions)
-        [huckleberry_finn_author_contribution] = huckleberry_finn_authors[
-            0
-        ].contributions
-        assert isinstance(huckleberry_finn_author_contribution, Contribution)
+        assert 2 == len(huckleberry_finn_authors[0].contributions)
+        [
+            huckleberry_finn_author_primary_contribution,
+            huckleberry_finn_author_contribution,
+        ] = huckleberry_finn_authors[0].contributions
+        assert isinstance(huckleberry_finn_author_primary_contribution, Contribution)
         assert (
             huckleberry_finn_authors[0]
-            == huckleberry_finn_author_contribution.contributor
+            == huckleberry_finn_author_primary_contribution.contributor
         )
-        assert huckleberry_finn_edition == huckleberry_finn_author_contribution.edition
+        assert (
+            huckleberry_finn_edition
+            == huckleberry_finn_author_primary_contribution.edition
+        )
+        assert (
+            Contributor.Role.PRIMARY_AUTHOR
+            == huckleberry_finn_author_primary_contribution.role
+        )
         assert Contributor.Role.AUTHOR == huckleberry_finn_author_contribution.role
 
         assert isinstance(huckleberry_finn_authors[1], Contributor)
@@ -552,6 +588,84 @@ class TestOPDS2Importer(OPDS2Test):
             Contributor.Role.AUTHOR
         ]
 
+    def test_extract_belongs_to(
+        self,
+        opds2_importer_fixture: TestOPDS2ImporterFixture,
+    ):
+        importer = opds2_importer_fixture.importer
+
+        belongs_to = rwpm.BelongsTo(
+            series=[
+                {"name": "First Series", "position": "2"},
+                {"name": "Second Series", "position": "3"},
+            ],
+            collection="A Collection",
+        )
+
+        # Only the first series is extracted plus the collection
+        assert importer._extract_belongs_to(belongs_to) == (
+            "First Series",
+            2,
+            "A Collection",
+        )
+        assert importer._extract_belongs_to(None) == (None, None, None)
+
+        belongs_to = rwpm.BelongsTo(
+            series=[
+                {"name": "Only Series"},
+            ],
+        )
+        # If the series has no position and there is no collection, the position and collection are None
+        assert importer._extract_belongs_to(belongs_to) == (
+            "Only Series",
+            None,
+            None,
+        )
+
+    def test_extract_contributors(
+        self,
+        opds2_importer_fixture: TestOPDS2ImporterFixture,
+    ):
+        importer = opds2_importer_fixture.importer
+        authors = [
+            rwpm.Contributor(
+                name="First Author",
+            ),
+            rwpm.Contributor(
+                name="Second Author",
+                links=[
+                    {
+                        "type": "application/opds+json",
+                        "href": "http://www.example.com",
+                    }
+                ],
+            ),
+        ]
+        translators = [
+            rwpm.Contributor(
+                name="The Translator",
+            )
+        ]
+        primary_author = authors[:1]
+        contributors = (
+            importer._extract_contributors(
+                primary_author, Contributor.Role.PRIMARY_AUTHOR
+            )
+            + importer._extract_contributors(authors, Contributor.Role.AUTHOR)
+            + importer._extract_contributors(translators, Contributor.Role.TRANSLATOR)
+        )
+
+        assert [contributor.display_name for contributor in contributors] == [
+            "First Author",
+            "First Author",
+            "Second Author",
+            "The Translator",
+        ]
+        assert contributors[0].roles == [Contributor.Role.PRIMARY_AUTHOR]
+        assert contributors[1].roles == [Contributor.Role.AUTHOR]
+        assert contributors[2].roles == [Contributor.Role.AUTHOR]
+        assert contributors[3].roles == [Contributor.Role.TRANSLATOR]
+
     def test_extract_next_links(
         self,
         opds2_importer_fixture: TestOPDS2ImporterFixture,
@@ -686,8 +800,8 @@ class TestOPDS2Importer(OPDS2Test):
             == LicensePool.UNLIMITED_ACCESS
         )
 
-        # Politics of postmodernism is unavailable, but it is past the until date, so it
-        # should be available
+        # Politics of postmodernism is unavailable. The past until date does not
+        # override the unavailable state. E-kirjasto does not have such "until" dates for availability.
         postmodernism_edition = self._get_edition_by_identifier(
             imported_editions, self.POSTMODERNISM_PROQUEST_IDENTIFIER
         )
@@ -700,11 +814,8 @@ class TestOPDS2Importer(OPDS2Test):
         )
         assert isinstance(postmodernism_license_pool, LicensePool) is True
         assert postmodernism_license_pool.open_access is False
-        assert postmodernism_license_pool.licenses_owned == LicensePool.UNLIMITED_ACCESS
-        assert (
-            postmodernism_license_pool.licenses_available
-            == LicensePool.UNLIMITED_ACCESS
-        )
+        assert postmodernism_license_pool.licenses_owned == 0
+        assert postmodernism_license_pool.licenses_available == 0
 
         # We harvest the feed again but this time the availability has changed
         moby_dick_metadata["availability"]["state"] = "available"

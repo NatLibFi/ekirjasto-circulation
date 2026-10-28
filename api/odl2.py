@@ -24,7 +24,7 @@ from core.integration.settings import (
     ConfigurationFormItemType,
     FormField,
 )
-from core.metadata_layer import FormatData, LicenseData, Metadata, TimestampData
+from core.metadata_layer import FormatData, Metadata, TimestampData
 from core.model import Collection, Edition, LicensePool, Loan, RightsStatus
 from core.model.configuration import ExternalIntegration
 from core.model.constants import MediaTypes
@@ -278,27 +278,39 @@ class ODL2Importer(BaseODLImporter[ODL2Settings], OPDS2Importer):
 
                 expires = odl_license.metadata.terms.expires_datetime
                 concurrency = odl_license.metadata.terms.concurrency
+                total_checkouts = odl_license.metadata.terms.checkouts
+                created = odl_license.metadata.created
+                price = odl_license.metadata.price
+                order = odl_license.metadata.order
+                availability = odl_license.metadata.availability
 
-                parsed_license = (
-                    LicenseData(
-                        identifier=license_identifier,
-                        checkout_url=None,
-                        status_url=license_info_document_link,
-                        status=LicenseStatus.unavailable,
-                        checkouts_available=0,
-                    )
-                    if (
-                        not odl_license.metadata.availability.available
-                        or not publication_availability
-                    )
-                    else self.get_license_data(
-                        license_info_document_link,
-                        checkout_link,
-                        license_identifier,
-                        expires,
-                        concurrency,
-                        self.http_get,
-                    )
+                license_metadata = dict(
+                    total_checkouts=total_checkouts,
+                    created=created,
+                    price_currency=(str(price.currency) if price else None),
+                    price_value=(price.value if price else None),
+                    order_name=(order.name if order else None),
+                    order_identifier=(order.identifier if order else None),
+                    order_href=(order.href if order else None),
+                    availability_state=availability.state if availability else None,
+                    availability_status=availability.status if availability else None,
+                    availability_since=availability.since
+                    if availability and availability.since
+                    else None,
+                    availability_reason=availability.reason
+                    if availability and availability.reason
+                    else None,
+                )
+
+                # Fetch and parse the license data from the license info document.
+                parsed_license = self.get_license_data(
+                    license_info_document_link,
+                    checkout_link,
+                    license_identifier,
+                    expires,
+                    concurrency,
+                    self.http_get,
+                    metadata=license_metadata,
                 )
 
                 if parsed_license is not None:

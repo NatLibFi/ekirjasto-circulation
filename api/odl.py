@@ -921,6 +921,7 @@ class BaseODLImporter(BaseOPDSImporter[SettingsType], ABC):
         license_info_document: bytes | str | None,
         license_info_link: str,
         checkout_link: str | None,
+        metadata: dict[str, Any] | None = None,
     ) -> LicenseData | None:
         """Check the license's attributes passed as parameters:
         - if they're correct, turn them into a LicenseData object
@@ -956,6 +957,7 @@ class BaseODLImporter(BaseOPDSImporter[SettingsType], ABC):
             checkouts_available=document.checkouts.available,
             status=document.status,
             terms_concurrency=document.terms.concurrency,
+            **(metadata or {}),
             content_types=list(document.formats),
         )
 
@@ -968,6 +970,7 @@ class BaseODLImporter(BaseOPDSImporter[SettingsType], ABC):
         feed_license_expires: datetime.datetime | None,
         feed_concurrency: int | None,
         do_get: Callable[..., Response],
+        metadata: dict[str, Any] | None = None,
     ) -> LicenseData | None:
         license_info_document = cls.fetch_license_info(license_info_link, do_get)
 
@@ -977,7 +980,7 @@ class BaseODLImporter(BaseOPDSImporter[SettingsType], ABC):
         cls.logger().info(f"Parsing License Info Document {license_info_link}")
 
         parsed_license = cls.parse_license_info(
-            license_info_document, license_info_link, checkout_link
+            license_info_document, license_info_link, checkout_link, metadata=metadata
         )
 
         if not parsed_license:
