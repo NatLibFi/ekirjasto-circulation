@@ -1,249 +1,118 @@
 name: Test & Build
 
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+  workflow_call:
+    inputs:
+      ref:
+        description: Exact commit or ref to build and test
+        required: true
+        type: string
 
 concurrency:
-  group: test-build-${{ github.ref_name }}-${{ github.event_name }}
+  group: test-build-${{ inputs.ref || github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
-jobs:
-  test:
-    name: ${{ matrix.module }} Tests (Py ${{ matrix.python-version }})
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    permissions:
-      contents: read
+permissions:
+  contents: read
 
+jobs:
+  metadata:
+    runs-on: ubuntu-24.04
+    # Internal PRs are already covered by their branch push.
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name != github.repository
+    outputs:
+      commit: ${{ steps.metadata.outputs.commit }}
+      short-commit: ${{ steps.metadata.outputs.short-commit }}
+      version: ${{ steps.metadata.outputs.version }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - uses: ./.github/actions/poetry
+      - name: Install version tooling
+        run: poetry install --only ci --no-root
+        env:
+          POETRY_VIRTUALENVS_CREATE: 'false'
+      - name: Generate version before any image is built
+        id: metadata
+        env:
+          BUILD_REF: ${{ inputs.ref || github.ref }}
+        run: |
+          version=$(python docker/ci/write_version.py)
+          commit=$(git rev-parse HEAD)
+          {
+            echo "commit=$commit"
+            echo "short-commit=${commit:0:7}"
+            echo "version=$version"
+          } >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: image-version
+          path: core/_version.py
+          retention-days: 1
+
+  test:
+    name: ${{ matrix.module == 'Migration' && 'Migration Tests' || format('{0} Tests (Py 3.12)', matrix.module) }}
+    needs: metadata
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.12"]
-        module: [Api, Core]
-
-    # Run on all pushes. For pull requests, run only for external forks,
-    # because internal pull requests are already tested by their branch push.
-    if: >-
-      github.event_name == 'push' ||
-      github.event.pull_request.head.repo.full_name != github.repository
-
+        module: [Api, Core, Migration]
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.metadata.outputs.commit }}
+          persist-credentials: false
       - name: Disable network offload
         run: sudo ethtool -K eth0 tx off rx off
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
+      - uses: actions/setup-python@v6
         with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Install Apt Packages
+          python-version: '3.12'
+      - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install --yes libxmlsec1-dev libxml2-dev
-
-      - name: Install Poetry
-        uses: ./.github/actions/poetry
-
+      - uses: ./.github/actions/poetry
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+            ~/.cache/pypoetry
+          key: python-${{ runner.os }}-${{ runner.arch }}-3.12-${{ hashFiles('poetry.lock') }}
       - name: Install Tox
-        run: poetry install --only ci
+        run: poetry install --only ci --no-root
         env:
-          POETRY_VIRTUALENVS_CREATE: false
-
-      - name: Run Tests
-        run: tox
+          POETRY_VIRTUALENVS_CREATE: 'false'
+      - name: Run tests
         env:
-          TOX_DOCKER_GATEWAY: "0.0.0.0"
+          TOX_DOCKER_GATEWAY: '0.0.0.0'
           MODULE: ${{ matrix.module }}
-
-  test-migrations:
-    name: Migration Tests
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-
-    if: >-
-      github.event_name == 'push' ||
-      github.event.pull_request.head.repo.full_name != github.repository
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Disable network offload
-        run: sudo ethtool -K eth0 tx off rx off
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-
-      - name: Install Apt Packages
         run: |
-          sudo apt-get update
-          sudo apt-get install --yes libxmlsec1-dev libxml2-dev
-
-      - name: Install Poetry
-        uses: ./.github/actions/poetry
-
-      - name: Install Tox
-        run: poetry install --only ci
-        env:
-          POETRY_VIRTUALENVS_CREATE: false
-
-      - name: Run Migration Tests
-        run: tox -e "migration-docker"
-        env:
-          TOX_DOCKER_GATEWAY: "0.0.0.0"
-
-  prepare-base-image:
-    name: Prepare base image
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push'
-    permissions:
-      contents: read
-      packages: write
-
-    outputs:
-      baseimage: ${{ steps.baseimage.outputs.tag }}
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-        with:
-          persist-credentials: false
-
-      - name: Disable network offload
-        run: sudo ethtool -K eth0 tx off rx off
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Generate tags for base image
-        id: baseimage-meta
-        uses: docker/metadata-action@v6
-        with:
-          images: ghcr.io/${{ github.repository_owner }}/ekirjasto-circ-baseimage
-          tags: |
-            type=ref,event=branch
-            type=sha
-            type=raw,value=latest,enable=${{ github.ref_name == 'main' }}
-
-      - name: Generate tag for latest
-        id: baseimage-latest
-        uses: docker/metadata-action@v6
-        with:
-          images: ghcr.io/${{ github.repository_owner }}/ekirjasto-circ-baseimage
-          tags: |
-            type=raw,value=latest
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v4
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Check if base image was changed by this branch
-        uses: dorny/paths-filter@v4
-        id: changes
-        with:
-          filters: |
-            baseimage:
-              - 'docker/Dockerfile.baseimage'
-
-      - name: Check if branch base image tag exists
-        id: tag-check
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          branch_tag="${{ fromJSON(steps.baseimage-meta.outputs.json).tags[0] }}"
-
-          if docker buildx imagetools inspect \
-            "${branch_tag}" >/dev/null 2>&1
-          then
-            echo "exists=true" >> "${GITHUB_OUTPUT}"
+          if [[ "$MODULE" == "Migration" ]]; then
+            tox -e migration-docker
           else
-            echo "exists=false" >> "${GITHUB_OUTPUT}"
+            tox
           fi
-
-      - name: Build and push base image
-        if: >-
-          steps.tag-check.outputs.exists == 'false' ||
-          steps.changes.outputs.baseimage == 'true'
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          file: ./docker/Dockerfile.baseimage
-          target: baseimage
-          cache-from: |
-            type=registry,ref=${{ fromJSON(steps.baseimage-meta.outputs.json).tags[0] }}
-            type=registry,ref=${{ fromJSON(steps.baseimage-latest.outputs.json).tags[0] }}
-          cache-to: type=inline
-          platforms: linux/amd64,linux/arm64
-          tags: ${{ steps.baseimage-meta.outputs.tags }}
-          labels: ${{ steps.baseimage-meta.outputs.labels }}
-          push: true
-
-      - name: Set base image tag
-        id: baseimage
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          tag="${{ fromJSON(steps.baseimage-meta.outputs.json).tags[0] }}"
-          echo "Base image tag: ${tag}"
-          echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
-
-  docker-test-migrations:
-    name: Docker migration test
-    runs-on: ubuntu-latest
-    needs: [prepare-base-image]
-    permissions:
-      contents: read
-
-    # On pull requests, prepare-base-image is skipped. In that case,
-    # docker-compose.yml falls back to the latest base image.
-    if: >-
-      always() &&
-      needs.prepare-base-image.result != 'failure' &&
-      (
-        github.event_name == 'push' ||
-        github.event.pull_request.head.repo.full_name != github.repository
-      )
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-        with:
-          persist-credentials: false
-          fetch-depth: 0
-
-      - name: Disable network offload
-        run: sudo ethtool -K eth0 tx off rx off
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Test migrations
-        run: ./docker/ci/test_migrations.sh
-        env:
-          BUILD_BASE_IMAGE: ${{ needs.prepare-base-image.outputs.baseimage }}
 
   docker-build-and-test:
     name: Docker build & test (${{ matrix.arch }})
+    needs: metadata
     runs-on: ${{ matrix.runner }}
-    needs: [prepare-base-image]
-    if: github.event_name == 'push'
+    timeout-minutes: 60
     permissions:
       contents: read
-      packages: read
-
+      packages: write
     strategy:
       fail-fast: false
       matrix:
@@ -252,150 +121,214 @@ jobs:
             runner: ubuntu-24.04
           - arch: arm64
             runner: ubuntu-24.04-arm
-
+    env:
+      COMPOSE_FILE: docker-compose.yml:docker/ci/images.yml
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
+      - uses: actions/checkout@v6
         with:
+          ref: ${{ needs.metadata.outputs.commit }}
           persist-credentials: false
-
+      - uses: actions/download-artifact@v4
+        with:
+          name: image-version
+          path: core
       - name: Disable network offload
         run: sudo ethtool -K eth0 tx off rx off
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v4
+      - uses: docker/setup-buildx-action@v4
+      - name: Select OS refresh generation
+        id: refresh
+        run: echo "week=$(date -u +%G%V)" >> "$GITHUB_OUTPUT"
+      - uses: docker/login-action@v4
+        if: github.event_name != 'pull_request'
         with:
           registry: ghcr.io
-          username: ${{ github.repository_owner }}
+          username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build images
-        run: docker compose build webapp scripts os
+      - name: Build all runtime targets together
+        uses: docker/bake-action@v7
         env:
-          BUILD_BASE_IMAGE: ${{ needs.prepare-base-image.outputs.baseimage }}
-          BUILD_CACHE_FROM: ""
-
+          BASE_IMAGE: baseimage
+          OS_REFRESH: ${{ steps.refresh.outputs.week }}
+          IMAGE_VERSION: ${{ needs.metadata.outputs.version }}
+          SOURCE_REVISION: ${{ needs.metadata.outputs.commit }}
+          SOURCE_URL: ${{ github.server_url }}/${{ github.repository }}
+        with:
+          files: docker/docker-bake.hcl
+          load: true
+          set: |
+            *.platform=linux/${{ matrix.arch }}
+            baseimage.pull=true
+            baseimage.cache-from=type=gha,scope=base-${{ matrix.arch }}
+            baseimage.cache-to=type=gha,scope=base-${{ matrix.arch }},mode=max
+            webapp.cache-from=type=gha,scope=app-${{ matrix.arch }}-webapp
+            webapp.cache-to=type=gha,scope=app-${{ matrix.arch }}-webapp,mode=max
+            scripts.cache-from=type=gha,scope=app-${{ matrix.arch }}-scripts
+            scripts.cache-to=type=gha,scope=app-${{ matrix.arch }}-scripts,mode=max
+            exec.cache-from=type=gha,scope=app-${{ matrix.arch }}-exec
+            exec.cache-to=type=gha,scope=app-${{ matrix.arch }}-exec,mode=max
+      - name: Build test service
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: docker/Dockerfile.ci
+          target: opensearch
+          tags: circulation-ci-opensearch:local
+          load: true
+          cache-from: type=gha,scope=opensearch-${{ matrix.arch }}
+          cache-to: type=gha,scope=opensearch-${{ matrix.arch }},mode=max
       - name: Start container stack
         run: docker compose up --no-build -d
+      - name: Test runtime images
+        run: |
+          ./docker/ci/test_webapp.sh webapp
+          ./docker/ci/test_scripts.sh scripts
+          docker run --rm --network none --entrypoint /bin/bash \
+            circulation-ci-exec:local -c \
+            'source ../env/bin/activate && cd .. && python -c "import core._version, lxml.etree, xmlsec; print(core._version.__version__)"'
+      - name: Save webapp for untrusted PR migration tests
+        if: github.event_name == 'pull_request' && matrix.arch == 'amd64'
+        run: docker save circulation-ci-webapp:local -o "${RUNNER_TEMP}/webapp.tar"
+      - uses: actions/upload-artifact@v4
+        if: github.event_name == 'pull_request' && matrix.arch == 'amd64'
+        with:
+          name: migration-webapp
+          path: ${{ runner.temp }}/webapp.tar
+          compression-level: 0
+          retention-days: 1
+      - name: Push tested candidates and record immutable references
+        if: github.event_name != 'pull_request'
         env:
-          BUILD_BASE_IMAGE: ${{ needs.prepare-base-image.outputs.baseimage }}
-
-      - name: Run webapp tests
-        run: ./docker/ci/test_webapp.sh webapp
-
-      - name: Run scripts tests
-        run: ./docker/ci/test_scripts.sh scripts
-
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          set -euo pipefail
+          mkdir -p image-digests
+          for image in webapp scripts exec; do
+            repository="ghcr.io/${REPOSITORY_OWNER,,}/ekirjasto-circ-${image}"
+            candidate="${repository}:ci-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${ARCH}"
+            docker tag "circulation-ci-${image}:local" "$candidate"
+            docker push "$candidate"
+            pinned=$(docker image inspect "$candidate" --format '{{index .RepoDigests 0}}')
+            [[ "$pinned" == "$repository"@sha256:* ]]
+            printf '%s\n' "$pinned" > "image-digests/${image}-${ARCH}.txt"
+          done
+      - uses: actions/upload-artifact@v4
+        if: github.event_name != 'pull_request'
+        with:
+          name: image-digests-${{ matrix.arch }}
+          path: image-digests/*.txt
+          retention-days: 1
       - name: Output logs on failure
         if: failure()
-        run: |
-          docker logs circulation-webapp-1 || true
-          docker logs circulation-scripts-1 || true
-
+        run: docker compose logs --no-color
       - name: Stop containers
         if: always()
         run: docker compose down
 
-  docker-image-push:
-    name: Push ekirjasto-circ-${{ matrix.image }}
-    runs-on: ubuntu-latest
-    needs:
-      - test
-      - test-migrations
-      - docker-test-migrations
-      - docker-build-and-test
-      - prepare-base-image
+  docker-test-migrations:
+    name: Docker migration test
+    needs: [metadata, docker-build-and-test]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: read
+    env:
+      CI_TEST_IMAGES: 'true'
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.metadata.outputs.commit }}
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        if: github.event_name != 'pull_request'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/download-artifact@v4
+        if: github.event_name != 'pull_request'
+        with:
+          name: image-digests-amd64
+          path: image-digests
+      - name: Pull tested webapp by digest
+        if: github.event_name != 'pull_request'
+        run: |
+          image=$(cat image-digests/webapp-amd64.txt)
+          docker pull "$image"
+          echo "CI_WEBAPP_IMAGE=$image" >> "$GITHUB_ENV"
+      - uses: actions/download-artifact@v4
+        if: github.event_name == 'pull_request'
+        with:
+          name: migration-webapp
+          path: ${{ runner.temp }}
+      - name: Load PR webapp
+        if: github.event_name == 'pull_request'
+        run: docker load -i "${RUNNER_TEMP}/webapp.tar"
+      - name: Build migration test service
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: docker/Dockerfile.ci
+          target: opensearch
+          tags: circulation-ci-opensearch:local
+          load: true
+          cache-from: type=gha,scope=opensearch-amd64
+          cache-to: type=gha,scope=opensearch-amd64,mode=max
+      - name: Test migrations against tested webapp
+        run: ./docker/ci/test_migrations.sh
+      - name: Clean up migration containers
+        if: always()
+        run: docker compose -f docker-compose.yml -f docker/ci/test_migrations.yml -f docker/ci/images.yml down
 
+  docker-image-push:
+    name: Publish ekirjasto-circ-${{ matrix.image }} manifests
+    needs: [metadata, test, docker-test-migrations, docker-build-and-test]
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       packages: write
-
     strategy:
       fail-fast: false
       matrix:
-        image:
-          - scripts
-          - webapp
-          - exec
-
+        image: [scripts, webapp, exec]
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
+      - uses: actions/download-artifact@v4
         with:
-          persist-credentials: false
-          fetch-depth: 0
-
-      - name: Disable network offload
-        run: sudo ethtool -K eth0 tx off rx off
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-
-      - name: Install Poetry
-        uses: ./.github/actions/poetry
-
-      - name: Set up Dunamai
-        run: poetry install --only ci
-        env:
-          POETRY_VIRTUALENVS_CREATE: false
-
-      - name: Create version file
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          echo \
-            "__version__ = '$(dunamai from git --style semver)'" \
-            >> core/_version.py
-
-          echo \
-            "__commit__ = '$(dunamai from git --format {commit} --full-commit)'" \
-            >> core/_version.py
-
-          echo \
-            "__branch__ = '$(dunamai from git --format {branch})'" \
-            >> core/_version.py
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v4
+          pattern: image-digests-*
+          path: image-digests
+          merge-multiple: true
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
         with:
           registry: ghcr.io
-          username: ${{ github.repository_owner }}
+          username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Generate tags for image
+      - name: Generate public tags
         id: meta
         uses: docker/metadata-action@v6
         with:
           images: ghcr.io/${{ github.repository_owner }}/ekirjasto-circ-${{ matrix.image }}
           tags: |
-            type=semver,pattern={{major}}.{{minor}},priority=10
-            type=semver,pattern={{version}},priority=20
-            type=ref,event=branch,priority=30
-            type=sha,priority=40
-
-      - name: Push image
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          file: ./docker/Dockerfile
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          target: ${{ matrix.image }}
-          cache-from: |
-            type=registry,ref=${{ needs.prepare-base-image.outputs.baseimage }}
-          platforms: linux/amd64,linux/arm64
-          build-args: |
-            BASE_IMAGE=${{ needs.prepare-base-image.outputs.baseimage }}
+            type=semver,pattern={{major}}.{{minor}},enable=${{ !inputs.ref }}
+            type=semver,pattern={{version}},enable=${{ !inputs.ref }}
+            type=ref,event=branch,enable=${{ !inputs.ref }}
+            type=raw,value=${{ inputs.ref }},enable=${{ inputs.ref != '' }}
+            type=raw,value=sha-${{ needs.metadata.outputs.commit }}
+            type=raw,value=sha-${{ needs.metadata.outputs.short-commit }}
+      - name: Publish manifests from tested digests without rebuilding
+        env:
+          TAGS: ${{ steps.meta.outputs.tags }}
+          IMAGE: ${{ matrix.image }}
+        run: |
+          set -euo pipefail
+          args=()
+          while IFS= read -r tag; do
+            [[ -n "$tag" ]] && args+=(--tag "$tag")
+          done <<< "$TAGS"
+          docker buildx imagetools create "${args[@]}" \
+            "$(cat "image-digests/${IMAGE}-amd64.txt")" \
+            "$(cat "image-digests/${IMAGE}-arm64.txt")"

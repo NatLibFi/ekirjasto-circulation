@@ -1,68 +1,103 @@
 name: Build Base Image
+
 on:
   schedule:
-    # Every Monday at 6:22am Eastern Time
-    - cron: "22 10 * * 1"
+    - cron: '22 10 * * 1'
   workflow_dispatch:
-    # Allow us to manually trigger build
 
 concurrency:
-  # This concurrency group is used to prevent multiple builds from running at the same time.
-  group: build-base-${{ github.ref_name }}-${{ github.event_name }}
-  cancel-in-progress: true
+  group: build-base-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
 
 jobs:
-  docker-build-baseimage:
-    name: Build Base Image
-    runs-on: ubuntu-latest
+  build:
+    name: Base image (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
-    permissions:
-      contents: read
-      packages: write
-
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
-
-      # See comment here: https://github.com/actions/runner-images/issues/1187#issuecomment-686735760
-      - name: Disable network offload
-        run: sudo ethtool -K eth0 tx off rx off
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v4
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
         with:
           registry: ghcr.io
-          username: ${{ github.repository_owner }}
+          username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Generate tags for image
-        id: meta
-        uses: docker/metadata-action@v6
-        with:
-          images: ghcr.io/${{ github.repository_owner }}/ekirjasto-circ-baseimage
-          # Generate tags for the image
-          # We use the following tags:
-          # - The date in YYYYww format, which is the year and week number. 202052 is the last week of 2020.
-          # - The latest tag
-          tags: |
-            type=schedule,pattern={{date 'YYYYww'}}
-            type=raw,value=latest
-
-      - name: Build base image
+      - name: Prepare build settings
+        id: settings
+        env:
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+        run: |
+          {
+            echo "repository=ghcr.io/${REPOSITORY_OWNER,,}/ekirjasto-circ-baseimage"
+            echo "week=$(date -u +%G%V)"
+          } >> "$GITHUB_OUTPUT"
+      - name: Build native base image
+        id: build
         uses: docker/build-push-action@v7
         with:
           context: .
-          file: ./docker/Dockerfile.baseimage
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          push: true
+          file: docker/Dockerfile.baseimage
           target: baseimage
-          cache-to: type=inline
-          platforms: linux/amd64, linux/arm64
+          platforms: linux/${{ matrix.arch }}
+          build-args: OS_REFRESH=${{ steps.settings.outputs.week }}
+          pull: true
+          cache-from: type=gha,scope=base-${{ matrix.arch }}
+          cache-to: type=gha,scope=base-${{ matrix.arch }},mode=max
+          tags: ${{ steps.settings.outputs.repository }}:ci-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.arch }}
+          push: true
+      - name: Record base digest
+        env:
+          REPOSITORY: ${{ steps.settings.outputs.repository }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          mkdir -p base-digests
+          printf '%s@%s\n' "$REPOSITORY" "$DIGEST" > "base-digests/$ARCH.txt"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: base-digest-${{ matrix.arch }}
+          path: base-digests/*.txt
+          retention-days: 1
+
+  publish:
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: base-digest-*
+          path: base-digests
+          merge-multiple: true
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish multi-architecture base image
+        env:
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+          IS_DEFAULT_BRANCH: ${{ github.ref_name == github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          repository="ghcr.io/${REPOSITORY_OWNER,,}/ekirjasto-circ-baseimage"
+          tags=(--tag "${repository}:build-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}")
+          if [[ "$IS_DEFAULT_BRANCH" == "true" ]]; then
+            tags+=(--tag "${repository}:latest")
+          fi
+          docker buildx imagetools create "${tags[@]}" \
+            "$(cat base-digests/amd64.txt)" "$(cat base-digests/arm64.txt)"

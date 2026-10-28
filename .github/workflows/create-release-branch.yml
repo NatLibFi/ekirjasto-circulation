@@ -32,6 +32,8 @@ jobs:
   create-release:
     name: Create release branch
     runs-on: ubuntu-latest
+    outputs:
+      ref: ${{ steps.release-ref.outputs.ref }}
 
     steps:
       - name: Checkout repository
@@ -157,6 +159,12 @@ jobs:
 
           git push origin "release/${RELEASE_NAME}"
 
+      - name: Record release ref for explicit CI invocation
+        id: release-ref
+        env:
+          RELEASE_NAME: ${{ inputs.release_name }}
+        run: echo "ref=release/${RELEASE_NAME}" >> "$GITHUB_OUTPUT"
+
       - name: Mark selected PRs for this release
         shell: bash
         env:
@@ -180,7 +188,7 @@ jobs:
               --description "Included in release ${RELEASE_NAME}"
           fi
 
-          while IFS=$'\t' read -r pr sha title
+          while IFS=$'\t' read -r pr _sha title
           do
             echo "Changing labels on PR #${pr}: ${title}"
 
@@ -188,3 +196,13 @@ jobs:
               --remove-label "release:next" \
               --add-label "${RELEASE_LABEL}"
           done < prs.txt
+
+  test-release:
+    name: Build and test release branch
+    needs: create-release
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/test-build.yml
+    with:
+      ref: ${{ needs.create-release.outputs.ref }}
