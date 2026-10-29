@@ -49,7 +49,6 @@ from core.util.log import LoggerMixin, elapsed_time_logging, log_elapsed_time
 
 if TYPE_CHECKING:
     from api.admin.controller.admin_search import AdminSearchController
-    from api.controller.editorial_content import EditorialContentController
     from api.admin.controller.catalog_services import CatalogServicesController
     from api.admin.controller.collection_settings import CollectionSettingsController
     from api.admin.controller.custom_lists import CustomListsController
@@ -76,6 +75,7 @@ if TYPE_CHECKING:
     from api.admin.controller.timestamps import TimestampsController
     from api.admin.controller.view import ViewController
     from api.admin.controller.work_editor import WorkController as AdminWorkController
+    from api.controller.editorial_content import EditorialContentController
 
 
 class CirculationManager(LoggerMixin):

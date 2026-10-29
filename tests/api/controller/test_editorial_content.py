@@ -4,8 +4,8 @@ import uuid
 import pytest
 
 from api.admin.exceptions import AdminNotAuthorized
-from api.controller.editorial_content import EditorialContentController
 from api.admin.problem_details import MISSING_EDITORIAL_CONTENT
+from api.controller.editorial_content import EditorialContentController
 from core.model import (
     Admin,
     AdminRole,
@@ -45,7 +45,7 @@ def make_content(
     body_html="<p>Body</p>",
 ):
     """Create editorial content with convenient test defaults."""
-    now = datetime.datetime.now(datetime.timezone.utc)
+    now = datetime.datetime.now(datetime.UTC)
     item, _ = create(
         db.session,
         EditorialContent,
@@ -72,7 +72,13 @@ class TestEditorialContentController:
         """Filter public listings by publication state, type, and language."""
         library = db.default_library()
         make_content(db, library, title="Published", language="en")
-        make_content(db, library, title="Draft", language="en", status=EditorialContentStatus.DRAFT)
+        make_content(
+            db,
+            library,
+            title="Draft",
+            language="en",
+            status=EditorialContentStatus.DRAFT,
+        )
         make_content(db, library, title="Finnish", language="fi")
         make_content(db, library, title="FAQ", content_type=EditorialContentType.FAQ)
         controller = make_controller(db)
@@ -87,8 +93,20 @@ class TestEditorialContentController:
     ):
         """Return banners in every language when no language is requested."""
         library = db.default_library()
-        make_content(db, library, title="Finnish banner", language="fi", content_type=EditorialContentType.BANNER)
-        make_content(db, library, title="English banner", language="en", content_type=EditorialContentType.BANNER)
+        make_content(
+            db,
+            library,
+            title="Finnish banner",
+            language="fi",
+            content_type=EditorialContentType.BANNER,
+        )
+        make_content(
+            db,
+            library,
+            title="English banner",
+            language="en",
+            content_type=EditorialContentType.BANNER,
+        )
         controller = make_controller(db)
 
         with flask_app_fixture.test_request_context("/", library=library):
@@ -102,15 +120,26 @@ class TestEditorialContentController:
         """Resolve public content by item ID, group ID, or slug."""
         library = db.default_library()
         group_id = uuid.uuid4()
-        item = make_content(db, library, title="A Story", group_id=group_id, slug="a-story")
-        translation = make_content(db, library, title="En berättelse", language="sv", group_id=group_id, slug="en-berattelse")
+        item = make_content(
+            db, library, title="A Story", group_id=group_id, slug="a-story"
+        )
+        translation = make_content(
+            db,
+            library,
+            title="En berättelse",
+            language="sv",
+            group_id=group_id,
+            slug="en-berattelse",
+        )
         controller = make_controller(db)
 
         with flask_app_fixture.test_request_context("/", library=library):
             assert controller.public_item(str(item.id))["id"] == str(item.id)
             assert controller.public_item(str(group_id))["id"] == str(item.id)
             assert controller.public_item("a-story")["id"] == str(item.id)
-            assert controller.public_item(str(group_id), "sv")["id"] == str(translation.id)
+            assert controller.public_item(str(group_id), "sv")["id"] == str(
+                translation.id
+            )
             assert controller.public_item("missing") == MISSING_EDITORIAL_CONTENT
 
     def test_admin_create_sanitizes_html_and_generates_unique_slug(
@@ -119,7 +148,13 @@ class TestEditorialContentController:
         """Sanitize created content and disambiguate duplicate slugs."""
         library = db.default_library()
         admin = make_admin(db, AdminRole.CONTENT_WRITER, library)
-        make_content(db, library, title="Hello World", status=EditorialContentStatus.DRAFT, slug="hello-world")
+        make_content(
+            db,
+            library,
+            title="Hello World",
+            status=EditorialContentStatus.DRAFT,
+            slug="hello-world",
+        )
         controller = make_controller(db)
 
         payload = {
@@ -192,7 +227,11 @@ class TestEditorialContentController:
         controller = make_controller(db)
 
         with flask_app_fixture.test_request_context(
-            "/", method="PUT", json={"title": "Updated", "status": "published"}, library=library, admin=admin
+            "/",
+            method="PUT",
+            json={"title": "Updated", "status": "published"},
+            library=library,
+            admin=admin,
         ):
             updated = controller.admin_update(str(item.id))
         assert updated["title"] == "Updated"
@@ -231,7 +270,11 @@ class TestEditorialContentController:
         controller = make_controller(db)
 
         with flask_app_fixture.test_request_context(
-            "/", method="POST", json={"type": "news", "language": "en", "title": 1, "body_html": ""}, library=library, admin=admin
+            "/",
+            method="POST",
+            json={"type": "news", "language": "en", "title": 1, "body_html": ""},
+            library=library,
+            admin=admin,
         ):
             result = controller.admin_create()
 

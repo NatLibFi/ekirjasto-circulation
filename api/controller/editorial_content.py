@@ -53,8 +53,15 @@ class EditorialContentController(AdminPermissionsControllerMixin):
 
     def _validate_payload(self, payload: dict, existing=None) -> dict | ProblemDetail:
         """Validate and normalize an editorial-content payload."""
-        content_type = self._enum(payload.get("type", getattr(existing, "type", None)), EditorialContentType)
-        status = self._enum(payload.get("status", getattr(existing, "status", EditorialContentStatus.DRAFT)), EditorialContentStatus)
+        content_type = self._enum(
+            payload.get("type", getattr(existing, "type", None)), EditorialContentType
+        )
+        status = self._enum(
+            payload.get(
+                "status", getattr(existing, "status", EditorialContentStatus.DRAFT)
+            ),
+            EditorialContentStatus,
+        )
         language_value = payload.get("language", getattr(existing, "language", ""))
         title_value = payload.get("title", getattr(existing, "title", ""))
         language = language_value.strip() if isinstance(language_value, str) else ""
@@ -82,15 +89,21 @@ class EditorialContentController(AdminPermissionsControllerMixin):
 
     def _query_for_library(self, library: Library, public=False):
         """Build a query for content belonging to a library."""
-        query = select(EditorialContent).where(EditorialContent.library_id == library.id)
+        query = select(EditorialContent).where(
+            EditorialContent.library_id == library.id
+        )
         if public:
-            query = query.where(EditorialContent.status == EditorialContentStatus.PUBLISHED)
+            query = query.where(
+                EditorialContent.status == EditorialContentStatus.PUBLISHED
+            )
         return query
 
     def public_list(self, content_type: str | None, language: str | None):
         """Return published editorial content for the public API."""
         library = self._library()
-        type_value = self._enum(content_type, EditorialContentType) if content_type else None
+        type_value = (
+            self._enum(content_type, EditorialContentType) if content_type else None
+        )
         selected_language = language or Configuration.localization_languages()[0]
 
         query = self._query_for_library(library, public=True)
@@ -102,12 +115,16 @@ class EditorialContentController(AdminPermissionsControllerMixin):
             query = query.where(EditorialContent.language == selected_language)
         if type_value:
             query = query.where(EditorialContent.type == type_value)
-        items = self._db.execute(
-            query.order_by(
-                EditorialContent.published_at.desc(),
-                EditorialContent.updated_at.desc(),
+        items = (
+            self._db.execute(
+                query.order_by(
+                    EditorialContent.published_at.desc(),
+                    EditorialContent.updated_at.desc(),
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         return {"content": [item.to_dict() for item in items]}
 
     def public_item(self, identifier: str, language: str | None = None):
@@ -124,28 +141,39 @@ class EditorialContentController(AdminPermissionsControllerMixin):
                 | (EditorialContent.id == identifier_uuid)
             )
         except ValueError:
-            slug_item = self._db.execute(
-                self._query_for_library(library, public=True).where(
-                    EditorialContent.slug == identifier
+            slug_item = (
+                self._db.execute(
+                    self._query_for_library(library, public=True).where(
+                        EditorialContent.slug == identifier
+                    )
                 )
-            ).scalars().first()
+                .scalars()
+                .first()
+            )
             if slug_item is None:
                 return MISSING_EDITORIAL_CONTENT
             query = query.where(EditorialContent.group_id == slug_item.group_id)
-        item = self._db.execute(
-            query.order_by(EditorialContent.published_at.desc())
-        ).scalars().first()
+        item = (
+            self._db.execute(query.order_by(EditorialContent.published_at.desc()))
+            .scalars()
+            .first()
+        )
         return item.to_dict() if item else MISSING_EDITORIAL_CONTENT
 
     def admin_list(self):
         """Return editorial content grouped for the admin interface."""
         library = self._library()
         self.require_librarian(library)
-        items = self._db.execute(
-            self._query_for_library(library).order_by(
-                EditorialContent.created_at.desc(), EditorialContent.updated_at.desc()
+        items = (
+            self._db.execute(
+                self._query_for_library(library).order_by(
+                    EditorialContent.created_at.desc(),
+                    EditorialContent.updated_at.desc(),
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         groups = {}
         for item in items:
             group = groups.setdefault(item.group_id, [])
@@ -160,15 +188,24 @@ class EditorialContentController(AdminPermissionsControllerMixin):
             group_id = uuid.UUID(identifier)
         except ValueError:
             return MISSING_EDITORIAL_CONTENT
-        items = self._db.execute(
-            self._query_for_library(library).where(EditorialContent.group_id == group_id)
-        ).scalars().all()
+        items = (
+            self._db.execute(
+                self._query_for_library(library).where(
+                    EditorialContent.group_id == group_id
+                )
+            )
+            .scalars()
+            .all()
+        )
         if not items:
             return MISSING_EDITORIAL_CONTENT
         return {
             "group_id": str(group_id),
             "type": items[0].type.value,
-            "languages": [self._language_detail(group_id, items, language) for language in self.LANGUAGES],
+            "languages": [
+                self._language_detail(group_id, items, language)
+                for language in self.LANGUAGES
+            ],
         }
 
     def admin_create(self):
@@ -188,7 +225,9 @@ class EditorialContentController(AdminPermissionsControllerMixin):
             type=payload["type"],
             language=payload["language"],
             title=payload["title"],
-            slug=self._slug(library, payload["type"], payload["language"], payload["title"]),
+            slug=self._slug(
+                library, payload["type"], payload["language"], payload["title"]
+            ),
             intro_html=self._sanitize(payload["intro_html"]),
             body_html=self._sanitize(payload["body_html"]),
             status=EditorialContentStatus.DRAFT,
@@ -197,7 +236,7 @@ class EditorialContentController(AdminPermissionsControllerMixin):
         )
         if payload["status"] == EditorialContentStatus.PUBLISHED:
             item.status = EditorialContentStatus.PUBLISHED
-            item.published_at = datetime.datetime.now(datetime.timezone.utc)
+            item.published_at = datetime.datetime.now(datetime.UTC)
         self._db.add(item)
         self._db.flush()
         return item.to_dict()
@@ -222,7 +261,12 @@ class EditorialContentController(AdminPermissionsControllerMixin):
     @staticmethod
     def _group_summary(items):
         """Summarize a group of editorial-content language variants."""
-        ordered = sorted(items, key=lambda item: ("fi", "en", "sv").index(item.language) if item.language in ("fi", "en", "sv") else 99)
+        ordered = sorted(
+            items,
+            key=lambda item: ("fi", "en", "sv").index(item.language)
+            if item.language in ("fi", "en", "sv")
+            else 99,
+        )
         return {
             "group_id": str(ordered[0].group_id),
             "type": ordered[0].type.value,
@@ -236,7 +280,12 @@ class EditorialContentController(AdminPermissionsControllerMixin):
         """Return the admin details for one language variant."""
         item = next((item for item in items if item.language == language), None)
         if item is None:
-            return {"language": language, "available": False, "action": "create", "group_id": str(group_id)}
+            return {
+                "language": language,
+                "available": False,
+                "action": "create",
+                "group_id": str(group_id),
+            }
         data = item.to_dict()
         data.update({"available": True, "action": "edit"})
         return data
@@ -255,9 +304,12 @@ class EditorialContentController(AdminPermissionsControllerMixin):
         item.intro_html = self._sanitize(payload["intro_html"])
         item.body_html = self._sanitize(payload["body_html"])
         item.updated_by = self._admin()
-        if payload["status"] == EditorialContentStatus.PUBLISHED and item.status != EditorialContentStatus.PUBLISHED:
+        if (
+            payload["status"] == EditorialContentStatus.PUBLISHED
+            and item.status != EditorialContentStatus.PUBLISHED
+        ):
             if item.published_at is None:
-                item.published_at = datetime.datetime.now(datetime.timezone.utc)
+                item.published_at = datetime.datetime.now(datetime.UTC)
         if payload["status"] == EditorialContentStatus.DRAFT:
             item.published_at = None
         item.status = payload["status"]
@@ -269,8 +321,12 @@ class EditorialContentController(AdminPermissionsControllerMixin):
         item = self._find_admin_item(identifier)
         if isinstance(item, ProblemDetail):
             return item
-        item.status = EditorialContentStatus.PUBLISHED if publish else EditorialContentStatus.DRAFT
-        item.published_at = datetime.datetime.now(datetime.timezone.utc) if publish else None
+        item.status = (
+            EditorialContentStatus.PUBLISHED
+            if publish
+            else EditorialContentStatus.DRAFT
+        )
+        item.published_at = datetime.datetime.now(datetime.UTC) if publish else None
         item.updated_by = self._admin()
         self._db.flush()
         return item.to_dict()
@@ -291,9 +347,15 @@ class EditorialContentController(AdminPermissionsControllerMixin):
 
             raise AdminNotAuthorized()
         try:
-            item = self._db.execute(
-                self._query_for_library(library).where(EditorialContent.id == uuid.UUID(identifier))
-            ).scalars().first()
+            item = (
+                self._db.execute(
+                    self._query_for_library(library).where(
+                        EditorialContent.id == uuid.UUID(identifier)
+                    )
+                )
+                .scalars()
+                .first()
+            )
         except ValueError:
             item = None
         return item or MISSING_EDITORIAL_CONTENT

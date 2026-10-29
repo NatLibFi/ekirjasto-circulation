@@ -1,22 +1,14 @@
 from __future__ import annotations
 
-from enum import Enum
 import re
-from typing import TYPE_CHECKING
 import uuid
+from enum import Enum
+from typing import TYPE_CHECKING
 
 from html_sanitizer.sanitizer import Sanitizer
-from sqlalchemy import (
-    Column,
-    DateTime,
-    Enum as SAEnum,
-    ForeignKey,
-    Index,
-    Integer,
-    UniqueConstraint,
-    Unicode,
-    select,
-)
+from sqlalchemy import Column, DateTime
+from sqlalchemy import Enum as SAEnum
+from sqlalchemy import ForeignKey, Index, Integer, Unicode, UniqueConstraint, select
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, Session, relationship
 from sqlalchemy.sql import func
@@ -42,7 +34,20 @@ class EditorialContentStatus(str, Enum):
 
 _SANITIZER = Sanitizer(
     settings={
-        "tags": {"p", "br", "strong", "em", "h1", "h2", "h3", "h4", "ul", "ol", "li", "a"},
+        "tags": {
+            "p",
+            "br",
+            "strong",
+            "em",
+            "h1",
+            "h2",
+            "h3",
+            "h4",
+            "ul",
+            "ol",
+            "li",
+            "a",
+        },
         "attributes": {"a": {"href", "title"}},
         "empty": {"br"},
         "protocols": {"http", "https", "mailto"},
@@ -65,31 +70,55 @@ class EditorialContent(Base):
     __tablename__ = "editorial_content"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    group_id = Column(UUID(as_uuid=True), nullable=False, default=uuid.uuid4, index=True)
+    group_id = Column(
+        UUID(as_uuid=True), nullable=False, default=uuid.uuid4, index=True
+    )
     library_id = Column(Integer, ForeignKey("libraries.id"), nullable=True, index=True)
-    type = Column(SAEnum(EditorialContentType, native_enum=False), nullable=False, index=True)
+    type = Column(
+        SAEnum(EditorialContentType, native_enum=False), nullable=False, index=True
+    )
     language = Column(Unicode, nullable=False, index=True)
     title = Column(Unicode, nullable=False)
     slug = Column(Unicode, nullable=False)
     intro_html = Column(Unicode, nullable=False)
     body_html = Column(Unicode, nullable=False)
-    status = Column(SAEnum(EditorialContentStatus, native_enum=False), nullable=False, index=True)
+    status = Column(
+        SAEnum(EditorialContentStatus, native_enum=False), nullable=False, index=True
+    )
     published_at = Column(DateTime(timezone=True), nullable=True)
-    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+    created_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
     created_by_id = Column(Integer, ForeignKey("admins.id"), nullable=True)
     updated_by_id = Column(Integer, ForeignKey("admins.id"), nullable=True)
 
-    library: Mapped[Library] = relationship("Library", back_populates="editorial_content")
+    library: Mapped[Library] = relationship(
+        "Library", back_populates="editorial_content"
+    )
     created_by: Mapped[Admin] = relationship("Admin", foreign_keys=[created_by_id])
     updated_by: Mapped[Admin] = relationship("Admin", foreign_keys=[updated_by_id])
 
     __table_args__ = (
         UniqueConstraint(
-            "library_id", "type", "group_id", "language",
+            "library_id",
+            "type",
+            "group_id",
+            "language",
             name="uq_editorial_content_group_language",
         ),
-        Index("ix_editorial_content_public_lookup", "library_id", "type", "language", "status"),
+        Index(
+            "ix_editorial_content_public_lookup",
+            "library_id",
+            "type",
+            "language",
+            "status",
+        ),
         Index("ix_editorial_content_slug", "library_id", "type", "language", "slug"),
     )
 
@@ -129,7 +158,9 @@ class EditorialContent(Base):
             "intro_html": self.intro_html or "",
             "body_html": self.body_html,
             "status": self.status.value,
-            "published_at": self.published_at.isoformat() if self.published_at else None,
+            "published_at": self.published_at.isoformat()
+            if self.published_at
+            else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }

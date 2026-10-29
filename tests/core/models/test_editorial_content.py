@@ -1,11 +1,7 @@
 import datetime
 import uuid
 
-from core.model import (
-    EditorialContent,
-    EditorialContentStatus,
-    EditorialContentType,
-)
+from core.model import EditorialContent, EditorialContentStatus, EditorialContentType
 from core.model.editorial_content import editorial_slug, sanitize_editorial_html
 
 
@@ -30,7 +26,7 @@ def test_sanitize_editorial_html_keeps_allowed_markup_and_removes_unsafe_markup(
 def test_to_dict_serializes_content_fields(db):
     """Serialize editorial-content fields into the API representation."""
     library = db.default_library()
-    now = datetime.datetime.now(datetime.timezone.utc)
+    now = datetime.datetime.now(datetime.UTC)
     item = EditorialContent(
         id=uuid.uuid4(),
         group_id=uuid.uuid4(),
