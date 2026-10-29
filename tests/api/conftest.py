@@ -6,7 +6,6 @@ register_assert_rewrite("tests.fixtures.files")
 register_assert_rewrite("tests.fixtures.vendor_id")
 
 pytest_plugins = [
-    "tests.fixtures.announcements",
     "tests.fixtures.api_admin",
     "tests.fixtures.api_axis_files",
     "tests.fixtures.api_bibliotheca_files",

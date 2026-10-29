@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-02 13:42+0300\n"
+"POT-Creation-Date: 2026-10-28 16:00+0200\n"
 "PO-Revision-Date: 2024-02-19 22:15+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -18,7 +18,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
 
-#: api/authenticator.py:324
+#: api/authenticator.py:329
 msgid ""
 "SAML providers are configured, but secret for signing bearer tokens is "
 "not."
@@ -26,16 +26,16 @@ msgstr ""
 "SAML providers are configured, but secret for signing bearer tokens is "
 "not."
 
-#: api/authenticator.py:562
+#: api/authenticator.py:567
 msgid "No SAML providers are configured."
 msgstr "No SAML providers are configured."
 
-#: api/authenticator.py:571
+#: api/authenticator.py:576
 #, python-format
 msgid " The known providers are: %s"
 msgstr " The known providers are: %s"
 
-#: api/authenticator.py:767
+#: api/authenticator.py:798
 msgid "Library"
 msgstr "Library"
 
@@ -161,19 +161,19 @@ msgstr "Lane does not exist"
 msgid "All Books"
 msgstr "All Books"
 
-#: api/config.py:81
+#: api/config.py:80
 msgid "Internal signing secret for OAuth and SAML bearer tokens"
 msgstr "Internal signing secret for OAuth and SAML bearer tokens"
 
-#: api/config.py:86
+#: api/config.py:85
 msgid "Internal secret key for admin interface cookies"
 msgstr "Internal secret key for admin interface cookies"
 
-#: api/config.py:91
+#: api/config.py:90
 msgid "Hostnames for web application access"
 msgstr "Hostnames for web application access"
 
-#: api/config.py:94
+#: api/config.py:93
 msgid ""
 "Only web applications from these hosts can access this circulation "
 "manager. This can be a single hostname (http://catalog.library.org) or a "
@@ -191,19 +191,19 @@ msgstr ""
 "to '*' to allow access from any host, but you must not do this in a "
 "production environment -- only during development."
 
-#: api/config.py:100
+#: api/config.py:99
 msgid "Cache time for static images and JS and CSS files (in seconds)"
 msgstr "Cache time for static images and JS and CSS files (in seconds)"
 
-#: api/config.py:107
+#: api/config.py:106
 msgid "Cache time for authentication documents (in seconds)"
 msgstr "Cache time for authentication documents (in seconds)"
 
-#: api/config.py:114
+#: api/config.py:113
 msgid "Custom Terms of Service link"
 msgstr "Custom Terms of Service link"
 
-#: api/config.py:118
+#: api/config.py:117
 msgid ""
 "If your inclusion in the SimplyE mobile app is governed by terms other "
 "than the default, put the URL to those terms in this link so that "
@@ -215,11 +215,11 @@ msgstr ""
 "librarians will have access to them. This URL will be used for all "
 "libraries on this circulation manager."
 
-#: api/config.py:123
+#: api/config.py:122
 msgid "Custom Terms of Service link text"
 msgstr "Custom Terms of Service link text"
 
-#: api/config.py:127
+#: api/config.py:126
 msgid ""
 "Custom text for the Terms of Service link in the footer of these "
 "administrative interface pages. This is primarily useful if you're not "
@@ -230,14 +230,6 @@ msgstr ""
 "administrative interface pages. This is primarily useful if you're not "
 "connecting this circulation manager to the SimplyE mobile app. This text "
 "will be used for all libraries on this circulation manager."
-
-#: api/config.py:135
-msgid "Scheduled announcements"
-msgstr "Scheduled announcements"
-
-#: api/config.py:137
-msgid "Announcements will be displayed to authenticated patrons."
-msgstr "Announcements will be displayed to authenticated patrons."
 
 #: api/custom_index.py:87
 msgid "I'm Under 13"

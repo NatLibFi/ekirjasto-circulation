@@ -65,7 +65,6 @@ disallow_subclassing_any = true
 disallow_untyped_decorators = true
 disallow_untyped_defs = true
 module = [
-    "api.admin.announcement_list_validator",
     "api.admin.config",
     "api.admin.controller.catalog_services",
     "api.admin.controller.collection_settings",
@@ -96,7 +95,6 @@ module = [
     "core.integration.*",
     "core.marc",
     "core.migration.*",
-    "core.model.announcements",
     "core.model.collection",
     "core.model.hassessioncache",
     "core.model.integration",

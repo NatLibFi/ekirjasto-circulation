@@ -1,7 +1,8 @@
 from freezegun.config import configure as fg_configure
 
+import core.model
+
 pytest_plugins = [
-    "tests.fixtures.announcements",
     "tests.fixtures.csv_files",
     "tests.fixtures.database",
     "tests.fixtures.library",
