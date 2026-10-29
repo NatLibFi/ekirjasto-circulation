@@ -479,10 +479,10 @@ class BaseODLAPI(
             licensepool.update_availability_from_licenses()
             # If we have a hold, it means we thought the book was available, but it wasn't.
             if hold:
-                # The license should be available at most by the default loan period in E-Kirjasto.
-                hold.end = utc_now() + datetime.timedelta(days=default_loan_period)
-                # Update the pool's queue and raise a specific error message.
-                self.recalculate_holds_in_license_pool(licensepool)
+                # Preserve the original pickup deadline despite the shortage.
+                self.recalculate_holds_in_license_pool(
+                    licensepool, ignored_holds={hold}
+                )
                 raise NoAvailableCopiesWhenReserved()
             raise NoAvailableCopies()
 
@@ -568,9 +568,9 @@ class BaseODLAPI(
             )
             return loan_status
         except OpdsWithOdlException as e:
-            if (
-                e.type == "http://opds-spec.org/odl/error/checkout/unavailable"
-                or "http://opds-spec.org/odl/error/checkout/loan"
+            if e.type in (
+                "http://opds-spec.org/odl/error/checkout/unavailable",
+                "http://opds-spec.org/odl/error/checkout/loan",
             ):
                 # TODO: This would be a good place to do an async availability update, since we know
                 #   the book is unavailable, when we thought it was available. For now, we know that
@@ -734,26 +734,97 @@ class BaseODLAPI(
         else:
             return self._license_fulfill(loan, delivery_mechanism)
 
-    def recalculate_holds_in_license_pool(self, licensepool: LicensePool) -> None:
-        """Set any holds ready for checkout and update the position for all other holds in the queue."""
-        holds = licensepool.holds_by_start_date()
-        ready_for_checkout = holds[: licensepool.licenses_reserved]
-        waiting = holds[licensepool.licenses_reserved :]
+    def refresh_hold_availability(self, licensepool: LicensePool) -> set[int]:
+        """Return ready hold IDs covered by freshly verified license capacity.
+
+        This check never recalculates the queue or changes pickup deadlines.
+        Existing pickup reservations consume capacity even if their patrons
+        have already been notified or have no push token. Check locally free
+        licenses first and stop once every pickup reservation is covered.
+        """
+        now = utc_now()
+        ready_holds = [
+            hold
+            for hold in licensepool.holds_by_start_date()
+            if hold.position == 0 and hold.end is not None and hold.end > now
+        ]
+        if not ready_holds:
+            return set()
+
+        licenses = sorted(
+            (license for license in licensepool.licenses if not license.is_missing),
+            key=lambda license: (
+                not license.is_available_for_borrowing,
+                license.id or 0,
+            ),
+        )
+        refreshed: list[LicenseData] = []
+        verified_capacity = 0
+        for license in licenses:
+            if verified_capacity >= len(ready_holds):
+                break
+            if not license.status_url:
+                continue
+            data = BaseODLImporter.get_license_data(
+                license.status_url,
+                license.checkout_url,
+                license.identifier,
+                license.expires,
+                license.terms_concurrency,
+                self._get,
+            )
+            if data is None:
+                continue
+            refreshed.append(data)
+            verified_capacity += data.currently_available_loans or 0
+
+        for data in refreshed:
+            data.add_to_pool(self._db, licensepool)
+
+        eligible: set[int] = set()
+        for hold in ready_holds[:verified_capacity]:
+            hold_id = hold.id
+            if hold_id is not None and hold.position == 0:
+                eligible.add(hold_id)
+        return eligible
+
+    def recalculate_holds_in_license_pool(
+        self, licensepool: LicensePool, ignored_holds: set[Hold] | None = None
+    ) -> None:
+        """Preserve pickup reservations and assign remaining capacity to the queue."""
+        now = utc_now()
+        ignored_ids = {hold.id for hold in (ignored_holds or set())}
+        holds = [
+            hold
+            for hold in licensepool.holds_by_start_date()
+            if hold.id not in ignored_ids
+        ]
+        protected = [
+            hold
+            for hold in holds
+            if hold.position == 0 and hold.end is not None and hold.end > now
+        ]
+        protected_ids = {hold.id for hold in protected}
+        waiting = [hold for hold in holds if hold.id not in protected_ids]
+        # Active pickup reservations retain their copy until their deadline,
+        # even when a full availability refresh reports fewer reserved copies.
+        new_capacity = max(0, (licensepool.licenses_reserved or 0) - len(protected))
+        ready_for_checkout = waiting[:new_capacity]
+        waiting = waiting[new_capacity:]
         self.log.info(
             f"Holds in License pool [{licensepool.identifier}]: {len(holds)} "
-            f"holds / {len(ready_for_checkout)} ready to checkout / {len(waiting)} in queue"
+            f"holds / {len(protected)} protected / "
+            f"{len(ready_for_checkout)} newly ready / {len(waiting)} in queue"
         )
 
         assert self.collection is not None
         default_reservation_period = self.collection.default_reservation_period
-        # If we had available copies, reserve them for the same amount of holds at the top of the queue.
+        # Only newly ready holds get a deadline from the current admin setting.
         for hold in ready_for_checkout:
-            if hold.position != 0:
-                hold.position = 0
-                # And start the reservation period which ends end of day.
-                hold.end = (
-                    utc_now() + datetime.timedelta(days=default_reservation_period)
-                ).replace(hour=23, minute=59, second=59, microsecond=999999)
+            hold.position = 0
+            hold.end = (
+                now + datetime.timedelta(days=default_reservation_period)
+            ).replace(hour=23, minute=59, second=59, microsecond=999999)
 
         # Update the rest of the queue.
         for idx, hold in enumerate(waiting):
@@ -768,7 +839,7 @@ class BaseODLAPI(
         licensepool.update_availability_from_licenses(
             as_of=utc_now(), ignored_holds=ignored_holds
         )
-        self.recalculate_holds_in_license_pool(licensepool)
+        self.recalculate_holds_in_license_pool(licensepool, ignored_holds=ignored_holds)
 
     def place_hold(
         self,

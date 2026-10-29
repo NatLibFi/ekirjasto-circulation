@@ -820,7 +820,7 @@ class LicensePool(Base):
                     Hold.position > 0,
                 )
             )
-            .order_by(Hold.start)
+            .order_by(Hold.start, Hold.id)
             .all()
         )
 
