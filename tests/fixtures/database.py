@@ -18,7 +18,6 @@ from sqlalchemy import MetaData
 from sqlalchemy.engine import Connection, Engine, Transaction
 from sqlalchemy.orm import Session
 
-import core.lane
 from api.discovery.opds_registration import OpdsRegistrationService
 from api.integration.registry.discovery import DiscoveryRegistry
 from core.classifier import SubjectClassifier
@@ -52,6 +51,7 @@ from core.model import (
     create,
     get_one_or_create,
 )
+import core.lane  # isort:skip
 from core.model.integration import (
     IntegrationConfiguration,
     IntegrationLibraryConfiguration,
