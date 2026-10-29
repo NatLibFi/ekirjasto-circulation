@@ -327,13 +327,13 @@ class Annotator(LoggerMixin):
         TODO: Use canonical names from LoC.
         """
         # If there's one author, use the 100 field.
-        if edition.sort_author and len(edition.contributions) == 1:
+        if edition.primary_author:
             record.add_field(
                 Field(
                     tag="100",
                     indicators=["1", " "],
                     subfields=[
-                        Subfield("a", str(edition.sort_author)),
+                        Subfield("a", str(edition.primary_author.sort_name)),
                     ],
                 )
             )
