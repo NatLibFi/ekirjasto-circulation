@@ -346,11 +346,11 @@ class TestAnnotator:
             fields, key=lambda x: x.get_subfields("a")[0]
         )
         assert author == author_field.get_subfields("a")[0]
-        assert Contributor.Role.PRIMARY_AUTHOR == author_field.get_subfields("e")[0]
+        assert "Päätekijä" == author_field.get_subfields("e")[0]
         assert author2 == author2_field.get_subfields("a")[0]
-        assert Contributor.Role.AUTHOR == author2_field.get_subfields("e")[0]
+        assert "Tekijä" == author2_field.get_subfields("e")[0]
         assert translator == translator_field.get_subfields("a")[0]
-        assert Contributor.Role.TRANSLATOR == translator_field.get_subfields("e")[0]
+        assert "Kääntäjä" == translator_field.get_subfields("e")[0]
 
     def test_add_publisher(self, db: DatabaseTransactionFixture):
         edition = db.edition()
@@ -591,9 +591,9 @@ class TestAnnotator:
             fields, key=lambda x: x.get_subfields("a")[0]
         )
         assert [" ", "0"] == fantasy_field.indicators
-        assert "Fantasy" == fantasy_field.get_subfields("a")[0]
+        assert "Fantasia" == fantasy_field.get_subfields("a")[0]
         assert [" ", "0"] == romance_field.indicators
-        assert "Romance" == romance_field.get_subfields("a")[0]
+        assert "Romantiikka" == romance_field.get_subfields("a")[0]
 
     def test_add_keywords_audiobook_and_ebook(self, db: DatabaseTransactionFixture):
         audiobook, ignore = db.edition(with_license_pool=True)
