@@ -7,11 +7,7 @@ from flask import Response, make_response, request
 from flask_cors.core import get_cors_options, set_cors_headers
 
 from api.app import app
-from core.app_server import (
-    compressible,
-    raises_problem_detail,
-    returns_problem_detail,
-)
+from core.app_server import compressible, raises_problem_detail, returns_problem_detail
 from core.model import HasSessionCache
 from core.util.problem_detail import ProblemDetail
 
