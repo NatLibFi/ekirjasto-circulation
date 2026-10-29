@@ -183,7 +183,7 @@ class TestOPDS2Importer(OPDS2Test):
         assert moby_dick_edition.duration == 100.2
         assert moby_dick_edition.awards == ["An award", "Another award"]
 
-        assert moby_dick_edition.primary_author == "Melville, Herman"
+        assert moby_dick_edition.primary_author.sort_name == "Melville, Herman"
 
         assert 1 == len(moby_dick_edition.author_contributors)
         [moby_dick_author] = moby_dick_edition.author_contributors
@@ -235,7 +235,7 @@ class TestOPDS2Importer(OPDS2Test):
         assert EditionConstants.BOOK_MEDIUM == huckleberry_finn_edition.medium
         # Two authors of which Mark Twain is the primary author and comes first.
         assert "Mark Twain, Samuel Langhorne Clemens" == huckleberry_finn_edition.author
-        assert "Twain, Mark" == huckleberry_finn_edition.primary_author
+        assert "Twain, Mark" == huckleberry_finn_edition.primary_author.sort_name
         # And authors are contributors
         assert 2 == len(huckleberry_finn_edition.author_contributors)
 
