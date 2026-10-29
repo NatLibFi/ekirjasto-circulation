@@ -51,7 +51,6 @@ from core.model import (
     create,
     get_one_or_create,
 )
-import core.lane  # isort:skip
 from core.model.integration import (
     IntegrationConfiguration,
     IntegrationLibraryConfiguration,
@@ -59,6 +58,8 @@ from core.model.integration import (
 from core.model.licensing import License, LicensePoolDeliveryMechanism, LicenseStatus
 from core.util.datetime_helpers import utc_now
 from core.util.string_helpers import random_string
+
+import core.lane  # isort:skip
 
 
 class ApplicationFixture:
