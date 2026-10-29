@@ -242,6 +242,30 @@ def authentication_document():
     return app.manager.index_controller.authentication_document()
 
 
+@library_route("/content", methods=["GET"])
+@has_library
+@allows_patron_web
+@returns_problem_detail
+@compressible
+def editorial_content():
+    """Return published editorial content for a library."""
+    return app.manager.admin_editorial_content_controller.public_list(
+        flask.request.args.get("type"), flask.request.args.get("language")
+    )
+
+
+@library_route("/content/<identifier>", methods=["GET"])
+@has_library
+@allows_patron_web
+@returns_problem_detail
+@compressible
+def editorial_content_item(identifier):
+    """Return one published editorial-content group."""
+    return app.manager.admin_editorial_content_controller.public_item(
+        identifier, flask.request.args.get("language")
+    )
+
+
 @library_dir_route("/groups", defaults=dict(lane_identifier=None))
 @library_route("/groups/<lane_identifier>")
 @has_library

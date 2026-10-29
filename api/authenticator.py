@@ -34,8 +34,13 @@ from api.problem_details import *
 from core.analytics import Analytics
 from core.integration.goals import Goals
 from core.integration.registry import IntegrationRegistry
-from core.model import ConfigurationSetting, Library, Patron, PatronProfileStorage
-from core.model.announcements import Announcement
+from core.model import (
+    ConfigurationSetting,
+    EditorialContent,
+    Library,
+    Patron,
+    PatronProfileStorage,
+)
 from core.model.integration import IntegrationLibraryConfiguration
 from core.user_profile import ProfileController
 from core.util.authentication_for_opds import AuthenticationForOPDSDocument
@@ -753,6 +758,32 @@ class LibraryAuthenticator(LoggerMixin):
         if library_uri:
             links.append(dict(rel="alternate", type="text/html", href=library_uri))
 
+        # Editorial content endpoints for the patron web application.
+        links.extend(
+            [
+                dict(
+                    rel="news",
+                    type="application/json",
+                    href=url_for(
+                        "editorial_content",
+                        library_short_name=self.library.short_name,
+                        type="news",
+                        _external=True,
+                    ),
+                ),
+                dict(
+                    rel="faq",
+                    type="application/json",
+                    href=url_for(
+                        "editorial_content",
+                        library_short_name=self.library.short_name,
+                        type="faq",
+                        _external=True,
+                    ),
+                ),
+            ]
+        )
+
         # Add the library's logo, if it has one.
         if self.library and self.library.logo:
             links.append(
@@ -819,9 +850,9 @@ class LibraryAuthenticator(LoggerMixin):
         bucket.append(Configuration.RESERVATIONS_FEATURE)
         doc["features"] = dict(enabled=enabled, disabled=disabled)
 
-        # Add any active announcements for the library.
+        # Add published editorial banners for the library.
         if self.library:
-            doc["announcements"] = Announcement.authentication_document_announcements(
+            doc["announcements"] = EditorialContent.authentication_document_banners(
                 self.library
             )
 
