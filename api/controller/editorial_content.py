@@ -104,15 +104,9 @@ class EditorialContentController(AdminPermissionsControllerMixin):
         type_value = (
             self._enum(content_type, EditorialContentType) if content_type else None
         )
-        selected_language = language or Configuration.localization_languages()[0]
-
         query = self._query_for_library(library, public=True)
-        # Banners are consumed as a service-wide feed and may be published
-        # before translations exist. If no language was requested, expose
-        # published banners in their available languages instead of silently
-        # filtering Finnish content out with the default English locale.
-        if not (type_value == EditorialContentType.BANNER and language is None):
-            query = query.where(EditorialContent.language == selected_language)
+        if language is not None:
+            query = query.where(EditorialContent.language == language)
         if type_value:
             query = query.where(EditorialContent.type == type_value)
         items = (

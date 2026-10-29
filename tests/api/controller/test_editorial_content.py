@@ -88,6 +88,36 @@ class TestEditorialContentController:
 
         assert [item["title"] for item in response["content"]] == ["Published"]
 
+    def test_public_list_without_filters_returns_all_published_content(
+        self, db: DatabaseTransactionFixture, flask_app_fixture: FlaskAppFixture
+    ):
+        """Return published content in all languages and types without filters."""
+        library = db.default_library()
+        make_content(db, library, title="English news", language="en")
+        make_content(
+            db,
+            library,
+            title="Finnish FAQ",
+            language="fi",
+            content_type=EditorialContentType.FAQ,
+        )
+        make_content(
+            db,
+            library,
+            title="Draft",
+            language="fi",
+            status=EditorialContentStatus.DRAFT,
+        )
+        controller = make_controller(db)
+
+        with flask_app_fixture.test_request_context("/", library=library):
+            response = controller.public_list(None, None)
+
+        assert {item["title"] for item in response["content"]} == {
+            "English news",
+            "Finnish FAQ",
+        }
+
     def test_public_banner_list_without_language_returns_all_published_languages(
         self, db: DatabaseTransactionFixture, flask_app_fixture: FlaskAppFixture
     ):
