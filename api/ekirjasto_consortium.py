@@ -1,5 +1,6 @@
 import logging
 from dataclasses import dataclass
+from datetime import date, datetime, timezone
 from typing import Literal, TypeVar
 
 import requests
@@ -44,6 +45,8 @@ class KoodistoConceptCode(BaseModel):
     attributes: list[KoodistoConceptCodeAttribute]
     status: Literal["ACTIVE", "PROPOSAL", "DELETED"]
     conceptCodeId: str
+    beginDate: date | None = None
+    expirationDate: date | None = None
 
     def findAttribute(self, attributeName: str) -> str | None:
         for attribute in self.attributes:
@@ -143,7 +146,7 @@ class EkirjastoConsortiumMonitor(Monitor):
         """Returns a dict of finnish municipality codes mapped to municipality names
         from data fetched from Koodistopalvelu. Memoized for 24h.
         """
-        concept_codes = cls._fetch_koodisto_concept_codes(cls)
+        concept_codes = cls._fetch_koodisto_concept_codes()
 
         code_name_map: dict[str, str] = {}
         for code in concept_codes:
@@ -158,26 +161,105 @@ class EkirjastoConsortiumMonitor(Monitor):
 
         return code_name_map
 
-    def _fetch_kirkanta_cities(self) -> list[KirkantaCity]:
-        return EkirjastoConsortiumMonitor._get(
-            KirkantaCities, f"{self._KIRKANTA_API_URL}/city", {"limit": 9999}
+    @classmethod
+    @memoize(ttls=86400)
+    def get_consortium_municipality_list(cls):
+        """Return active Kirkanta consortiums with current municipality names and codes."""
+        consortiums = cls._fetch_kirkanta_consortiums()
+        cities = cls._filter_out_junk_data(cls._fetch_kirkanta_cities())
+        concept_codes = cls._fetch_koodisto_concept_codes()
+        today = date.today()
+        excluded_codes = {"000", "198", "199", "200"}
+
+        municipalities = {}
+        current_codes = []
+        for code in concept_codes:
+            name = code.findAttribute("ShortName")
+            if (
+                code.status == "ACTIVE"
+                and code.conceptCodeId not in excluded_codes
+                and name
+                and (code.beginDate is None or code.beginDate <= today)
+                and (code.expirationDate is None or code.expirationDate >= today)
+            ):
+                current_codes.append(code)
+                municipalities[code.conceptCodeId] = {
+                    "name": name,
+                    "code": code.conceptCodeId,
+                    "consortium_id": None,
+                }
+
+        consortium_by_id = {consortium.id: consortium for consortium in consortiums}
+        unmapped_cities = []
+        for city in cities:
+            code = cls._to_koodisto_code(city, current_codes)
+            if code is None:
+                unmapped_cities.append(
+                    {"name": city.name, "consortium_id": city.consortium}
+                )
+                continue
+            municipality = municipalities.get(code.conceptCodeId)
+            if municipality and city.consortium in consortium_by_id:
+                municipality["consortium_id"] = city.consortium
+
+        result_consortiums = []
+        for consortium in consortiums:
+            members = [
+                {"name": municipality["name"], "code": municipality["code"]}
+                for municipality in municipalities.values()
+                if municipality["consortium_id"] == consortium.id
+            ]
+            result_consortiums.append(
+                {
+                    "id": consortium.id,
+                    "name": consortium.name,
+                    "slug": consortium.slug,
+                    "municipalities": sorted(
+                        members,
+                        key=lambda municipality: municipality["name"].casefold(),
+                    ),
+                }
+            )
+
+        unassigned = [
+            {"name": municipality["name"], "code": municipality["code"]}
+            for municipality in municipalities.values()
+            if municipality["consortium_id"] is None
+        ]
+        return {
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "consortiums": result_consortiums,
+            "unassigned_municipalities": sorted(
+                unassigned, key=lambda municipality: municipality["name"].casefold()
+            ),
+            "unmapped_kirkanta_cities": sorted(
+                unmapped_cities, key=lambda city: city["name"].casefold()
+            ),
+        }
+
+    @classmethod
+    def _fetch_kirkanta_cities(cls) -> list[KirkantaCity]:
+        return cls._get(
+            KirkantaCities, f"{cls._KIRKANTA_API_URL}/city", {"limit": 9999}
         ).items
 
-    def _fetch_kirkanta_consortiums(self) -> list[KirkantaConsortium]:
-        return EkirjastoConsortiumMonitor._get(
+    @classmethod
+    def _fetch_kirkanta_consortiums(cls) -> list[KirkantaConsortium]:
+        return cls._get(
             KirkantaConsortiums,
-            f"{self._KIRKANTA_API_URL}/consortium",
+            f"{cls._KIRKANTA_API_URL}/consortium",
             {"status": "ACTIVE", "limit": 9999},
         ).items
 
-    def _fetch_koodisto_concept_codes(self, page: int = 1) -> list[KoodistoConceptCode]:
-        response: KoodistoConceptCodes = EkirjastoConsortiumMonitor._get(
+    @classmethod
+    def _fetch_koodisto_concept_codes(cls, page: int = 1) -> list[KoodistoConceptCode]:
+        response: KoodistoConceptCodes = cls._get(
             KoodistoConceptCodes,
-            f"{self._KOODISTO_API_URL}/classifications/{self._KOODISTO_CLASSIFICATION_ID}/conceptcodes",
-            {"pageSize": self._KOODISTO_MAX_ALLOWED_PAGESIZE, "page": page},
+            f"{cls._KOODISTO_API_URL}/classifications/{cls._KOODISTO_CLASSIFICATION_ID}/conceptcodes",
+            {"pageSize": cls._KOODISTO_MAX_ALLOWED_PAGESIZE, "page": page},
         )
         if response.page < response.totalPages:
-            return response.conceptCodes + self._fetch_koodisto_concept_codes(
+            return response.conceptCodes + cls._fetch_koodisto_concept_codes(
                 page=page + 1
             )
 
@@ -257,8 +339,9 @@ class EkirjastoConsortiumMonitor(Monitor):
             )
         )
 
-    def _filter_out_junk_data(self, cities: list[KirkantaCity]) -> list[KirkantaCity]:
-        return [city for city in cities if city.name not in self._KIRKANTA_JUNK_CITIES]
+    @classmethod
+    def _filter_out_junk_data(cls, cities: list[KirkantaCity]) -> list[KirkantaCity]:
+        return [city for city in cities if city.name not in cls._KIRKANTA_JUNK_CITIES]
 
     def _verify_all_kirkanta_cities_found_in_koodisto(
         self, cities: list[KirkantaCity], concept_codes: list[KoodistoConceptCode]
@@ -285,8 +368,9 @@ class EkirjastoConsortiumMonitor(Monitor):
             logging.info("Nice! All Kirkanta city names found in Koodistopalvelu.")
             return None
 
+    @classmethod
     def _to_koodisto_code(
-        self, kirkanta_city: KirkantaCity, concept_codes: list[KoodistoConceptCode]
+        cls, kirkanta_city: KirkantaCity, concept_codes: list[KoodistoConceptCode]
     ) -> KoodistoConceptCode | None:
         """Finds a matching Koodistopalvelu code for a kirkanta city"""
 
@@ -295,7 +379,7 @@ class EkirjastoConsortiumMonitor(Monitor):
             if koodisto_city_name == kirkanta_city.name:
                 return code
 
-            alias: str | None = self._KIRKANTA_CITY_NAME_ALIASES.get(
+            alias: str | None = cls._KIRKANTA_CITY_NAME_ALIASES.get(
                 kirkanta_city.name,
             )
             if alias and koodisto_city_name == alias:
