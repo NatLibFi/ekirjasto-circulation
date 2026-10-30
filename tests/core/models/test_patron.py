@@ -761,6 +761,35 @@ class TestPatron:
         # Check that the book still exists (just for our sanity)
         assert len(db.session.query(Work).all()) == 1
 
+    def test_get_selected_works_filters_none_values(
+        self, db: DatabaseTransactionFixture
+    ):
+        """Test that get_selected_works() filters out None work values."""
+        patron = db.patron()
+        work1 = db.work()
+        work2 = db.work()
+
+        # Add two books to the patron's selected books
+        selected_book1 = patron.select_book(work1)
+        selected_book2 = patron.select_book(work2)
+        db.session.commit()
+
+        # Verify both works are in the list
+        selected_works = patron.get_selected_works()
+        assert len(selected_works) == 2
+        assert work1 in selected_works
+        assert work2 in selected_works
+
+        # Simulate an orphaned SelectedBook
+        selected_book1.work = None  # type: ignore
+        db.session.commit()
+
+        # get_selected_works() should filter out the None value
+        selected_works = patron.get_selected_works()
+        assert len(selected_works) == 1
+        assert work2 in selected_works
+        assert None not in selected_works
+
 
 def mock_url_for(url, **kwargs):
     item_list = [f"{k}={v}" for k, v in kwargs.items()]
