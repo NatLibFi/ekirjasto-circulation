@@ -49,7 +49,6 @@ from core.util.log import LoggerMixin, elapsed_time_logging, log_elapsed_time
 
 if TYPE_CHECKING:
     from api.admin.controller.admin_search import AdminSearchController
-    from api.admin.controller.announcement_service import AnnouncementSettings
     from api.admin.controller.catalog_services import CatalogServicesController
     from api.admin.controller.collection_settings import CollectionSettingsController
     from api.admin.controller.custom_lists import CustomListsController
@@ -76,6 +75,7 @@ if TYPE_CHECKING:
     from api.admin.controller.timestamps import TimestampsController
     from api.admin.controller.view import ViewController
     from api.admin.controller.work_editor import WorkController as AdminWorkController
+    from api.controller.editorial_content import EditorialContentController
 
 
 class CirculationManager(LoggerMixin):
@@ -119,10 +119,10 @@ class CirculationManager(LoggerMixin):
     admin_library_settings_controller: LibrarySettingsController
     admin_individual_admin_settings_controller: IndividualAdminSettingsController
     admin_catalog_services_controller: CatalogServicesController
-    admin_announcement_service: AnnouncementSettings
     admin_search_controller: AdminSearchController
     admin_view_controller: ViewController
     admin_quicksight_controller: QuickSightController
+    admin_editorial_content_controller: EditorialContentController
 
     @inject
     def __init__(

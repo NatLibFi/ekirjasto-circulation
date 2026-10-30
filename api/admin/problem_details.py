@@ -33,6 +33,13 @@ ADMIN_NOT_AUTHORIZED = pd(
     _("Your admin account is not authorized to make this request."),
 )
 
+MISSING_EDITORIAL_CONTENT = pd(
+    "http://librarysimplified.org/terms/problem/editorial-content-not-found",
+    404,
+    _("Editorial content not found."),
+    _("The requested editorial content does not exist."),
+)
+
 INVALID_CSRF_TOKEN = pd(
     "http://librarysimplified.org/terms/problem/invalid-csrf-token",
     400,

@@ -134,11 +134,43 @@ class TestAdmin:
         assert True == admin.is_library_manager(other_library)
         assert True == admin.is_librarian(library)
         assert True == admin.is_librarian(other_library)
+
         admin.remove_role(AdminRole.LIBRARY_MANAGER, other_library)
         assert False == admin.is_library_manager(library)
         assert False == admin.is_library_manager(other_library)
         assert True == admin.is_librarian(library)
         assert True == admin.is_librarian(other_library)
+
+    def test_content_writer_roles(self, admin_fixture: AdminFixture):
+        """Verify library-scoped and sitewide content-writer permissions."""
+        library = admin_fixture.db.default_library()
+        other_library = admin_fixture.db.library()
+        admin = admin_fixture.admin
+
+        assert admin.has_content_writer_role(library) is False
+
+        admin.add_role(AdminRole.CONTENT_WRITER, library)
+        assert admin.has_content_writer_role(library) is True
+        assert admin.has_content_writer_role(other_library) is False
+
+        admin.remove_role(AdminRole.CONTENT_WRITER, library)
+        admin.add_role(AdminRole.CONTENT_WRITER_ALL)
+        assert admin.has_content_writer_role(library) is True
+        assert admin.has_content_writer_role(other_library) is True
+
+    def test_content_writer_roles_have_librarian_hierarchy(
+        self, admin_fixture: AdminFixture
+    ):
+        """Verify content-writer roles match librarian hierarchy levels."""
+        admin = admin_fixture.admin
+        library = admin_fixture.db.default_library()
+        content_writer = admin.add_role(AdminRole.CONTENT_WRITER, library)
+        librarian = admin.add_role(AdminRole.LIBRARIAN, library)
+        content_writer_all = admin.add_role(AdminRole.CONTENT_WRITER_ALL)
+        sitewide_librarian = admin.add_role(AdminRole.SITEWIDE_LIBRARIAN)
+
+        assert content_writer.compare_role(librarian) == AdminRole.EQUAL
+        assert content_writer_all.compare_role(sitewide_librarian) == AdminRole.EQUAL
 
     def test_can_see_collection(self, admin_fixture: AdminFixture):
         # This collection is only visible to system admins since it has no libraries.

@@ -86,7 +86,11 @@ class LicenseReport:
         row: list[object] = [""] * len(self.headers)
         row[0] = identifier.identifier
         if edition:
-            row[1:4] = [edition.title, edition.primary_author, edition.author]
+            row[1:4] = [
+                edition.title,
+                edition.primary_author.sort_name if edition.primary_author else "",
+                edition.author,
+            ]
             row[5:13] = [
                 edition.language,
                 edition.medium,
@@ -117,7 +121,7 @@ class LicenseReport:
             if edition:
                 license_row[1:4] = [
                     edition.title,
-                    edition.primary_author,
+                    edition.primary_author.sort_name if edition.primary_author else "",
                     edition.author,
                 ]
                 license_row[4] = pool.collection.name

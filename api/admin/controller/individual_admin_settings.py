@@ -113,6 +113,7 @@ class IndividualAdminSettingsController(AdminPermissionsControllerMixin):
                     elif role.role in {
                         AdminRole.SITEWIDE_LIBRARY_MANAGER,
                         AdminRole.SITEWIDE_LIBRARIAN,
+                        AdminRole.CONTENT_WRITER_ALL,
                     }:
                         append_role(roles, role)
 

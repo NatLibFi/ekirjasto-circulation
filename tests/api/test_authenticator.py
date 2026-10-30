@@ -66,7 +66,6 @@ from core.util.datetime_helpers import utc_now
 from core.util.http import IntegrationException, RemoteIntegrationException
 from core.util.opds_writer import OPDSFeed
 from core.util.problem_detail import ProblemDetail
-from tests.fixtures.announcements import AnnouncementFixture
 from tests.fixtures.library import LibraryFixture
 
 if TYPE_CHECKING:
@@ -1053,7 +1052,6 @@ class TestLibraryAuthenticator:
         self,
         db: DatabaseTransactionFixture,
         mock_basic: MockBasicFixture,
-        announcement_fixture: AnnouncementFixture,
         library_fixture: LibraryFixture,
         token_auth_enabled: bool,
         auth_count: int,
@@ -1132,43 +1130,6 @@ class TestLibraryAuthenticator:
         base_url = ConfigurationSetting.sitewide(db.session, Configuration.BASE_URL_KEY)
         base_url.value = "http://circulation-manager/"
 
-        # Configure three library announcements: two active and one inactive.
-        a1_db = announcement_fixture.create_announcement(
-            db.session,
-            content="this is announcement 1",
-            start=announcement_fixture.yesterday,
-            finish=announcement_fixture.today,
-            library=library,
-        )
-        announcement_fixture.create_announcement(
-            db.session,
-            content="this is announcement 2",
-            start=announcement_fixture.a_week_ago,
-            finish=announcement_fixture.yesterday,
-            library=library,
-        )
-        a3_db = announcement_fixture.create_announcement(
-            db.session,
-            content="this is announcement 3",
-            start=announcement_fixture.yesterday,
-            finish=announcement_fixture.today,
-            library=library,
-        )
-
-        # Configure two site-wide announcements: one active and one inactive.
-        a4_db = announcement_fixture.create_announcement(
-            db.session,
-            content="this is announcement 4",
-            start=announcement_fixture.yesterday,
-            finish=announcement_fixture.today,
-        )
-        announcement_fixture.create_announcement(
-            db.session,
-            content="this is announcement 5",
-            start=announcement_fixture.a_week_ago,
-            finish=announcement_fixture.yesterday,
-        )
-
         with self.app.test_request_context("/"):
             url = authenticator.authentication_document_url()
             assert url.endswith("/%s/authentication_document" % library.short_name)
@@ -1224,7 +1185,25 @@ class TestLibraryAuthenticator:
                 start,
                 stylesheet,
                 terms_of_service,
-            ) = sorted(doc["links"], key=lambda x: (x["rel"], x["href"]))
+            ) = sorted(
+                [link for link in doc["links"] if link["rel"] not in {"news", "faq"}],
+                key=lambda x: (x["rel"], x["href"]),
+            )
+
+            editorial_links = {
+                link["rel"]: link
+                for link in doc["links"]
+                if link["rel"] in {"news", "faq"}
+            }
+            assert set(editorial_links) == {"news", "faq"}
+            for content_type, link in editorial_links.items():
+                assert link["type"] == "application/json"
+                assert link["href"] == url_for(
+                    "editorial_content",
+                    library_short_name=library.short_name,
+                    type=content_type,
+                    _external=True,
+                )
             assert "http://terms.com" == terms_of_service["href"]
             assert "http://privacy.com" == privacy_policy["href"]
             assert "http://copyright.com" == copyright["href"]
@@ -1295,12 +1274,6 @@ class TestLibraryAuthenticator:
                 == alternate
             )
 
-            # Active announcements are published; inactive announcements are not.
-            a4, a1, a3 = doc["announcements"]
-            assert dict(id=str(a1_db.id), content="this is announcement 1") == a1
-            assert dict(id=str(a3_db.id), content="this is announcement 3") == a3
-            assert dict(id=str(a4_db.id), content="this is announcement 4") == a4
-
             # Features that are enabled for this library are communicated
             # through the 'features' item.
             features = doc["features"]
@@ -1323,19 +1296,6 @@ class TestLibraryAuthenticator:
             doc = json.loads(authenticator.create_authentication_document())
             for key in ("focus_area", "service_area"):
                 assert key not in doc
-
-            # Only global announcements
-            for announcement in [a1_db, a3_db]:
-                db.session.delete(announcement)
-            doc = json.loads(authenticator.create_authentication_document())
-            assert [dict(id=str(a4_db.id), content="this is announcement 4")] == doc[
-                "announcements"
-            ]
-            # If there are no announcements, the list of announcements is present
-            # but empty.
-            db.session.delete(a4_db)
-            doc = json.loads(authenticator.create_authentication_document())
-            assert [] == doc["announcements"]
 
             # The annotator's annotate_authentication_document method
             # was called and successfully modified the authentication

@@ -10,7 +10,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-02 13:42+0300\n"
+"POT-Creation-Date: 2026-10-28 16:00+0200\n"
 "PO-Revision-Date: 2025-08-20 09:06+0000\n"
 "Last-Translator: Kaisa Kuivalahti, 2025\n"
 "Language: sv\n"
@@ -22,7 +22,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
 
-#: api/authenticator.py:324
+#: api/authenticator.py:329
 msgid ""
 "SAML providers are configured, but secret for signing bearer tokens is "
 "not."
@@ -30,16 +30,16 @@ msgstr ""
 "SAML-leverantörer har konfigurerats, men inte krypteringskoden för att "
 "signera bearer tokens."
 
-#: api/authenticator.py:562
+#: api/authenticator.py:567
 msgid "No SAML providers are configured."
 msgstr "Inga SAML-leverantörer har konfigurerats."
 
-#: api/authenticator.py:571
+#: api/authenticator.py:576
 #, python-format
 msgid " The known providers are: %s"
 msgstr "Kända leverantörer är: %s"
 
-#: api/authenticator.py:767
+#: api/authenticator.py:798
 msgid "Library"
 msgstr "Bibliotek"
 
@@ -167,19 +167,19 @@ msgstr "Bandet finns inte"
 msgid "All Books"
 msgstr "Alla böcker"
 
-#: api/config.py:81
+#: api/config.py:80
 msgid "Internal signing secret for OAuth and SAML bearer tokens"
 msgstr "Krypteringskod för intern signering av bearer tokens för OAuth och SAML"
 
-#: api/config.py:86
+#: api/config.py:85
 msgid "Internal secret key for admin interface cookies"
 msgstr "Intern krypteringskod för administratörsgränssnittets kakor"
 
-#: api/config.py:91
+#: api/config.py:90
 msgid "Hostnames for web application access"
 msgstr "Värdnamn för åtkomst till webbapplikation"
 
-#: api/config.py:94
+#: api/config.py:93
 msgid ""
 "Only web applications from these hosts can access this circulation "
 "manager. This can be a single hostname (http://catalog.library.org) or a "
@@ -197,19 +197,19 @@ msgstr ""
 "till '*' för att ge åtkomst från vilken värd som helst, men du får inte "
 "göra detta i en produktionsmiljö -- bara vid utveckling."
 
-#: api/config.py:100
+#: api/config.py:99
 msgid "Cache time for static images and JS and CSS files (in seconds)"
 msgstr "Cachetid för statiska bilder och JS- och CSS-filer (sekunder)"
 
-#: api/config.py:107
+#: api/config.py:106
 msgid "Cache time for authentication documents (in seconds)"
 msgstr "Cachetid för autentiseringsdokument (sekunder)"
 
-#: api/config.py:114
+#: api/config.py:113
 msgid "Custom Terms of Service link"
 msgstr "Länk till anpassade användarvillkor"
 
-#: api/config.py:118
+#: api/config.py:117
 msgid ""
 "If your inclusion in the SimplyE mobile app is governed by terms other "
 "than the default, put the URL to those terms in this link so that "
@@ -221,11 +221,11 @@ msgstr ""
 "bibliotekarierna har tillgång till dem. Denna URL kommer att användas för"
 " alla bibliotek på denna utlåningshanterare."
 
-#: api/config.py:123
+#: api/config.py:122
 msgid "Custom Terms of Service link text"
 msgstr "Länktext till anpassad användaravtal"
 
-#: api/config.py:127
+#: api/config.py:126
 msgid ""
 "Custom text for the Terms of Service link in the footer of these "
 "administrative interface pages. This is primarily useful if you're not "
@@ -236,14 +236,6 @@ msgstr ""
 "administratörsgränssnittet. Detta är nyttigt i första hand om du inte "
 "ansluter denna utlåningshanterare till mobilappen SimplyE. Denna text "
 "används i alla bibliotek i denna utlåningshanterare."
-
-#: api/config.py:135
-msgid "Scheduled announcements"
-msgstr "Schemalagda meddelanden"
-
-#: api/config.py:137
-msgid "Announcements will be displayed to authenticated patrons."
-msgstr "Meddelanden kommer att visas för autentiserade kunder."
 
 #: api/custom_index.py:87
 msgid "I'm Under 13"
@@ -952,4 +944,10 @@ msgstr "Kundens medlemskap har löpt ut"
 #: api/sirsidynix_authentication_provider.py:33
 msgid "Patron has been blocked."
 msgstr "Kunden har blockerats."
+
+#~ msgid "Scheduled announcements"
+#~ msgstr "Schemalagda meddelanden"
+
+#~ msgid "Announcements will be displayed to authenticated patrons."
+#~ msgstr "Meddelanden kommer att visas för autentiserade kunder."
 

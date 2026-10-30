@@ -11,7 +11,6 @@ if TYPE_CHECKING:
 def setup_admin_controllers(manager: CirculationManager):
     """Set up all the controllers that will be used by the admin parts of the web app."""
     from api.admin.controller.admin_search import AdminSearchController
-    from api.admin.controller.announcement_service import AnnouncementSettings
     from api.admin.controller.catalog_services import CatalogServicesController
     from api.admin.controller.collection_settings import CollectionSettingsController
     from api.admin.controller.custom_lists import CustomListsController
@@ -37,6 +36,7 @@ def setup_admin_controllers(manager: CirculationManager):
     from api.admin.controller.timestamps import TimestampsController
     from api.admin.controller.view import ViewController
     from api.admin.controller.work_editor import WorkController
+    from api.controller.editorial_content import EditorialContentController
 
     manager.admin_view_controller = ViewController(manager)
     manager.admin_sign_in_controller = SignInController(manager)
@@ -66,6 +66,6 @@ def setup_admin_controllers(manager: CirculationManager):
         IndividualAdminSettingsController(manager._db)
     )
     manager.admin_catalog_services_controller = CatalogServicesController(manager)
-    manager.admin_announcement_service = AnnouncementSettings(manager._db)
     manager.admin_search_controller = AdminSearchController(manager)
     manager.admin_quicksight_controller = QuickSightController(manager)
+    manager.admin_editorial_content_controller = EditorialContentController(manager._db)

@@ -883,7 +883,7 @@ msgstr "Journalists (Biographies)"
 
 #: core/classifier/localized_names.py:97
 msgid "Historical Biographies"
-msgstr "Historical Romance"
+msgstr "Historical Biographies"
 
 #: core/classifier/localized_names.py:98
 msgid "LGBTQ Biographies"
@@ -1068,7 +1068,7 @@ msgstr "Humorous Nonfiction"
 
 #: core/classifier/localized_names.py:143
 msgid "Literature & Linguistics"
-msgstr "Literary Criticism"
+msgstr "Literature & Linguistics"
 
 #: core/classifier/localized_names.py:144
 msgid "Dictionaries"
@@ -1088,7 +1088,7 @@ msgstr "Machinery & Equipment"
 
 #: core/classifier/localized_names.py:148
 msgid "Equipment & Technology"
-msgstr "Science & Technology"
+msgstr "Equipment & Technology"
 
 #: core/classifier/localized_names.py:149
 msgid "Robots"
@@ -1224,7 +1224,7 @@ msgstr "Self-Help"
 
 #: core/classifier/localized_names.py:182
 msgid "Sexual Education"
-msgstr "Education"
+msgstr "Sexual Education"
 
 #: core/classifier/localized_names.py:183
 msgid "Society"

@@ -26,6 +26,7 @@ from core.integration.settings import (
 )
 from core.model import (
     Collection,
+    Contributor,
     DeliveryMechanism,
     Edition,
     Identifier,
@@ -326,20 +327,30 @@ class Annotator(LoggerMixin):
 
         TODO: Use canonical names from LoC.
         """
+        primary_author = edition.primary_author
+
         # If there's one author, use the 100 field.
-        if edition.sort_author and len(edition.contributions) == 1:
+        if primary_author:
             record.add_field(
                 Field(
                     tag="100",
                     indicators=["1", " "],
                     subfields=[
-                        Subfield("a", str(edition.sort_author)),
+                        Subfield("a", str(primary_author.sort_name)),
                     ],
                 )
             )
 
         if len(edition.contributions) > 1:
             for contribution in edition.contributions:
+                # The primary author is already represented by the 100 field.
+                # Do not emit the same contribution again as a 700 field.
+                if (
+                    primary_author
+                    and contribution.role == Contributor.Role.PRIMARY_AUTHOR
+                    and contribution.contributor == primary_author
+                ):
+                    continue
                 contributor = contribution.contributor
                 if contributor.sort_name and contribution.role:
                     record.add_field(

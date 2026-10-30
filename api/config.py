@@ -11,7 +11,6 @@ from core.config import IntegrationException  # noqa: autoflake
 from core.config import Configuration as CoreConfiguration
 from core.configuration.library import LibrarySettings
 from core.model import Library
-from core.model.announcements import SETTING_NAME as ANNOUNCEMENT_SETTING_NAME
 from core.util import MoneyUtility
 
 
@@ -126,18 +125,6 @@ class Configuration(CoreConfiguration):
             "description": _(
                 "Custom text for the Terms of Service link in the footer of these administrative interface pages. This is primarily useful if you're not connecting this circulation manager to the SimplyE mobile app. This text will be used for all libraries on this circulation manager."
             ),
-        },
-    ]
-
-    ANNOUNCEMENT_SETTINGS = [
-        {
-            "key": ANNOUNCEMENT_SETTING_NAME,
-            "label": _("Scheduled announcements"),
-            "description": _(
-                "Announcements will be displayed to authenticated patrons."
-            ),
-            "category": "Announcements",
-            "type": "announcements",
         },
     ]
 

@@ -18,7 +18,6 @@ from sqlalchemy import MetaData
 from sqlalchemy.engine import Connection, Engine, Transaction
 from sqlalchemy.orm import Session
 
-import core.lane
 from api.discovery.opds_registration import OpdsRegistrationService
 from api.integration.registry.discovery import DiscoveryRegistry
 from core.classifier import SubjectClassifier
@@ -59,6 +58,8 @@ from core.model.integration import (
 from core.model.licensing import License, LicensePoolDeliveryMechanism, LicenseStatus
 from core.util.datetime_helpers import utc_now
 from core.util.string_helpers import random_string
+
+import core.lane  # isort:skip
 
 
 class ApplicationFixture:

@@ -539,6 +539,11 @@ from core.model.datasource import DataSource
 from core.model.devicetokens import DeviceToken
 from core.model.discovery_service_registration import DiscoveryServiceRegistration
 from core.model.edition import Edition
+from core.model.editorial_content import (
+    EditorialContent,
+    EditorialContentStatus,
+    EditorialContentType,
+)
 from core.model.hassessioncache import HasSessionCache
 from core.model.identifier import Equivalency, Identifier
 from core.model.integration import (
