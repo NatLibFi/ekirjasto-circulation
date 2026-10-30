@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 from collections.abc import Callable
 from datetime import date, datetime, timedelta
 
@@ -7,6 +8,7 @@ import flask
 from sqlalchemy import desc, nullslast
 from sqlalchemy.orm import Session
 
+from api.admin.controller.base import AdminPermissionsControllerMixin
 from api.admin.model.dashboard_statistics import StatisticsResponse
 from api.controller.circulation_manager import CirculationManagerController
 from api.local_analytics_exporter import LocalAnalyticsExporter
@@ -19,9 +21,18 @@ from core.model import (
     LicensePool,
     Work,
 )
+from core.reports.license_report import LicenseReport
 
 
-class DashboardController(CirculationManagerController):
+class DashboardController(
+    CirculationManagerController, AdminPermissionsControllerMixin
+):
+    def license_report(self) -> str:
+        self.require_system_admin()
+        output = io.StringIO(newline="")
+        LicenseReport(self._db).write(output)
+        return output.getvalue()
+
     def stats(
         self, stats_function: Callable[[Admin, Session], StatisticsResponse]
     ) -> StatisticsResponse:

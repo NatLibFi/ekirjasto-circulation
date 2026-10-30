@@ -20,6 +20,7 @@ from api.opds.base import BaseOpdsModel
 from api.opds.types.language import LanguageCode, LanguageMap
 from api.opds.types.link import BaseLink, CompactCollection
 from api.opds.util import StrModelOrTuple, StrOrModel, StrOrTuple, obj_or_tuple_to_tuple
+from core.util.log import LoggerMixin
 
 
 class Encryption(BaseOpdsModel):
@@ -38,7 +39,7 @@ class Encryption(BaseOpdsModel):
     original_length: PositiveInt | None = Field(None, alias="originalLength")
 
 
-class PresentationProperties(BaseOpdsModel):
+class PresentationProperties(BaseOpdsModel, LoggerMixin):
     """
     Presentation Hints Properties and Metadata Object.
 
@@ -49,6 +50,15 @@ class PresentationProperties(BaseOpdsModel):
     clipped: bool | None = None
     fit: Literal["contain", "cover", "width", "height"] | None = None
     orientation: Literal["auto", "landscape", "portrait"] | None = None
+    layout: Literal["fixed", "reflowable", "scrolled"] | None = None
+
+    @field_validator("layout", mode="before")
+    @classmethod
+    def validate_layout(cls, value):
+        if value in {"fixed", "reflowable", "scrolled"}:
+            return value
+        cls.logger().error("Invalid layout value: %r", value)
+        return None
 
 
 class EPubProperties(BaseOpdsModel):
@@ -137,7 +147,7 @@ class AltIdentifier(BaseOpdsModel):
     scheme: str | None = None
 
 
-class Named(BaseOpdsModel):
+class Named(BaseOpdsModel, LoggerMixin):
     """
     An object with a required translatable name.
     """
@@ -148,6 +158,7 @@ class Named(BaseOpdsModel):
     @field_validator("name", mode="before")
     def validate_name(cls, value):
         if value is None or value == "":
+            cls.logger().info("Name is missing or empty, defaulting to '[Unknown]'")
             return "[Unknown]"
         return value
 
@@ -215,23 +226,64 @@ class Subject(Named):
     links: CompactCollection[Link] = Field(default_factory=CompactCollection)
 
 
-class BelongsTo(BaseOpdsModel):
+class SeriesEntry(BaseOpdsModel):
+    name: str
+    position: str | None = None
+
+
+class BelongsTo(BaseOpdsModel, LoggerMixin):
     """
     https://github.com/readium/webpub-manifest/tree/master/contexts/default#collections--series
     https://github.com/readium/webpub-manifest/blob/b43ec57fd28028316272987ccb10c326f0130280/schema/metadata.schema.json#L138-L147
     """
 
-    series_data: StrModelOrTuple[Contributor] | None = Field(None, alias="series")
+    series_data: tuple[SeriesEntry, ...] | None = Field(None, alias="series")
 
     @cached_property
-    def series(self) -> Sequence[Contributor]:
-        return _named_or_sequence_to_sequence(self.series_data, Contributor)
+    def series(self) -> Sequence[SeriesEntry]:
+        return self.series_data or tuple()
 
-    collection: StrModelOrTuple[Contributor] | None = None
+    collection: str | None = None
 
-    @cached_property
-    def collections(self) -> Sequence[Contributor]:
-        return _named_or_sequence_to_sequence(self.collection, Contributor)
+    @field_validator("collection", mode="before")
+    @classmethod
+    def validate_collection(cls, value):
+        if value is None or isinstance(value, str):
+            return value
+        return None
+
+    @field_validator("series_data", mode="before")
+    @classmethod
+    def validate_series(cls, value):
+        """Drop invalid series entries while normalizing input for Pydantic."""
+        if value is None:
+            return value
+        if not isinstance(value, list):
+            cls.logger().error("Invalid belongsTo series value: %r", value)
+            return None
+
+        valid_series = []
+        for item in value:
+            if not isinstance(item, dict):
+                cls.logger().error("Invalid belongsTo series entry: %r", item)
+                continue
+
+            name = item.get("name")
+            position = item.get("position")
+
+            if isinstance(position, int):
+                position = str(position)
+                cls.logger().info("Coercing series position to string: %r", position)
+
+            if isinstance(name, str) and (
+                position is None
+                or (isinstance(position, str) and position.strip().isdigit())
+            ):
+                valid_series.append({"name": name, "position": position})
+            else:
+                cls.logger().error("Invalid belongsTo series entry: %r", item)
+
+        return valid_series
 
 
 NamedT = TypeVar("NamedT", bound=Named)
@@ -246,7 +298,7 @@ def _named_or_sequence_to_sequence(
     )
 
 
-class Metadata(BaseOpdsModel):
+class Metadata(BaseOpdsModel, LoggerMixin):
     """
     Metadata associated with a publication.
 
@@ -280,6 +332,7 @@ class Metadata(BaseOpdsModel):
         """
         if isinstance(value, str) and value.isdigit() and len(value) == 4:
             year = int(value)
+            cls.logger().info("Coercing year value to datetime: %r", year)
             return datetime(year, 1, 1)
         return value
 
@@ -373,18 +426,79 @@ class Metadata(BaseOpdsModel):
     def subjects(self) -> Sequence[Subject]:
         return _named_or_sequence_to_sequence(self.subject, Subject)
 
-    layout: Literal["fixed", "reflowable", "scrolled"] | None = None
     reading_progression: Literal["ltr", "rtl"] = Field(
         "ltr", alias="readingProgression"
     )
     description: str | None = None
-    duration: PositiveFloat | None = None
+    duration: float | None = None
     number_of_pages: PositiveInt | None = Field(None, alias="numberOfPages")
+
+    @field_validator("duration", mode="before")
+    @classmethod
+    def validate_duration(cls, value):
+        """Validate that the duration is a non-negative float."""
+        if value is None:
+            return None
+        try:
+            duration = float(value)
+        except (TypeError, ValueError):
+            cls.logger().error("Invalid duration value: %r", value)
+            return None
+        if duration < 0:
+            cls.logger().error("Invalid negative duration value: %r", value)
+            return None
+        return duration
+
+    @field_validator("number_of_pages", mode="before")
+    @classmethod
+    def validate_number_of_pages(cls, value):
+        """Normalize the number_of_pages value to an integer."""
+        if isinstance(value, int):
+            return value
+        if isinstance(value, str):
+            try:
+                cls.logger().info("Coercing numberOfPages value to integer: %r", value)
+                return int(value)
+            except ValueError:
+                pass
+        cls.logger().error("Invalid numberOfPages value: %r", value)
+        return None
+
     abridged: bool | None = None
 
-    belongs_to: BelongsTo = Field(default_factory=BelongsTo, alias="belongsTo")
+    @field_validator("abridged", mode="before")
+    @classmethod
+    def validate_abridged(cls, value):
+        """Normalize the abridged value to a boolean."""
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str) and value.lower() in {"true", "false"}:
+            cls.logger().info("Coercing abridged value to boolean: %r", value)
+            return value.lower() == "true"
+        cls.logger().error("Invalid abridged value: %r", value)
+        return None
 
-    presentation: PresentationProperties = Field(default_factory=PresentationProperties)
+    belongs_to: BelongsTo | None = Field(None, alias="belongsTo")
+
+    @field_validator("belongs_to", mode="before")
+    @classmethod
+    def validate_belongs_to(cls, value):
+        """Normalize the belongs_to value to a dictionary."""
+        if isinstance(value, dict):
+            return value
+        cls.logger().error("Invalid belongsTo value: %r", value)
+        return None
+
+    presentation: PresentationProperties | None = Field(None, alias="presentation")
+
+    @field_validator("presentation", mode="before")
+    @classmethod
+    def validate_presentation(cls, value):
+        """Normalize the presentation value to a dictionary."""
+        if isinstance(value, dict):
+            return value
+        cls.logger().error("Invalid presentation value: %r", value)
+        return None
 
     # Ellibs provides an empty list if there's no data available.
     accessibility: Accessibility | list | None = None
@@ -393,6 +507,20 @@ class Metadata(BaseOpdsModel):
     def check_accessibility_type(cls, value):
         if isinstance(value, dict):
             return Accessibility(**value)
+        cls.logger().error("Invalid accessibility value: %r", value)
+        return None
+
+    award: list[str] | str | None = None
+
+    @field_validator("award", mode="before")
+    def check_award_type(cls, value):
+        """Normalize the award value to a list of strings."""
+        if isinstance(value, list) and all(isinstance(item, str) for item in value):
+            return value
+        if isinstance(value, str):
+            cls.logger().info("Coercing award value to list: %r", value)
+            return [value]
+        cls.logger().error("Invalid award value: %r", value)
         return None
 
 

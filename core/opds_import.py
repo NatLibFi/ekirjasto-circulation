@@ -9,7 +9,8 @@ from collections.abc import Callable, Generator, Iterable, Mapping, Sequence
 from datetime import datetime
 from enum import Enum
 from io import BytesIO
-from typing import TYPE_CHECKING, Any, Generic, TypeVar, overload
+from textwrap import indent
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast, overload
 from urllib.parse import urljoin, urlparse
 from xml.etree.ElementTree import Element
 
@@ -1973,12 +1974,25 @@ class OPDSImportMonitor(CollectionMonitor):
             imported_editions, failures = self.import_one_feed(feed)
             total_imported += len(imported_editions)
             total_failures += len(failures)
-            for failure_id, failure_details in failures.items():
-                failure_summary.append(f"ISBN: {failure_id}: {failure_details}")
+            for failure_id, raw_failure_details in failures.items():
+                # Failure details contain CoverageFailure objects whose
+                # exception may be a multi-line traceback. Avoid rendering the
+                # list with repr(), which turns the traceback into one long line.
+                failure_details = cast(object, raw_failure_details)
+                if isinstance(failure_details, (str, bytes)):
+                    failure_items: Iterable[object] = [failure_details]
+                else:
+                    failure_items = cast(Iterable[object], failure_details)
+                details = "\n".join(
+                    str(getattr(failure, "exception", failure))
+                    for failure in failure_items
+                )
+                failure_summary.append(
+                    f"- ISBN: {failure_id}\n" f"  Details:\n{indent(details, '    ')}"
+                )
             self._db.commit()
-        achievements = (
-            "Items imported: %d. Failures: %d.\nFailed IDs and details:\n%s"
-            % (total_imported, total_failures, "\n".join(failure_summary))
-        )
+        achievements = f"Items imported: {total_imported}. Failures: {total_failures}."
+        if failure_summary:
+            achievements += "\nFailed IDs and details:\n" + "\n".join(failure_summary)
 
         return TimestampData(achievements=achievements)

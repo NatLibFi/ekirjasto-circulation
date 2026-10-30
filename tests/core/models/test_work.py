@@ -205,7 +205,7 @@ class TestWork:
             work.license_pools.append(p)
 
         # The author of the Work is the author of its primary work record.
-        assert "Alice Adder, Bob Bitshifter" == work.author
+        assert "Bob Bitshifter, Alice Adder" == work.author
 
         # This Work starts out with a single CoverageRecord reflecting
         # the work done to choose-edition as a primary edition is set. The
@@ -228,7 +228,7 @@ class TestWork:
         work.calculate_presentation(search_index_client=index)
 
         # The author of the Work has not changed.
-        assert "Alice Adder, Bob Bitshifter" == work.author
+        assert "Bob Bitshifter, Alice Adder" == work.author
 
         # one and only one license pool should be un-superceded
         assert pool1.superceded == True
@@ -249,8 +249,8 @@ class TestWork:
         assert "The 2nd Subtitle" == work.subtitle
 
         # The author of the Work is the author of its primary work record.
-        assert "Alice Adder, Bob Bitshifter" == work.author
-        assert "Adder, Alice ; Bitshifter, Bob" == work.sort_author
+        assert "Bob Bitshifter, Alice Adder" == work.author
+        assert "Bitshifter, Bob ; Adder, Alice" == work.sort_author
 
         # The summary has now been chosen.
         assert chosen_summary == work.summary.representation.content.decode("utf-8")
@@ -336,8 +336,8 @@ class TestWork:
         assert "The Staff Title" == work.title
 
         # The author of the Work is still the author of edition2 and was not clobbered.
-        assert "Alice Adder, Bob Bitshifter" == work.author
-        assert "Adder, Alice ; Bitshifter, Bob" == work.sort_author
+        assert "Bob Bitshifter, Alice Adder" == work.author
+        assert "Bitshifter, Bob ; Adder, Alice" == work.sort_author
 
     def test_calculate_presentation_with_no_presentation_edition(
         self, db: DatabaseTransactionFixture
@@ -806,8 +806,8 @@ class TestWork:
         assert "The GItenberg Subtitle" == work.subtitle
 
         # The author of the Work is still the author of its last viable presentation edition.
-        assert "Alice Adder, Bob Bitshifter" == work.author
-        assert "Adder, Alice ; Bitshifter, Bob" == work.sort_author
+        assert "Bob Bitshifter, Alice Adder" == work.author
+        assert "Bitshifter, Bob ; Adder, Alice" == work.sort_author
 
     def test_different_language_means_different_work(
         self, db: DatabaseTransactionFixture
