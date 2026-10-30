@@ -275,11 +275,8 @@ class TestODL2Importer:
         assert "Herman Melville" == moby_dick_author.display_name
         assert "Melville, Herman" == moby_dick_author.sort_name
 
-        assert 2 == len(moby_dick_author.contributions)
-        [
-            moby_dick_primary_author_contribution,
-            moby_dick_author_author_contribution,
-        ] = moby_dick_author.contributions
+        assert 1 == len(moby_dick_author.contributions)
+        [moby_dick_primary_author_contribution] = moby_dick_author.contributions
         assert isinstance(moby_dick_primary_author_contribution, Contribution)
         assert moby_dick_author == moby_dick_primary_author_contribution.contributor
         assert moby_dick_edition == moby_dick_primary_author_contribution.edition
@@ -287,11 +284,6 @@ class TestODL2Importer:
             Contributor.Role.PRIMARY_AUTHOR
             == moby_dick_primary_author_contribution.role
         )
-
-        assert isinstance(moby_dick_author_author_contribution, Contribution)
-        assert moby_dick_author == moby_dick_author_author_contribution.contributor
-        assert moby_dick_edition == moby_dick_author_author_contribution.edition
-        assert Contributor.Role.AUTHOR == moby_dick_author_author_contribution.role
 
         assert "Feedbooks" == moby_dick_edition.data_source.name
         assert (
@@ -619,10 +611,9 @@ class TestODL2Importer:
             "Lindqvist, John Ajvide" == maahan_katketty_edition.primary_author.sort_name
         )
 
-        assert 2 == len(maahan_katketty_author.contributions)
+        assert 1 == len(maahan_katketty_author.contributions)
         [
-            maahan_katketty_primary_author_contribution,
-            maahan_katketty_author_author_contribution,
+            maahan_katketty_primary_author_contribution
         ] = maahan_katketty_author.contributions
         assert isinstance(maahan_katketty_primary_author_contribution, Contribution)
         assert (
@@ -637,19 +628,6 @@ class TestODL2Importer:
             Contributor.Role.PRIMARY_AUTHOR
             == maahan_katketty_primary_author_contribution.role
         )
-        assert isinstance(maahan_katketty_author_author_contribution, Contribution)
-        assert (
-            maahan_katketty_author
-            == maahan_katketty_author_author_contribution.contributor
-        )
-        assert (
-            maahan_katketty_edition
-            == maahan_katketty_author_author_contribution.edition
-        )
-        assert (
-            Contributor.Role.AUTHOR == maahan_katketty_author_author_contribution.role
-        )
-
         assert (
             "Feedbooks" == maahan_katketty_edition.data_source.name
         )  # Based on some default value in tests. It's based on what's set as the collection's datasource in the admin UI.

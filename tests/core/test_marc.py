@@ -334,24 +334,23 @@ class TestAnnotator:
             record, "100", {"a": edition.primary_author.sort_name}, ["1", " "]
         )
 
-        # Edition with two authors and a translator gets three 700 fields and no 100 fields.
+        # Edition with two authors and a translator gets a 100 field for the
+        # primary author and 700 fields for the other contributors.
         edition = db.edition(authors=[author, author2])
         edition.add_contributor(translator, Contributor.Role.TRANSLATOR)
 
         record = Record()
         Annotator.add_contributors(record, edition)
         assert [] != record.get_fields("100")
+        self._check_field(
+            record, "100", {"a": edition.primary_author.sort_name}, ["1", " "]
+        )
         fields = record.get_fields("700")
         for field in fields:
             assert ["1", " "] == field.indicators
-        [author_field, author2_field, translator_field] = sorted(
+        [author2_field, translator_field] = sorted(
             fields, key=lambda x: x.get_subfields("a")[0]
         )
-        assert author == author_field.get_subfields("a")[0]
-        assert author_field.get_subfields("e")[0] in {
-            "Päätekijä",
-            "Primary Author",
-        }
         assert author2 == author2_field.get_subfields("a")[0]
         assert author2_field.get_subfields("e")[0] in {
             "Tekijä",
