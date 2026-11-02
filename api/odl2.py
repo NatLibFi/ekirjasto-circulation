@@ -291,7 +291,7 @@ class ODL2Importer(BaseODLImporter[ODL2Settings], OPDS2Importer):
                         not odl_license.metadata.availability.available
                         or not publication_availability
                     )
-                    else self.get_license_data(
+                    else self.fetch_and_parse_license_data(
                         license_info_document_link,
                         checkout_link,
                         license_identifier,

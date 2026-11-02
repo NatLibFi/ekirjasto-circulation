@@ -2145,7 +2145,7 @@ class TestOdlAndOdl2Importer:
         assert len(http.requests) == 1
         assert http.requests.pop() == "http://example.org/feed"
 
-    def test_get_license_data(self, monkeypatch: pytest.MonkeyPatch):
+    def test_fetch_and_parse_license_data(self, monkeypatch: pytest.MonkeyPatch):
         expires = utc_now() + datetime.timedelta(days=1)
 
         responses: list[tuple[int, str]] = []
@@ -2157,8 +2157,8 @@ class TestOdlAndOdl2Importer:
             resp._content = body.encode("utf-8")
             return resp
 
-        def get_license_data() -> LicenseData | None:
-            return ODLImporter.get_license_data(
+        def fetch_and_parse_license_data() -> LicenseData | None:
+            return ODLImporter.fetch_and_parse_license_data(
                 "license_info_link",
                 "checkout_link",
                 "identifier",
@@ -2169,11 +2169,11 @@ class TestOdlAndOdl2Importer:
 
         # Bad status code returns None
         responses.append((400, "Bad Request"))
-        assert get_license_data() is None
+        assert fetch_and_parse_license_data() is None
 
         # Bad data returns None
         responses.append((200, "{}"))
-        assert get_license_data() is None
+        assert fetch_and_parse_license_data() is None
 
         # Identifier mismatch returns None
         responses.append(
@@ -2184,7 +2184,7 @@ class TestOdlAndOdl2Importer:
                 ).json,
             )
         )
-        assert get_license_data() is None
+        assert fetch_and_parse_license_data() is None
 
         # Expiry mismatch makes license unavailable
         responses.append(
@@ -2200,7 +2200,7 @@ class TestOdlAndOdl2Importer:
                 ).json,
             )
         )
-        license_data = get_license_data()
+        license_data = fetch_and_parse_license_data()
         assert license_data is not None
         assert license_data.status == LicenseStatus.unavailable
 
@@ -2216,7 +2216,7 @@ class TestOdlAndOdl2Importer:
                 ).json,
             )
         )
-        license_data = get_license_data()
+        license_data = fetch_and_parse_license_data()
         assert license_data is not None
         assert license_data.status == LicenseStatus.unavailable
 
@@ -2232,7 +2232,7 @@ class TestOdlAndOdl2Importer:
                 ).json,
             )
         )
-        license_data = get_license_data()
+        license_data = fetch_and_parse_license_data()
         assert license_data is not None
         assert license_data.status == LicenseStatus.available
         assert license_data.checkouts_available == 10
