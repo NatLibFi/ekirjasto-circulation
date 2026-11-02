@@ -24,7 +24,7 @@ from core.integration.settings import (
     ConfigurationFormItemType,
     FormField,
 )
-from core.metadata_layer import FormatData, Metadata, TimestampData
+from core.metadata_layer import FormatData, LicenseData, Metadata, TimestampData
 from core.model import Collection, Edition, LicensePool, Loan, RightsStatus
 from core.model.configuration import ExternalIntegration
 from core.model.constants import MediaTypes
@@ -321,6 +321,7 @@ class ODL2Importer(BaseODLImporter[ODL2Settings], OPDS2Importer):
                         expires,
                         concurrency,
                         self.http_get,
+                        metadata=license_metadata,
                     )
                 )
 
