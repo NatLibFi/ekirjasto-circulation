@@ -30,7 +30,7 @@ x-cm-build: &cm-build
   context: .
   dockerfile: docker/Dockerfile
   args:
-    - BASE_IMAGE=${BUILD_BASE_IMAGE-ghcr.io/natlibfi/ekirjasto-circ-baseimage:latest}
+    - BASE_IMAGE=${BUILD_BASE_IMAGE:-ghcr.io/natlibfi/ekirjasto-circ-baseimage:latest}
   cache_from:
     - ${BUILD_CACHE_FROM-ghcr.io/natlibfi/ekirjasto-circ-webapp:main}
 
