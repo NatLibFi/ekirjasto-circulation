@@ -691,7 +691,7 @@ class OPDSAcquisitionFeed(BaseOPDSFeed):
             if active_license_pool:
                 identifier = active_license_pool.identifier
                 active_edition = active_license_pool.presentation_edition
-            elif work.presentation_edition:
+            elif work and work.presentation_edition:
                 active_edition = work.presentation_edition
                 if active_edition is not None:
                     identifier = active_edition.primary_identifier
