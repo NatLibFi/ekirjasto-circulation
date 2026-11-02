@@ -765,7 +765,7 @@ class BaseODLAPI(
                 break
             if not license.status_url:
                 continue
-            data = BaseODLImporter.get_license_data(
+            data = BaseODLImporter.fetch_and_parse_license_data(
                 license.status_url,
                 license.checkout_url,
                 license.identifier,
@@ -1031,7 +1031,7 @@ class BaseODLImporter(BaseOPDSImporter[SettingsType], ABC):
         )
 
     @classmethod
-    def get_license_data(
+    def fetch_and_parse_license_data(
         cls,
         license_info_link: str,
         checkout_link: str | None,
@@ -1206,7 +1206,7 @@ class ODLImporter(OPDSImporter, BaseODLImporter[ODLSettings]):
             if not odl_status_link:
                 parsed_license = None
             else:
-                parsed_license = cls.get_license_data(
+                parsed_license = cls.fetch_and_parse_license_data(
                     odl_status_link,
                     checkout_link,
                     identifier,

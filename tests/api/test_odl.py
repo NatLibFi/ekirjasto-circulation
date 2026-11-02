@@ -812,15 +812,17 @@ class TestODLAPI:
             content="hot garbage",
         )
 
-        with pytest.raises(BadResponseException):
-            opds2_with_odl_api_fixture.api_checkout()
+        with opds2_with_odl_api_fixture.mock_http.patch():
+            with pytest.raises(BadResponseException):
+                opds2_with_odl_api_fixture.api_checkout()
 
         # Test the case where we just get an unknown bad response.
         opds2_with_odl_api_fixture.mock_http.queue_response(
             500, "text/plain", content="halt and catch fire 🔥"
         )
-        with pytest.raises(BadResponseException):
-            opds2_with_odl_api_fixture.api_checkout()
+        with opds2_with_odl_api_fixture.mock_http.patch():
+            with pytest.raises(BadResponseException):
+                opds2_with_odl_api_fixture.api_checkout()
 
     def test_checkout_no_licenses(
         self,
