@@ -395,17 +395,6 @@ class TestODL2Importer:
         api_odl_files_fixture: ODLAPIFilesFixture,
     ) -> None:
         """Ensure that available and unavailable licenses' data are saved correctly."""
-        unavailable_license_info = LicenseInfoHelper(
-            license=LicenseHelper(
-                identifier="urn:uuid:eexx11",
-                concurrency=1,
-                checkouts=26,
-            ),
-            available=0,
-            left=0,
-            status="unavailable",
-        )
-        odl_mock_get.add(unavailable_license_info)
         available_license_info = LicenseInfoHelper(
             license=LicenseHelper(
                 identifier="urn:uuid:eexx22",
@@ -519,9 +508,7 @@ class TestODL2Importer:
         assert loan.license == available_license
         assert loan.end is None
 
-        # First mock the unavailable license info fetch.
-        odl_mock_get.add(unavailable_license_info)
-        # And then the available license info fetch with changes.
+        # Mock the available license info fetch with changes.
         odl_mock_get.add(
             LicenseInfoHelper(
                 license=LicenseHelper(
@@ -1010,13 +997,6 @@ class TestODL2Importer:
 
         odl_mock_get.add(license_status_reply(MOBY_DICK_LICENSE_ID))
         odl_mock_get.add(license_status_reply(HUCK_FINN_LICENSE_ID))
-        odl_mock_get.add(
-            license_status_reply(
-                TEST_BOOK_LICENSE_ID,
-                status="unavailable",
-                available=0,
-            )
-        )
 
         (
             imported_editions,
@@ -1108,20 +1088,6 @@ class TestODL2Importer:
         }
 
         # Mock responses from license status server
-        odl_mock_get.add(
-            license_status_reply(
-                MOBY_DICK_LICENSE_ID,
-                status="unavailable",
-                available=0,
-            )
-        )
-        odl_mock_get.add(
-            license_status_reply(
-                HUCK_FINN_LICENSE_ID,
-                status="unavailable",
-                available=0,
-            )
-        )
         odl_mock_get.add(license_status_reply(TEST_BOOK_LICENSE_ID))
 
         # Harvest the feed again

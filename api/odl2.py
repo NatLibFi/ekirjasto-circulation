@@ -305,10 +305,34 @@ class ODL2Importer(BaseODLImporter[ODL2Settings], OPDS2Importer):
                 parsed_license = (
                     LicenseData(
                         identifier=license_identifier,
-                        checkout_url=None,
+                        checkout_url=checkout_link,
                         status_url=license_info_document_link,
                         status=LicenseStatus.unavailable,
                         checkouts_available=0,
+                        checkouts_left=0,
+                        expires=expires,
+                        terms_concurrency=concurrency,
+                        total_checkouts=total_checkouts,
+                        created=created,
+                        price_currency=(str(price.currency) if price else None),
+                        price_value=(price.value if price else None),
+                        order_name=(order.name if order else None),
+                        order_identifier=(order.identifier if order else None),
+                        order_href=(order.href if order else None),
+                        availability_state=(
+                            availability.state if availability else None
+                        ),
+                        availability_status=(
+                            availability.status if availability else None
+                        ),
+                        availability_since=(
+                            availability.since
+                            if availability and availability.since
+                            else None
+                        ),
+                        availability_reason=(
+                            availability.reason if availability else None
+                        ),
                     )
                     if (
                         not odl_license.metadata.availability.available
