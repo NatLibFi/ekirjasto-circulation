@@ -88,7 +88,10 @@ debug_echo() {
 
 # Run a docker-compose command
 compose_cmd() {
-  args=(docker compose -f docker-compose.yml -f docker/ci/test_migrations.yml --progress quiet)
+  local args=(docker compose -f docker-compose.yml -f docker/ci/test_migrations.yml --progress quiet)
+  if [[ "${CI_TEST_IMAGES:-false}" == "true" ]]; then
+    args+=(-f docker/ci/images.yml)
+  fi
   debug_echo "++" "${args[@]}" "$@"
   "${args[@]}" "$@"
 }
@@ -100,7 +103,12 @@ run_in_container()
   local CONTAINER_NAME=$1
   shift 1
   debug_echo "+" "$@"
-  compose_cmd run --build --rm --no-deps "${CONTAINER_NAME}" /bin/bash -c "source env/bin/activate && $*"
+  local build_args=(--build)
+  if [[ "${CI_TEST_IMAGES:-false}" == "true" ]]; then
+    # The CI override removes build definitions and supplies tested images.
+    build_args=()
+  fi
+  compose_cmd run "${build_args[@]}" --rm --no-deps "${CONTAINER_NAME}" /bin/bash -c "source env/bin/activate && $*"
 }
 
 # Cleanup any running containers

@@ -1,0 +1,11 @@
+# Use already-built images in CI. Never rebuild them during runtime tests.
+services:
+  webapp:
+    build: !reset null
+    image: ${CI_WEBAPP_IMAGE:-circulation-ci-webapp:local}
+  scripts:
+    build: !reset null
+    image: circulation-ci-scripts:local
+  os:
+    build: !reset null
+    image: circulation-ci-opensearch:local
