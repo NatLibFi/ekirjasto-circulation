@@ -124,7 +124,8 @@ All other images (`webapp`, `scripts`, `exec`) are built `FROM` a shared base im
 Poetry, the system libraries needed to compile the Python wheels (lxml, xmlsec, psycopg2, uwsgi), and a pre-installed
 copy of the `main` + `pg` dependency groups. Building it is slow, so in CI it is built on a schedule and published to
 the GitHub Container Registry as `ghcr.io/natlibfi/ekirjasto-circ-baseimage:latest`. The app image builds normally pull
-that published image.
+that published image. CI builds the base and runtime images together using cached layers, with a weekly OS package
+refresh. Only scheduled or manual builds on the default branch update `latest`.
 
 You only need to build the base image locally when you have changed dependencies (`pyproject.toml` / `poetry.lock`) and
 want those changes baked into the base layer rather than re-installed on top of a stale base. Build it from the root of
@@ -146,6 +147,26 @@ e.g. `--tag circ-baseimage:local` then `export BUILD_BASE_IMAGE=circ-baseimage:l
 > Note: even when an image is built on top of a stale base image, the final image build re-runs
 > `poetry install --only main,pg` against the current `poetry.lock`, so the resulting image is always up to date. Building
 > the base image fresh is purely an optimization that moves that work into the cached base layer.
+
+### CI and release builds
+
+CI generates version metadata, then builds and tests all runtime targets on native AMD64 and ARM64 runners with
+shared build caches. Migration tests reuse the tested webapp. Public tags reference the tested image digests;
+publication does not rebuild images.
+
+Creating a release branch explicitly invokes CI. A final `vX.Y.Z` tag builds and tests the release version before
+publishing version tags and `latest`.
+
+To build all runtime targets locally using your base image:
+
+```sh
+poetry run python docker/ci/write_version.py
+BASE_IMAGE=circ-baseimage:local docker buildx bake --file docker/docker-bake.hcl --load
+```
+
+This creates `circulation-ci-{webapp,scripts,exec}:local`. Container tests use `docker/ci/images.yml` and require
+`circulation-ci-opensearch:local`, built from `docker/Dockerfile.ci`. Set `CI_TEST_IMAGES=true` to reuse the built
+webapp in migration tests.
 
 ### `webapp` and `scripts` images
 

@@ -6,8 +6,11 @@ from collections import defaultdict
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
+    ARRAY,
+    Boolean,
     Column,
     Date,
+    DateTime,
     Enum,
     Float,
     ForeignKey,
@@ -59,6 +62,9 @@ class Edition(Base, EditionConstants):
     data_source: Mapped[DataSource] = relationship(
         "DataSource", back_populates="editions"
     )
+
+    # The source modification timestamp from the OPDS publication metadata.
+    data_source_modified = Column(DateTime(timezone=True), nullable=True)
 
     MAX_THUMBNAIL_HEIGHT = 300
     MAX_THUMBNAIL_WIDTH = 200
@@ -142,6 +148,11 @@ class Edition(Base, EditionConstants):
     # The playtime duration of an audiobook (seconds)
     # https://github.com/readium/webpub-manifest/tree/master/contexts/default#duration-and-number-of-pages
     duration = Column(Float, nullable=True)
+    abridged = Column(Boolean, nullable=True)
+    number_of_pages = Column(Integer, nullable=True)
+    layout = Column(Unicode, nullable=True)
+    collection = Column(Unicode, nullable=True)
+    awards = Column(ARRAY(Unicode), nullable=True)
 
     cover_id = Column(
         Integer,
@@ -188,6 +199,14 @@ class Edition(Base, EditionConstants):
         return {x.contributor for x in self.contributions}
 
     @property
+    def primary_author(self):
+        """The contributor explicitly marked as the primary author, if any."""
+        for contribution in self.contributions:
+            if contribution.role == Contributor.Role.PRIMARY_AUTHOR:
+                return contribution.contributor.sort_name
+        return None
+
+    @property
     def author_contributors(self):
         """All distinct 'author'-type contributors, with the primary author
         first, other authors sorted by sort name.
@@ -203,7 +222,6 @@ class Edition(Base, EditionConstants):
         etc. However it happens, your name only shows up once on the
         front of the book.
         """
-        seen_authors = set()
         primary_author = None
         other_authors = []
         acceptable_substitutes = defaultdict(list)
@@ -784,11 +802,15 @@ class Edition(Base, EditionConstants):
             display_names.append([family_name, display_name])
             sort_names.append(author.sort_name)
         if display_names:
-            author = ", ".join([x[1] for x in sorted(display_names)])
+            primary_author_display_name = display_names[0][1]
+            other_display_names = sorted(x[1] for x in display_names[1:])
+            # The primary author's display name comes first, followed by other authors in alphabetical order.
+            author = ", ".join([primary_author_display_name, *other_display_names])
         else:
             author = self.UNKNOWN_AUTHOR
         if sort_names:
-            sort_author = " ; ".join(sorted(sort_names))
+            # The primary author's sort name comes first, followed by other authors in alphabetical order.
+            sort_author = " ; ".join([sort_names[0], *sorted(sort_names[1:])])
         else:
             sort_author = self.UNKNOWN_AUTHOR
 

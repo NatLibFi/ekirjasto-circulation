@@ -35,6 +35,7 @@ from core.model import (
     Subject,
     create,
 )
+from core.model.licensing import LicensePoolStatus, LicenseType
 from core.util.datetime_helpers import datetime_utc
 from tests.core.mock import (
     AlwaysSuccessfulCoverageProvider,
@@ -78,8 +79,24 @@ class TestWorkController:
         work_fixture.admin.add_role(AdminRole.SYSTEM_ADMIN)
         [pool] = work_fixture.english_1.license_pools
         license_ = work_fixture.ctrl.db.license(
-            pool, identifier="license-1", checkouts_available=2
+            pool,
+            identifier="license-1",
+            checkouts_left=5,
+            checkouts_available=2,
         )
+        pool.status = LicensePoolStatus.active
+        license_.license_type = LicenseType.loan_limited
+        license_.total_checkouts = 26
+        license_.created = datetime_utc(2025, 7, 3, 8, 22, 26)
+        license_.price_currency = "USD"
+        license_.price_value = 12.75
+        license_.order_name = "Order name"
+        license_.order_identifier = "order-identifier"
+        license_.order_href = "https://example.com/order"
+        license_.availability_state = "available"
+        license_.availability_status = "available"
+        license_.availability_since = datetime_utc(2025, 7, 3, 8, 22, 26)
+        license_.availability_reason = None
         patron = work_fixture.ctrl.db.patron()
         loan, _ = license_.loan_to(
             patron,
@@ -105,7 +122,21 @@ class TestWorkController:
         }
         [pool_data] = response["license_pools"]
         assert pool_data["pool_id"] == pool.id
+        assert pool_data["licensepool_status"] == "active"
         assert pool_data["licenses"][0]["identifier"] == "license-1"
+        license_data = pool_data["licenses"][0]
+        assert license_data["total_checkouts"] == 26
+        assert license_data["created"] == license_.created.isoformat()
+        assert license_data["price"] == {"currency": "USD", "value": 12.75}
+        assert license_data["order"] == {
+            "name": "Order name",
+            "identifier": "order-identifier",
+            "href": "https://example.com/order",
+        }
+        assert license_data["license type"] == "loan_limited"
+        assert license_data["feed status"] == "available"
+        assert license_data["exhausted date"] == license_.availability_since.isoformat()
+        assert license_data["reason"] is None
         assert pool_data["licenses"][0]["loans"] == [
             {
                 "id": loan.id,

@@ -18,6 +18,7 @@ FROM phusion/baseimage:noble-1.0.2 AS baseimage
 RUN userdel -r ubuntu
 
 # Make sure base system is up to date
+ARG OS_REFRESH=local
 RUN apt-get update && \
     apt-get upgrade -y --no-install-recommends -o Dpkg::Options::="--force-confold" && \
     /bd_build/cleanup.sh

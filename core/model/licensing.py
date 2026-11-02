@@ -10,7 +10,15 @@ from typing import TYPE_CHECKING, Literal, overload
 
 from sqlalchemy import Boolean, Column, DateTime
 from sqlalchemy import Enum as AlchemyEnum
-from sqlalchemy import ForeignKey, Index, Integer, String, Unicode, UniqueConstraint
+from sqlalchemy import (
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Unicode,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, relationship
 from sqlalchemy.orm.session import Session
 from sqlalchemy.sql.expression import or_
@@ -50,6 +58,13 @@ class LicenseStatus(PythonEnum):
     @classmethod
     def get(cls, value: str):
         return cls.__members__.get(value.lower(), cls.unavailable)
+
+
+class LicenseType(PythonEnum):
+    perpetual = "perpetual"
+    time_limited = "time_limited"
+    loan_limited = "loan_limited"
+    time_and_loan_limited = "time_and_loan_limited"
 
 
 class LicenseFunctions:
@@ -113,6 +128,17 @@ class LicenseFunctions:
             return self.checkouts_available
 
 
+def license_type_for(license_: LicenseFunctions) -> LicenseType:
+    """Return the persisted classification for a license's limits."""
+    if license_.is_time_limited and license_.is_loan_limited:
+        return LicenseType.time_and_loan_limited
+    if license_.is_time_limited:
+        return LicenseType.time_limited
+    if license_.is_loan_limited:
+        return LicenseType.loan_limited
+    return LicenseType.perpetual
+
+
 class License(Base, LicenseFunctions):
     """A single license for a work from a given source.
 
@@ -145,6 +171,22 @@ class License(Base, LicenseFunctions):
 
     # License info document terms.concurrency field
     terms_concurrency = Column(Integer)
+
+    license_type = Column(AlchemyEnum(LicenseType), nullable=True)
+
+    # Values from the OPDS/ODL publication license metadata.
+    # How many checkouts were purchased.
+    total_checkouts = Column(Integer)
+    created = Column(DateTime(timezone=True))
+    price_currency = Column(Unicode)
+    price_value = Column(Float)
+    order_name = Column(Unicode)
+    order_identifier = Column(Unicode)
+    order_href = Column(Unicode)
+    availability_state = Column(Unicode)
+    availability_status = Column(Unicode)
+    availability_since = Column(DateTime(timezone=True))
+    availability_reason = Column(Unicode)
 
     # For tracking missing licenses in import
     last_checked = Column(DateTime(timezone=True))
@@ -214,6 +256,12 @@ class License(Base, LicenseFunctions):
         return f"License id: {self.identifier}, checkouts left: {self.checkouts_left}, available: {self.checkouts_available}, is inactive: {self.is_inactive}, can be borrowed: {self.is_available_for_borrowing}"
 
 
+class LicensePoolStatus(PythonEnum):
+    active = "active"
+    exhausted = "exhausted"
+    no_licenses = "no_licenses"
+
+
 class LicensePool(Base):
     """A pool of undifferentiated licenses for a work from a given source."""
 
@@ -278,6 +326,11 @@ class LicensePool(Base):
     # The date this LicensePool was first created in our db
     # (the date we first discovered that ​we had that book in ​our collection).
     availability_time = Column(DateTime(timezone=True), index=True)
+
+    status = Column(AlchemyEnum(LicensePoolStatus), index=True, nullable=True)
+    # If the LicensePool has no available licenses, this is the date it became exhausted.
+    # It is set to the most recent date among the unavailable licenses in the pool.
+    exhausted_date = Column(DateTime(timezone=True), nullable=True)
 
     # A LicensePool may be superceded by some other LicensePool
     # associated with the same Work. This may happen if it's an
