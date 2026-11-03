@@ -10,6 +10,7 @@ from api.admin.dashboard_stats import generate_statistics
 from api.admin.model.dashboard_statistics import StatisticsResponse
 from api.admin.templates import admin_sign_in_again as sign_in_again_template
 from api.app import app
+from api.controller.editorial_content import EditorialContentController
 from api.controller.static_file import StaticFileController
 from api.ekirjasto_consortium import EkirjastoConsortiumMonitor
 from api.routes import allows_library, has_library, library_route
@@ -646,12 +647,60 @@ def sitewide_setting(key):
     )
 
 
-@app.route("/admin/announcements", methods=["GET", "POST"])
+@library_route("/admin/content", methods=["GET", "POST"])
+@has_library
 @returns_json_or_response_or_problem_detail
 @requires_admin
 @requires_csrf_token
-def announcements_for_all():
-    return app.manager.admin_announcement_service.process_many()
+def admin_editorial_content():
+    """List or create editorial content for a library."""
+    controller: EditorialContentController = (
+        app.manager.admin_editorial_content_controller
+    )
+    if request.method == "GET":
+        return controller.admin_list()
+    return controller.admin_create()
+
+
+@library_route("/admin/content/<identifier>", methods=["GET", "PUT", "DELETE"])
+@has_library
+@returns_json_or_response_or_problem_detail
+@requires_admin
+@requires_csrf_token
+def admin_editorial_content_item(identifier):
+    """Read, update, or delete an editorial-content group."""
+    controller: EditorialContentController = (
+        app.manager.admin_editorial_content_controller
+    )
+    if request.method == "GET":
+        return controller.admin_group(identifier)
+    if request.method == "DELETE":
+        return controller.admin_delete(identifier)
+    return controller.admin_update(identifier)
+
+
+@library_route("/admin/content/<identifier>/publish", methods=["POST"])
+@has_library
+@returns_json_or_response_or_problem_detail
+@requires_admin
+@requires_csrf_token
+def admin_publish_editorial_content(identifier):
+    """Publish an editorial-content item."""
+    return app.manager.admin_editorial_content_controller.admin_publish(
+        identifier, True
+    )
+
+
+@library_route("/admin/content/<identifier>/unpublish", methods=["POST"])
+@has_library
+@returns_json_or_response_or_problem_detail
+@requires_admin
+@requires_csrf_token
+def admin_unpublish_editorial_content(identifier):
+    """Unpublish an editorial-content item."""
+    return app.manager.admin_editorial_content_controller.admin_publish(
+        identifier, False
+    )
 
 
 @app.route("/admin/discovery_service_library_registrations", methods=["GET", "POST"])

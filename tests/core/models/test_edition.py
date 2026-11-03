@@ -77,7 +77,7 @@ class TestEdition:
         [alice], ignore = Contributor.lookup(db.session, "Adder, Alice")
         edition.add_contributor(alice, Contributor.Role.PRIMARY_AUTHOR)
 
-        assert "Adder, Alice" == edition.primary_author
+        assert "Adder, Alice" == edition.primary_author.sort_name
 
         edition = db.edition(authors=[])
         [bob], ignore = Contributor.lookup(db.session, "Bitshifter, Bob")

@@ -122,7 +122,7 @@ class AdminRouteFixture:
         mock_function = getattr(self.routes, function_name)
 
         # Call it in the context of the mock app.
-        with self.controller_fixture.app.test_request_context():
+        with self.controller_fixture.app.test_request_context(url, method=method):
             return mock_function(**kwargs)
 
     def assert_request_calls(self, url, method, *args, **kwargs):
@@ -264,6 +264,7 @@ class TestAdminSignIn:
 
     @pytest.fixture(scope="function")
     def fixture(self, admin_route_fixture: AdminRouteFixture) -> AdminRouteFixture:
+        """Configure the shared admin-route fixture for editorial content."""
         admin_route_fixture.set_controller_name(self.CONTROLLER_NAME)
         return admin_route_fixture
 
@@ -430,6 +431,55 @@ class TestAdminFeed:
     def test_genres(self, fixture: AdminRouteFixture):
         url = "/admin/genres"
         fixture.assert_authenticated_request_calls(url, fixture.controller.genres)  # type: ignore
+
+
+class TestAdminEditorialContent:
+    CONTROLLER_NAME = "admin_editorial_content_controller"
+
+    @pytest.fixture(scope="function")
+    def fixture(self, admin_route_fixture: AdminRouteFixture) -> AdminRouteFixture:
+        admin_route_fixture.set_controller_name(self.CONTROLLER_NAME)
+        return admin_route_fixture
+
+    def test_list_and_create(self, fixture: AdminRouteFixture):
+        """Route editorial-content listing and creation requests."""
+        url = "/admin/content"
+        fixture.assert_authenticated_request_calls(url, fixture.controller.admin_list)  # type: ignore
+        fixture.assert_authenticated_request_calls(
+            url, fixture.controller.admin_create, http_method="POST"  # type: ignore
+        )
+        fixture.assert_supported_methods(url, "GET", "POST")
+
+    def test_item_operations(self, fixture: AdminRouteFixture):
+        """Route editorial-content item operations."""
+        url = "/admin/content/<identifier>"
+        fixture.assert_authenticated_request_calls(
+            url, fixture.controller.admin_group, "<identifier>"  # type: ignore
+        )
+        fixture.assert_authenticated_request_calls(
+            url, fixture.controller.admin_update, "<identifier>", http_method="PUT"  # type: ignore
+        )
+        fixture.assert_authenticated_request_calls(
+            url, fixture.controller.admin_delete, "<identifier>", http_method="DELETE"  # type: ignore
+        )
+        fixture.assert_supported_methods(url, "GET", "PUT", "DELETE")
+
+    def test_publish_operations(self, fixture: AdminRouteFixture):
+        """Route editorial-content publication operations."""
+        for suffix, method in (
+            ("publish", fixture.controller.admin_publish),  # type: ignore
+            ("unpublish", fixture.controller.admin_publish),  # type: ignore
+        ):
+            fixture.assert_authenticated_request_calls(
+                f"/admin/content/<identifier>/{suffix}",
+                method,
+                "<identifier>",
+                suffix == "publish",
+                http_method="POST",
+            )
+            fixture.assert_supported_methods(
+                f"/admin/content/<identifier>/{suffix}", "POST"
+            )
 
 
 class TestAdminDashboard:

@@ -203,7 +203,7 @@ class Edition(Base, EditionConstants):
         """The contributor explicitly marked as the primary author, if any."""
         for contribution in self.contributions:
             if contribution.role == Contributor.Role.PRIMARY_AUTHOR:
-                return contribution.contributor.sort_name
+                return contribution.contributor
         return None
 
     @property

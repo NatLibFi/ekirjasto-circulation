@@ -187,6 +187,12 @@ class SignInController(AdminController):
         if ekirjasto_role == "librarian":
             return [(AdminRole.LIBRARIAN, library) for library in libraries]
 
+        if ekirjasto_role == "content-writer":
+            return [(AdminRole.CONTENT_WRITER, library) for library in libraries]
+
+        if ekirjasto_role == "content-writer-all":
+            return [(AdminRole.CONTENT_WRITER_ALL, None)]
+
         # other possible values are "sysadmin", "registrant" and "customer",
         # these are not allowed as circulation admins
         return []

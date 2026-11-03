@@ -114,13 +114,6 @@ class LibrarySettings(BaseSettings):
             type=ConfigurationFormItemType.IMAGE,
             level=Level.ALL_ACCESS,
         ),
-        "announcements": LibraryConfFormItem(
-            label="Scheduled announcements",
-            description="Announcements will be displayed to authenticated patrons.",
-            type=ConfigurationFormItemType.ANNOUNCEMENTS,
-            category="Announcements",
-            level=Level.ALL_ACCESS,
-        ),
     }
 
     website: HttpUrl = FormField(

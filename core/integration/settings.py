@@ -180,7 +180,6 @@ class ConfigurationFormItemType(Enum):
     LIST = "list"
     MENU = "menu"
     NUMBER = "number"
-    ANNOUNCEMENTS = "announcements"
     COLOR = "color-picker"
     IMAGE = "image"
 

@@ -31,7 +31,6 @@ from core.facets import FacetConstants
 from core.integration.base import integration_settings_load, integration_settings_update
 from core.integration.goals import Goals
 from core.model import Base, get_one
-from core.model.announcements import Announcement
 from core.model.customlist import customlist_sharedlibrary
 from core.model.edition import Edition
 from core.model.hassessioncache import HasSessionCache
@@ -50,6 +49,7 @@ if TYPE_CHECKING:
         ExternalIntegration,
         Patron,
     )
+    from core.model.editorial_content import EditorialContent
 
 
 class Library(Base, HasSessionCache):
@@ -139,8 +139,8 @@ class Library(Base, HasSessionCache):
         "CirculationEvent", backref="library", cascade="all, delete-orphan"
     )
 
-    library_announcements: Mapped[list[Announcement]] = relationship(
-        "Announcement",
+    editorial_content: Mapped[list[EditorialContent]] = relationship(
+        "EditorialContent",
         back_populates="library",
         cascade="all, delete-orphan",
     )
