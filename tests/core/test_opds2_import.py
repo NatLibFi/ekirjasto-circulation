@@ -183,7 +183,7 @@ class TestOPDS2Importer(OPDS2Test):
         assert moby_dick_edition.duration == 100.2
         assert moby_dick_edition.awards == ["An award", "Another award"]
 
-        assert moby_dick_edition.primary_author == "Melville, Herman"
+        assert moby_dick_edition.primary_author.sort_name == "Melville, Herman"
 
         assert 1 == len(moby_dick_edition.author_contributors)
         [moby_dick_author] = moby_dick_edition.author_contributors
@@ -191,19 +191,17 @@ class TestOPDS2Importer(OPDS2Test):
         assert "Herman Melville" == moby_dick_author.display_name
         assert "Melville, Herman" == moby_dick_author.sort_name
 
-        assert 2 == len(moby_dick_author.contributions)
+        assert 1 == len(moby_dick_author.contributions)
         [
             moby_dick_author_primary_contribution,
-            moby_dick_author_contribution,
         ] = moby_dick_author.contributions
-        assert isinstance(moby_dick_author_contribution, Contribution)
-        assert moby_dick_author == moby_dick_author_contribution.contributor
-        assert moby_dick_edition == moby_dick_author_contribution.edition
+        assert isinstance(moby_dick_author_primary_contribution, Contribution)
+        assert moby_dick_author == moby_dick_author_primary_contribution.contributor
+        assert moby_dick_edition == moby_dick_author_primary_contribution.edition
         assert (
             Contributor.Role.PRIMARY_AUTHOR
             == moby_dick_author_primary_contribution.role
         )
-        assert Contributor.Role.AUTHOR == moby_dick_author_contribution.role
 
         assert data.data_source == moby_dick_edition.data_source
         assert (
@@ -235,7 +233,7 @@ class TestOPDS2Importer(OPDS2Test):
         assert EditionConstants.BOOK_MEDIUM == huckleberry_finn_edition.medium
         # Two authors of which Mark Twain is the primary author and comes first.
         assert "Mark Twain, Samuel Langhorne Clemens" == huckleberry_finn_edition.author
-        assert "Twain, Mark" == huckleberry_finn_edition.primary_author
+        assert "Twain, Mark" == huckleberry_finn_edition.primary_author.sort_name
         # And authors are contributors
         assert 2 == len(huckleberry_finn_edition.author_contributors)
 
@@ -245,11 +243,10 @@ class TestOPDS2Importer(OPDS2Test):
         # The first author is Mark Twain who is also the primary author
         assert "Mark Twain" == huckleberry_finn_authors[0].display_name
         assert "Twain, Mark" == huckleberry_finn_authors[0].sort_name
-        assert 2 == len(huckleberry_finn_authors[0].contributions)
-        [
-            huckleberry_finn_author_primary_contribution,
-            huckleberry_finn_author_contribution,
-        ] = huckleberry_finn_authors[0].contributions
+        assert 1 == len(huckleberry_finn_authors[0].contributions)
+        [huckleberry_finn_author_primary_contribution] = huckleberry_finn_authors[
+            0
+        ].contributions
         assert isinstance(huckleberry_finn_author_primary_contribution, Contribution)
         assert (
             huckleberry_finn_authors[0]
@@ -263,7 +260,6 @@ class TestOPDS2Importer(OPDS2Test):
             Contributor.Role.PRIMARY_AUTHOR
             == huckleberry_finn_author_primary_contribution.role
         )
-        assert Contributor.Role.AUTHOR == huckleberry_finn_author_contribution.role
 
         assert isinstance(huckleberry_finn_authors[1], Contributor)
         assert "Samuel Langhorne Clemens" == huckleberry_finn_authors[1].display_name
@@ -651,20 +647,18 @@ class TestOPDS2Importer(OPDS2Test):
             importer._extract_contributors(
                 primary_author, Contributor.Role.PRIMARY_AUTHOR
             )
-            + importer._extract_contributors(authors, Contributor.Role.AUTHOR)
+            + importer._extract_contributors(authors[1:], Contributor.Role.AUTHOR)
             + importer._extract_contributors(translators, Contributor.Role.TRANSLATOR)
         )
 
         assert [contributor.display_name for contributor in contributors] == [
-            "First Author",
             "First Author",
             "Second Author",
             "The Translator",
         ]
         assert contributors[0].roles == [Contributor.Role.PRIMARY_AUTHOR]
         assert contributors[1].roles == [Contributor.Role.AUTHOR]
-        assert contributors[2].roles == [Contributor.Role.AUTHOR]
-        assert contributors[3].roles == [Contributor.Role.TRANSLATOR]
+        assert contributors[2].roles == [Contributor.Role.TRANSLATOR]
 
     def test_extract_next_links(
         self,

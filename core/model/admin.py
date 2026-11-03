@@ -154,7 +154,9 @@ class Admin(Base, HasSessionCache):
         role, ignore = AdminRole.by_cache_key(
             _db, (self.id, None, AdminRole.SITEWIDE_LIBRARIAN), lookup_hook
         )
-        if role:
+        if role or get_one(
+            _db, AdminRole, admin=self, role=AdminRole.CONTENT_WRITER_ALL
+        ):
             return True
         return False
 
@@ -193,6 +195,15 @@ class Admin(Base, HasSessionCache):
         if self.is_sitewide_librarian():
             return True
 
+        if get_one(
+            _db,
+            AdminRole,
+            admin=self,
+            library=library,
+            role=AdminRole.CONTENT_WRITER,
+        ):
+            return True
+
         # If not, they might be a librarian of _this_ library.
         def lookup_hook():
             return (
@@ -212,6 +223,22 @@ class Admin(Base, HasSessionCache):
         if role:
             return True
         return False
+
+    def has_content_writer_role(self, library):
+        """Whether this admin may create or modify editorial content."""
+        if self.is_library_manager(library):
+            return True
+        _db = Session.object_session(self)
+        return bool(
+            get_one(_db, AdminRole, admin=self, role=AdminRole.CONTENT_WRITER_ALL)
+            or get_one(
+                _db,
+                AdminRole,
+                admin=self,
+                library=library,
+                role=AdminRole.CONTENT_WRITER,
+            )
+        )
 
     def can_see_collection(self, collection):
         if self.is_system_admin():
@@ -298,6 +325,8 @@ class AdminRole(Base, HasSessionCache):
     LIBRARY_MANAGER = "manager"
     SITEWIDE_LIBRARIAN = "librarian-all"
     LIBRARIAN = "librarian"
+    CONTENT_WRITER_ALL = "content-writer-all"
+    CONTENT_WRITER = "content-writer"
 
     ROLES = [
         SYSTEM_ADMIN,
@@ -305,6 +334,8 @@ class AdminRole(Base, HasSessionCache):
         LIBRARY_MANAGER,
         SITEWIDE_LIBRARIAN,
         LIBRARIAN,
+        CONTENT_WRITER_ALL,
+        CONTENT_WRITER,
     ]
     LESS_THAN = -1
     EQUAL = 0
@@ -330,8 +361,15 @@ class AdminRole(Base, HasSessionCache):
         if not self.role or not other.role:
             raise ValueError("Cannot compare role to None")
 
-        self_ix = self.ROLES.index(self.role)
-        other_ix = self.ROLES.index(other.role)
+        # Content writer roles have the same administrative level as the
+        # corresponding librarian role. Content management is an additional
+        # capability, not a hierarchy level.
+        equivalent = {
+            self.CONTENT_WRITER: self.LIBRARIAN,
+            self.CONTENT_WRITER_ALL: self.SITEWIDE_LIBRARIAN,
+        }
+        self_ix = self.ROLES.index(equivalent.get(self.role, self.role))
+        other_ix = self.ROLES.index(equivalent.get(other.role, other.role))
         if self_ix == other_ix:
             return self.EQUAL
         elif self_ix > other_ix:  # Lower priority role is later in the array

@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import base64
-import datetime
-import json
 from io import BytesIO
 from typing import Any
 from unittest.mock import MagicMock, create_autospec
@@ -26,11 +24,8 @@ from api.config import Configuration
 from api.problem_details import LIBRARY_NOT_FOUND
 from core.facets import FacetConstants
 from core.model import AdminRole, Library, get_one
-from core.model.announcements import SETTING_NAME as ANNOUNCEMENTS_SETTING_NAME
-from core.model.announcements import Announcement, AnnouncementData
 from core.model.library import LibraryLogo
 from core.util.problem_detail import ProblemDetail, ProblemDetailException
-from tests.fixtures.announcements import AnnouncementFixture
 from tests.fixtures.database import DatabaseTransactionFixture
 from tests.fixtures.flask import FlaskAppFixture
 from tests.fixtures.library import LibraryFixture
@@ -99,51 +94,6 @@ class TestLibrarySettings:
             response = controller.process_get()
             assert isinstance(response.json, dict)
             assert response.json.get("libraries") == []
-
-    def test_libraries_get_with_announcements(
-        self,
-        flask_app_fixture: FlaskAppFixture,
-        controller: LibrarySettingsController,
-        db: DatabaseTransactionFixture,
-        announcement_fixture: AnnouncementFixture,
-    ):
-        # Delete any existing library created by the controller test setup.
-        library = get_one(db.session, Library)
-        if library:
-            db.session.delete(library)
-
-        # Set some announcements for this library.
-        test_library = db.library("Library 1", "L1")
-        a1 = announcement_fixture.active_announcement(db.session, test_library)
-        a2 = announcement_fixture.expired_announcement(db.session, test_library)
-        a3 = announcement_fixture.forthcoming_announcement(db.session, test_library)
-
-        # When we request information about this library...
-        with flask_app_fixture.test_request_context_system_admin("/"):
-            response = controller.process_get()
-            assert isinstance(response.json, dict)
-            library_settings = response.json.get("libraries", [])[0].get("settings")
-
-            # We find out about the library's announcements.
-            announcements = library_settings.get(ANNOUNCEMENTS_SETTING_NAME)
-            assert [
-                str(a2.id),
-                str(a1.id),
-                str(a3.id),
-            ] == [x.get("id") for x in json.loads(announcements)]
-
-            # The objects found in `library_settings` aren't exactly
-            # the same as what is stored in the database: string dates
-            # can be parsed into datetime.date objects.
-            for i in json.loads(announcements):
-                assert isinstance(
-                    datetime.datetime.strptime(i.get("start"), "%Y-%m-%d"),
-                    datetime.date,
-                )
-                assert isinstance(
-                    datetime.datetime.strptime(i.get("finish"), "%Y-%m-%d"),
-                    datetime.date,
-                )
 
     def test_libraries_get_with_logo(
         self,
@@ -424,7 +374,6 @@ class TestLibrarySettings:
         flask_app_fixture: FlaskAppFixture,
         controller: LibrarySettingsController,
         db: DatabaseTransactionFixture,
-        announcement_fixture: AnnouncementFixture,
     ):
         # Pull needed properties from logo fixture
         image_data, expected_logo_data_url, image = (
@@ -443,23 +392,6 @@ class TestLibrarySettings:
                     ("library_description", "Short description of library"),
                     ("website", "https://library.library/"),
                     ("small_collection_languages", "ger"),
-                    (
-                        ANNOUNCEMENTS_SETTING_NAME,
-                        json.dumps(
-                            [
-                                AnnouncementData(
-                                    content="This is announcement one.",
-                                    start=announcement_fixture.today,
-                                    finish=announcement_fixture.tomorrow,
-                                ).as_dict(),
-                                AnnouncementData(
-                                    content="This is announcement two.",
-                                    start=announcement_fixture.tomorrow,
-                                    finish=announcement_fixture.in_a_week,
-                                ).as_dict(),
-                            ]
-                        ),
-                    ),
                     (
                         "default_notification_email_address",
                         "email@example.com",
@@ -516,19 +448,6 @@ class TestLibrarySettings:
         assert isinstance(public_key, RsaKey)
         expected_public = private_key.public_key().export_key().decode("utf-8")
         assert library.public_key == expected_public
-
-        # Announcements were validated and the result was written to the database, such that we can
-        # parse it as a list of Announcement objects.
-        announcements = (
-            db.session.execute(Announcement.library_announcements(library))
-            .scalars()
-            .all()
-        )
-        assert [
-            "This is announcement one.",
-            "This is announcement two.",
-        ] == [x.content for x in announcements]
-        assert all(isinstance(x, Announcement) for x in announcements)
 
         # When the library was created, default lanes were also created
         # according to its language setup. This library has one tiny

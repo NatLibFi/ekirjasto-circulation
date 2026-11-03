@@ -10,7 +10,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-02 13:42+0300\n"
+"POT-Creation-Date: 2026-10-28 16:00+0200\n"
 "PO-Revision-Date: 2025-08-20 09:06+0000\n"
 "Last-Translator: Kaisa Kuivalahti, 2025\n"
 "Language: fi\n"
@@ -22,7 +22,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
 
-#: api/authenticator.py:324
+#: api/authenticator.py:329
 msgid ""
 "SAML providers are configured, but secret for signing bearer tokens is "
 "not."
@@ -30,16 +30,16 @@ msgstr ""
 "SAML-palveluntarjoajat on määritetty, mutta salauskoodia bearer tokenien "
 "allekirjoittamista varten ei ole."
 
-#: api/authenticator.py:562
+#: api/authenticator.py:567
 msgid "No SAML providers are configured."
 msgstr "SAML-palveluntarjoajia ei ole määritetty."
 
-#: api/authenticator.py:571
+#: api/authenticator.py:576
 #, python-format
 msgid " The known providers are: %s"
 msgstr " Tunnetut palveluntarjoajat ovat seuraavat: %s"
 
-#: api/authenticator.py:767
+#: api/authenticator.py:798
 msgid "Library"
 msgstr "Kirjasto"
 
@@ -166,19 +166,19 @@ msgstr "Kaistaa ei ole olemassa"
 msgid "All Books"
 msgstr "Kaikki kirjat"
 
-#: api/config.py:81
+#: api/config.py:80
 msgid "Internal signing secret for OAuth and SAML bearer tokens"
 msgstr "OAuthin ja SAML:n bearer tokenien sisäisen allekirjoittamisen salauskoodi"
 
-#: api/config.py:86
+#: api/config.py:85
 msgid "Internal secret key for admin interface cookies"
 msgstr "Hallintakäyttöliittymän evästeiden sisäinen salausavain"
 
-#: api/config.py:91
+#: api/config.py:90
 msgid "Hostnames for web application access"
 msgstr "Isäntänimet verkkosovellusten käyttöä varten"
 
-#: api/config.py:94
+#: api/config.py:93
 msgid ""
 "Only web applications from these hosts can access this circulation "
 "manager. This can be a single hostname (http://catalog.library.org) or a "
@@ -196,21 +196,21 @@ msgstr ""
 "tämän arvoksi '*', jolloin pääsy sallitaan miltä tahansa isäntäkoneelta, "
 "mutta et voi tehdä tätä tuotantoympäristössä -- vain kehityksen aikana."
 
-#: api/config.py:100
+#: api/config.py:99
 msgid "Cache time for static images and JS and CSS files (in seconds)"
 msgstr ""
 "Staattisten kuvien sekä JS- ja CSS-tiedostojen välimuistiaika "
 "(sekunneissa)"
 
-#: api/config.py:107
+#: api/config.py:106
 msgid "Cache time for authentication documents (in seconds)"
 msgstr "Todennusdokumenttien välimuistiaika (sekunneissa)"
 
-#: api/config.py:114
+#: api/config.py:113
 msgid "Custom Terms of Service link"
 msgstr "Mukautettujen käyttöehtojen linkki"
 
-#: api/config.py:118
+#: api/config.py:117
 msgid ""
 "If your inclusion in the SimplyE mobile app is governed by terms other "
 "than the default, put the URL to those terms in this link so that "
@@ -222,11 +222,11 @@ msgstr ""
 "kirjastonhoitajat voivat käyttää niitä. Tätä URL-osoitetta käytetään "
 "kaikissa kirjastoissa tässä lainauksen hallinnassa."
 
-#: api/config.py:123
+#: api/config.py:122
 msgid "Custom Terms of Service link text"
 msgstr "Mukautettujen käyttöehtojen linkin teksti"
 
-#: api/config.py:127
+#: api/config.py:126
 msgid ""
 "Custom text for the Terms of Service link in the footer of these "
 "administrative interface pages. This is primarily useful if you're not "
@@ -238,14 +238,6 @@ msgstr ""
 " silloin, jos et yhdistä tätä lainauksen hallintaa SimplyE-"
 "mobiilisovellukseen. Tätä tekstiä käytetään kaikissa kirjastoissa tässä "
 "lainauksen hallinnassa."
-
-#: api/config.py:135
-msgid "Scheduled announcements"
-msgstr "Ajastetut ilmoitukset"
-
-#: api/config.py:137
-msgid "Announcements will be displayed to authenticated patrons."
-msgstr "Ilmoitukset näytetään todennetuille asiakkaille."
 
 #: api/custom_index.py:87
 msgid "I'm Under 13"
@@ -952,4 +944,10 @@ msgstr "Asiakkaan jäsenyys on päättynyt"
 #: api/sirsidynix_authentication_provider.py:33
 msgid "Patron has been blocked."
 msgstr "Asiakas on estetty."
+
+#~ msgid "Scheduled announcements"
+#~ msgstr "Ajastetut ilmoitukset"
+
+#~ msgid "Announcements will be displayed to authenticated patrons."
+#~ msgstr "Ilmoitukset näytetään todennetuille asiakkaille."
 

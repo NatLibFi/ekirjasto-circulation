@@ -27,6 +27,34 @@ class TestIndex:
         fixture.assert_request_calls(url, fixture.controller.authentication_document)  # type: ignore[union-attr]
 
 
+class TestEditorialContent:
+    CONTROLLER_NAME = "admin_editorial_content_controller"
+
+    @pytest.fixture(scope="function")
+    def fixture(self, route_test: RouteTestFixture) -> RouteTestFixture:
+        """Configure the route fixture for editorial-content endpoints."""
+        route_test.controller = getattr(route_test.manager, self.CONTROLLER_NAME)
+        route_test.real_controller = None
+        return route_test
+
+    def test_list(self, fixture: RouteTestFixture):
+        """Route public editorial-content listing requests."""
+        fixture.assert_request_calls(
+            "/content", fixture.controller.public_list, None, None  # type: ignore[union-attr]
+        )
+        fixture.assert_supported_methods("/content", "GET")
+
+    def test_item(self, fixture: RouteTestFixture):
+        """Route public editorial-content item requests."""
+        fixture.assert_request_calls(
+            "/content/<identifier>",
+            fixture.controller.public_item,  # type: ignore[union-attr]
+            "<identifier>",
+            None,
+        )
+        fixture.assert_supported_methods("/content/<identifier>", "GET")
+
+
 class TestOPDSFeed:
     CONTROLLER_NAME = "opds_feeds"
 

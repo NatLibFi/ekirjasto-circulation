@@ -717,8 +717,8 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
         primary_author = authors[:1]
         contributors = (
             self._extract_contributors(primary_author, Contributor.Role.PRIMARY_AUTHOR)
-            # The primary author is kept as an author.
-            + self._extract_contributors(authors, Contributor.Role.AUTHOR)
+            # Exclude primary author from the list of authors.
+            + self._extract_contributors(authors[1:], Contributor.Role.AUTHOR)
             + self._extract_contributors(
                 publication.metadata.translators, Contributor.Role.TRANSLATOR
             )

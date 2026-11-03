@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import base64
-import json
 import uuid
 from io import BytesIO
 
@@ -12,7 +11,6 @@ from PIL import Image, UnidentifiedImageError
 from PIL.Image import Resampling
 from werkzeug.datastructures import FileStorage
 
-from api.admin.announcement_list_validator import AnnouncementListValidator
 from api.admin.controller.base import AdminPermissionsControllerMixin
 from api.admin.form_data import ProcessFormData
 from api.admin.problem_details import *
@@ -29,8 +27,6 @@ from core.model import (
     json_serializer,
     site_configuration_has_changed,
 )
-from core.model.announcements import SETTING_NAME as ANNOUNCEMENT_SETTING_NAME
-from core.model.announcements import Announcement
 from core.model.library import LibraryLogo
 from core.scripts import RunMonitorScript
 from core.util.problem_detail import ProblemDetail, ProblemDetailException
@@ -62,19 +58,6 @@ class LibrarySettingsController(AdminPermissionsControllerMixin):
                 continue
 
             settings = library.settings_dict
-
-            # TODO: It would be nice to make this more sane in the future, but right now the admin interface
-            #  is expecting the "announcements" field to be a JSON string, within the JSON document we send,
-            #  so it ends up being double-encoded. This is a quick fix to make it work without modifying the
-            #  admin interface.
-            db_announcements = (
-                self._db.execute(Announcement.library_announcements(library))
-                .scalars()
-                .all()
-            )
-            announcements = [x.to_data().as_dict() for x in db_announcements]
-            if announcements:
-                settings["announcements"] = json.dumps(announcements)
 
             if library.logo:
                 settings["logo"] = library.logo.data_url
@@ -144,21 +127,6 @@ class LibrarySettingsController(AdminPermissionsControllerMixin):
 
         # Validate and scale logo
         self.scale_and_store_logo(library, flask.request.files.get("logo"))
-
-        if ANNOUNCEMENT_SETTING_NAME in flask.request.form:
-            validated_announcements = (
-                AnnouncementListValidator().validate_announcements(
-                    flask.request.form[ANNOUNCEMENT_SETTING_NAME]
-                )
-            )
-            existing_announcements = (
-                self._db.execute(Announcement.library_announcements(library))
-                .scalars()
-                .all()
-            )
-            Announcement.sync(
-                self._db, existing_announcements, validated_announcements, library
-            )
 
         # Trigger a site configuration change
         site_configuration_has_changed(self._db)
