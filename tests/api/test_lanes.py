@@ -130,8 +130,8 @@ class TestLaneCreation:
         assert [
             "Fiction for Adults",
             "Nonfiction for Adults",
-            "Books for Young Adults",
-            "Books for Children",
+            "Young Adult Books",
+            "Children's Books",
             "All Books in English",
         ] == [x.display_name for x in lanes[0].sublanes]
         for lane in lanes:
