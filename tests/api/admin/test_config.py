@@ -18,6 +18,9 @@ class TestAdminUI:
             monkeypatch.delenv(key)
 
     def test_package_version_cached(self, monkeypatch):
+        # An earlier test may have populated the class-level version cache.
+        # Reset it to keep this test independent of test execution order.
+        monkeypatch.setattr(AdminConfig, "_version", None)
         with patch(
             "api.admin.config.Configuration.env_package_version"
         ) as env_package_version:
