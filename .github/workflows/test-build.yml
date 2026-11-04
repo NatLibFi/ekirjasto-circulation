@@ -128,7 +128,7 @@ jobs:
         with:
           ref: ${{ needs.metadata.outputs.commit }}
           persist-credentials: false
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v8
         with:
           name: image-version
           path: core
@@ -252,7 +252,7 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v8
         if: github.event_name != 'pull_request'
         with:
           name: image-digests-amd64
@@ -263,7 +263,7 @@ jobs:
           image=$(cat image-digests/webapp-amd64.txt)
           docker pull "$image"
           echo "CI_WEBAPP_IMAGE=$image" >> "$GITHUB_ENV"
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v8
         if: github.event_name == 'pull_request'
         with:
           name: migration-webapp
@@ -300,7 +300,7 @@ jobs:
       matrix:
         image: [scripts, webapp, exec]
     steps:
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v8
         with:
           pattern: image-digests-*
           path: image-digests
