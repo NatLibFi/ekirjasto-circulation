@@ -67,6 +67,7 @@ ENV TZ=Europe/Helsinki
 
 # Setup nginx
 COPY docker/services/nginx /etc/nginx/
+RUN nginx -t
 
 # Setup uwsgi
 COPY docker/services/uwsgi /etc/

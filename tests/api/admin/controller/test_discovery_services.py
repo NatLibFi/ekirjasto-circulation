@@ -40,7 +40,6 @@ def controller(db: DatabaseTransactionFixture) -> DiscoveryServicesController:
 
 
 class TestDiscoveryServices:
-
     """Test the controller functions that list and create new discovery
     services.
     """
@@ -311,16 +310,12 @@ class TestDiscoveryServices:
         )
 
         with flask_app_fixture.test_request_context("/", method="DELETE"):
-            pytest.raises(
-                AdminNotAuthorized,
-                controller.process_delete,
-                discovery_service.id,
-            )
+            assert discovery_service.id is not None
+            with pytest.raises(AdminNotAuthorized):
+                controller.process_delete(discovery_service.id)
 
         with flask_app_fixture.test_request_context_system_admin("/", method="DELETE"):
-            response = controller.process_delete(
-                discovery_service.id  # type: ignore[arg-type]
-            )
+            response = controller.process_delete(discovery_service.id)
             assert response.status_code == 200
 
         service = get_one(

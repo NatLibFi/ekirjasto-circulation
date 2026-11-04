@@ -714,11 +714,9 @@ class TestCollectionSettings:
         assert collection.marked_for_deletion is False
 
         with flask_app_fixture.test_request_context("/", method="DELETE"):
-            pytest.raises(
-                AdminNotAuthorized,
-                controller.process_delete,
-                collection.integration_configuration.id,
-            )
+            assert collection.integration_configuration.id is not None
+            with pytest.raises(AdminNotAuthorized):
+                controller.process_delete(collection.integration_configuration.id)
 
         with flask_app_fixture.test_request_context_system_admin("/", method="DELETE"):
             assert collection.integration_configuration.id is not None
