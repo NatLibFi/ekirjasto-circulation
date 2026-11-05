@@ -67,6 +67,7 @@ poetry install --only ci
     - [5. Run an individual file or test](#5-Run-an-individual-file-or-test)
     - [6. tox_pytest.py](#6-tox_pytestpy)
 - [Localization (flask-pybabel, Transifex)](#localization-flask-pybabel-transifex)
+- [Admin frontend](#admin-frontend)
 - [DeMarque WebReader](#demarque-webreader)
 - [Technology overview](#technology-overview)
 - [Code Style](#code-style)
@@ -429,6 +430,10 @@ Once all strings have been translated and reviewed in Transifex, Transifex will 
 commit the updated files.
 
 Compiled `.mo` files are generated when Docker containers are initialized.
+
+## Admin frontend
+
+Set the desired admin frontend version in `api/admin/config.py`.
 
 ## DeMarque WebReader
 
