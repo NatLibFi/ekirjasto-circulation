@@ -125,3 +125,22 @@ Continuation pages read live data rather than a database snapshot, so concurrent
 changes can alter page contents. If a continuation page no longer exists, the
 token is rejected and the harvest must be restarted. No token is returned on
 the final page.
+
+### Resumption-token signing
+
+OAI-PMH requires resumption tokens to be opaque to clients, but it does not
+require them to be cryptographically signed. An implementation may use a
+database key, encoded state, a signed token, or an encrypted token. This
+service uses a signed `itsdangerous.URLSafeTimedSerializer` token so clients
+cannot alter the library, repository namespace, verb, cursor, date filters,
+page size, upper work-ID bound, or expiry without invalidating the token.
+
+Signing provides integrity and authenticity; it does not encrypt the token's
+contents. Clients must treat tokens as opaque and must not attempt to decode or
+modify them.
+
+The signing key is the Flask application `secret_key`, loaded from the
+site-wide `secret_key` configuration setting. This is an application-level
+implementation choice, not an OAI-PMH-specific requirement. The same key also
+signs Flask application cookies, so it must not be exposed. If the application
+has no signing secret, the endpoint cannot issue or validate continuation tokens.
