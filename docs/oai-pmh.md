@@ -17,10 +17,10 @@ by the OAI-PMH MARC builder.
 
 OAI-PMH settings are library settings, visible to system administrators:
 
-- `oai_pmh_namespace`: permanent domain-based repository namespace. The default
-  is `lib.e-kirjasto.fi`; for example, `oai.example.org`. Identifiers have the
-  form `oai:<namespace>:<type>-<value>`, such as
-  `oai:oai.example.org:isbn-9789146237396`.
+- `oai_pmh_namespace`: optional permanent domain-based repository namespace,
+  for example `oai.example.org`. The endpoint remains unavailable until this
+  is configured. Identifiers have the form `oai:<namespace>:<type>-<value>`,
+  such as `oai:oai.example.org:isbn-9789146237396`.
 - `oai_pmh_admin_contact`: public email address or URL returned by `Identify`.
   The default is the E-kirjasto feedback URL.
 - `oai_pmh_page_size`: records per page, default 500, allowed range 100–5000.
@@ -29,7 +29,7 @@ OAI-PMH settings are library settings, visible to system administrators:
 - `oai_pmh_organization_code`: optional MARC organization code written to
   field 003. The default is `FI-Ekirj`.
 - `oai_pmh_catalogue_url`: optional public catalogue URL used in MARC 856
-  links. The default is the E-kirjasto catalogue URL.
+  links. If unset, no catalogue URL is added to the generated MARC records.
 
 The site-wide canonical base URL must also be configured as an HTTP or HTTPS
 URL, and the library must have a UUID. The endpoint returns HTTP 503 until

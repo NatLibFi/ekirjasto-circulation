@@ -87,7 +87,7 @@ class LibraryConfFormItem(ConfigurationFormItem):
 
 class LibrarySettings(BaseSettings):
     oai_pmh_namespace: str | None = FormField(
-        "lib.e-kirjasto.fi",
+        None,
         pattern=r"^[A-Za-z0-9][A-Za-z0-9.-]*$",
         form=LibraryConfFormItem(
             label="OAI-PMH repository namespace",
@@ -136,7 +136,7 @@ class LibrarySettings(BaseSettings):
         ),
     )
     oai_pmh_catalogue_url: str | None = FormField(
-        "https://web.e-kirjasto.fi/ekirjasto",
+        None,
         form=LibraryConfFormItem(
             label="Catalogue URL",
             description="Optional public catalogue URL used in MARC 856 links.",
