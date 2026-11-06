@@ -11,6 +11,7 @@ from expiringdict import ExpiringDict
 from sqlalchemy import (
     Boolean,
     Column,
+    DateTime,
     ForeignKey,
     Integer,
     LargeBinary,
@@ -37,6 +38,7 @@ from core.model.hassessioncache import HasSessionCache
 from core.model.hybrid import hybrid_property
 from core.model.licensing import LicensePool
 from core.model.work import Work
+from core.util.datetime_helpers import utc_now
 
 if TYPE_CHECKING:
     from core.lane import Lane
@@ -133,6 +135,15 @@ class Library(Base, HasSessionCache):
 
     # Any additional configuration information is stored as JSON on this column.
     settings_dict: dict[str, Any] = Column(JSONB, nullable=False, default=dict)
+
+    # Freeze the namespace on first use, independently of editable settings.
+    oai_pmh_namespace = Column(Unicode, nullable=True)
+    oai_pmh_initialized_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        server_default=func.now(),
+    )
 
     # A Library may have many CirculationEvents
     circulation_events: Mapped[list[CirculationEvent]] = relationship(
@@ -524,6 +535,14 @@ class Library(Base, HasSessionCache):
         lines.append("-----------------------")
         assert self.settings  # Satisfying unit test lazy load
         for key, value in self.settings.model_dump(exclude_defaults=False).items():
+            # OAI-PMH settings have service-wide defaults. Do not add those
+            # defaults to the legacy library summary, but do show values that
+            # have been explicitly customized.
+            if (
+                key.startswith("oai_pmh_")
+                and value == type(self.settings).model_fields[key].default
+            ):
+                continue
             if value is not None:
                 lines.append(f"{key}='{value}'")
 

@@ -1705,6 +1705,29 @@ class TestWork:
         assert work.active_license_pool() == lp1
         assert work.active_license_pool(library=l2) == lp2
 
+    def test_active_license_pool_uses_prefetched_scope_and_urls(
+        self, db: DatabaseTransactionFixture
+    ):
+        work = db.work(with_license_pool=True, with_open_access_download=True)
+        [pool] = work.license_pools
+        pool.open_access = True
+        pool.collection_id = 123
+
+        assert work.active_license_pool(collection_ids=set()) is None
+        assert (
+            work.active_license_pool(
+                collection_ids={123}, open_access_urls={pool.id: None}
+            )
+            is None
+        )
+        assert (
+            work.active_license_pool(
+                collection_ids={123},
+                open_access_urls={pool.id: "https://example.com/book"},
+            )
+            == pool
+        )
+
     def test_delete_work(self, db: DatabaseTransactionFixture):
         # Search mock
         class MockSearchIndex:
