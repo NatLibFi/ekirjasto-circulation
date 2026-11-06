@@ -679,7 +679,12 @@ class OAIPMHController(LoggerMixin):
         except OAIError as exc:
             self._render_error(root, request_node, exc)
         response = Response(
-            etree.tostring(root, encoding="UTF-8", xml_declaration=True),
+            etree.tostring(
+                root,
+                encoding="UTF-8",
+                xml_declaration=True,
+                pretty_print=True,
+            ),
             mimetype="text/xml",
         )
         response.headers["Cache-Control"] = "no-store"
