@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import flask
 from flask import Response, redirect, url_for
+from sqlalchemy import func, or_
 
 from api.controller.circulation_manager import CirculationManagerController
 from api.lanes import (
@@ -20,12 +21,117 @@ from core.feed.acquisition import OPDSAcquisitionFeed
 from core.feed.navigation import NavigationFeed
 from core.feed.opds import NavigationFacets
 from core.lane import FeaturedFacets, Pagination, SearchFacets, WorkList
-from core.model import Collection, CustomList
+from core.model import (
+    Classification,
+    Collection,
+    CustomList,
+    Genre,
+    LicensePool,
+    Subject,
+    Work,
+    WorkGenre,
+)
 from core.opensearch import OpenSearchDocument
+from core.util.cache import memoize
 from core.util.problem_detail import ProblemDetail
 
 
 class OPDSFeedController(CirculationManagerController):
+    def search_filter_values(self):
+        """List genres and classifications present in searchable library books."""
+        library = flask.request.library
+        collection_ids = tuple(
+            sorted(collection.id for collection in library.collections if collection.id)
+        )
+        return self._search_filter_values_cached(
+            collection_ids, library.settings.allow_holds
+        )
+
+    @memoize(ttls=3600)
+    def _search_filter_values_cached(
+        self, collection_ids: tuple[int, ...], allow_holds: bool
+    ) -> dict:
+        if not collection_ids:
+            return {"genres": [], "classifications": []}
+
+        def searchable_books(query):
+            query = query.filter(
+                LicensePool.collection_id.in_(collection_ids),
+                LicensePool.suppressed == False,
+                Work.presentation_ready == True,
+                or_(LicensePool.open_access == True, LicensePool.licenses_owned != 0),
+            )
+            if not allow_holds:
+                query = query.filter(
+                    or_(
+                        LicensePool.open_access == True,
+                        LicensePool.licenses_owned == LicensePool.UNLIMITED_ACCESS,
+                        LicensePool.licenses_available > 0,
+                    )
+                )
+            return query
+
+        genres_query = searchable_books(
+            self._db.query(
+                Genre.id,
+                Genre.name,
+                func.count(func.distinct(Work.id)),
+            )
+            .join(WorkGenre, WorkGenre.genre_id == Genre.id)
+            .join(Work, Work.id == WorkGenre.work_id)
+            .join(LicensePool, LicensePool.work_id == Work.id)
+        )
+        genres = [
+            {"id": genre_id, "name": name, "count": count}
+            for genre_id, name, count in genres_query.group_by(
+                Genre.id, Genre.name
+            ).order_by(func.lower(Genre.name), Genre.id)
+        ]
+
+        term = func.replace(func.coalesce(Subject.name, Subject.identifier), "/", " ")
+        classifications_query = searchable_books(
+            self._db.query(
+                Subject.type,
+                Subject.identifier,
+                Subject.name,
+                term.label("term"),
+                func.count(func.distinct(Work.id)),
+            )
+            .join(Classification, Classification.subject_id == Subject.id)
+            .join(
+                LicensePool,
+                LicensePool.identifier_id == Classification.identifier_id,
+            )
+            .join(Work, Work.id == LicensePool.work_id)
+            .filter(
+                Subject.type.in_(Subject.TYPES_FOR_SEARCH),
+                func.coalesce(Subject.name, Subject.identifier).isnot(None),
+            )
+        )
+        classifications = []
+        for (
+            scheme,
+            identifier,
+            name,
+            search_term,
+            count,
+        ) in classifications_query.group_by(
+            Subject.type, Subject.identifier, Subject.name, term
+        ).order_by(
+            func.lower(term), Subject.type, Subject.identifier
+        ):
+            classifications.append(
+                {
+                    "scheme": Subject.uri_lookup.get(scheme, scheme),
+                    "identifier": identifier,
+                    "term": search_term,
+                    "name": name or identifier,
+                    "count": count,
+                }
+            )
+
+        return {"genres": genres, "classifications": classifications}
+
     def groups(self, lane_identifier, feed_class=OPDSAcquisitionFeed):
         """Build or retrieve a grouped acquisition feed.
 

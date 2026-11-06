@@ -1009,10 +1009,23 @@ class SearchFacets(Facets):
     # top billing just because they're first alphabetically. This is
     # the default cutoff point, determined empirically.
     DEFAULT_MIN_SCORE = 500
+    SEARCH_FIELDS = frozenset(
+        {"all", "title", "author", "classification", "genre", "summary"}
+    )
 
     def __init__(self, **kwargs):
         languages = kwargs.pop("languages", None)
         media = kwargs.pop("media", None)
+        self.search_field = kwargs.pop("search_field", "all")
+        self.include_summary = kwargs.pop("include_summary", True)
+        self.genre_ids = self._ensure_list(kwargs.pop("genre", None)) or []
+        self.classification_terms = (
+            self._ensure_list(kwargs.pop("classification", None)) or []
+        )
+        if self.search_field not in self.SEARCH_FIELDS:
+            raise ValueError(f"Invalid search field: {self.search_field}")
+        if not isinstance(self.include_summary, bool):
+            raise ValueError("include_summary must be a boolean")
 
         # Our default_facets implementation will fill in values for
         # the facet groups defined by the Facets class. This
@@ -1029,9 +1042,10 @@ class SearchFacets(Facets):
         # kwargs.setdefault("language", None)
         order = kwargs.setdefault("order", None)
 
-        if order in (None, self.ORDER_BY_RELEVANCE):
+        if order in (None, self.ORDER_BY_RELEVANCE) or self.search_field != "all":
             # Search results are ordered by score, so there is no
-            # need for a score cutoff.
+            # need for a score cutoff. Field-only searches also avoid
+            # the cutoff calibrated for the multi-field query.
             default_min_score = None
         else:
             default_min_score = self.DEFAULT_MIN_SCORE
@@ -1135,6 +1149,51 @@ class SearchFacets(Facets):
         if search_type:
             extra["search_type"] = search_type
 
+        search_field = get_argument("search_field", "all")
+        if search_field not in cls.SEARCH_FIELDS:
+            return INVALID_INPUT.detailed("Invalid search_field.")
+        include_summary = get_argument("include_summary", "true")
+        if include_summary not in {"true", "false"}:
+            return INVALID_INPUT.detailed("include_summary must be 'true' or 'false'.")
+        if search_type == "json" and (
+            search_field != "all" or include_summary != "true"
+        ):
+            return INVALID_INPUT.detailed(
+                "search_field and include_summary only apply to text searches."
+            )
+        extra["search_field"] = search_field
+        extra["include_summary"] = include_summary == "true"
+
+        # Flask's request argument getter is bound to an ImmutableMultiDict,
+        # which lets the UI send repeated parameters for checkbox selections.
+        arguments = getattr(get_argument, "__self__", None)
+        getlist = getattr(arguments, "getlist", None)
+
+        def values_for(name):
+            if getlist:
+                return getlist(name)
+            value = get_argument(name)
+            if value is None:
+                return []
+            return value if isinstance(value, list) else [value]
+
+        raw_genre_ids = values_for("genre")
+        try:
+            genre_ids = [int(value) for value in raw_genre_ids]
+        except (TypeError, ValueError):
+            return INVALID_INPUT.detailed("Genre values must be integer IDs.")
+        if any(value < 1 for value in genre_ids):
+            return INVALID_INPUT.detailed("Genre values must be positive IDs.")
+
+        classification_terms = values_for("classification")
+        if any(
+            not isinstance(value, str) or not value.strip() or len(value) > 512
+            for value in classification_terms
+        ):
+            return INVALID_INPUT.detailed("Invalid classification value.")
+        extra["genre"] = sorted(set(genre_ids))
+        extra["classification"] = sorted(set(classification_terms))
+
         return cls._from_request(
             config, get_argument, get_header, worklist, default_entrypoint, **extra
         )
@@ -1158,6 +1217,12 @@ class SearchFacets(Facets):
         so that it reflects this SearchFacets object.
         """
         super().modify_search_filter(filter)
+
+        filter.search_field = self.search_field
+        filter.include_summary = self.include_summary
+        if self.genre_ids:
+            filter.genre_restriction_sets.append(self.genre_ids)
+        filter.classification_terms = self.classification_terms
 
         if filter.order is not None and filter.min_score is None:
             # The user wants search results to be ordered by one of
@@ -1214,14 +1279,31 @@ class SearchFacets(Facets):
         if self.search_type is not None:
             yield ("search_type", self.search_type)
 
+        if self.search_field != "all":
+            yield ("search_field", self.search_field)
+        if not self.include_summary:
+            yield ("include_summary", "false")
+        if self.genre_ids:
+            yield ("genre", [str(value) for value in self.genre_ids])
+        if self.classification_terms:
+            yield ("classification", self.classification_terms)
+
         # Only a language that came in from the request query should be reproduced
         if self._language_from_query and self.languages:
             yield ("language", self.languages)
 
     def navigate(self, **kwargs):
         min_score = kwargs.pop("min_score", self.min_score)
+        search_field = kwargs.pop("search_field", self.search_field)
+        include_summary = kwargs.pop("include_summary", self.include_summary)
+        genre_ids = kwargs.pop("genre", self.genre_ids)
+        classification_terms = kwargs.pop("classification", self.classification_terms)
         new_facets = super().navigate(**kwargs)
         new_facets.min_score = min_score
+        new_facets.search_field = search_field
+        new_facets.include_summary = include_summary
+        new_facets.genre_ids = genre_ids
+        new_facets.classification_terms = classification_terms
         return new_facets
 
 
