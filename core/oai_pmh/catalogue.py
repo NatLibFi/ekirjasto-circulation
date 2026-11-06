@@ -10,6 +10,7 @@ from typing import cast
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload, selectinload
+from sqlalchemy.sql import Select
 
 from core.model import Contribution, Edition, Identifier, Library, LicensePool, Work
 from core.model.constants import LinkRelations
@@ -36,7 +37,7 @@ class OAICatalogue:
             if collection.id is not None
         }
 
-    def works(self):
+    def works(self) -> Select:
         """Build a query for presentation-ready works in the library's collections.
 
         Eager-load the relationships needed to select a pool using the same
@@ -60,6 +61,21 @@ class OAICatalogue:
                     LicensePool.delivery_mechanisms
                 ),
             )
+        )
+
+    @staticmethod
+    def is_harvestable(pool: LicensePool) -> bool:
+        """Return whether a selected pool has the metadata OAI-PMH requires."""
+        edition = pool.presentation_edition
+        identifier = pool.identifier
+        return bool(
+            not pool.suppressed
+            and pool.delivery_mechanisms
+            and edition
+            and edition.title
+            and identifier
+            and identifier.type is not None
+            and identifier.identifier is not None
         )
 
     def open_access_urls(self, works: Sequence[Work]) -> dict[int, str | None]:
@@ -154,16 +170,7 @@ class OAICatalogue:
                 pool = work.active_license_pool(
                     collection_ids=self.collection_ids, open_access_urls=urls
                 )
-                if (
-                    pool is None
-                    or pool.suppressed
-                    or not pool.delivery_mechanisms
-                    or not pool.presentation_edition
-                    or not pool.presentation_edition.title
-                    or not pool.identifier
-                    or pool.identifier.type is None
-                    or pool.identifier.identifier is None
-                ):
+                if pool is None or not self.is_harvestable(pool):
                     continue
                 identity = (pool.identifier.type, pool.identifier.identifier)
                 if identifier is not None and identity != identifier:
@@ -291,15 +298,14 @@ class OAICatalogue:
             .unique()
             .all()
         )
+        isbn_by_id = {isbn.id: isbn for isbn in isbns}
         return {
-            identifier_id: next(
-                (isbn for isbn in isbns if isbn.id == identifier_id), None
-            )
+            identifier_id: isbn_by_id.get(identifier_id)
             or next(
                 (
-                    isbn
-                    for isbn in isbns
-                    if isbn.id in equivalents.get(identifier_id, [])
+                    isbn_by_id[equivalent_id]
+                    for equivalent_id in equivalents.get(identifier_id, [])
+                    if equivalent_id in isbn_by_id
                 ),
                 None,
             )
