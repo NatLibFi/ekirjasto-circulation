@@ -1,17 +1,13 @@
 from __future__ import annotations
 
-import datetime
 import functools
-import logging
 import urllib
 from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, create_autospec, patch
 
 import pytest
-from _pytest.logging import LogCaptureFixture
 from pymarc import MARCReader, Record
 
-from core.classifier import ClassifierConstants
 from core.marc import Annotator
 from core.model import (
     Contributor,
@@ -21,16 +17,13 @@ from core.model import (
     Genre,
     Identifier,
     LicensePoolDeliveryMechanism,
-    MarcFile,
     Representation,
     RightsStatus,
 )
 from core.util.datetime_helpers import datetime_utc, utc_now
-from core.util.uuid import uuid_encode
 
 if TYPE_CHECKING:
     from tests.fixtures.database import DatabaseTransactionFixture
-    from tests.fixtures.s3 import MockS3Service, S3ServiceFixture
 
 
 class AnnotateWorkRecordFixture:

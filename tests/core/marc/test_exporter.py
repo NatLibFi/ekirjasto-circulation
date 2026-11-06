@@ -3,34 +3,23 @@ from __future__ import annotations
 import datetime
 import functools
 import logging
-import urllib
 from typing import TYPE_CHECKING
-from unittest.mock import MagicMock, create_autospec, patch
+from unittest.mock import MagicMock
 
 import pytest
 from _pytest.logging import LogCaptureFixture
-from pymarc import MARCReader, Record
+from pymarc import MARCReader
 
 from core.classifier import ClassifierConstants
 from core.marc import Annotator, MARCExporter
-from core.model import (
-    Contributor,
-    DataSource,
-    DeliveryMechanism,
-    Edition,
-    Genre,
-    Identifier,
-    LicensePoolDeliveryMechanism,
-    MarcFile,
-    Representation,
-    RightsStatus,
-)
-from core.util.datetime_helpers import datetime_utc, utc_now
+from core.model import DataSource, MarcFile
+from core.util.datetime_helpers import utc_now
 from core.util.uuid import uuid_encode
 
 if TYPE_CHECKING:
     from tests.fixtures.database import DatabaseTransactionFixture
     from tests.fixtures.s3 import MockS3Service, S3ServiceFixture
+
 
 class MarcExporterFixture:
     def __init__(self, db: DatabaseTransactionFixture, s3: MockS3Service):
