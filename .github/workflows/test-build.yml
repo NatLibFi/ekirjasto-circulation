@@ -54,7 +54,7 @@ jobs:
             echo "short-commit=${commit:0:7}"
             echo "version=$version"
           } >> "$GITHUB_OUTPUT"
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with:
           name: image-version
           path: core/_version.py
@@ -192,7 +192,7 @@ jobs:
       - name: Save webapp for untrusted PR migration tests
         if: github.event_name == 'pull_request' && matrix.arch == 'amd64'
         run: docker save circulation-ci-webapp:local -o "${RUNNER_TEMP}/webapp.tar"
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         if: github.event_name == 'pull_request' && matrix.arch == 'amd64'
         with:
           name: migration-webapp
@@ -216,7 +216,7 @@ jobs:
             [[ "$pinned" == "$repository"@sha256:* ]]
             printf '%s\n' "$pinned" > "image-digests/${image}-${ARCH}.txt"
           done
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         if: github.event_name != 'pull_request'
         with:
           name: image-digests-${{ matrix.arch }}
