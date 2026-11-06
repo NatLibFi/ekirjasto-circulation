@@ -66,9 +66,7 @@ class TestCatalogServicesController:
         controller: CatalogServicesController,
         db: DatabaseTransactionFixture,
     ):
-        library_settings = MarcExporterLibrarySettings(
-            include_summary=True, include_genres=True, organization_code="US-MaBoDPL"
-        )
+        library_settings = MarcExporterLibrarySettings(organization_code="US-MaBoDPL")
 
         protocol = CatalogServicesRegistry().get_protocol(MARCExporter)
         assert protocol is not None
@@ -100,8 +98,6 @@ class TestCatalogServicesController:
             [library] = service.get("libraries")
             assert db.default_library().short_name == library.get("short_name")
             assert "US-MaBoDPL" == library.get("organization_code")
-            assert library.get("include_summary") is True
-            assert library.get("include_genres") is True
 
     @pytest.mark.parametrize(
         "post_data,expected,admin,raises",
@@ -214,8 +210,6 @@ class TestCatalogServicesController:
                             [
                                 {
                                     "short_name": db.default_library().short_name,
-                                    "include_summary": "false",
-                                    "include_genres": "true",
                                 }
                             ]
                         ),
@@ -239,8 +233,7 @@ class TestCatalogServicesController:
         assert service.libraries == [db.default_library()]
 
         settings = MARCExporter.library_settings_load(service.library_configurations[0])
-        assert settings.include_summary is False
-        assert settings.include_genres is True
+        assert settings.organization_code is None
 
     def test_catalog_services_post_edit(
         self,
@@ -269,8 +262,6 @@ class TestCatalogServicesController:
                             [
                                 {
                                     "short_name": db.default_library().short_name,
-                                    "include_summary": "true",
-                                    "include_genres": "false",
                                 }
                             ]
                         ),
@@ -287,8 +278,7 @@ class TestCatalogServicesController:
         assert service.libraries == [db.default_library()]
 
         settings = MARCExporter.library_settings_load(service.library_configurations[0])
-        assert settings.include_summary is True
-        assert settings.include_genres is False
+        assert settings.organization_code is None
 
     def test_catalog_services_delete(
         self,

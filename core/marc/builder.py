@@ -6,45 +6,27 @@ import re
 import urllib.parse
 from collections.abc import Mapping
 from datetime import datetime
-from io import BytesIO
-from uuid import UUID, uuid4
 
 import pytz
-from pydantic import NonNegativeInt
 from pymarc import Field, Record, Subfield
-from sqlalchemy import select
-from sqlalchemy.engine import ScalarResult
 from sqlalchemy.orm.session import Session
 
 from core.classifier import SubjectClassifier
-from core.integration.base import HasLibraryIntegrationConfiguration
-from core.integration.settings import (
-    BaseSettings,
-    ConfigurationFormItem,
-    ConfigurationFormItemType,
-    FormField,
-)
 from core.model import (
-    Collection,
     Contributor,
     DeliveryMechanism,
     Edition,
     Identifier,
-    Library,
     LicensePool,
-    MarcFile,
     Representation,
     Work,
-    create,
 )
-from core.service.storage.s3 import S3Service
 from core.util import LanguageCodes
 from core.util.datetime_helpers import utc_now
 from core.util.log import LoggerMixin
-from core.util.uuid import uuid_encode
 
 # Finna needs Finnish data.
-localedir = os.path.join(os.path.dirname(__file__), "../translations")
+localedir = os.path.join(os.path.dirname(__file__), "../../translations")
 try:
     fi = gettext.translation("messages", localedir=localedir, languages=["fi"])
     fi.install()
@@ -98,15 +80,24 @@ class Annotator(LoggerMixin):
         library_short_name: str,
         web_client_urls: list[str],
         organization_code: str | None,
-        include_summary: bool,
-        include_genres: bool,
+        *,
+        modified_at: datetime | None = None,
+        entered_at: datetime | None = None,
+        isbn_identifiers: Mapping[int, Identifier | None] | None = None,
     ) -> None:
+        """Configure MARC links, optional fields, and precomputed harvest metadata.
+
+        Optional timestamps override the modification and entry dates in control
+        fields 005 and 008. An ISBN mapping supplies resolved ISBNs by publication
+        identifier ID; missing entries skip ISBN output without fallback queries.
+        """
         self.cm_url = cm_url
         self.library_short_name = library_short_name
         self.web_client_urls = web_client_urls
         self.organization_code = organization_code
-        self.include_summary = include_summary
-        self.include_genres = include_genres
+        self.modified_at = modified_at
+        self.entered_at = entered_at
+        self.isbn_identifiers = isbn_identifiers
 
     def annotate_work_record(
         self,
@@ -131,7 +122,24 @@ class Annotator(LoggerMixin):
         """
         record = Record(leader=self.leader(revised), force_utf8=True)
         self.add_control_fields(record, identifier, active_license_pool, edition)
-        self.add_isbn(record, identifier)
+        # Batch callers can provide resolved ISBNs to avoid per-record queries.
+        if self.isbn_identifiers is None:
+            self.add_isbn(record, identifier)
+        elif identifier.id is not None and (
+            isbn := self.isbn_identifiers.get(identifier.id)
+        ):
+            self.add_isbn(record, isbn)
+        # Harvest dates keep control fields stable across repeated requests.
+        if self.modified_at is not None:
+            record["005"].data = self.modified_at.astimezone(pytz.UTC).strftime(
+                "%Y%m%d%H%M%S.0"
+            )
+        if self.entered_at is not None:
+            # Replace only the entry date; retain the remaining fixed-length data.
+            record["008"].data = (
+                self.entered_at.astimezone(pytz.UTC).strftime("%y%m%d")
+                + record["008"].data[6:]
+            )
 
         # TODO: The 240 and 130 fields are for translated works, so they can be grouped even
         #  though they have different titles. We do not group editions of the same work in
@@ -148,11 +156,8 @@ class Annotator(LoggerMixin):
         if self.organization_code:
             self.add_marc_organization_code(record, self.organization_code)
 
-        if self.include_summary:
-            self.add_summary(record, work)
-
-        if self.include_genres:
-            self.add_genres(record, work)
+        self.add_summary(record, work)
+        self.add_genres(record, work)
 
         self.add_keywords(record, edition)
 
@@ -639,238 +644,5 @@ class Annotator(LoggerMixin):
             )
 
 
-class MarcExporterSettings(BaseSettings):
-    # This setting (in days) controls how often MARC files should be
-    # automatically updated. Since the crontab in docker isn't easily
-    # configurable, we can run a script daily but check this to decide
-    # whether to do anything.
-    update_frequency: NonNegativeInt = FormField(
-        30,
-        form=ConfigurationFormItem(
-            label="Update frequency (in days)",
-            type=ConfigurationFormItemType.NUMBER,
-            required=True,
-        ),
-    )
-
-
-class MarcExporterLibrarySettings(BaseSettings):
-    # MARC organization codes are assigned by the
-    # Library of Congress and can be found here:
-    # http://www.loc.gov/marc/organizations/org-search.php
-    organization_code: str | None = FormField(
-        None,
-        form=ConfigurationFormItem(
-            label="The MARC organization code for this library (003 field).",
-            description="MARC organization codes are assigned by the Library of Congress.",
-            type=ConfigurationFormItemType.TEXT,
-        ),
-    )
-
-    web_client_url: str | None = FormField(
-        None,
-        form=ConfigurationFormItem(
-            label="The base URL for the web catalog for this library, for the 856 field.",
-            description="If using a library registry that provides a web catalog, this can be left blank.",
-            type=ConfigurationFormItemType.TEXT,
-        ),
-    )
-
-    include_summary: bool = FormField(
-        False,
-        form=ConfigurationFormItem(
-            label="Include summaries in MARC records (520 field)",
-            type=ConfigurationFormItemType.SELECT,
-            options={"false": "Do not include summaries", "true": "Include summaries"},
-        ),
-    )
-
-    include_genres: bool = FormField(
-        False,
-        form=ConfigurationFormItem(
-            label="Include Palace Collection Manager genres in MARC records (650 fields)",
-            type=ConfigurationFormItemType.SELECT,
-            options={
-                "false": "Do not include Palace Collection Manager genres",
-                "true": "Include Palace Collection Manager genres",
-            },
-        ),
-    )
-
-
-class MARCExporter(
-    HasLibraryIntegrationConfiguration[
-        MarcExporterSettings, MarcExporterLibrarySettings
-    ],
-    LoggerMixin,
-):
-    """Turn a work into a record for a MARC file."""
-
-    # The minimum size each piece of a multipart upload should be
-    MINIMUM_UPLOAD_BATCH_SIZE_BYTES = 5 * 1024 * 1024  # 5MB
-
-    def __init__(
-        self,
-        _db: Session,
-        storage_service: S3Service,
-    ):
-        self._db = _db
-        self.storage_service = storage_service
-
-    @classmethod
-    def label(cls) -> str:
-        return "MARC Export"
-
-    @classmethod
-    def description(cls) -> str:
-        return (
-            "Export metadata into MARC files that can be imported into an ILS manually."
-        )
-
-    @classmethod
-    def settings_class(cls) -> type[MarcExporterSettings]:
-        return MarcExporterSettings
-
-    @classmethod
-    def library_settings_class(cls) -> type[MarcExporterLibrarySettings]:
-        return MarcExporterLibrarySettings
-
-    @classmethod
-    def create_record(
-        cls,
-        revised: bool,
-        work: Work,
-        annotator: Annotator,
-    ) -> Record | None:
-        """Build a complete MARC record for a given work."""
-        pool = work.active_license_pool()
-        if not pool:
-            return None
-
-        edition = pool.presentation_edition
-        identifier = pool.identifier
-
-        return annotator.annotate_work_record(revised, work, pool, edition, identifier)
-
-    @staticmethod
-    def _date_to_string(date: datetime) -> str:
-        return date.astimezone(pytz.UTC).strftime("%Y-%m-%d")
-
-    def _file_key(
-        self,
-        uuid: UUID,
-        library: Library,
-        collection: Collection,
-        creation_time: datetime,
-        since_time: datetime | None = None,
-    ) -> str:
-        """The path to the hosted MARC file for the given library, collection,
-        and date range."""
-        root = "marc"
-        short_name = str(library.short_name)
-        creation = self._date_to_string(creation_time)
-
-        if since_time:
-            file_type = f"delta.{self._date_to_string(since_time)}.{creation}"
-        else:
-            file_type = f"full.{creation}"
-
-        uuid_encoded = uuid_encode(uuid)
-        collection_name = collection.name.replace(" ", "_")
-        filename = f"{collection_name}.{file_type}.{uuid_encoded}.mrc"
-        parts = [root, short_name, filename]
-        return "/".join(parts)
-
-    def query_works(
-        self,
-        collection: Collection,
-        since_time: datetime | None,
-        creation_time: datetime,
-        batch_size: int,
-    ) -> ScalarResult:
-        query = (
-            select(Work)
-            .join(LicensePool)
-            .join(Collection)
-            .where(
-                Collection.id == collection.id,
-                Work.last_update_time <= creation_time,
-            )
-        )
-
-        if since_time is not None:
-            query = query.where(Work.last_update_time >= since_time)
-
-        return self._db.execute(query).unique().yield_per(batch_size).scalars()
-
-    def records(
-        self,
-        library: Library,
-        collection: Collection,
-        annotator: Annotator,
-        *,
-        creation_time: datetime,
-        since_time: datetime | None = None,
-        batch_size: int = 500,
-    ) -> None:
-        """
-        Create and export a MARC file for the books in a collection.
-        """
-        uuid = uuid4()
-        key = self._file_key(uuid, library, collection, creation_time, since_time)
-
-        with self.storage_service.multipart(
-            key,
-            content_type=Representation.MARC_MEDIA_TYPE,
-        ) as upload:
-            this_batch = BytesIO()
-
-            works = self.query_works(collection, since_time, creation_time, batch_size)
-            for work in works:
-                # Create a record for each work and add it to the MARC file in progress.
-                record = self.create_record(
-                    since_time is not None,
-                    work,
-                    annotator,
-                )
-                if record:
-                    record_bytes = record.as_marc()
-                    this_batch.write(record_bytes)
-                    if (
-                        this_batch.getbuffer().nbytes
-                        >= self.MINIMUM_UPLOAD_BATCH_SIZE_BYTES
-                    ):
-                        # We've reached or exceeded the upload threshold.
-                        # Upload one part of the multipart document.
-                        upload.upload_part(this_batch.getvalue())
-                        this_batch.seek(0)
-                        this_batch.truncate()
-
-            # Upload the final part of the multi-document, if
-            # necessary.
-            if this_batch.getbuffer().nbytes > 0:
-                upload.upload_part(this_batch.getvalue())
-
-        if upload.complete:
-            create(
-                self._db,
-                MarcFile,
-                id=uuid,
-                library=library,
-                collection=collection,
-                created=creation_time,
-                since=since_time,
-                key=key,
-            )
-        else:
-            if upload.exception:
-                # Log the exception and move on to the next file. We will try again next script run.
-                self.log.error(
-                    f"Failed to upload MARC file for {library.short_name}/{collection.name}: {upload.exception}",
-                    exc_info=upload.exception,
-                )
-            else:
-                # There were no records to upload. This is not an error, but we should log it.
-                self.log.info(
-                    f"No MARC records to upload for {library.short_name}/{collection.name}."
-                )
+# Neutral name used by OAI-PMH; kept as an alias for existing callers.
+MARCRecordBuilder = Annotator
