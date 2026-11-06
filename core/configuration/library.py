@@ -126,7 +126,7 @@ class LibrarySettings(BaseSettings):
             level=Level.SYS_ADMIN_ONLY,
         ),
     )
-    oai_pmh_organization_code: str | None= FormField(
+    oai_pmh_organization_code: str | None = FormField(
         "FI-Ekirj",
         form=LibraryConfFormItem(
             label="MARC organization code",

@@ -21,7 +21,15 @@ from core.integration.settings import (
     FormField,
 )
 from core.marc.builder import Annotator
-from core.model import Collection, Library, LicensePool, MarcFile, Representation, Work, create
+from core.model import (
+    Collection,
+    Library,
+    LicensePool,
+    MarcFile,
+    Representation,
+    Work,
+    create,
+)
 from core.service.storage.s3 import S3Service
 from core.util.log import LoggerMixin
 from core.util.uuid import uuid_encode
