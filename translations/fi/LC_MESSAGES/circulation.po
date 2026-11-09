@@ -51,7 +51,7 @@ msgstr "Käyttäjänimi"
 msgid "Password"
 msgstr "Salasana"
 
-#: api/axis.py:103 api/bibliotheca.py:99 api/enki.py:79 api/overdrive.py:132
+#: api/axis.py:103 api/bibliotheca.py:99 api/overdrive.py:132
 #: api/overdrive.py:193
 msgid "Library ID"
 msgstr "Kirjaston tunnus"
@@ -88,11 +88,11 @@ msgstr "Tilin tunnus"
 msgid "Account Key"
 msgstr "Tilin avain"
 
-#: api/bibliotheca.py:108 api/enki.py:84
+#: api/bibliotheca.py:108
 msgid "Show/Hide Titles with No Available Loans"
 msgstr "Näytä/piilota teokset, joita ei ole saatavilla lainattavaksi"
 
-#: api/bibliotheca.py:111 api/enki.py:87
+#: api/bibliotheca.py:111
 msgid "Titles with no available loans will not be displayed in the Catalog view."
 msgstr ""
 "Teokset, joita ei ole saatavilla lainattavaksi, eivät näy "
@@ -289,13 +289,9 @@ msgstr ""
 "e-kirjaston tunnuksen puolesta. Tämän on oltava lyhyempi kuin e-kirjaston"
 " tunnuksen vanhenemisaika, jotta se voidaan päivittää."
 
-#: api/enki.py:72 api/kansas_patron.py:20
+#: api/kansas_patron.py:20
 msgid "URL"
 msgstr "URL-osoite"
-
-#: api/enki.py:104
-msgid "Integrate an Enki collection."
-msgstr "Integroi Enki-kokoelma."
 
 #: api/millenium_patron.py:178
 msgid "III Millenium Patron API"

@@ -43,7 +43,6 @@ def wire_container(container: Services) -> None:
             "api.axis",
             "api.bibliotheca",
             "api.circulation_manager",
-            "api.enki",
             "api.odl",
             "api.overdrive",
             "core.feed.annotator.circulation",

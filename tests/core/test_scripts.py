@@ -720,7 +720,7 @@ class TestRunThreadedCollectionCoverageProviderScript:
         # If there are no collections for the provider, run does nothing.
         # Pass a mock pool that will raise an error if it's used.
         pool = object()
-        collection = db.collection(protocol=ExternalIntegration.ENKI)
+        collection = db.collection(protocol=ExternalIntegration.ODL2)
 
         # Run exits without a problem because the pool is never touched.
         script.run(pool=pool)
