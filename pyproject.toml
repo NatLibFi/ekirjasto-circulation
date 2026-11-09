@@ -82,7 +82,6 @@ module = [
     "api.circulation",
     "api.controller.marc",
     "api.discovery.*",
-    "api.enki",
     "api.integration.*",
     "api.lcp.hash",
     "api.marc",

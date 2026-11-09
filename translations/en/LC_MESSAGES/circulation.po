@@ -47,7 +47,7 @@ msgstr "Username"
 msgid "Password"
 msgstr "Password"
 
-#: api/axis.py:103 api/bibliotheca.py:99 api/enki.py:79 api/overdrive.py:132
+#: api/axis.py:103 api/bibliotheca.py:99 api/overdrive.py:132
 #: api/overdrive.py:193
 msgid "Library ID"
 msgstr "Library ID"
@@ -84,11 +84,11 @@ msgstr "Account ID"
 msgid "Account Key"
 msgstr "Account Key"
 
-#: api/bibliotheca.py:108 api/enki.py:84
+#: api/bibliotheca.py:108
 msgid "Show/Hide Titles with No Available Loans"
 msgstr "Show/Hide Titles with No Available Loans"
 
-#: api/bibliotheca.py:111 api/enki.py:87
+#: api/bibliotheca.py:111
 msgid "Titles with no available loans will not be displayed in the Catalog view."
 msgstr "Titles with no available loans will not be displayed in the Catalog view."
 
@@ -281,13 +281,9 @@ msgstr ""
 "token. This should be less than the expire time for ekirjasto token, so "
 "it can be refreshed."
 
-#: api/enki.py:72 api/kansas_patron.py:20
+#: api/kansas_patron.py:20
 msgid "URL"
 msgstr "URL"
-
-#: api/enki.py:104
-msgid "Integrate an Enki collection."
-msgstr "Integrate an Enki collection."
 
 #: api/millenium_patron.py:178
 msgid "III Millenium Patron API"

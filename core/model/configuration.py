@@ -64,7 +64,6 @@ class ExternalIntegration(Base):
     BIBLIOTHECA = DataSourceConstants.BIBLIOTHECA
     AXIS_360 = DataSourceConstants.AXIS_360
     OPDS_FOR_DISTRIBUTORS = "OPDS for Distributors"
-    ENKI = DataSourceConstants.ENKI
     FEEDBOOKS = DataSourceConstants.FEEDBOOKS
     ODL = "ODL"
     ODL2 = "ODL 2.0"
@@ -84,7 +83,6 @@ class ExternalIntegration(Base):
         BIBLIOTHECA,
         AXIS_360,
         GUTENBERG,
-        ENKI,
     ]
 
     # Some integrations with LICENSE_GOAL imply that the data and
@@ -93,7 +91,6 @@ class ExternalIntegration(Base):
         OVERDRIVE: DataSourceConstants.OVERDRIVE,
         BIBLIOTHECA: DataSourceConstants.BIBLIOTHECA,
         AXIS_360: DataSourceConstants.AXIS_360,
-        ENKI: DataSourceConstants.ENKI,
         FEEDBOOKS: DataSourceConstants.FEEDBOOKS,
     }
 
