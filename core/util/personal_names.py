@@ -151,6 +151,22 @@ def is_one_name(human_name):
     return False
 
 
+def _parse_name(name):
+    """Preserve parenthesized catalog annotations as nicknames.
+
+    nameparser 2 treats annotations ending in a period as suffix-like text,
+    which can make an annotation become the family name. Extract them before
+    parsing to retain the behavior of nameparser 1.1.3.
+    """
+    annotations = re.findall(r"\(([^()]*)\)", name)
+    if annotations:
+        name = re.sub(r"\([^()]*\)", " ", name)
+    parsed = HumanName(name)
+    if annotations:
+        parsed.nickname = " ".join(filter(None, [parsed.nickname, *annotations]))
+    return parsed
+
+
 def display_name_to_sort_name(display_name):
     """
     Take the "First Name Last Name"-formatted display_name, and convert it
@@ -175,7 +191,7 @@ def display_name_to_sort_name(display_name):
     display_name = name_tidy(display_name)
 
     # name has title, first, middle, last, suffix, nickname
-    name = HumanName(display_name)
+    name = _parse_name(display_name)
 
     # Note: When the first and middle names are initials that have come in with a space between them,
     # let them keep that space, to be consistent with initials with no periods, which would be more
@@ -256,7 +272,7 @@ def normalize_contributor_name_for_matching(name):
     joiner_fix = re.compile("of the", re.IGNORECASE)
     name = joiner_fix.sub("of", name)
 
-    name = HumanName(name)
+    name = _parse_name(name)
     # name has title, first, middle, last, suffix, nickname
     name = " ".join(
         [name.title, name.first, name.middle, name.last, name.suffix, name.nickname]
@@ -282,7 +298,7 @@ def sort_name_to_display_name(sort_name):
     if not sort_name:
         return None
 
-    name = HumanName(sort_name)
+    name = _parse_name(sort_name)
     # name has title, first, middle, last, suffix, nickname
     if name.nickname:
         name.nickname = "(" + name.nickname + ")"
