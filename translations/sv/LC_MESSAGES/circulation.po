@@ -51,7 +51,7 @@ msgstr "Användarnamn"
 msgid "Password"
 msgstr "Lösenord"
 
-#: api/axis.py:103 api/bibliotheca.py:99 api/enki.py:79 api/overdrive.py:132
+#: api/axis.py:103 api/bibliotheca.py:99 api/overdrive.py:132
 #: api/overdrive.py:193
 msgid "Library ID"
 msgstr "Biblioteks-ID"
@@ -88,11 +88,11 @@ msgstr "Konto-ID"
 msgid "Account Key"
 msgstr "Kontonyckel"
 
-#: api/bibliotheca.py:108 api/enki.py:84
+#: api/bibliotheca.py:108
 msgid "Show/Hide Titles with No Available Loans"
 msgstr "Visa/Dölj titlar som inte kan lånas"
 
-#: api/bibliotheca.py:111 api/enki.py:87
+#: api/bibliotheca.py:111
 msgid "Titles with no available loans will not be displayed in the Catalog view."
 msgstr "Titlar som inte kan lånas visas inte i katalogvyn."
 
@@ -287,13 +287,9 @@ msgstr ""
 "e-bibliotekstoken. Den måste vara kortare än förfallotiden för "
 "e-bibliotekstoken så att den kan uppdateras."
 
-#: api/enki.py:72 api/kansas_patron.py:20
+#: api/kansas_patron.py:20
 msgid "URL"
 msgstr "URL"
-
-#: api/enki.py:104
-msgid "Integrate an Enki collection."
-msgstr "Integrera en Enki-samling"
 
 #: api/millenium_patron.py:178
 msgid "III Millenium Patron API"

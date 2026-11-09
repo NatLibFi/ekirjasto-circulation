@@ -67,11 +67,6 @@ HOME=/var/www/circulation
 */15 * * * * root core/bin/run overdrive_reaper >> /var/log/cron.log 2>&1
 0 4 * * * root core/bin/run overdrive_format_sweep >> /var/log/cron.log 2>&1
 
-# Enki
-#
-0 0 1 * * root core/bin/run enki_reaper >> /var/log/cron.log 2>&1
-0 */6 * * * root core/bin/run enki_import >> /var/log/cron.log 2>&1
-
 # OPDS For Distributors
 #
 0 2 * * * root core/bin/run opds_for_distributors_reaper_monitor >> /var/log/cron.log 2>&1
