@@ -1,7 +1,37 @@
-from core.util.personal_names import display_name_to_sort_name
+import pytest
+
+from core.util.personal_names import (
+    display_name_to_sort_name,
+    normalize_contributor_name_for_matching,
+    sort_name_to_display_name,
+)
 
 
 class TestNameConversions:
+    @pytest.mark.parametrize(
+        "display_name, sort_name",
+        [
+            ("Heliodorus (bp. of Tricca.)", "Heliodorus (bp. of Tricca.)"),
+            ("Bob (B.) Bitshifter", "Bitshifter, Bob (B.)"),
+            ("Bob Bitshifter (B.)", "Bitshifter, Bob (B.)"),
+            ("James M. (James Montgomery) Beck", "Beck, James M. (James Montgomery)"),
+            ("谢新源 (Xie Xinyuan)", "谢新源 (Xie Xinyuan)"),
+        ],
+    )
+    def test_parenthesized_annotations(self, display_name, sort_name):
+        assert display_name_to_sort_name(display_name) == sort_name
+
+    def test_sort_name_to_display_name_preserves_annotation(self):
+        assert (
+            sort_name_to_display_name("Bitshifter, Bob (B.)") == "Bob (B.) Bitshifter"
+        )
+
+    def test_normalize_contributor_name_preserves_annotation_order(self):
+        assert (
+            normalize_contributor_name_for_matching("Bitshifter, Bob (B.)")
+            == "bob bitshifter b"
+        )
+
     def test_display_name_to_sort_name(self):
         # Make sure the sort name algorithm processes the messy reality of contributor
         # names in a way we expect.
