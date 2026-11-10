@@ -215,7 +215,7 @@ jinja2 = "^3.1.6"
 jsonschema = "4.26.0"
 jwcrypto = "^1.4.2"
 levenshtein = "^0.27"
-lxml = {version = "6.1.1", extras = ["html-clean"]}
+lxml = {version = "6.1.3", extras = ["html-clean"]}
 money = "1.3.0"
 multipledispatch = "^1.0"
 nameparser = "^2.8"  # nameparser is for author name manipulations
