@@ -306,60 +306,63 @@ class TestPushNotifications:
             # Notify 2 patrons 2 devices
             PushNotifications.send_user_survey_message([patron1, patron2])
             assert messaging.Message.call_count == 4
-            assert messaging.Message.call_args_list == [
-                mock.call(
-                    token=tokens[0].device_token,
-                    notification=messaging.Notification(
-                        title="Vastaa E-kirjaston käyttäjäkyselyyn!",
-                        body="Katso Asetuksista Käyttäjäkyselyt. Besvara användarenkäten! Se Inställningar. Take a user survey! See Settings.",
+            messaging.Message.assert_has_calls(
+                [
+                    mock.call(
+                        token=tokens[0].device_token,
+                        notification=messaging.Notification(
+                            title="Vastaa E-kirjaston käyttäjäkyselyyn!",
+                            body="Katso Asetuksista Käyttäjäkyselyt. Besvara användarenkäten! Se Inställningar. Take a user survey! See Settings.",
+                        ),
+                        data=dict(
+                            event_type=NotificationConstants.USER_SURVEY_TYPE,
+                            title="Vastaa E-kirjaston käyttäjäkyselyyn!",
+                            body="Katso Asetuksista Käyttäjäkyselyt. Besvara användarenkäten! Se Inställningar. Take a user survey! See Settings.",
+                            external_identifier=patron1.external_identifier,
+                        ),
                     ),
-                    data=dict(
-                        event_type=NotificationConstants.USER_SURVEY_TYPE,
-                        title="Vastaa E-kirjaston käyttäjäkyselyyn!",
-                        body="Katso Asetuksista Käyttäjäkyselyt. Besvara användarenkäten! Se Inställningar. Take a user survey! See Settings.",
-                        external_identifier=patron1.external_identifier,
+                    mock.call(
+                        token=tokens[1].device_token,
+                        notification=messaging.Notification(
+                            title="Vastaa E-kirjaston käyttäjäkyselyyn!",
+                            body="Katso Asetuksista Käyttäjäkyselyt. Besvara användarenkäten! Se Inställningar. Take a user survey! See Settings.",
+                        ),
+                        data=dict(
+                            event_type=NotificationConstants.USER_SURVEY_TYPE,
+                            title="Vastaa E-kirjaston käyttäjäkyselyyn!",
+                            body="Katso Asetuksista Käyttäjäkyselyt. Besvara användarenkäten! Se Inställningar. Take a user survey! See Settings.",
+                            external_identifier=patron1.external_identifier,
+                        ),
                     ),
-                ),
-                mock.call(
-                    token=tokens[1].device_token,
-                    notification=messaging.Notification(
-                        title="Vastaa E-kirjaston käyttäjäkyselyyn!",
-                        body="Katso Asetuksista Käyttäjäkyselyt. Besvara användarenkäten! Se Inställningar. Take a user survey! See Settings.",
+                    mock.call(
+                        token=tokens[2].device_token,
+                        notification=messaging.Notification(
+                            title="Vastaa E-kirjaston käyttäjäkyselyyn!",
+                            body="Katso Asetuksista Käyttäjäkyselyt. Besvara användarenkäten! Se Inställningar. Take a user survey! See Settings.",
+                        ),
+                        data=dict(
+                            event_type=NotificationConstants.USER_SURVEY_TYPE,
+                            title="Vastaa E-kirjaston käyttäjäkyselyyn!",
+                            body="Katso Asetuksista Käyttäjäkyselyt. Besvara användarenkäten! Se Inställningar. Take a user survey! See Settings.",
+                            external_identifier=patron2.external_identifier,
+                        ),
                     ),
-                    data=dict(
-                        event_type=NotificationConstants.USER_SURVEY_TYPE,
-                        title="Vastaa E-kirjaston käyttäjäkyselyyn!",
-                        body="Katso Asetuksista Käyttäjäkyselyt. Besvara användarenkäten! Se Inställningar. Take a user survey! See Settings.",
-                        external_identifier=patron1.external_identifier,
+                    mock.call(
+                        token=tokens[3].device_token,
+                        notification=messaging.Notification(
+                            title="Vastaa E-kirjaston käyttäjäkyselyyn!",
+                            body="Katso Asetuksista Käyttäjäkyselyt. Besvara användarenkäten! Se Inställningar. Take a user survey! See Settings.",
+                        ),
+                        data=dict(
+                            event_type=NotificationConstants.USER_SURVEY_TYPE,
+                            title="Vastaa E-kirjaston käyttäjäkyselyyn!",
+                            body="Katso Asetuksista Käyttäjäkyselyt. Besvara användarenkäten! Se Inställningar. Take a user survey! See Settings.",
+                            external_identifier=patron2.external_identifier,
+                        ),
                     ),
-                ),
-                mock.call(
-                    token=tokens[2].device_token,
-                    notification=messaging.Notification(
-                        title="Vastaa E-kirjaston käyttäjäkyselyyn!",
-                        body="Katso Asetuksista Käyttäjäkyselyt. Besvara användarenkäten! Se Inställningar. Take a user survey! See Settings.",
-                    ),
-                    data=dict(
-                        event_type=NotificationConstants.USER_SURVEY_TYPE,
-                        title="Vastaa E-kirjaston käyttäjäkyselyyn!",
-                        body="Katso Asetuksista Käyttäjäkyselyt. Besvara användarenkäten! Se Inställningar. Take a user survey! See Settings.",
-                        external_identifier=patron2.external_identifier,
-                    ),
-                ),
-                mock.call(
-                    token=tokens[3].device_token,
-                    notification=messaging.Notification(
-                        title="Vastaa E-kirjaston käyttäjäkyselyyn!",
-                        body="Katso Asetuksista Käyttäjäkyselyt. Besvara användarenkäten! Se Inställningar. Take a user survey! See Settings.",
-                    ),
-                    data=dict(
-                        event_type=NotificationConstants.USER_SURVEY_TYPE,
-                        title="Vastaa E-kirjaston käyttäjäkyselyyn!",
-                        body="Katso Asetuksista Käyttäjäkyselyt. Besvara användarenkäten! Se Inställningar. Take a user survey! See Settings.",
-                        external_identifier=patron2.external_identifier,
-                    ),
-                ),
-            ]
+                ],
+                any_order=True,
+            )
 
             assert messaging.send.call_count == 4
 
