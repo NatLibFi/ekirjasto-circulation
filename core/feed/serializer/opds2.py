@@ -76,6 +76,14 @@ class OPDS2Serializer(SerializerInterface[dict[str, Any]]):
             metadata["sortAs"] = data.sort_title.text
         if data.duration is not None:
             metadata["duration"] = data.duration
+        if data.file_size is not None:
+            metadata["file_size"] = data.file_size
+        if data.original_language:
+            metadata["original_language"] = data.original_language.text
+        if data.original_published:
+            metadata["original_published"] = data.original_published.text
+        if data.original_title:
+            metadata["original_title"] = data.original_title.text
         if data.abridged is not None:
             metadata["abridged"] = data.abridged
         if data.number_of_pages is not None:
@@ -118,6 +126,16 @@ class OPDS2Serializer(SerializerInterface[dict[str, Any]]):
                     }
                 )
             metadata["subject"] = subjects
+
+        keyowrds = []
+        if data.keywords:
+            for keyword in data.keywords:
+                keyowrds.append(
+                    {
+                        "name": keyword.name
+                    }
+                )
+            metadata["keyword"] = keyowrds
 
         if data.series:
             name = getattr(data.series, "name", None)
