@@ -140,6 +140,9 @@ class Edition(Base, EditionConstants):
     # `published is the original publication date of the text.
     # A Project Gutenberg text was likely `published` long before being `issued`.
     published = Column(Date)
+    original_language = Column(Unicode, nullable=True)
+    original_published = Column(Date, nullable=True)
+    original_title = Column(Unicode, nullable=True)
 
     MEDIUM_ENUM = Enum(*EditionConstants.KNOWN_MEDIA, name="medium")
 
@@ -148,6 +151,7 @@ class Edition(Base, EditionConstants):
     # The playtime duration of an audiobook (seconds)
     # https://github.com/readium/webpub-manifest/tree/master/contexts/default#duration-and-number-of-pages
     duration = Column(Float, nullable=True)
+    file_size = Column(Float, nullable=True)
     abridged = Column(Boolean, nullable=True)
     number_of_pages = Column(Integer, nullable=True)
     layout = Column(Unicode, nullable=True)

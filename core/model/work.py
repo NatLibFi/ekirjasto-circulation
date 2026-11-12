@@ -56,6 +56,7 @@ from core.util.datetime_helpers import utc_now
 if TYPE_CHECKING:
     from core.external_search import ExternalSearchIndex
     from core.model import CustomListEntry, Library, LicensePool
+    from core.model.keyword import Keyword
 
 
 class WorkGenre(Base):
@@ -143,6 +144,11 @@ class Work(Base):
     genres = association_proxy("work_genres", "genre", creator=WorkGenre.from_genre)
     work_genres: Mapped[list[WorkGenre]] = relationship(
         "WorkGenre", backref="work", cascade="all, delete-orphan"
+    )
+    keywords: Mapped[list[Keyword]] = relationship(
+        "Keyword",
+        backref="work",
+        cascade="all, delete-orphan",
     )
     audience = Column(Unicode, index=True)
     target_age = Column(INT4RANGE, index=True)
