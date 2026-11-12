@@ -10,6 +10,7 @@ import time
 import traceback
 from hashlib import md5
 from io import BytesIO
+from typing import TYPE_CHECKING
 from urllib.parse import quote, urlparse, urlsplit
 
 import requests
@@ -40,6 +41,9 @@ from core.model.edition import Edition
 from core.model.licensing import LicensePoolDeliveryMechanism
 from core.util.datetime_helpers import utc_now
 from core.util.http import HTTP
+
+if TYPE_CHECKING:
+    from core.model.datasource import DataSource
 
 
 class Resource(Base):
@@ -91,6 +95,7 @@ class Resource(Base):
 
     # The DataSource that is the controlling authority for this Resource.
     data_source_id = Column(Integer, ForeignKey("datasources.id"), index=True)
+    data_source: DataSource
 
     # An archived Representation of this Resource.
     representation_id = Column(Integer, ForeignKey("representations.id"), index=True)

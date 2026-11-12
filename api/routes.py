@@ -350,6 +350,13 @@ def marc_page():
     return app.manager.marc_records.download_page()
 
 
+@library_route("/oaipmh", methods=["GET", "POST"])
+@has_library
+@compressible
+def oai_pmh():
+    return app.manager.oai_pmh.harvest()
+
+
 @library_dir_route("/search", defaults=dict(lane_identifier=None))
 @library_route("/search/<lane_identifier>")
 @has_library

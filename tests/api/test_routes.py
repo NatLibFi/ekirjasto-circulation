@@ -141,6 +141,21 @@ class TestMARCRecord:
         fixture.assert_request_calls(url, fixture.controller.download_page)  # type: ignore[union-attr]
 
 
+class TestOAIPMH:
+    CONTROLLER_NAME = "oai_pmh"
+
+    @pytest.fixture(scope="function")
+    def fixture(self, route_test: RouteTestFixture) -> RouteTestFixture:
+        route_test.set_controller_name(self.CONTROLLER_NAME)
+        return route_test
+
+    def test_oai_pmh(self, fixture: RouteTestFixture):
+        fixture.assert_request_calls("/oaipmh", fixture.controller.harvest)  # type: ignore[union-attr]
+        fixture.assert_request_calls(
+            "/oaipmh", fixture.controller.harvest, http_method="POST"  # type: ignore[union-attr]
+        )
+
+
 class TestProfileController:
     CONTROLLER_NAME = "profiles"
 

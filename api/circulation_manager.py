@@ -21,6 +21,7 @@ from api.controller.index import IndexController
 from api.controller.jwks import JwksController
 from api.controller.loan import LoanController
 from api.controller.marc import MARCRecordController
+from api.controller.oaipmh import OAIPMHController
 from api.controller.odl_notification import ODLNotificationController
 from api.controller.opds_feed import OPDSFeedController
 from api.controller.patron_auth_token import PatronAuthTokenController
@@ -83,6 +84,7 @@ class CirculationManager(LoggerMixin):
     index_controller: IndexController
     opds_feeds: OPDSFeedController
     marc_records: MARCRecordController
+    oai_pmh: OAIPMHController
     loans: LoanController
     annotations: AnnotationController
     urn_lookup: URNLookupController
@@ -319,6 +321,7 @@ class CirculationManager(LoggerMixin):
         self.index_controller = IndexController(self)
         self.opds_feeds = OPDSFeedController(self)
         self.marc_records = MARCRecordController(self.services.storage.public())
+        self.oai_pmh = OAIPMHController(self)
         self.loans = LoanController(self)
         self.annotations = AnnotationController(self)
         self.urn_lookup = URNLookupController(self)

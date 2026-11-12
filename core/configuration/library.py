@@ -86,6 +86,64 @@ class LibraryConfFormItem(ConfigurationFormItem):
 
 
 class LibrarySettings(BaseSettings):
+    oai_pmh_namespace: str | None = FormField(
+        None,
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9.-]*$",
+        form=LibraryConfFormItem(
+            label="OAI-PMH repository namespace",
+            description="A permanent domain-based identifier, such as oai.example.org. "
+            "It cannot change after the first harvest.",
+            category="OAI-PMH",
+            level=Level.SYS_ADMIN_ONLY,
+        ),
+    )
+    oai_pmh_admin_contact: str | None = FormField(
+        "https://web.e-kirjasto.fi/fi/ekirjasto/feedback",
+        form=LibraryConfFormItem(
+            label="Public OAI-PMH contact email/url",
+            description="This address is published in the Identify response.",
+            category="OAI-PMH",
+            level=Level.SYS_ADMIN_ONLY,
+        ),
+    )
+    oai_pmh_page_size: int = FormField(
+        500,
+        ge=100,
+        le=5000,
+        form=LibraryConfFormItem(
+            label="OAI-PMH records per page",
+            type=ConfigurationFormItemType.NUMBER,
+            category="OAI-PMH",
+            level=Level.SYS_ADMIN_ONLY,
+        ),
+    )
+    oai_pmh_token_lifetime: PositiveInt = FormField(
+        86400,
+        form=LibraryConfFormItem(
+            label="OAI-PMH token lifetime in seconds",
+            type=ConfigurationFormItemType.NUMBER,
+            category="OAI-PMH",
+            level=Level.SYS_ADMIN_ONLY,
+        ),
+    )
+    oai_pmh_organization_code: str | None = FormField(
+        "FI-Ekirj",
+        form=LibraryConfFormItem(
+            label="MARC organization code",
+            description="The MARC organization code placed in field 003.",
+            category="OAI-PMH",
+            level=Level.SYS_ADMIN_ONLY,
+        ),
+    )
+    oai_pmh_catalogue_url: str | None = FormField(
+        None,
+        form=LibraryConfFormItem(
+            label="Catalogue URL",
+            description="Optional public catalogue URL used in MARC 856 links.",
+            category="OAI-PMH",
+            level=Level.SYS_ADMIN_ONLY,
+        ),
+    )
     _additional_form_fields = {
         "name": LibraryConfFormItem(
             label="Name",

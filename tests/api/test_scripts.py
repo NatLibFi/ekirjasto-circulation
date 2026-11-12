@@ -167,8 +167,6 @@ class TestCacheMARCFiles:
         expected_settings = MarcExporterSettings(update_frequency=3)
         expected_library_settings = MarcExporterLibrarySettings(
             organization_code="test",
-            include_summary=True,
-            include_genres=True,
         )
 
         other_library_settings = MarcExporterLibrarySettings(
@@ -313,8 +311,6 @@ class TestCacheMARCFiles:
         library_settings = MarcExporterLibrarySettings(
             organization_code="test",
             web_client_url="http://web-client-url/",
-            include_summary=True,
-            include_genres=False,
         )
         mock_settings.return_value = (
             settings,
@@ -336,8 +332,6 @@ class TestCacheMARCFiles:
             cache_marc_files.library.short_name,
             [library_settings.web_client_url],
             library_settings.organization_code,
-            library_settings.include_summary,
-            library_settings.include_genres,
         )
 
         assert mock_process_collection.call_count == 1

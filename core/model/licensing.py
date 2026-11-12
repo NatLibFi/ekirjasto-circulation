@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime
 import logging
+from collections.abc import Iterable
 from enum import Enum as PythonEnum
 from enum import IntEnum, auto
 from typing import TYPE_CHECKING, Literal, overload
@@ -1474,9 +1475,20 @@ class LicensePool(Base):
         """Determine the best open-access Resource currently provided by this
         LicensePool.
         """
-        best = None
+        return self.select_open_access_resource(self.open_access_links)
+
+    def select_open_access_resource(
+        self, resources: Iterable[Resource]
+    ) -> Resource | None:
+        """Choose a supported download resource using the shared open-access ranking.
+
+        Accept prefetched resources so batch callers can reuse the same selection
+        rules as ``best_open_access_resource``. Prefer Gutenberg files with images
+        when resolving a tie, and return None if no supported resource exists.
+        """
+        best: Resource | None = None
         best_priority = -1
-        for resource in self.open_access_links:
+        for resource in resources:
             if not any(
                 [
                     resource.representation

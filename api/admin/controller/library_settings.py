@@ -113,6 +113,16 @@ class LibrarySettingsController(AdminPermissionsControllerMixin):
 
         self.check_short_name_unique(library, short_name)
         validated_settings = ProcessFormData.get_settings(LibrarySettings, form_data)
+        if (
+            library
+            and library.oai_pmh_namespace is not None
+            and validated_settings.oai_pmh_namespace != library.oai_pmh_namespace
+        ):
+            raise ProblemDetailException(
+                INVALID_CONFIGURATION_OPTION.detailed(
+                    "The OAI-PMH repository namespace cannot change after first use."
+                )
+            )
 
         if not library:
             # Everyone can modify an existing library, but only a system admin can create a new one.

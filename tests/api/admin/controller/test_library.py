@@ -351,6 +351,27 @@ class TestLibrarySettings:
                 "Unable to open uploaded image" in excinfo.value.problem_detail.detail
             )
 
+    def test_oai_namespace_cannot_change_after_first_use(
+        self,
+        flask_app_fixture: FlaskAppFixture,
+        controller: LibrarySettingsController,
+        db: DatabaseTransactionFixture,
+    ):
+        library = db.default_library()
+        library.oai_pmh_namespace = "original.example.org"
+
+        with flask_app_fixture.test_request_context_system_admin("/", method="POST"):
+            flask.request.form = self.library_form(
+                library, {"oai_pmh_namespace": "changed.example.org"}
+            )
+            with pytest.raises(ProblemDetailException) as excinfo:
+                controller.process_post()
+
+        assert excinfo.value.problem_detail.uri == INVALID_CONFIGURATION_OPTION.uri
+        assert excinfo.value.problem_detail.detail == (
+            "The OAI-PMH repository namespace cannot change after first use."
+        )
+
     def test__process_image(self, logo_properties: dict[str, Any]):
         image, expected_encoded_image = (
             logo_properties[key] for key in ("image", "base64_bytes")
