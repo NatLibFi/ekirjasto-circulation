@@ -84,6 +84,10 @@ class TestOPDS2Serializer:
             ],
             other_links=[Link(href="http://link", rel="rel")],
             duration=10,
+            file_size=1185001.0,
+            original_language=FeedEntryType(text="eng"),
+            original_published=FeedEntryType(text="2023-01-01"),
+            original_title=FeedEntryType(text="Alkuperäinen nimi"),
             abridged=True,
             number_of_pages=208,
             layout="reflowable",
@@ -101,6 +105,10 @@ class TestOPDS2Serializer:
         assert metadata["title"] == data.title.text
         assert metadata["sortAs"] == data.sort_title.text
         assert metadata["duration"] == data.duration
+        assert metadata["file_size"] == data.file_size
+        assert metadata["original_language"] == data.original_language.text
+        assert metadata["original_published"] == data.original_published.text
+        assert metadata["original_title"] == data.original_title.text
         assert metadata["abridged"] is True
         assert metadata["numberOfPages"] == 208
         assert metadata["presentation"] == {"layout": "reflowable"}

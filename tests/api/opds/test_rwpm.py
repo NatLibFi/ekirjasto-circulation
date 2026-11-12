@@ -1,3 +1,4 @@
+import datetime
 import logging
 
 import pytest
@@ -9,6 +10,10 @@ def test_publication_metadata_accepts_and_normalizes_new_fields():
     metadata = Metadata.model_validate(
         {
             "title": "Test",
+            "original_language": "en",
+            "original_published": "2023",
+            "original_title": "Original title",
+            "file_size": 1185001,
             "abridged": "false",
             "numberOfPages": "208",
             "presentation": {"layout": "reflowable"},
@@ -26,6 +31,10 @@ def test_publication_metadata_accepts_and_normalizes_new_fields():
     )
 
     assert metadata.abridged is False
+    assert metadata.original_language == "eng"
+    assert metadata.original_published == datetime.date(2023, 1, 1)
+    assert metadata.original_title == "Original title"
+    assert metadata.file_size == 1185001.0
     assert metadata.number_of_pages == 208
     assert metadata.presentation.layout == "reflowable"
     assert metadata.belongs_to.collection == "A collection"
@@ -74,6 +83,7 @@ def test_invalid_new_metadata_is_logged_and_dropped(caplog):
             "numberOfPages": "many",
             "presentation": 15,
             "belongsTo": 15,
+            "file_size": "many",
         }
     )
 
@@ -81,10 +91,12 @@ def test_invalid_new_metadata_is_logged_and_dropped(caplog):
     assert metadata.number_of_pages is None
     assert metadata.presentation is None
     assert metadata.belongs_to is None
+    assert metadata.file_size is None
     assert "Invalid abridged value" in caplog.text
     assert "Invalid numberOfPages value" in caplog.text
     assert "Invalid presentation value" in caplog.text
     assert "Invalid belongsTo value" in caplog.text
+    assert "Invalid file_size value" in caplog.text
 
 
 def test_invalid_nested_metadata_fields_are_logged_and_dropped(caplog):
@@ -116,6 +128,20 @@ def test_belongs_to_defaults_all_fields_to_none_or_empty():
 
     assert belongs_to.collection is None
     assert belongs_to.series == ()
+
+
+def test_publication_metadata_accepts_compact_layout_and_series():
+    metadata = Metadata.model_validate(
+        {
+            "title": "Test",
+            "layout": "fixed",
+            "belongsTo": {"series": {"name": "Me Otukset"}},
+        }
+    )
+
+    assert metadata.layout == "fixed"
+    assert len(metadata.belongs_to.series) == 1
+    assert metadata.belongs_to.series[0].name == "Me Otukset"
 
 
 def test_presentation_layout_is_optional():
