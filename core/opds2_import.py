@@ -239,7 +239,9 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
         """
         return identifier.type not in self.ignored_identifier_types
 
-    def _extract_subjects(self, subjects: Sequence[rwpm.Subject]) -> list[SubjectData]:
+    def _extract_subjects(
+        self, subjects: Sequence[rwpm.Subject]
+    ) -> tuple[list[SubjectData], list[str]]:
         """Extract a list of SubjectData objects from the rwpm Subject.
 
         :param subjects: Parsed subject object
@@ -248,6 +250,7 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
         self.log.debug("Started extracting subjects metadata")
 
         subject_metadata_list = []
+        keywords = []
 
         for subject in subjects:
             self.log.debug(
@@ -255,6 +258,12 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
             )
 
             scheme = subject.scheme
+
+            if scheme is None and subject.code is None:
+                name = str(subject.name).strip()
+                if name:
+                    keywords.append(name)
+                continue
 
             # This will determine later which classifier is used.
             subject_type = Subject.by_uri.get(scheme) if scheme is not None else None
@@ -281,7 +290,7 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
             f"Finished extracting subjects metadata: {subject_metadata_list}"
         )
 
-        return subject_metadata_list
+        return subject_metadata_list, keywords
 
     @cached_property
     def _contributor_roles(self) -> Mapping[str, str]:
@@ -710,7 +719,15 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
         imprint = str(first_imprint.name) if first_imprint else None
 
         published = publication.metadata.published
-        subjects = self._extract_subjects(publication.metadata.subjects)
+        original_language = publication.metadata.original_language
+        if isinstance(original_language, tuple):
+            original_language = first_or_default(original_language)
+        original_title = (
+            str(publication.metadata.original_title)
+            if publication.metadata.original_title
+            else None
+        )
+        subjects, keywords = self._extract_subjects(publication.metadata.subjects)
         authors = publication.metadata.authors
         # The first author is considered the primary author. This information is
         # needed for FINNA and statistics.
@@ -785,7 +802,9 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
 
         presentation = publication.metadata.presentation
         layout = None
-        if presentation and presentation.layout:
+        if publication.metadata.layout:
+            layout = publication.metadata.layout
+        elif presentation and presentation.layout:
             layout = presentation.layout
 
         # FIXME: It seems that OPDS 2.0 spec doesn't contain information about rights so we use the default one
@@ -827,6 +846,7 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
             imprint=imprint,
             primary_identifier=identifier_data,
             subjects=subjects,
+            keywords=keywords,
             contributors=contributors,
             measurements=measurements,
             series=series,
@@ -834,6 +854,10 @@ class OPDS2Importer(BaseOPDSImporter[OPDS2ImporterSettings]):
             links=links,
             data_source_last_updated=last_opds_update,
             duration=duration,
+            file_size=publication.metadata.file_size,
+            original_language=original_language,
+            original_published=publication.metadata.original_published,
+            original_title=original_title,
             abridged=publication.metadata.abridged,
             number_of_pages=publication.metadata.number_of_pages,
             layout=layout,
