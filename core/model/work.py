@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from collections import Counter
+from collections.abc import Mapping
 from datetime import date, datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any, Self, cast
@@ -1153,20 +1154,43 @@ class Work(Base):
         l = [_ensure(s) for s in l]
         return "\n".join(l)
 
-    def active_license_pool(self, library: Library | None = None) -> LicensePool | None:
+    def active_license_pool(
+        self,
+        library: Library | None = None,
+        *,
+        collection_ids: set[int] | None = None,
+        open_access_urls: Mapping[int, str | None] | None = None,
+    ) -> LicensePool | None:
+        """Select an OPDS pool, optionally using batch-prefetched selection data.
+
+        An explicit collection set, including an empty set, takes precedence
+        over the library. A supplied URL mapping must cover all candidate
+        open-access pools; missing entries mean no usable download.
+        """
         # The active license pool is the one that *would* be
         # associated with a loan, were a loan to be issued right
         # now.
         active_license_pool = None
-        collections = [] if not library else [c for c in library.collections]
+        collections = (
+            []
+            if collection_ids is not None or not library
+            else list(library.collections)
+        )
         for p in self.license_pools:
+            if collection_ids is not None and p.collection_id not in collection_ids:
+                continue
             if collections and p.collection not in collections:
                 continue
             if p.superceded:
                 continue
             edition = p.presentation_edition
             if p.open_access:
-                if p.best_open_access_link:
+                url = (
+                    p.best_open_access_link
+                    if open_access_urls is None
+                    else open_access_urls.get(cast(int, p.id))
+                )
+                if url:
                     active_license_pool = p
                     # We have an unlimited source for this book.
                     # There's no need to keep looking.

@@ -273,8 +273,6 @@ class CacheMARCFiles(LibraryInputScript):
             library.short_name or "",
             web_client_urls,
             library_settings.organization_code,
-            library_settings.include_summary,
-            library_settings.include_genres,
         )
 
         # We set the creation time to be the start of the batch. Any updates that happen during the batch will be
