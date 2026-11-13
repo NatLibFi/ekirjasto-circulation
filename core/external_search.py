@@ -680,6 +680,10 @@ class Query(SearchBase):
             # There is no query string. Match everything.
             return MatchAll()
 
+        search_field = getattr(self.filter, "search_field", "all")
+        if search_field != "all":
+            return self._field_search_query(search_field)
+
         # Here are the hypotheses:
 
         # The query string might be a match against a single field:
@@ -758,6 +762,55 @@ class Query(SearchBase):
 
         # The score of any given book is the maximum score it gets from
         # any of these hypotheses.
+        return self._combine_hypotheses(hypotheses)
+
+    def _field_search_query(self, field):
+        """Search one field without interpreting words as cross-field filters."""
+        hypotheses = []
+        if field == "title":
+            matches = self.match_one_field_hypotheses("title")
+        elif field == "author":
+            # Include the primary author and author contributions, but not narrators.
+            matches = list(self.match_one_field_hypotheses("author"))
+            author_roles = Terms(
+                **{"contributors.role": sorted(Contributor.AUTHOR_ROLES)}
+            )
+            for name in ("contributors.display_name", "contributors.sort_name"):
+                for query, weight in self.match_one_field_hypotheses(name):
+                    matches.append(
+                        (
+                            Nested(
+                                path="contributors",
+                                query=Bool(must=[query, author_roles]),
+                            ),
+                            weight,
+                        )
+                    )
+        elif field == "classification":
+            matches = [
+                (
+                    Match(**{"classifications.term": self.query_string}),
+                    self.WEIGHT_FOR_FIELD["summary"],
+                )
+            ]
+        elif field == "genre":
+            matches = [
+                (
+                    Nested(
+                        path="genres",
+                        query=Match(**{"genres.name": self.query_string}),
+                    ),
+                    self.WEIGHT_FOR_FIELD["summary"],
+                )
+            ]
+        elif field == "summary":
+            matches = [
+                (Match(summary=self.query_string), self.WEIGHT_FOR_FIELD["summary"])
+            ]
+        else:
+            raise QueryParseException(detail=f"Invalid search_field: {field}")
+        for query, weight in matches:
+            self._hypothesize(hypotheses, query, weight)
         return self._combine_hypotheses(hypotheses)
 
     def match_one_field_hypotheses(self, base_field, query_string=None):
@@ -938,9 +991,12 @@ class Query(SearchBase):
         """
         # Note that we are using the default analyzer, which gives us
         # the stemmed versions of these fields.
+        fields = ["summary", "classifications.term"]
+        if not getattr(self.filter, "include_summary", True):
+            fields.remove("summary")
         qu = MultiMatch(
             query=self.query_string,
-            fields=["summary", "classifications.term"],
+            fields=fields,
             type="best_fields",
         )
         yield qu, self.WEIGHT_FOR_FIELD["summary"]
@@ -996,7 +1052,10 @@ class Query(SearchBase):
         information is used in a simple query that matches basic
         fields.
         """
-        parser = QueryParser(self.query_string)
+        if getattr(self.filter, "include_summary", True):
+            parser = QueryParser(self.query_string)
+        else:
+            parser = QueryParser(self.query_string, query_filter=self.filter)
         return parser.match_queries, parser.filters
 
     def _fuzzy_matches(self, field_name, **kwargs):
@@ -1359,7 +1418,7 @@ class QueryParser:
     these criteria to a greater or lesser extent.
     """
 
-    def __init__(self, query_string, query_class=Query):
+    def __init__(self, query_string, query_class=Query, query_filter=None):
         """Parse the query string and create a list of clauses
         that will boost certain types of books.
 
@@ -1443,8 +1502,11 @@ class QueryParser:
             self.final_query_string
             and self.final_query_string != self.original_query_string
         ):
+            recursive_kwargs = dict(use_query_parser=False)
+            if query_filter is not None:
+                recursive_kwargs["filter"] = query_filter
             recursive = self.query_class(
-                self.final_query_string, use_query_parser=False
+                self.final_query_string, **recursive_kwargs
             ).search_query
             self.match_queries.append(recursive)
 
@@ -1755,8 +1817,11 @@ class Filter(SearchBase):
         self.subcollection = None
         self.order = None
         self.order_ascending = False
+        self.search_field = "all"
+        self.include_summary = True
 
         self.script_fields = script_fields or dict()
+        self.classification_terms: list[str] = []
 
         # Give the Facets object a chance to modify any or all of this
         # information.
@@ -1925,6 +1990,12 @@ class Filter(SearchBase):
             ids = filter_ids(genre_ids)
             nested_filters["genres"].append(
                 Terms(**{"genres.term": filter_ids(genre_ids)})
+            )
+
+        if self.classification_terms:
+            f = chain(
+                f,
+                Terms(**{"classifications.term.keyword": self.classification_terms}),
             )
 
         for customlist_ids in self.customlist_restriction_sets:
