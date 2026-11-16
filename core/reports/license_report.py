@@ -7,7 +7,11 @@ from typing import Protocol, TextIO
 
 from sqlalchemy.orm import Session
 
-from core.model import CirculationEvent, LicensePool
+from core.model import LicensePool
+from core.model.edition import Edition
+from core.model.identifier import Identifier
+from core.model.licensing import License
+from core.model.work import Work
 
 
 class CSVWriter(Protocol):
@@ -23,17 +27,23 @@ class LicenseReport:
     headers = [
         "Work/Licensepool Identifier",
         "Title",
+        "Original title",
         "Primary author",
         "Author",
         "Collection",
         "Language",
+        "Original language",
+        "Published",
+        "Original published",
         "Format",
+        "File size",
         "Audiobook duration",
         "Ebook pages",
         "Series",
         "Book Collection",
         "Abridged",
         "Awards",
+        "Keywords",
         "Data source modified",
         "Work last modified",
         "Title/Licensepool Created",
@@ -86,29 +96,12 @@ class LicenseReport:
         row: list[object] = [""] * len(self.headers)
         row[0] = identifier.identifier
         if edition:
-            row[1:4] = [
-                edition.title,
-                edition.primary_author.sort_name if edition.primary_author else "",
-                edition.author,
-            ]
-            row[5:13] = [
-                edition.language,
-                edition.medium,
-                edition.duration,
-                edition.number_of_pages,
-                self._series(edition),
-                edition.collection,
-                "abridged" if edition.abridged is True else "not abridged",
-                "; ".join(edition.awards or []),
-            ]
-            row[13] = self._date(edition.data_source_modified)
-            row[14] = self._date(edition.work.last_update_time)
-        row[4] = pool.collection.name
-        row[15] = self._date(pool.availability_time)
-        row[16] = self._date(last_seen)
-        row[17] = self._enum_value(pool.status)
-        row[18] = self._date(pool.exhausted_date)
-        row[19:22] = [
+            self._populate_edition(row, edition)
+        row[5] = pool.collection.name
+        row[21] = self._date(pool.availability_time)
+        row[22] = self._enum_value(pool.status)
+        row[23] = self._date(pool.exhausted_date)
+        row[24:27] = [
             pool.licenses_owned,
             pool.licenses_available,
             pool.patrons_in_hold_queue,
@@ -119,15 +112,10 @@ class LicenseReport:
             license_row: list[object] = [""] * len(self.headers)
             license_row[0] = identifier.identifier
             if edition:
-                license_row[1:4] = [
-                    edition.title,
-                    edition.primary_author.sort_name if edition.primary_author else "",
-                    edition.author,
-                ]
-                license_row[4] = pool.collection.name
-                license_row[5] = edition.language
-            license_row[17] = self._enum_value(pool.status)
-            license_row[22:40] = [
+                self._populate_edition(license_row, edition)
+                license_row[5] = pool.collection.name
+            license_row[22] = self._enum_value(pool.status)
+            license_row[27:45] = [
                 license.identifier,
                 self._date(license.created),
                 self._enum_value(license.status),
@@ -183,6 +171,30 @@ class LicenseReport:
             if not last_seen or candidate > last_seen:
                 last_seen = candidate
         return last_seen
+    def _populate_edition(self, row: list[object], edition) -> None:
+        row[1:5] = [
+            edition.title,
+            edition.original_title or "",
+            edition.primary_author.sort_name if edition.primary_author else "",
+            edition.author,
+        ]
+        row[6:21] = [
+            edition.language,
+            edition.original_language or "",
+            self._date(edition.published),
+            self._date(edition.original_published),
+            edition.medium,
+            edition.file_size,
+            edition.duration,
+            edition.number_of_pages,
+            self._series(edition),
+            edition.collection,
+            "abridged" if edition.abridged is True else "not abridged",
+            "; ".join(edition.awards or []),
+            "; ".join(edition.work.keywords),
+            self._date(edition.data_source_modified),
+            self._date(edition.work.last_update_time),
+        ]
 
     def _series(self, edition) -> str:
         series = edition.series or ""
