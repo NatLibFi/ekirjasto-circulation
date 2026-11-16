@@ -3529,14 +3529,14 @@ testing = ["covdefaults (>=2.3)", "pytest (>=8.4.2)", "pytest-cov (>=7)", "pytes
 
 [[package]]
 name = "pyspellchecker"
-version = "0.9.0"
+version = "0.9.1"
 description = "Pure python spell checker based on work by Peter Norvig"
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "pyspellchecker-0.9.0-py3-none-any.whl", hash = "sha256:97eaed776e0854f69aafb723f6962b403099e50c9a1d9c05525c819f4b0f5d54"},
-    {file = "pyspellchecker-0.9.0.tar.gz", hash = "sha256:eb1a594161c84a4e67df7db1c269a3392a645bd50e4c82e1298892db0cdb0965"},
+    {file = "pyspellchecker-0.9.1-py3-none-any.whl", hash = "sha256:c79b144b4bad20024bf489ad3ffd96b76f3f53439e9fa59ac607896352852f3d"},
+    {file = "pyspellchecker-0.9.1.tar.gz", hash = "sha256:786c21f082d4059b139bca922cd6db6c85c800374b904b59a8f61d75a0a62d7f"},
 ]
 
 [[package]]
