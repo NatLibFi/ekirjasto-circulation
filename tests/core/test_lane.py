@@ -1320,6 +1320,60 @@ class TestFeaturedFacets:
 
 
 class TestSearchFacets:
+    def test_search_scope_navigation(self):
+        defaults = SearchFacets()
+        assert defaults.search_field == "all"
+        assert defaults.include_summary is True
+        assert "search_field" not in dict(defaults.items())
+        assert "include_summary" not in dict(defaults.items())
+
+        facets = SearchFacets(search_field="genre", include_summary=False)
+        navigated = facets.navigate(order="title")
+        assert navigated.search_field == "genre"
+        assert navigated.include_summary is False
+        assert navigated.min_score is None
+        assert dict(navigated.items())["search_field"] == "genre"
+        assert dict(navigated.items())["include_summary"] == "false"
+
+        filter = Filter(facets=navigated)
+        assert filter.search_field == "genre"
+        assert filter.include_summary is False
+        reset = navigated.navigate(search_field="all", include_summary=True)
+        assert reset.search_field == "all"
+        assert reset.include_summary is True
+
+    @pytest.mark.parametrize(
+        "arguments",
+        [
+            {"search_field": "unknown"},
+            {"include_summary": "invalid"},
+            {"search_type": "json", "search_field": "title"},
+            {"search_type": "json", "include_summary": "false"},
+        ],
+    )
+    def test_invalid_search_scope(self, arguments):
+        # Validate before constructing facets or accessing any database.
+        class Config:
+            def enabled_facets(self, group):
+                return []
+
+        result = SearchFacets.from_request(None, Config(), arguments.get, {}.get, None)
+        assert result.status_code == 400
+
+    def test_search_scope_from_request(self):
+        class Config:
+            entrypoints = []
+
+            def enabled_facets(self, group):
+                return []
+
+        arguments = {"search_field": "title", "include_summary": "false"}
+        facets = SearchFacets.from_request(None, Config(), arguments.get, {}.get, None)
+        assert facets.search_field == "title"
+        assert facets.include_summary is False
+        assert dict(facets.items())["search_field"] == "title"
+        assert dict(facets.items())["include_summary"] == "false"
+
     def test_constructor(self):
         # The SearchFacets constructor allows you to specify
         # a medium and language (or a list of them) as well

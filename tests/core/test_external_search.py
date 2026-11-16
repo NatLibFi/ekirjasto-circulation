@@ -2201,6 +2201,75 @@ class TestSearchBase:
 
 
 class TestQuery:
+    @staticmethod
+    def _queried_fields(query):
+        """Collect text fields from the generated DSL, including nested clauses."""
+        fields = set()
+        if isinstance(query, dict):
+            for key, value in query.items():
+                if key in {"match", "match_phrase", "term"}:
+                    fields.update(value)
+                elif key == "multi_match":
+                    fields.update(value["fields"])
+                fields.update(TestQuery._queried_fields(value))
+        elif isinstance(query, list):
+            for value in query:
+                fields.update(TestQuery._queried_fields(value))
+        return fields
+
+    @pytest.mark.parametrize(
+        "text", ["erotiikka", "young adult romance dogs", "nonfiction dogs"]
+    )
+    def test_exclude_summary(self, text):
+        default = Query(text).search_query.to_dict()
+        assert "summary" in self._queried_fields(default)
+        facets = SearchFacets(include_summary=False)
+        restricted = Query(text, Filter(facets=facets)).search_query.to_dict()
+        assert "summary" not in self._queried_fields(restricted)
+        assert "title.minimal" in self._queried_fields(restricted)
+        assert "classifications.term" in self._queried_fields(restricted)
+
+    @pytest.mark.parametrize(
+        "field,expected",
+        [
+            ("title", {"title", "title.keyword", "title.minimal"}),
+            (
+                "author",
+                {
+                    "author.keyword",
+                    "author.minimal",
+                    "contributors.display_name.keyword",
+                    "contributors.display_name.minimal",
+                    "contributors.sort_name.keyword",
+                    "contributors.sort_name.minimal",
+                },
+            ),
+            ("classification", {"classifications.term"}),
+            ("genre", {"genres.name"}),
+            ("summary", {"summary"}),
+        ],
+    )
+    def test_search_field(self, field, expected):
+        # Filter-like words must stay in the selected field, without parser leakage.
+        facets = SearchFacets(search_field=field, include_summary=False)
+        query = Query("romance", Filter(facets=facets)).search_query.to_dict()
+        assert self._queried_fields(query) == expected
+        if field == "genre":
+            assert (
+                query["dis_max"]["queries"][0]["bool"]["must"][0]["nested"]["path"]
+                == "genres"
+            )
+        if field == "author":
+            assert Contributor.Role.NARRATOR not in json.dumps(query)
+
+    def test_search_field_defaults_preserve_query(self):
+        original = Query("young adult romance dogs").search_query.to_dict()
+        explicit = Query(
+            "young adult romance dogs",
+            Filter(facets=SearchFacets(search_field="all", include_summary=True)),
+        ).search_query.to_dict()
+        assert explicit == original
+
     def test_constructor(self):
         # Verify that the Query constructor sets members with
         # no processing.
