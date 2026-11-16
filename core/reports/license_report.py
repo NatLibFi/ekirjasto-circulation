@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 from collections.abc import Iterable, Iterator
+from contextlib import closing
 from datetime import date, datetime
 from io import StringIO
 from typing import Protocol, TextIO
@@ -80,8 +81,9 @@ class LicenseReport:
         writer = csv.writer(output, lineterminator="\n")
         writer.writerow(self.headers)
 
-        for pool in self._pools():
-            self._write_pool(writer, pool)
+        with closing(iter(self._pools())) as pools:
+            for pool in pools:
+                self._write_pool(writer, pool)
 
     def stream(self) -> Iterator[str]:
         """Yield the report in pool-sized chunks instead of buffering it all."""
@@ -93,12 +95,15 @@ class LicenseReport:
         output.seek(0)
         output.truncate(0)
 
-        for pool in self._pools():
-            self._write_pool(writer, pool)
-            yield output.getvalue()
-            # Keep each yielded chunk limited to the next pool's rows.
-            output.seek(0)
-            output.truncate(0)
+        # Close the query iterator before request teardown ends its transaction,
+        # including when a disconnected client closes this generator early.
+        with closing(iter(self._pools())) as pools:
+            for pool in pools:
+                self._write_pool(writer, pool)
+                yield output.getvalue()
+                # Keep each yielded chunk limited to the next pool's rows.
+                output.seek(0)
+                output.truncate(0)
 
     def _pools(self):
         return (
