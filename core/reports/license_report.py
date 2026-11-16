@@ -18,6 +18,7 @@ from core.model.identifier import Identifier
 from core.model.licensing import License
 from core.model.patron import Loan
 from core.model.work import Work
+from core.util.log import LoggerMixin
 
 
 class CSVWriter(Protocol):
@@ -25,7 +26,7 @@ class CSVWriter(Protocol):
         ...
 
 
-class LicenseReport:
+class LicenseReport(LoggerMixin):
     """Write a CSV report containing license pools and their licenses."""
 
     format = "%Y-%m-%d"
@@ -153,6 +154,12 @@ class LicenseReport:
     ) -> None:
         edition = pool.presentation_edition
         identifier = pool.identifier
+        if identifier is None or not identifier.identifier:
+            message = (
+                f"Cannot generate license report: pool {pool.id} has no identifier."
+            )
+            self.log.error(message)
+            raise ValueError(message)
 
         row: list[object] = [""] * len(self.headers)
         row[0] = identifier.identifier
@@ -174,7 +181,7 @@ class LicenseReport:
             license_row[0] = identifier.identifier
             if edition:
                 self._populate_edition(license_row, edition)
-                license_row[5] = pool.collection.name
+            license_row[5] = pool.collection.name
             license_row[22] = self._enum_value(pool.status)
             license_row[27:45] = [
                 license.identifier,
@@ -198,7 +205,8 @@ class LicenseReport:
             ]
             writer.writerow(license_row)
 
-    def _populate_edition(self, row: list[object], edition) -> None:
+    def _populate_edition(self, row: list[object], edition: Edition) -> None:
+        work = edition.work
         row[1:5] = [
             edition.title,
             edition.original_title or "",
@@ -218,9 +226,9 @@ class LicenseReport:
             edition.collection,
             "abridged" if edition.abridged is True else "not abridged",
             "; ".join(edition.awards or []),
-            "; ".join(edition.work.keywords),
+            "; ".join(work.keywords) if work is not None else "",
             self._date(edition.data_source_modified),
-            self._date(edition.work.last_update_time),
+            self._date(work.last_update_time) if work is not None else "",
         ]
 
     def _series(self, edition) -> str:
