@@ -56,7 +56,7 @@ class PresentationProperties(BaseOpdsModel, LoggerMixin):
     @field_validator("layout", mode="before")
     @classmethod
     def validate_layout(cls, value):
-        if value in {"fixed", "reflowable", "scrolled"}:
+        if isinstance(value, str) and value in {"fixed", "reflowable", "scrolled"}:
             return value
         cls.logger().error("Invalid layout value: %r", value)
         return None
@@ -493,7 +493,9 @@ class Metadata(BaseOpdsModel, LoggerMixin):
     @field_validator("layout", mode="before")
     @classmethod
     def validate_layout_value(cls, value):
-        if value is None or value in {"fixed", "reflowable", "scrolled"}:
+        if value is None or (
+            isinstance(value, str) and value in {"fixed", "reflowable", "scrolled"}
+        ):
             return value
         cls.logger().error("Invalid layout value: %r", value)
         return None
