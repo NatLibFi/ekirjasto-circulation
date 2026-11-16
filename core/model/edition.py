@@ -157,6 +157,7 @@ class Edition(Base, EditionConstants):
     layout = Column(Unicode, nullable=True)
     collection = Column(Unicode, nullable=True)
     awards = Column(ARRAY(Unicode), nullable=True)
+    keywords = Column(ARRAY(Unicode), nullable=True)
 
     cover_id = Column(
         Integer,

@@ -551,7 +551,6 @@ from core.model.integration import (
     IntegrationLibraryConfiguration,
 )
 from core.model.library import Library
-from core.model.keyword import Keyword
 from core.model.licensing import (
     DeliveryMechanism,
     License,

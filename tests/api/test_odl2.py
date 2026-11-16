@@ -698,7 +698,7 @@ class TestODL2Importer:
         assert 1 == len(maahan_katketty_work.genres)  # General Fiction is omitted
         assert "Adult" == maahan_katketty_work.audience
         assert True == maahan_katketty_work.fiction
-        assert [keyword.name for keyword in maahan_katketty_work.keywords] == [
+        assert [keyword for keyword in maahan_katketty_work.keywords] == [
             "ruotsi",
             "hakkerit",
             "koukuttava",

@@ -21,16 +21,9 @@ def upgrade() -> None:
     op.add_column("editions", sa.Column("original_published", sa.Date(), nullable=True))
     op.add_column("editions", sa.Column("original_title", sa.Unicode(), nullable=True))
     op.add_column("editions", sa.Column("file_size", sa.Float(), nullable=True))
-    op.create_table(
-        "keywords",
-        sa.Column("id", sa.Integer(), nullable=False),
-        sa.Column("work_id", sa.Integer(), nullable=False),
-        sa.Column("name", sa.Unicode(), nullable=False),
-        sa.ForeignKeyConstraint(["work_id"], ["works.id"]),
-        sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("work_id", "name"),
+    op.add_column(
+        "editions", sa.Column("keywords", sa.ARRAY(sa.Unicode()), nullable=True)
     )
-    op.create_index(op.f("ix_keywords_work_id"), "keywords", ["work_id"], unique=False)
 
 
 def downgrade() -> None:
@@ -40,3 +33,4 @@ def downgrade() -> None:
     op.drop_column("editions", "original_title")
     op.drop_column("editions", "original_published")
     op.drop_column("editions", "original_language")
+    op.drop_column("editions", "keywords")

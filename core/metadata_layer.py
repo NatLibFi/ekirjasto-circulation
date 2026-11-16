@@ -1853,26 +1853,14 @@ class Metadata:
             self.circulation.apply(_db, collection, replace)
 
         if self.keywords is not None:
-            work = edition.work
-            if not work:
-                pool = get_one(
-                    _db,
-                    LicensePool,
-                    identifier=edition.primary_identifier,
-                    on_multiple="interchangeable",
-                )
-                work = pool.work if pool else None
-            if work:
-                from core.model import Keyword
-
-                names = []
-                seen = set()
-                for keyword in self.keywords:
-                    name = keyword.strip()
-                    if name and name not in seen:
-                        names.append(name)
-                        seen.add(name)
-                work.keywords[:] = [Keyword(name=name) for name in names]
+            names = []
+            seen = set()
+            for keyword in self.keywords:
+                name = keyword.strip()
+                if name and name not in seen:
+                    names.append(name)
+                    seen.add(name)
+            edition.keywords = names
 
         # obtains a presentation_edition for the title
         has_image = any([link.rel == Hyperlink.IMAGE for link in self.links])

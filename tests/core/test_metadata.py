@@ -120,6 +120,31 @@ class TestMetadataImporter:
             x.subject.identifier for x in identifier.classifications
         )
 
+    def test_keywords_are_reconciled_without_replacing_unchanged_rows(
+        self, db: DatabaseTransactionFixture
+    ):
+        work = db.work(with_license_pool=True)
+        edition = work.presentation_edition
+        metadata = Metadata(
+            data_source=edition.data_source,
+            keywords=[" mustat aukot ", "mustat aukot", "uusi"],
+        )
+
+        metadata.apply(edition, None)
+        db.session.flush()
+        existing = edition.keywords
+
+        metadata.apply(edition, None)
+        db.session.flush()
+
+        assert edition.keywords == existing == ["mustat aukot", "uusi"]
+        
+        metadata.keywords = ["uusi", "kolmas"]
+        metadata.apply(edition, None)
+        db.session.flush()
+
+        assert edition.keywords == ["uusi", "kolmas"]
+
     def test_classifications_with_missing_subject_name_and_ident(
         self, db: DatabaseTransactionFixture
     ):

@@ -335,7 +335,7 @@ class Annotator(ToFeedEntry):
             )
         if edition.original_title:
             computed.original_title = FeedEntryType(text=edition.original_title)
-        computed.keywords = [keyword.name for keyword in work.keywords]
+        computed.keywords = work.keywords
         if edition.collection:
             computed.collection = edition.collection
         computed.awards = [str(award) for award in (edition.awards or [])]

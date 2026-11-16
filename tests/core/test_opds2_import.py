@@ -211,7 +211,7 @@ class TestOPDS2Importer(OPDS2Test):
         moby_dick_work = self._get_work_by_identifier(
             works, self.MOBY_DICK_ISBN_IDENTIFIER
         )
-        assert [keyword.name for keyword in moby_dick_work.keywords] == [
+        assert [keyword for keyword in moby_dick_work.keywords] == [
             "remontointi ulkomailla"
         ]
 

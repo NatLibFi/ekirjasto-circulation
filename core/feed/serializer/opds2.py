@@ -127,15 +127,11 @@ class OPDS2Serializer(SerializerInterface[dict[str, Any]]):
                 )
             metadata["subject"] = subjects
 
-        keyowrds = []
+        keywords = []
         if data.keywords:
             for keyword in data.keywords:
-                keyowrds.append(
-                    {
-                        "name": keyword.name
-                    }
-                )
-            metadata["keyword"] = keyowrds
+                keywords.append({"name": keyword})
+            metadata["keyword"] = keywords
 
         if data.series:
             name = getattr(data.series, "name", None)
