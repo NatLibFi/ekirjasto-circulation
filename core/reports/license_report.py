@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import csv
-from collections.abc import Iterator, Mapping
+from collections.abc import Generator, Mapping
 from contextlib import closing
 from datetime import date, datetime
 from io import StringIO
@@ -90,7 +90,7 @@ class LicenseReport(LoggerMixin):
             for pool, loan_counts in pools:
                 self._write_pool(writer, pool, loan_counts)
 
-    def stream(self) -> Iterator[str]:
+    def stream(self) -> Generator[str, None, None]:
         """Yield the report in pool-sized chunks instead of buffering it all."""
         output = StringIO(newline="")
         writer = csv.DictWriter(output, fieldnames=self.headers, lineterminator="\n")
@@ -134,7 +134,7 @@ class LicenseReport(LoggerMixin):
 
     def _pools_with_loan_counts(
         self,
-    ) -> Iterator[tuple[LicensePool, dict[int, int]]]:
+    ) -> Generator[tuple[LicensePool, dict[int, int]], None, None]:
         with closing(iter(self._pools())) as pools:
             for batch in batched(pools, 100):
                 # Count in SQL without loading loan or patron objects. Restrict
@@ -192,7 +192,9 @@ class LicenseReport(LoggerMixin):
                     "License checkouts left": license.checkouts_left,
                     "License checkouts available": license.checkouts_available,
                     "License concurrency": license.terms_concurrency,
-                    "Active loans": loan_counts.get(license.id, 0),
+                    "Active loans": loan_counts.get(license.id, 0)
+                    if license.id is not None
+                    else 0,
                     "License expiration": self._date(license.expires),
                     "License status url": license.status_url,
                     "License exhausted date": self._date(license.availability_since),
@@ -223,8 +225,10 @@ class LicenseReport(LoggerMixin):
             "Series": self._series(edition),
             "Book Collection": edition.collection,
             "Abridged": "abridged" if edition.abridged is True else "not abridged",
-            "Awards": "; ".join(edition.awards or []),
-            "Keywords": "; ".join(work.keywords) if work is not None else "",
+            "Awards": "; ".join(str(award) for award in edition.awards or []),
+            "Keywords": "; ".join(str(keyword) for keyword in work.keywords)
+            if work is not None
+            else "",
             "Data source modified": self._date(edition.data_source_modified),
             "Work last modified": self._date(work.last_update_time)
             if work is not None

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import csv
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from io import StringIO
 from unittest.mock import Mock, patch
 
@@ -187,6 +187,32 @@ class TestLicenseReport:
         output = StringIO()
         report.write(output)
         assert "".join(chunks) == output.getvalue()
+
+    def test_loan_counts_across_pool_batches(self, db: DatabaseTransactionFixture):
+        expected = {}
+        for index in range(101):
+            _, pool = db.edition(with_license_pool=True)
+            pool.open_access = False
+            pool.availability_time = datetime(
+                2024, 1, 1, tzinfo=timezone.utc
+            ) + timedelta(seconds=index)
+            license_ = db.license(pool, identifier=f"license-{index}")
+            # Put different counts at either end of the second batch boundary.
+            count = index % 3
+            for _ in range(count):
+                license_.loan_to(db.patron())
+            expected[license_.identifier] = str(count)
+
+        output = StringIO()
+        LicenseReport(db.session).write(output)
+        rows = list(csv.DictReader(StringIO(output.getvalue())))
+
+        assert len(rows) == 202
+        assert {
+            row["License identifier"]: row["Active loans"]
+            for row in rows
+            if row["License identifier"]
+        } == expected
 
     def test_empty_report(self, db: DatabaseTransactionFixture):
         report = LicenseReport(db.session)

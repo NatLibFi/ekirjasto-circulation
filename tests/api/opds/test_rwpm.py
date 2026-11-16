@@ -148,6 +148,16 @@ def test_presentation_layout_is_optional():
     assert PresentationProperties.model_validate({}).layout is None
 
 
+@pytest.mark.parametrize("layout", ["unknown", 15, [], {}])
+def test_invalid_compact_layout_is_logged_and_dropped(layout, caplog):
+    caplog.set_level(logging.ERROR)
+
+    metadata = Metadata.model_validate({"title": "Test", "layout": layout})
+
+    assert metadata.layout is None
+    assert "Invalid layout value" in caplog.text
+
+
 @pytest.mark.parametrize(
     "duration, expected_duration, expected_log",
     [

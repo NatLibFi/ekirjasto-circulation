@@ -19,6 +19,11 @@ from core.util.opds_writer import OPDSMessage
 
 
 class TestOPDS2Serializer:
+    def test_empty_keywords_are_omitted(self):
+        entry = OPDS2Serializer().serialize_work_entry(WorkEntryData())
+
+        assert "keyword" not in entry["metadata"]
+
     def test_serialize_feed(self):
         feed = FeedData(
             metadata=FeedMetadata(
@@ -93,6 +98,7 @@ class TestOPDS2Serializer:
             layout="reflowable",
             collection="A collection",
             awards=["An award", "Another award"],
+            keywords=["remontointi ulkomailla", "koti"],
             selected_by_patrons=7,
         )
 
@@ -129,6 +135,10 @@ class TestOPDS2Serializer:
             name="Series", position=3, collection="A collection"
         )
         assert metadata["award"] == ["An award", "Another award"]
+        assert metadata["keyword"] == [
+            {"name": "remontointi ulkomailla"},
+            {"name": "koti"},
+        ]
 
         assert entry["links"] == [
             dict(href="http://link", rel="rel"),

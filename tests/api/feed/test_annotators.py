@@ -1,5 +1,5 @@
 import json
-from datetime import timedelta
+from datetime import date, timedelta
 
 import feedparser
 import pytest
@@ -439,6 +439,11 @@ class TestAnnotator:
         edition.imprint = "imprint"
         edition.issued = utc_now().date()
         edition.duration = 10
+        edition.file_size = 1024.0
+        edition.original_language = "fin"
+        edition.original_published = date(2020, 1, 2)
+        edition.original_title = "Alkuperäinen nimi"
+        edition.keywords = ["koti", "remontointi"]
         edition.data_source_modified = now
 
         # datetime for > today
@@ -472,6 +477,11 @@ class TestAnnotator:
         assert data.publisher == FeedEntryType(text="publisher")
         assert data.issued == edition.issued
         assert data.duration == edition.duration
+        assert data.file_size == edition.file_size
+        assert data.original_language == FeedEntryType(text="fin")
+        assert data.original_published == FeedEntryType(text="2020-01-02")
+        assert data.original_title == FeedEntryType(text="Alkuperäinen nimi")
+        assert data.keywords == ["koti", "remontointi"]
         assert data.data_source_modified is not None
         assert data.data_source_modified.text == strftime(now)
 

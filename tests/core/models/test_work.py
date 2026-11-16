@@ -25,6 +25,28 @@ from tests.fixtures.search import ExternalSearchFixtureFake
 
 
 class TestWork:
+    def test_keywords_merge_source_editions_in_edition_order(
+        self, db: DatabaseTransactionFixture
+    ):
+        work = db.work()
+        first, first_pool = db.edition(with_license_pool=True)
+        first.keywords = ["first", "shared", ""]
+        second, second_pool = db.edition(with_license_pool=True)
+        second.keywords = ["shared", "second"]
+        duplicate_pool = db.licensepool(first, collection=db.collection())
+        _, empty_pool = db.edition(with_license_pool=True)
+        presentation = db.edition(
+            data_source_name=DataSource.PRESENTATION_EDITION,
+            identifier_type=first.primary_identifier.type,
+            identifier_id=first.primary_identifier.identifier,
+        )
+        presentation.keywords = ["presentation only"]
+        # Reverse the pool order and include the first identifier twice.
+        work.license_pools = [second_pool, duplicate_pool, empty_pool, first_pool]
+        db.session.flush()
+
+        assert work.keywords == ["first", "shared", "second"]
+
     def test_all_identifier_ids(self, db: DatabaseTransactionFixture):
         work = db.work(with_license_pool=True)
         lp = work.license_pools[0]

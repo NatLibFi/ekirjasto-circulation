@@ -120,14 +120,12 @@ class TestMetadataImporter:
             x.subject.identifier for x in identifier.classifications
         )
 
-    def test_keywords_are_reconciled_without_replacing_unchanged_rows(
-        self, db: DatabaseTransactionFixture
-    ):
+    def test_keywords_are_normalized_and_replaced(self, db: DatabaseTransactionFixture):
         work = db.work(with_license_pool=True)
         edition = work.presentation_edition
         metadata = Metadata(
             data_source=edition.data_source,
-            keywords=[" mustat aukot ", "mustat aukot", "uusi"],
+            keywords=[" mustat aukot ", "mustat aukot", "uusi", "", "  "],
         )
 
         metadata.apply(edition, None)
@@ -138,12 +136,29 @@ class TestMetadataImporter:
         db.session.flush()
 
         assert edition.keywords == existing == ["mustat aukot", "uusi"]
-        
+
         metadata.keywords = ["uusi", "kolmas"]
         metadata.apply(edition, None)
         db.session.flush()
 
         assert edition.keywords == ["uusi", "kolmas"]
+
+    @pytest.mark.parametrize(
+        "keywords, expected",
+        [(None, ["existing"]), ([], [])],
+    )
+    def test_missing_keywords_preserve_values_and_empty_keywords_clear_them(
+        self, db: DatabaseTransactionFixture, keywords, expected
+    ):
+        edition = db.edition()
+        edition.keywords = ["existing"]
+        metadata = Metadata(data_source=edition.data_source, keywords=keywords)
+
+        metadata.apply(edition, None)
+        db.session.flush()
+        db.session.expire(edition, ["keywords"])
+
+        assert edition.keywords == expected
 
     def test_classifications_with_missing_subject_name_and_ident(
         self, db: DatabaseTransactionFixture
