@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-import io
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from datetime import date, datetime, timedelta
 
 import flask
@@ -27,11 +26,9 @@ from core.reports.license_report import LicenseReport
 class DashboardController(
     CirculationManagerController, AdminPermissionsControllerMixin
 ):
-    def license_report(self) -> str:
+    def license_report(self) -> Iterator[str]:
         self.require_system_admin()
-        output = io.StringIO(newline="")
-        LicenseReport(self._db).write(output)
-        return output.getvalue()
+        return LicenseReport(self._db).stream()
 
     def stats(
         self, stats_function: Callable[[Admin, Session], StatisticsResponse]

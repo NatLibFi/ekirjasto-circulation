@@ -367,7 +367,8 @@ def genres():
 @requires_admin
 def licenses():
     """Returns a CSV report of all non-open-access license pools."""
-    response = make_response(app.manager.admin_dashboard_controller.license_report())
+    report = app.manager.admin_dashboard_controller.license_report()
+    response = make_response(flask.stream_with_context(report))
     response.headers["Content-Type"] = "text/csv"
     response.headers[
         "Content-Disposition"

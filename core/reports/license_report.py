@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import csv
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 from datetime import date, datetime
+from io import StringIO
 from typing import Protocol, TextIO
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from core.model import LicensePool
 from core.model.edition import Edition
@@ -79,13 +80,46 @@ class LicenseReport:
         writer = csv.writer(output, lineterminator="\n")
         writer.writerow(self.headers)
 
-        pools = (
+        for pool in self._pools():
+            self._write_pool(writer, pool)
+
+    def stream(self) -> Iterator[str]:
+        """Yield the report in pool-sized chunks instead of buffering it all."""
+        output = StringIO(newline="")
+        writer = csv.writer(output, lineterminator="\n")
+        writer.writerow(self.headers)
+        # Send the header as its own chunk, then clear it before writing data.
+        yield output.getvalue()
+        output.seek(0)
+        output.truncate(0)
+
+        for pool in self._pools():
+            self._write_pool(writer, pool)
+            yield output.getvalue()
+            # Keep each yielded chunk limited to the next pool's rows.
+            output.seek(0)
+            output.truncate(0)
+
+    def _pools(self):
+        return (
             self.db.query(LicensePool)
+            .options(
+                selectinload(LicensePool.identifier),
+                selectinload(LicensePool.collection),
+                selectinload(LicensePool.presentation_edition)
+                .selectinload(Edition.work)
+                .selectinload(Work.license_pools)
+                .selectinload(LicensePool.identifier)
+                .selectinload(Identifier.primarily_identifies)
+                .selectinload(Edition.data_source),
+                selectinload(LicensePool.licenses).selectinload(License.loans),
+                selectinload(LicensePool.loans),
+                selectinload(LicensePool.holds),
+            )
             .filter(LicensePool.open_access == False)
             .order_by(LicensePool.availability_time.desc())
+            .yield_per(100)
         )
-        for pool in pools:
-            self._write_pool(writer, pool)
 
     def _write_pool(self, writer: CSVWriter, pool: LicensePool) -> None:
         edition = pool.presentation_edition
