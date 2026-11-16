@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import csv
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterator, Mapping
 from contextlib import closing
 from datetime import date, datetime
 from io import StringIO
@@ -22,7 +22,7 @@ from core.util.log import LoggerMixin
 
 
 class CSVWriter(Protocol):
-    def writerow(self, row: Iterable[object]) -> object:
+    def writerow(self, row: Mapping[str, object]) -> object:
         ...
 
 
@@ -83,8 +83,8 @@ class LicenseReport(LoggerMixin):
         self.db = db
 
     def write(self, output: TextIO) -> None:
-        writer = csv.writer(output, lineterminator="\n")
-        writer.writerow(self.headers)
+        writer = csv.DictWriter(output, fieldnames=self.headers, lineterminator="\n")
+        writer.writeheader()
 
         with closing(self._pools_with_loan_counts()) as pools:
             for pool, loan_counts in pools:
@@ -93,8 +93,8 @@ class LicenseReport(LoggerMixin):
     def stream(self) -> Iterator[str]:
         """Yield the report in pool-sized chunks instead of buffering it all."""
         output = StringIO(newline="")
-        writer = csv.writer(output, lineterminator="\n")
-        writer.writerow(self.headers)
+        writer = csv.DictWriter(output, fieldnames=self.headers, lineterminator="\n")
+        writer.writeheader()
         # Send the header as its own chunk, then clear it before writing data.
         yield output.getvalue()
         output.seek(0)
@@ -161,75 +161,75 @@ class LicenseReport(LoggerMixin):
             self.log.error(message)
             raise ValueError(message)
 
-        row: list[object] = [""] * len(self.headers)
-        row[0] = identifier.identifier
+        shared: dict[str, object] = {
+            "Work/Licensepool Identifier": identifier.identifier,
+            "Collection": pool.collection.name,
+            "Licensepool Status": self._enum_value(pool.status),
+        }
         if edition:
-            self._populate_edition(row, edition)
-        row[5] = pool.collection.name
-        row[21] = self._date(pool.availability_time)
-        row[22] = self._enum_value(pool.status)
-        row[23] = self._date(pool.exhausted_date)
-        row[24:27] = [
-            pool.licenses_owned,
-            pool.licenses_available,
-            pool.patrons_in_hold_queue,
-        ]
-        writer.writerow(row)
+            shared.update(self._edition_fields(edition))
+        writer.writerow(
+            shared
+            | {
+                "Title/Licensepool Created": self._date(pool.availability_time),
+                "Licensepool exhausted date": self._date(pool.exhausted_date),
+                "Current copies owned": pool.licenses_owned,
+                "Current copies available": pool.licenses_available,
+                "Patrons in hold queue": pool.patrons_in_hold_queue,
+            }
+        )
 
         for license in pool.licenses:
-            license_row: list[object] = [""] * len(self.headers)
-            license_row[0] = identifier.identifier
-            if edition:
-                self._populate_edition(license_row, edition)
-            license_row[5] = pool.collection.name
-            license_row[22] = self._enum_value(pool.status)
-            license_row[27:45] = [
-                license.identifier,
-                self._date(license.created),
-                self._enum_value(license.status),
-                license.license_type.value if license.license_type else "",
-                license.is_missing,
-                self._date(license.last_checked),
-                license.checkouts_left,
-                license.checkouts_available,
-                license.terms_concurrency,
-                loan_counts.get(license.id, 0),
-                self._date(license.expires),
-                license.status_url,
-                self._date(license.availability_since),
-                license.availability_reason,
-                license.price_value,
-                license.price_currency,
-                license.order_name,
-                license.total_checkouts,
-            ]
-            writer.writerow(license_row)
+            writer.writerow(
+                shared
+                | {
+                    "License identifier": license.identifier,
+                    "License created": self._date(license.created),
+                    "License status": self._enum_value(license.status),
+                    "License type": self._enum_value(license.license_type),
+                    "License missing?": license.is_missing,
+                    "License last checked": self._date(license.last_checked),
+                    "License checkouts left": license.checkouts_left,
+                    "License checkouts available": license.checkouts_available,
+                    "License concurrency": license.terms_concurrency,
+                    "Active loans": loan_counts.get(license.id, 0),
+                    "License expiration": self._date(license.expires),
+                    "License status url": license.status_url,
+                    "License exhausted date": self._date(license.availability_since),
+                    "License availability reason": license.availability_reason,
+                    "License price": license.price_value,
+                    "License price currency": license.price_currency,
+                    "License order name": license.order_name,
+                    "License purchased checkouts": license.total_checkouts,
+                }
+            )
 
-    def _populate_edition(self, row: list[object], edition: Edition) -> None:
+    def _edition_fields(self, edition: Edition) -> dict[str, object]:
         work = edition.work
-        row[1:5] = [
-            edition.title,
-            edition.original_title or "",
-            edition.primary_author.sort_name if edition.primary_author else "",
-            edition.author,
-        ]
-        row[6:21] = [
-            edition.language,
-            edition.original_language or "",
-            self._date(edition.published),
-            self._date(edition.original_published),
-            edition.medium,
-            edition.file_size,
-            edition.duration,
-            edition.number_of_pages,
-            self._series(edition),
-            edition.collection,
-            "abridged" if edition.abridged is True else "not abridged",
-            "; ".join(edition.awards or []),
-            "; ".join(work.keywords) if work is not None else "",
-            self._date(edition.data_source_modified),
-            self._date(work.last_update_time) if work is not None else "",
-        ]
+        primary_author = edition.primary_author
+        return {
+            "Title": edition.title,
+            "Original title": edition.original_title or "",
+            "Primary author": primary_author.sort_name if primary_author else "",
+            "Author": edition.author,
+            "Language": edition.language,
+            "Original language": edition.original_language or "",
+            "Published": self._date(edition.published),
+            "Original published": self._date(edition.original_published),
+            "Format": edition.medium,
+            "File size": edition.file_size,
+            "Audiobook duration": edition.duration,
+            "Ebook pages": edition.number_of_pages,
+            "Series": self._series(edition),
+            "Book Collection": edition.collection,
+            "Abridged": "abridged" if edition.abridged is True else "not abridged",
+            "Awards": "; ".join(edition.awards or []),
+            "Keywords": "; ".join(work.keywords) if work is not None else "",
+            "Data source modified": self._date(edition.data_source_modified),
+            "Work last modified": self._date(work.last_update_time)
+            if work is not None
+            else "",
+        }
 
     def _series(self, edition) -> str:
         series = edition.series or ""
