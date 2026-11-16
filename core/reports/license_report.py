@@ -5,14 +5,18 @@ from collections.abc import Iterable, Iterator
 from contextlib import closing
 from datetime import date, datetime
 from io import StringIO
+from itertools import batched
 from typing import Protocol, TextIO
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session, selectinload
 
 from core.model import LicensePool
+from core.model.contributor import Contribution
 from core.model.edition import Edition
 from core.model.identifier import Identifier
 from core.model.licensing import License
+from core.model.patron import Loan
 from core.model.work import Work
 
 
@@ -81,9 +85,9 @@ class LicenseReport:
         writer = csv.writer(output, lineterminator="\n")
         writer.writerow(self.headers)
 
-        with closing(iter(self._pools())) as pools:
-            for pool in pools:
-                self._write_pool(writer, pool)
+        with closing(self._pools_with_loan_counts()) as pools:
+            for pool, loan_counts in pools:
+                self._write_pool(writer, pool, loan_counts)
 
     def stream(self) -> Iterator[str]:
         """Yield the report in pool-sized chunks instead of buffering it all."""
@@ -97,9 +101,9 @@ class LicenseReport:
 
         # Close the query iterator before request teardown ends its transaction,
         # including when a disconnected client closes this generator early.
-        with closing(iter(self._pools())) as pools:
-            for pool in pools:
-                self._write_pool(writer, pool)
+        with closing(self._pools_with_loan_counts()) as pools:
+            for pool, loan_counts in pools:
+                self._write_pool(writer, pool, loan_counts)
                 yield output.getvalue()
                 # Keep each yielded chunk limited to the next pool's rows.
                 output.seek(0)
@@ -117,16 +121,36 @@ class LicenseReport:
                 .selectinload(LicensePool.identifier)
                 .selectinload(Identifier.primarily_identifies)
                 .selectinload(Edition.data_source),
-                selectinload(LicensePool.licenses).selectinload(License.loans),
-                selectinload(LicensePool.loans),
-                selectinload(LicensePool.holds),
+                selectinload(LicensePool.presentation_edition)
+                .selectinload(Edition.contributions)
+                .selectinload(Contribution.contributor),
+                selectinload(LicensePool.licenses),
             )
             .filter(LicensePool.open_access == False)
             .order_by(LicensePool.availability_time.desc())
             .yield_per(100)
         )
 
-    def _write_pool(self, writer: CSVWriter, pool: LicensePool) -> None:
+    def _pools_with_loan_counts(
+        self,
+    ) -> Iterator[tuple[LicensePool, dict[int, int]]]:
+        with closing(iter(self._pools())) as pools:
+            for batch in batched(pools, 100):
+                # Count in SQL without loading loan or patron objects. Restrict
+                # each query to this batch to keep memory and query size bounded.
+                loan_counts = dict(
+                    self.db.query(Loan.license_id, func.count(Loan.id))
+                    .join(License, Loan.license_id == License.id)
+                    .filter(License.license_pool_id.in_([pool.id for pool in batch]))
+                    .group_by(Loan.license_id)
+                    .all()
+                )
+                for pool in batch:
+                    yield pool, loan_counts
+
+    def _write_pool(
+        self, writer: CSVWriter, pool: LicensePool, loan_counts: dict[int, int]
+    ) -> None:
         edition = pool.presentation_edition
         identifier = pool.identifier
 
@@ -162,7 +186,7 @@ class LicenseReport:
                 license.checkouts_left,
                 license.checkouts_available,
                 license.terms_concurrency,
-                len(license.loans),
+                loan_counts.get(license.id, 0),
                 self._date(license.expires),
                 license.status_url,
                 self._date(license.availability_since),
