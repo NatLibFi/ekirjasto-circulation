@@ -47,7 +47,6 @@ class LicenseReport:
         "Data source modified",
         "Work last modified",
         "Title/Licensepool Created",
-        "Last seen (best guess)",
         "Licensepool Status",
         "Licensepool exhausted date",
         "Current copies owned",
@@ -91,7 +90,6 @@ class LicenseReport:
     def _write_pool(self, writer: CSVWriter, pool: LicensePool) -> None:
         edition = pool.presentation_edition
         identifier = pool.identifier
-        last_seen = self._last_seen(pool)
 
         row: list[object] = [""] * len(self.headers)
         row[0] = identifier.identifier
@@ -137,40 +135,6 @@ class LicenseReport:
             ]
             writer.writerow(license_row)
 
-    def _last_seen(self, pool: LicensePool) -> datetime | None:
-        last_seen = pool.availability_time
-        for loan in pool.loans:
-            if loan.start and (not last_seen or loan.start > last_seen):
-                last_seen = loan.start
-        for hold in pool.holds:
-            if hold.start and (not last_seen or hold.start > last_seen):
-                last_seen = hold.start
-
-        events = (
-            self.db.query(CirculationEvent)
-            .filter(CirculationEvent.license_pool_id == pool.id)
-            .order_by(CirculationEvent.start.desc())
-        )
-        title_removals = events.filter(
-            CirculationEvent.type == CirculationEvent.DISTRIBUTOR_TITLE_REMOVE
-        )
-        if title_removals.count():
-            candidate = title_removals[-1].start
-            if not last_seen or candidate > last_seen:
-                last_seen = candidate
-
-        license_removals = (
-            events.filter(
-                CirculationEvent.type == CirculationEvent.DISTRIBUTOR_LICENSE_REMOVE
-            )
-            .filter(CirculationEvent.old_value > 0)
-            .filter(CirculationEvent.new_value <= 0)
-        )
-        if license_removals.count():
-            candidate = license_removals[-1].start
-            if not last_seen or candidate > last_seen:
-                last_seen = candidate
-        return last_seen
     def _populate_edition(self, row: list[object], edition) -> None:
         row[1:5] = [
             edition.title,
