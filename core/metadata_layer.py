@@ -1187,6 +1187,10 @@ class Metadata:
         "language",
         "medium",
         "duration",
+        "file_size",
+        "original_language",
+        "original_published",
+        "original_title",
         "series",
         "series_position",
         "publisher",
@@ -1217,11 +1221,16 @@ class Metadata:
         identifiers=None,
         recommendations=None,
         subjects=None,
+        keywords=None,
         contributors=None,
         measurements=None,
         links=None,
         data_source_last_updated=None,
         duration=None,
+        file_size=None,
+        original_language=None,
+        original_published=None,
+        original_title=None,
         abridged=None,
         number_of_pages=None,
         layout=None,
@@ -1255,6 +1264,10 @@ class Metadata:
         self.issued = issued
         self.published = published
         self.duration = duration
+        self.file_size = file_size
+        self.original_language = original_language
+        self.original_published = original_published
+        self.original_title = original_title
         self.abridged = abridged
         self.number_of_pages = number_of_pages
         self.layout = layout
@@ -1269,6 +1282,7 @@ class Metadata:
             self.identifiers.append(self.primary_identifier)
         self.recommendations = recommendations or []
         self.subjects = subjects or []
+        self.keywords = keywords
         self.contributors = contributors or []
         self.measurements = measurements or []
 
@@ -1837,6 +1851,16 @@ class Metadata:
         # its information is up-to-date.
         if self.circulation:
             self.circulation.apply(_db, collection, replace)
+
+        if self.keywords is not None:
+            names = []
+            seen = set()
+            for keyword in self.keywords:
+                name = keyword.strip()
+                if name and name not in seen:
+                    names.append(name)
+                    seen.add(name)
+            edition.keywords = names
 
         # obtains a presentation_edition for the title
         has_image = any([link.rel == Hyperlink.IMAGE for link in self.links])

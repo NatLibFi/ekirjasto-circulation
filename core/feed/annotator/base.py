@@ -325,6 +325,17 @@ class Annotator(ToFeedEntry):
 
         if edition.duration is not None:
             computed.duration = float(edition.duration)
+        if edition.file_size is not None:
+            computed.file_size = float(edition.file_size)
+        if edition.original_language:
+            computed.original_language = FeedEntryType(text=edition.original_language)
+        if edition.original_published:
+            computed.original_published = FeedEntryType(
+                text=edition.original_published.isoformat()
+            )
+        if edition.original_title:
+            computed.original_title = FeedEntryType(text=edition.original_title)
+        computed.keywords = work.keywords
         if edition.collection:
             computed.collection = edition.collection
         computed.awards = [str(award) for award in (edition.awards or [])]

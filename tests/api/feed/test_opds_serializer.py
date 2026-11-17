@@ -162,6 +162,7 @@ class TestOPDSSerializer:
             ],
             ratings=[FeedEntryType(text="rating")],
             duration=10,
+            keywords=["remontointi ulkomailla", "koti"],
             abridged=True,
             number_of_pages=208,
             layout="reflowable",
@@ -258,6 +259,12 @@ class TestOPDSSerializer:
         child = element.findall(f"{{{OPDSFeed.DCTERMS_NS}}}duration")
         assert len(child) == 1
         assert child[0].text == "10"
+
+        children = element.findall("keyword")
+        assert [child.text for child in children] == [
+            "remontointi ulkomailla",
+            "koti",
+        ]
 
         child = element.findall(f"{{{OPDSFeed.SCHEMA_NS}}}numberOfPages")
         assert len(child) == 1

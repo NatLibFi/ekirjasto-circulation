@@ -1,7 +1,9 @@
 import logging
 from collections.abc import Generator
-from typing import Any
-from unittest.mock import MagicMock
+from datetime import date
+from tempfile import TemporaryFile
+from typing import Any, cast
+from unittest.mock import MagicMock, Mock
 
 import flask
 import pytest
@@ -489,6 +491,91 @@ class TestAdminDashboard:
     def fixture(self, admin_route_fixture: AdminRouteFixture) -> AdminRouteFixture:
         admin_route_fixture.set_controller_name(self.CONTROLLER_NAME)
         return admin_route_fixture
+
+    def test_license_report_requires_authentication(self, fixture: AdminRouteFixture):
+        report = Mock()
+        cast(Any, fixture.controller).license_report = report
+
+        response = fixture.request("/admin/licenses")
+
+        assert response.status_code == 401
+        report.assert_not_called()
+
+    @pytest.mark.parametrize("consume", [False, True])
+    def test_license_report_download(
+        self, fixture: AdminRouteFixture, monkeypatch, consume
+    ):
+        fixture.manager.admin_sign_in_controller.authenticated = True
+        closed = Mock()
+        chunks = ["Title,Keywords\n", '"Ääni, kirja",koti\n']
+
+        def report():
+            try:
+                yield from chunks
+            finally:
+                closed()
+
+        cast(Any, fixture.controller).license_report = Mock(side_effect=report)
+        with TemporaryFile(mode="w+b") as output:
+            monkeypatch.setattr(routes, "TemporaryFile", Mock(return_value=output))
+            response = fixture.request("/admin/licenses")
+            try:
+                # Generation finishes while the temporary file stays open for download.
+                closed.assert_called_once_with()
+                assert not output.closed
+                assert response.status_code == 200
+                assert response.mimetype == "text/csv"
+                assert response.headers["Content-Disposition"] == (
+                    f"attachment; filename=license_report_{date.today().isoformat()}.csv"
+                )
+                expected = "".join(chunks).encode("utf-8")
+                assert response.content_length == len(expected)
+                assert response.headers["Cache-Control"] == "no-store"
+                assert "ETag" not in response.headers
+                if consume:
+                    assert b"".join(response.response) == expected
+            finally:
+                # Also exercise closing a response before consuming its body.
+                response.close()
+            assert output.closed
+
+    @pytest.mark.parametrize("failure_stage", ["generation", "send_file"])
+    def test_license_report_failure_returns_problem_and_closes_resources(
+        self, fixture: AdminRouteFixture, monkeypatch, failure_stage
+    ):
+        fixture.manager.admin_sign_in_controller.authenticated = True
+        fixture.manager._db = Mock()
+        closed = Mock()
+
+        def report():
+            try:
+                yield "Title\n"
+                if failure_stage == "generation":
+                    raise RuntimeError("Report failed after its header")
+                yield "A book\n"
+            finally:
+                closed()
+
+        cast(Any, fixture.controller).license_report = Mock(side_effect=report)
+        if failure_stage == "send_file":
+            monkeypatch.setattr(
+                routes.flask, "send_file", Mock(side_effect=RuntimeError("Send failed"))
+            )
+        with TemporaryFile(mode="w+b") as output:
+            monkeypatch.setattr(routes, "TemporaryFile", Mock(return_value=output))
+            response = fixture.controller_fixture.app.make_response(
+                fixture.request("/admin/licenses")
+            )
+
+            assert response.status_code == 500
+            assert response.mimetype == ProblemDetail.JSON_MEDIA_TYPE
+            assert response.get_json()["detail"] == (
+                "The license report could not be generated. Please try again."
+            )
+            assert "Content-Disposition" not in response.headers
+            fixture.manager._db.rollback.assert_called_once_with()
+            closed.assert_called_once_with()
+            assert output.closed
 
     def test_bulk_circulation_events(self, fixture: AdminRouteFixture):
         url = "/admin/bulk_circulation_events"

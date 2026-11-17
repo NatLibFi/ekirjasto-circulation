@@ -20,6 +20,17 @@
                 "modified": "2025-09-08T10:09:22+03:00",
                 "published": "2025",
                 "language": "fi",
+                "original_title": "Rummet i jorden",
+                "original_language": "sv",
+                "original_published": "2025",
+                "numberOfPages": 456,
+                "file_size": 2278097,
+                "belongsTo": {
+                    "series": {
+                        "name": "Julia Malmros"
+                    }
+                },
+                "layout": "fixed",
                 "description": "Julia Malmros -jännärisarjan piinaavan jännittävä toinen osa.  Kim Ribbing on vanginnut talonsa kellariin tohtori Martin Rudbeckin, jonka kidutuksen kaltaisista hoitomenetelmistä Kim joutui nuorena kärsimään. Nyt roolit ovat vaihtuneet, mutta poliisi etsii jo kadonnutta tohtoria ja silmukka Kimin ympärillä kiristyy.  Kirjailija Julia Malmros puolestaan tutkii äärioikeistolaista puoluetta ja sen yhteyksiä moottoripyöräkerhoon. Tutkinta osoittautuu kaikkea muuta kuin vaarattomaksi.",
                 "publisher": {
                     "name": "Gummerus",
@@ -45,6 +56,30 @@
                         "code": "Adult",
                         "name": "Adult",
                         "scheme": "http://schema.org/audience"
+                    },
+                    {
+                        "name": "ruotsi"
+                    },
+                    {
+                        "name": "hakkerit"
+                    },
+                    {
+                        "name": "koukuttava"
+                    },
+                    {
+                        "name": "millennium"
+                    },
+                    {
+                        "name": "piinaava"
+                    },
+                    {
+                        "name": "rikos"
+                    },
+                    {
+                        "name": "skandidekkarit"
+                    },
+                    {
+                        "name": "yllättävä"
                     }
                 ],
                 "translator": {

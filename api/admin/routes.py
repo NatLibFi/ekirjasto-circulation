@@ -1,11 +1,14 @@
 import hmac
 import logging
 import os
+from contextlib import ExitStack, closing
 from datetime import date, datetime, timedelta, timezone
 from functools import wraps
+from tempfile import TemporaryFile
 
 import flask
 from flask import Response, make_response, redirect, request, url_for
+from flask_babel import lazy_gettext as _
 
 from api.admin.config import Configuration as AdminClientConfig
 from api.admin.config import OperationalMode
@@ -23,6 +26,7 @@ from api.controller.static_file import StaticFileController
 from api.ekirjasto_consortium import EkirjastoConsortiumMonitor
 from api.routes import allows_library, has_library, library_route
 from core.app_server import returns_problem_detail
+from core.problem_details import INTERNAL_SERVER_ERROR
 from core.util.problem_detail import BaseProblemDetailException, ProblemDetail
 
 # An admin's session will expire after this amount of time and
@@ -367,12 +371,38 @@ def genres():
 @requires_admin
 def licenses():
     """Returns a CSV report of all non-open-access license pools."""
-    response = make_response(app.manager.admin_dashboard_controller.license_report())
-    response.headers["Content-Type"] = "text/csv"
-    response.headers[
-        "Content-Disposition"
-    ] = f"attachment; filename=license_report_{date.today().isoformat()}.csv"
-    return response
+    report = app.manager.admin_dashboard_controller.license_report()
+    try:
+        with ExitStack() as cleanup:
+            output = cleanup.enter_context(TemporaryFile(mode="w+b"))
+            # Complete generation before committing to a successful download.
+            # The temporary file keeps the full report out of application memory.
+            with closing(report):
+                for chunk in report:
+                    output.write(chunk.encode("utf-8"))
+            size = output.tell()
+            output.seek(0)
+            response = flask.send_file(
+                output,
+                mimetype="text/csv",
+                as_attachment=True,
+                download_name=f"license_report_{date.today().isoformat()}.csv",
+                conditional=False,
+                etag=False,
+            )
+            response.content_length = size
+            response.headers["Cache-Control"] = "no-store"
+            # The response's file wrapper closes the file on completion or
+            # disconnect. Keep a callback for explicitly closed responses too.
+            response.call_on_close(output.close)
+            cleanup.pop_all()
+            return response
+    except Exception:
+        logger.exception("License report generation failed")
+        app.manager._db.rollback()
+        return INTERNAL_SERVER_ERROR.detailed(
+            _("The license report could not be generated. Please try again.")
+        )
 
 
 @library_route("/admin/bulk_circulation_events")

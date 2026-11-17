@@ -157,6 +157,35 @@ class Work(Base):
     # the content of the summary Resource.
     summary_text = Column(Unicode)
 
+    @property
+    def keywords(self) -> list[str]:
+        """Return the unique keywords supplied for this work's source editions."""
+        editions: dict[int, Edition] = {}
+        for pool in self.license_pools or []:
+            identifier = pool.identifier
+            if not identifier:
+                continue
+            for edition in identifier.primarily_identifies:
+                if (
+                    edition.data_source
+                    and edition.data_source.name
+                    != DataSourceConstants.PRESENTATION_EDITION
+                ):
+                    if edition.id is not None:
+                        editions[edition.id] = edition
+
+        keywords: list[str] = []
+        seen: set[str] = set()
+        for edition in sorted(
+            editions.values(), key=lambda item: (item.id is None, item.id or 0)
+        ):
+            names = cast(list[str], edition.keywords or [])
+            for name in names:
+                if name and name not in seen:
+                    keywords.append(name)
+                    seen.add(name)
+        return keywords
+
     # The overall suitability of this work for unsolicited
     # presentation to a patron. This is a calculated value taking both
     # rating and popularity into account.

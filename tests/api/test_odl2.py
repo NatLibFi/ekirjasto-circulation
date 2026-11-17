@@ -623,6 +623,13 @@ class TestODL2Importer:
         assert (
             datetime.date(2025, 1, 1) == maahan_katketty_edition.published
         )  # The data constains only year
+        assert "Rummet i jorden" == maahan_katketty_edition.original_title
+        assert "swe" == maahan_katketty_edition.original_language
+        assert datetime.date(2025, 1, 1) == maahan_katketty_edition.original_published
+        assert 456 == maahan_katketty_edition.number_of_pages
+        assert 2278097.0 == maahan_katketty_edition.file_size
+        assert "Julia Malmros" == maahan_katketty_edition.series
+        assert "fixed" == maahan_katketty_edition.layout
 
         assert (
             "https://www.library.com/sites/default/files/imagecache/product_full/bookcover_9789512445448.jpg"
@@ -691,6 +698,16 @@ class TestODL2Importer:
         assert 1 == len(maahan_katketty_work.genres)  # General Fiction is omitted
         assert "Adult" == maahan_katketty_work.audience
         assert True == maahan_katketty_work.fiction
+        assert [keyword for keyword in maahan_katketty_work.keywords] == [
+            "ruotsi",
+            "hakkerit",
+            "koukuttava",
+            "millennium",
+            "piinaava",
+            "rikos",
+            "skandidekkarit",
+            "yllättävä",
+        ]
 
     @freeze_time("2016-01-01T00:00:00+00:00")
     def test_import_demarque_audiobook_with_streaming(

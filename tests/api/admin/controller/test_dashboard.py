@@ -5,8 +5,10 @@ from unittest import mock
 
 import pytest
 
+from api.admin.exceptions import AdminNotAuthorized
 from core.feed.annotator.admin import AdminAnnotator
 from core.model import CirculationEvent, Genre, WorkGenre, get_one_or_create
+from core.model.admin import AdminRole
 from core.util.datetime_helpers import utc_now
 from tests.fixtures.api_admin import AdminControllerFixture
 from tests.fixtures.api_controller import ControllerFixture
@@ -35,6 +37,23 @@ def dashboard_fixture(controller_fixture: ControllerFixture) -> DashboardFixture
 
 
 class TestDashboardController:
+    def test_license_report_requires_system_admin(
+        self, dashboard_fixture: DashboardFixture
+    ):
+        controller = dashboard_fixture.manager.admin_dashboard_controller
+        with dashboard_fixture.request_context_with_admin("/admin/licenses"):
+            with pytest.raises(AdminNotAuthorized):
+                controller.license_report()
+
+            dashboard_fixture.admin.add_role(AdminRole.SYSTEM_ADMIN)
+            report = controller.license_report()
+            try:
+                assert (
+                    next(csv.reader([next(report)]))[0] == "Work/Licensepool Identifier"
+                )
+            finally:
+                report.close()
+
     def test_circulation_events(self, dashboard_fixture: DashboardFixture):
         [lp] = dashboard_fixture.english_1.license_pools
         types = [
