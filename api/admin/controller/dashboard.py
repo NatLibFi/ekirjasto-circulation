@@ -6,7 +6,7 @@ from typing import Any
 
 import flask
 from sqlalchemy import asc, case, desc, func, nullslast
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from api.admin.controller.base import AdminPermissionsControllerMixin
 from api.admin.model.dashboard_statistics import StatisticsResponse
@@ -22,7 +22,9 @@ from core.model import (
     Work,
 )
 from core.model.edition import Edition
+from core.model.classification import Genre
 from core.model.licensing import LicensePoolStatus
+from core.model.work import WorkGenre
 from core.reports.license_report import LicenseReport
 
 
@@ -51,7 +53,21 @@ class DashboardController(
             value = flask.request.args.get(name, "").strip()
             return value or None
 
-        limit = 20
+        def float_argument(name: str) -> float | None:
+            value = text_argument(name)
+            try:
+                return float(value) if value is not None else None
+            except ValueError:
+                return None
+
+        def date_argument(name: str) -> date | None:
+            value = text_argument(name)
+            try:
+                return date.fromisoformat(value) if value else None
+            except ValueError:
+                return None
+
+        limit = 50
         offset = integer_argument("offset", 0) or 0
 
         # The index contains bibliographic data, but circulation values are
@@ -74,6 +90,7 @@ class DashboardController(
                     "patrons_in_hold_queue"
                 ),
                 func.max(pool_status_rank).label("status_rank"),
+                func.min(LicensePool.availability_time).label("title_created_date"),
             )
             .filter(
                 LicensePool.collection_id.in_(
@@ -96,6 +113,31 @@ class DashboardController(
             pool_totals.c.patrons_in_hold_queue, 0
         ).label("patrons_in_hold_queue")
 
+        genres = (
+            self._db.query(
+                WorkGenre.work_id.label("work_id"),
+                func.string_agg(Genre.name, ", ").label("names"),
+            )
+            .join(Genre, Genre.id == WorkGenre.genre_id)
+            .group_by(WorkGenre.work_id)
+            .subquery()
+        )
+        source_editions = (
+            self._db.query(
+                LicensePool.work_id.label("work_id"),
+                func.string_agg(
+                    func.distinct(func.array_to_string(Edition.keywords, ", ")),
+                    ", ",
+                ).label("names"),
+            )
+            .join(Identifier, Identifier.id == LicensePool.identifier_id)
+            .join(Edition, Edition.primary_identifier_id == Identifier.id)
+            .join(DataSource, DataSource.id == Edition.data_source_id)
+            .filter(DataSource.name != DataSource.PRESENTATION_EDITION)
+            .group_by(LicensePool.work_id)
+            .subquery()
+        )
+
         query = (
             self._db.query(
                 Work,
@@ -104,6 +146,7 @@ class DashboardController(
                 status,
                 licenses_owned,
                 patrons_in_hold_queue,
+                pool_totals.c.title_created_date,
             )
             .join(Edition, Work.presentation_edition_id == Edition.id)
             .outerjoin(pool_totals, pool_totals.c.work_id == Work.id)
@@ -118,6 +161,12 @@ class DashboardController(
                 )
             )
         )
+
+        requested_sort = text_argument("sort") or "title"
+        if text_argument("genres") or requested_sort == "genres":
+            query = query.outerjoin(genres, genres.c.work_id == Work.id)
+        if text_argument("keywords") or requested_sort == "keywords":
+            query = query.outerjoin(source_editions, source_editions.c.work_id == Work.id)
 
         title = text_argument("title")
         author = text_argument("author")
@@ -155,6 +204,51 @@ class DashboardController(
             if maximum is not None:
                 query = query.filter(column <= maximum)
 
+        text_filters = {
+            "series": Edition.series,
+            "awards": func.array_to_string(Edition.awards, ", "),
+            "original_language": Edition.original_language,
+            "original_title": Edition.original_title,
+            "keywords": source_editions.c.names,
+            "genres": genres.c.names,
+        }
+        for name, column in text_filters.items():
+            value = text_argument(name)
+            if value:
+                query = query.filter(column.ilike(f"%{value}%"))
+
+        audience = text_argument("audience")
+        if audience:
+            query = query.filter(Work.audience == audience)
+
+        fiction = text_argument("fiction")
+        if fiction in ("true", "false"):
+            query = query.filter(Work.fiction.is_(fiction == "true"))
+        for name, column in (
+            ("duration", Edition.duration),
+            ("number_of_pages", Edition.number_of_pages),
+            ("original_published_year", func.extract("year", Edition.original_published)),
+        ):
+            for suffix, comparison in (("_min", "min"), ("_max", "max")):
+                value = float_argument(name + suffix)
+                if value is not None:
+                    query = query.filter(
+                        column >= value if comparison == "min" else column <= value
+                    )
+        target_age = integer_argument("target_age")
+        if target_age is not None:
+            query = query.filter(Work.target_age.contains(target_age))
+        for name, column in (
+            ("title_created_date", pool_totals.c.title_created_date),
+            ("data_source_modified", Edition.data_source_modified),
+        ):
+            minimum = date_argument(name + "_min")
+            maximum = date_argument(name + "_max")
+            if minimum:
+                query = query.filter(func.date(column) >= minimum)
+            if maximum:
+                query = query.filter(func.date(column) <= maximum)
+
         include_total = flask.request.args.get("include_total", "true").lower() not in (
             "false",
             "0",
@@ -169,8 +263,22 @@ class DashboardController(
             "license_pool_status": status,
             "licenses_owned": licenses_owned,
             "patrons_in_hold_queue": patrons_in_hold_queue,
+            "series": Edition.series,
+            "duration": Edition.duration,
+            "number_of_pages": Edition.number_of_pages,
+            "awards": func.array_to_string(Edition.awards, ", "),
+            "title_created_date": pool_totals.c.title_created_date,
+            "data_source_modified": Edition.data_source_modified,
+            "original_published_year": Edition.original_published,
+            "original_language": Edition.original_language,
+            "original_title": Edition.original_title,
+            "keywords": source_editions.c.names,
+            "genres": genres.c.names,
+            "fiction": Work.fiction,
+            "audience": Work.audience,
+            "target_age": func.lower(Work.target_age),
         }
-        sort_name = text_argument("sort") or "title"
+        sort_name = requested_sort
         sort_column = sort_columns.get(sort_name, Edition.sort_title)
         descending = flask.request.args.get("direction", "asc").lower() == "desc"
         query = query.order_by(
@@ -178,13 +286,18 @@ class DashboardController(
             Work.id.asc(),
         )
 
-        rows = query.offset(offset).limit(limit + 1).all()
+        rows = (
+            query.options(selectinload(Work.work_genres).joinedload(WorkGenre.genre))
+            .offset(offset)
+            .limit(limit + 1)
+            .all()
+        )
         has_more = len(rows) > limit
         rows = rows[:limit]
 
         annotator = AdminAnnotator(self.circulation, library)
         works = []
-        for work, edition, identifier, pool_status, owned, holds in rows:
+        for work, edition, identifier, pool_status, owned, holds, created_date in rows:
             works.append(
                 {
                     "id": work.id,
@@ -203,6 +316,23 @@ class DashboardController(
                     "license_pool_status": pool_status,
                     "licenses_owned": owned,
                     "patrons_in_hold_queue": holds,
+                    "series": edition.series,
+                    "series_position": edition.series_position,
+                    "duration": edition.duration,
+                    "number_of_pages": edition.number_of_pages,
+                    "awards": edition.awards or [],
+                    "title_created_date": created_date.isoformat()
+                    if created_date
+                    else None,
+                    "data_source_modified": edition.data_source_modified.isoformat() if edition.data_source_modified else None,
+                    "original_published_year": edition.original_published.year if edition.original_published else None,
+                    "original_language": edition.original_language,
+                    "original_title": edition.original_title,
+                    "keywords": work.keywords,
+                    "genres": sorted(genre.name for genre in work.genres),
+                    "fiction": work.fiction,
+                    "audience": work.audience,
+                    "target_age": work.target_age_string if work.target_age else None,
                     "identifier": {
                         "type": identifier.type if identifier else None,
                         "identifier": identifier.identifier if identifier else None,
