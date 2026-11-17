@@ -22,10 +22,12 @@ from core.model import (
     Edition,
     Genre,
     Hyperlink,
+    LicensePool,
     Measurement,
     PresentationCalculationPolicy,
     RightsStatus,
     Subject,
+    Work,
     create,
     get_one,
     get_one_or_create,
@@ -57,7 +59,9 @@ class WorkController(CirculationManagerController, AdminPermissionsControllerMix
         # cached, which is perfect. We want the admin interface
         # to update immediately when an admin makes a change.
         return OPDSAcquisitionFeed.entry_as_response(
-            OPDSAcquisitionFeed.single_entry(work, annotator)
+            OPDSAcquisitionFeed.single_entry(
+                work, annotator, even_if_no_license_pool=True
+            )
         )
 
     def circulation_details(self, identifier_type, identifier):
@@ -255,8 +259,23 @@ class WorkController(CirculationManagerController, AdminPermissionsControllerMix
         return marc_to_role
 
     def languages(self):
-        """Return the supported language codes and their English names."""
-        return LanguageCodes.english_names
+        """Return language codes and English names for the library's works."""
+        collection_ids = [
+            collection.id for collection in flask.request.library.all_collections
+        ]
+        languages = (
+            self._db.query(Edition.language)
+            .select_from(Work)
+            .join(Work.presentation_edition)
+            .join(Work.license_pools)
+            .filter(LicensePool.collection_id.in_(collection_ids))
+            .distinct()
+        )
+        return {
+            language: LanguageCodes.english_names[language]
+            for (language,) in languages
+            if language in LanguageCodes.english_names
+        }
 
     def media(self):
         """Return the supported media types for a work and their schema.org values."""
