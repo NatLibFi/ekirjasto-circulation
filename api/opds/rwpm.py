@@ -12,6 +12,7 @@ from pydantic import (
     NonNegativeInt,
     PositiveFloat,
     PositiveInt,
+    ValidationInfo,
     field_validator,
 )
 
@@ -55,7 +56,7 @@ class PresentationProperties(BaseOpdsModel, LoggerMixin):
     @field_validator("layout", mode="before")
     @classmethod
     def validate_layout(cls, value):
-        if value in {"fixed", "reflowable", "scrolled"}:
+        if isinstance(value, str) and value in {"fixed", "reflowable", "scrolled"}:
             return value
         cls.logger().error("Invalid layout value: %r", value)
         return None
@@ -258,6 +259,8 @@ class BelongsTo(BaseOpdsModel, LoggerMixin):
         """Drop invalid series entries while normalizing input for Pydantic."""
         if value is None:
             return value
+        if isinstance(value, dict):
+            value = [value]
         if not isinstance(value, list):
             cls.logger().error("Invalid belongsTo series value: %r", value)
             return None
@@ -324,8 +327,9 @@ class Metadata(BaseOpdsModel, LoggerMixin):
 
     modified: AwareDatetime | None = None
     published: AwareDatetime | date | None = None
+    original_published: date | None = None
 
-    @field_validator("published", mode="before")
+    @field_validator("published", "original_published", mode="before")
     def check_year(cls, value):
         """
         Format a year into a datetime object.
@@ -337,6 +341,8 @@ class Metadata(BaseOpdsModel, LoggerMixin):
         return value
 
     language: StrOrTuple[LanguageCode] | None = None
+    original_language: StrOrTuple[LanguageCode] | None = None
+    original_title: LanguageMap | None = None
 
     @cached_property
     def languages(self) -> Sequence[LanguageCode]:
@@ -431,23 +437,25 @@ class Metadata(BaseOpdsModel, LoggerMixin):
     )
     description: str | None = None
     duration: float | None = None
+    file_size: float | None = None
     number_of_pages: PositiveInt | None = Field(None, alias="numberOfPages")
 
-    @field_validator("duration", mode="before")
+    @field_validator("duration", "file_size", mode="before")
     @classmethod
-    def validate_duration(cls, value):
-        """Validate that the duration is a non-negative float."""
+    def validate_duration(cls, value, info: ValidationInfo):
+        """Validate that numeric metadata is a non-negative float."""
+        field_name = info.field_name
         if value is None:
             return None
         try:
-            duration = float(value)
+            new_value = float(value)
         except (TypeError, ValueError):
-            cls.logger().error("Invalid duration value: %r", value)
+            cls.logger().error("Invalid %s value: %r", field_name, value)
             return None
-        if duration < 0:
-            cls.logger().error("Invalid negative duration value: %r", value)
+        if new_value < 0:
+            cls.logger().error("Invalid negative %s value: %r", field_name, value)
             return None
-        return duration
+        return new_value
 
     @field_validator("number_of_pages", mode="before")
     @classmethod
@@ -479,6 +487,18 @@ class Metadata(BaseOpdsModel, LoggerMixin):
         return None
 
     belongs_to: BelongsTo | None = Field(None, alias="belongsTo")
+
+    layout: Literal["fixed", "reflowable", "scrolled"] | None = None
+
+    @field_validator("layout", mode="before")
+    @classmethod
+    def validate_layout_value(cls, value):
+        if value is None or (
+            isinstance(value, str) and value in {"fixed", "reflowable", "scrolled"}
+        ):
+            return value
+        cls.logger().error("Invalid layout value: %r", value)
+        return None
 
     @field_validator("belongs_to", mode="before")
     @classmethod

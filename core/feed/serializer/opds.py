@@ -179,6 +179,8 @@ class OPDS1Serializer(SerializerInterface[etree._Element], OPDSFeed):
             entry.append(
                 OPDSFeed.E(f"{{{OPDSFeed.SCHEMA_NS}}}layout", feed_entry.layout)
             )
+        for keyword in feed_entry.keywords:
+            entry.append(OPDSFeed.E("keyword", keyword))
         if feed_entry.summary:
             entry.append(OPDSFeed.E("summary", feed_entry.summary.text))
         if feed_entry.pwid:

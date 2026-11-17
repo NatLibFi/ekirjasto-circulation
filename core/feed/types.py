@@ -159,11 +159,16 @@ class WorkEntryData(BaseModel):
     pwid: str | None = None
     issued: datetime | date | None = None
     duration: float | None = None
+    file_size: float | None = None
+    original_language: FeedEntryType | None = None
+    original_published: FeedEntryType | None = None
+    original_title: FeedEntryType | None = None
     abridged: bool | None = None
     number_of_pages: int | None = None
     layout: str | None = None
     collection: str | None = None
     awards: list[str] = field(default_factory=list)
+    keywords: list[str] = field(default_factory=list)
 
     summary: FeedEntryType | None = None
     language: FeedEntryType | None = None

@@ -19,6 +19,11 @@ from core.util.opds_writer import OPDSMessage
 
 
 class TestOPDS2Serializer:
+    def test_empty_keywords_are_omitted(self):
+        entry = OPDS2Serializer().serialize_work_entry(WorkEntryData())
+
+        assert "keyword" not in entry["metadata"]
+
     def test_serialize_feed(self):
         feed = FeedData(
             metadata=FeedMetadata(
@@ -84,11 +89,16 @@ class TestOPDS2Serializer:
             ],
             other_links=[Link(href="http://link", rel="rel")],
             duration=10,
+            file_size=1185001.0,
+            original_language=FeedEntryType(text="eng"),
+            original_published=FeedEntryType(text="2023-01-01"),
+            original_title=FeedEntryType(text="Alkuperäinen nimi"),
             abridged=True,
             number_of_pages=208,
             layout="reflowable",
             collection="A collection",
             awards=["An award", "Another award"],
+            keywords=["remontointi ulkomailla", "koti"],
             selected_by_patrons=7,
         )
 
@@ -101,6 +111,10 @@ class TestOPDS2Serializer:
         assert metadata["title"] == data.title.text
         assert metadata["sortAs"] == data.sort_title.text
         assert metadata["duration"] == data.duration
+        assert metadata["file_size"] == data.file_size
+        assert metadata["original_language"] == data.original_language.text
+        assert metadata["original_published"] == data.original_published.text
+        assert metadata["original_title"] == data.original_title.text
         assert metadata["abridged"] is True
         assert metadata["numberOfPages"] == 208
         assert metadata["presentation"] == {"layout": "reflowable"}
@@ -121,6 +135,10 @@ class TestOPDS2Serializer:
             name="Series", position=3, collection="A collection"
         )
         assert metadata["award"] == ["An award", "Another award"]
+        assert metadata["keyword"] == [
+            {"name": "remontointi ulkomailla"},
+            {"name": "koti"},
+        ]
 
         assert entry["links"] == [
             dict(href="http://link", rel="rel"),

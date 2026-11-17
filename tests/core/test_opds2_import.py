@@ -151,6 +151,25 @@ class TestOPDS2Importer(OPDS2Test):
             "An award",
             "Another award",
         ]
+        feed_json["publications"][0]["metadata"].update(
+            {
+                "original_language": "en",
+                "original_published": "2023",
+                "original_title": "Alkuperäinen nimi",
+                "file_size": 1185001,
+                "layout": "fixed",
+                "belongsTo": {"series": {"name": "Me Otukset"}},
+                "subject": [
+                    {
+                        "scheme": "http://schema.org/audience",
+                        "code": "juvenile-fiction",
+                        "name": "Juvenile Fiction",
+                    },
+                    {"name": "remontointi ulkomailla"},
+                    {"name": "remontointi ulkomailla"},
+                ],
+            }
+        )
         content_server_feed_text = json.dumps(feed_json)
 
         if manifest_type == "bytes":
@@ -181,7 +200,20 @@ class TestOPDS2Importer(OPDS2Test):
         assert EditionConstants.AUDIO_MEDIUM == moby_dick_edition.medium
         assert "Herman Melville" == moby_dick_edition.author
         assert moby_dick_edition.duration == 100.2
+        assert moby_dick_edition.original_language == "eng"
+        assert moby_dick_edition.original_published == datetime.date(2023, 1, 1)
+        assert moby_dick_edition.original_title == "Alkuperäinen nimi"
+        assert moby_dick_edition.file_size == 1185001.0
+        assert moby_dick_edition.layout == "fixed"
+        assert moby_dick_edition.series == "Me Otukset"
         assert moby_dick_edition.awards == ["An award", "Another award"]
+
+        moby_dick_work = self._get_work_by_identifier(
+            works, self.MOBY_DICK_ISBN_IDENTIFIER
+        )
+        assert [keyword for keyword in moby_dick_work.keywords] == [
+            "remontointi ulkomailla"
+        ]
 
         assert moby_dick_edition.primary_author.sort_name == "Melville, Herman"
 
