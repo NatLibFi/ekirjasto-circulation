@@ -3,8 +3,154 @@ info:
   version: "0.1"
   title: Circulation API
 paths:
+  /{library}/admin/all_works:
+    summary: Browse the selected library's complete work inventory
+    get:
+      summary: Return one page of filtered and sorted works
+      description: |
+        Requires an authenticated administrator with librarian access to the selected library.
+        Returns works with presentation metadata and a license pool in one of the library's
+        collections, including parent collections. Suppressed works and works with exhausted
+        or no-license pools are included.
+
+        Pages contain at most 50 works; the page size cannot be changed. Filter options describe
+        the complete library inventory and do not depend on the current filters or page.
+        Filters are combined with AND. Numeric and date bounds are inclusive.
+
+        Text filters use case-insensitive partial matching, except for language, format,
+        audience, and genres, which require exact values. Percent and underscore characters
+        in partial-match filters act as SQL LIKE wildcards. Blank text filters and malformed
+        numeric or date filters are ignored. Negative integer filters are treated as zero.
+
+        Sorting places null values last in both directions and uses ascending work ID to
+        break ties. Genre sorting uses the displayed Finnish labels. Keyword sorting uses
+        an ordered aggregation of distinct source-edition keyword strings.
+      parameters:
+        - {name: library, in: path, required: true, schema: {type: string}}
+        - name: offset
+          in: query
+          description: Number of matching works to skip; invalid or negative values use zero
+          schema: {type: integer, minimum: 0, default: 0}
+        - name: include_total
+          in: query
+          description: Set to "false" or "0" to skip the total count; values are case-insensitive and all other values include the count
+          schema: {type: string, default: "true"}
+        - {name: title, in: query, schema: {type: string}}
+        - {name: author, in: query, schema: {type: string}}
+        - {name: language, in: query, description: Exact language code from language_options, schema: {type: string}}
+        - {name: format, in: query, description: Exact edition medium such as Book or Audio, schema: {type: string}}
+        - name: status
+          in: query
+          description: Comma-separated pool statuses; a work matches any listed status
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: {$ref: "#/components/schemas/license_pool_status"}
+        - {name: licenses_owned, in: query, description: Exact sum of licenses owned across the library's pools, schema: {type: integer, minimum: 0}}
+        - {name: licenses_owned_min, in: query, schema: {type: integer, minimum: 0}}
+        - {name: licenses_owned_max, in: query, schema: {type: integer, minimum: 0}}
+        - {name: patrons_in_hold_queue, in: query, description: Exact sum of patrons in hold queues across the library's pools, schema: {type: integer, minimum: 0}}
+        - {name: patrons_in_hold_queue_min, in: query, schema: {type: integer, minimum: 0}}
+        - {name: patrons_in_hold_queue_max, in: query, schema: {type: integer, minimum: 0}}
+        - {name: series, in: query, schema: {type: string}}
+        - {name: awards, in: query, schema: {type: string}}
+        - {name: original_language, in: query, schema: {type: string}}
+        - {name: original_title, in: query, schema: {type: string}}
+        - {name: keywords, in: query, schema: {type: string}}
+        - {name: genres, in: query, description: Exact canonical genre name from genre_options, schema: {type: string}}
+        - {name: audience, in: query, schema: {type: string}}
+        - {name: fiction, in: query, schema: {type: string, enum: ["true", "false"]}}
+        - {name: target_age, in: query, description: Match works whose target-age range contains this age, schema: {type: integer, minimum: 0}}
+        - {name: published_year_min, in: query, schema: {type: number}}
+        - {name: published_year_max, in: query, schema: {type: number}}
+        - {name: duration_min, in: query, description: Minimum duration in seconds, schema: {type: number}}
+        - {name: duration_max, in: query, description: Maximum duration in seconds, schema: {type: number}}
+        - {name: number_of_pages_min, in: query, schema: {type: number}}
+        - {name: number_of_pages_max, in: query, schema: {type: number}}
+        - {name: original_published_year_min, in: query, schema: {type: number}}
+        - {name: original_published_year_max, in: query, schema: {type: number}}
+        - {name: title_created_date_min, in: query, schema: {type: string, format: date}}
+        - {name: title_created_date_max, in: query, schema: {type: string, format: date}}
+        - {name: data_source_modified_min, in: query, schema: {type: string, format: date}}
+        - {name: data_source_modified_max, in: query, schema: {type: string, format: date}}
+        - name: sort
+          in: query
+          description: Sort field; an unrecognized value falls back to title
+          schema:
+            type: string
+            default: title
+            enum:
+              - title
+              - author
+              - published_year
+              - language
+              - format
+              - license_pool_status
+              - licenses_owned
+              - patrons_in_hold_queue
+              - series
+              - duration
+              - number_of_pages
+              - awards
+              - title_created_date
+              - data_source_modified
+              - original_published_year
+              - original_language
+              - original_title
+              - keywords
+              - genres
+              - fiction
+              - audience
+              - target_age
+        - name: direction
+          in: query
+          description: Case-insensitive sort direction; values other than desc use ascending order
+          schema: {type: string, enum: [asc, desc], default: asc}
+      responses:
+        '200':
+          description: A page of works and pagination metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [works, language_options, genre_options, total, offset, limit, has_more]
+                properties:
+                  works:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/admin_work"
+                  language_options:
+                    type: object
+                    description: Recognized language codes present in the library's complete inventory, before filtering and pagination, mapped to English names
+                    additionalProperties:
+                      type: array
+                      items: {type: string}
+                  genre_options:
+                    type: array
+                    description: Genres associated with the library's pools before filtering and pagination; Finnish labels with canonical fallbacks and canonical filter values
+                    items:
+                      type: object
+                      required: [value, label]
+                      properties:
+                        value: {type: string}
+                        label: {type: string}
+                  total: {type: integer, minimum: 0, nullable: true, description: Number of matching works before pagination; null when include_total is false or 0}
+                  offset: {type: integer, minimum: 0}
+                  limit: {type: integer, enum: [50], example: 50, description: Fixed page size}
+                  has_more: {type: boolean, description: Whether more matching works exist after this page}
+        '401':
+          description: Missing or invalid administrator authentication
+        '403':
+          description: Administrator lacks librarian access to this library
+        '404':
+          description: Library not found
+      tags: [admin]
   /{library}/admin/custom_list/{list_id}:
     summary: Edit/Delete a custom list as required
+    parameters:
+      - {name: library, in: path, required: true, schema: {type: string}}
+      - {name: list_id, in: path, required: true, schema: {type: integer}}
     post:
       summary: Edit a custom list
       requestBody:
@@ -60,6 +206,73 @@ components:
                 auto_update_facets:
                   type: object
   schemas:
+    license_pool_status:
+      type: string
+      enum: [active, exhausted, no_licenses]
+    admin_work:
+      type: object
+      required:
+        - id
+        - admin_url
+        - title
+        - author
+        - published_year
+        - language
+        - format
+        - license_pool_status
+        - licenses_owned
+        - patrons_in_hold_queue
+        - series
+        - series_position
+        - duration
+        - number_of_pages
+        - awards
+        - title_created_date
+        - data_source_modified
+        - original_published_year
+        - original_language
+        - original_title
+        - keywords
+        - genres
+        - fiction
+        - audience
+        - target_age
+        - identifier
+      properties:
+        id: {type: integer}
+        admin_url: {type: string, format: uri, nullable: true, description: Absolute URL of the library's admin work-details endpoint; null when no primary identifier is available}
+        title: {type: string, nullable: true}
+        author: {type: string, nullable: true}
+        published_year: {type: integer, nullable: true}
+        language: {type: string, nullable: true}
+        format: {type: string, nullable: true}
+        license_pool_status:
+          allOf:
+            - $ref: "#/components/schemas/license_pool_status"
+          description: Aggregated status across the library's pools; active takes precedence over exhausted and then no_licenses
+        licenses_owned: {type: integer, description: Sum across the library's pools}
+        patrons_in_hold_queue: {type: integer, description: Sum across the library's pools}
+        series: {type: string, nullable: true}
+        series_position: {type: integer, nullable: true}
+        duration: {type: number, nullable: true, description: Seconds}
+        number_of_pages: {type: integer, nullable: true}
+        awards: {type: array, items: {type: string}}
+        title_created_date: {type: string, format: date-time, nullable: true, description: Earliest pool availability time in the library's collections}
+        data_source_modified: {type: string, format: date-time, nullable: true}
+        original_published_year: {type: integer, nullable: true}
+        original_language: {type: string, nullable: true}
+        original_title: {type: string, nullable: true}
+        keywords: {type: array, description: Unique nonempty source-edition keywords in first-occurrence order, items: {type: string}}
+        genres: {type: array, description: Finnish genre labels with canonical fallbacks sorted case-insensitively, items: {type: string}}
+        fiction: {type: boolean, nullable: true}
+        audience: {type: string, nullable: true}
+        target_age: {type: string, nullable: true, description: Human-readable target age or age range, example: "8-11"}
+        identifier:
+          type: object
+          required: [type, identifier]
+          properties:
+            type: {type: string, nullable: true}
+            identifier: {type: string, nullable: true}
     invalid_input:
       type: object
       properties:
