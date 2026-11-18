@@ -23,11 +23,12 @@ from core.model import (
     LicensePool,
     Work,
 )
-from core.model.edition import Edition
 from core.model.classification import Genre
+from core.model.edition import Edition
 from core.model.licensing import LicensePoolStatus
 from core.model.work import WorkGenre
 from core.reports.license_report import LicenseReport
+from core.util import LanguageCodes
 
 
 class DashboardController(
@@ -164,14 +165,20 @@ class DashboardController(
             )
         )
 
+        available_languages = query.with_entities(Edition.language).distinct().all()
+        language_options = {
+            language: LanguageCodes.english_names[language]
+            for (language,) in available_languages
+            if language in LanguageCodes.english_names
+        }
+
         requested_sort = text_argument("sort") or "title"
         if requested_sort == "genres":
             query = query.outerjoin(genres, genres.c.work_id == Work.id)
-        if (
-            text_argument("keywords")
-            or requested_sort == "keywords"
-        ):
-            query = query.outerjoin(source_editions, source_editions.c.work_id == Work.id)
+        if text_argument("keywords") or requested_sort == "keywords":
+            query = query.outerjoin(
+                source_editions, source_editions.c.work_id == Work.id
+            )
 
         title = text_argument("title")
         author = text_argument("author")
@@ -242,7 +249,10 @@ class DashboardController(
             ("published_year", func.extract("year", Edition.published)),
             ("duration", Edition.duration),
             ("number_of_pages", Edition.number_of_pages),
-            ("original_published_year", func.extract("year", Edition.original_published)),
+            (
+                "original_published_year",
+                func.extract("year", Edition.original_published),
+            ),
         ):
             for suffix, comparison in (("_min", "min"), ("_max", "max")):
                 value = float_argument(name + suffix)
@@ -354,6 +364,7 @@ class DashboardController(
 
         return {
             "works": works,
+            "language_options": language_options,
             "genre_options": [
                 {"value": name, "label": label}
                 for name, label in sorted(

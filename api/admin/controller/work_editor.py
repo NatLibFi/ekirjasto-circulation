@@ -22,12 +22,10 @@ from core.model import (
     Edition,
     Genre,
     Hyperlink,
-    LicensePool,
     Measurement,
     PresentationCalculationPolicy,
     RightsStatus,
     Subject,
-    Work,
     create,
     get_one,
     get_one_or_create,
@@ -259,23 +257,8 @@ class WorkController(CirculationManagerController, AdminPermissionsControllerMix
         return marc_to_role
 
     def languages(self):
-        """Return language codes and English names for the library's works."""
-        collection_ids = [
-            collection.id for collection in flask.request.library.all_collections
-        ]
-        languages = (
-            self._db.query(Edition.language)
-            .select_from(Work)
-            .join(Work.presentation_edition)
-            .join(Work.license_pools)
-            .filter(LicensePool.collection_id.in_(collection_ids))
-            .distinct()
-        )
-        return {
-            language: LanguageCodes.english_names[language]
-            for (language,) in languages
-            if language in LanguageCodes.english_names
-        }
+        """Return the supported language codes and their English names."""
+        return LanguageCodes.english_names
 
     def media(self):
         """Return the supported media types for a work and their schema.org values."""

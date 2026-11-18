@@ -331,8 +331,7 @@ def roles():
     return app.manager.admin_work_controller.roles()
 
 
-@library_route("/admin/languages")
-@has_library
+@app.route("/admin/languages")
 @returns_json_or_response_or_problem_detail
 def languages():
     return app.manager.admin_work_controller.languages()
