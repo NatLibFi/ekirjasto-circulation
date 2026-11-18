@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Any, NamedTuple
@@ -10,6 +10,14 @@ from flask_babel import force_locale
 from core.classifier.localized_names import genres as localized_genres
 from core.feed.annotator.admin import AdminAnnotator
 from core.model import Edition, Identifier, Work
+
+
+def inventory_genre_labels(
+    names: Iterable[str] = localized_genres,
+) -> dict[str, str]:
+    """Use the same Finnish genre labels for display and database sorting."""
+    with force_locale("fi"):
+        return {name: str(localized_genres.get(name, name)) for name in names}
 
 
 @dataclass(frozen=True)
@@ -137,9 +145,7 @@ class WorkInventoryPage:
 
     def as_dict(self, annotator: AdminAnnotator) -> dict[str, Any]:
         with force_locale("fi"):
-            genre_labels = {
-                name: str(localized_genres.get(name, name)) for name in self.genre_names
-            }
+            genre_labels = inventory_genre_labels(self.genre_names)
             works = [
                 serialize_inventory_row(row, genre_labels, annotator)
                 for row in self.rows
