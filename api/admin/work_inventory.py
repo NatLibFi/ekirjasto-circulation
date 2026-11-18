@@ -29,7 +29,14 @@ class WorkInventoryQuery:
 
     def __init__(self, session: Session, library: Library) -> None:
         self._db = session
-        self.library = library
+        # Parent collections are part of the library's inventory too.
+        self._collection_ids = sorted(
+            {
+                collection.id
+                for collection in library.all_collections
+                if collection.id is not None
+            }
+        )
         # The index contains bibliographic data, but circulation values are
         # authoritative in PostgreSQL and change independently of indexing.
         pool_status_rank: Any = case(
@@ -50,11 +57,7 @@ class WorkInventoryQuery:
                 func.max(pool_status_rank).label("status_rank"),
                 func.min(LicensePool.availability_time).label("title_created_date"),
             )
-            .filter(
-                LicensePool.collection_id.in_(
-                    collection.id for collection in self.library.collections
-                )
-            )
+            .filter(LicensePool.collection_id.in_(self._collection_ids))
             .group_by(LicensePool.work_id)
             .subquery()
         )
@@ -150,9 +153,7 @@ class WorkInventoryQuery:
             .filter(
                 Work.id.in_(
                     self._db.query(LicensePool.work_id).filter(
-                        LicensePool.collection_id.in_(
-                            collection.id for collection in self.library.collections
-                        )
+                        LicensePool.collection_id.in_(self._collection_ids)
                     )
                 )
             )
@@ -306,11 +307,7 @@ class WorkInventoryQuery:
             self._db.query(Genre.name)
             .join(WorkGenre, WorkGenre.genre_id == Genre.id)
             .join(LicensePool, LicensePool.work_id == WorkGenre.work_id)
-            .filter(
-                LicensePool.collection_id.in_(
-                    collection.id for collection in self.library.collections
-                )
-            )
+            .filter(LicensePool.collection_id.in_(self._collection_ids))
             .distinct()
             .all()
         )
