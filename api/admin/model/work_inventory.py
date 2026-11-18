@@ -174,8 +174,12 @@ def serialize_inventory_row(
     work, edition, identifier, pool_status, owned, holds, created_date = row
     return {
         "id": work.id,
-        "admin_url": annotator.permalink_for(identifier)[0].replace(
-            "/works/", "/admin/works/", 1
+        "admin_url": annotator.url_for(
+            "work_details",
+            library_short_name=annotator.library.short_name,
+            identifier_type=identifier.type,
+            identifier=identifier.identifier,
+            _external=True,
         )
         if identifier
         else None,
