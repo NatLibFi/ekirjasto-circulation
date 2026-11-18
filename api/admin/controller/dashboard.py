@@ -5,6 +5,7 @@ from datetime import date, datetime, timedelta
 from typing import Any
 
 import flask
+from flask_babel import force_locale
 from sqlalchemy import asc, case, desc, func, nullslast
 from sqlalchemy.orm import Session, selectinload
 
@@ -12,6 +13,7 @@ from api.admin.controller.base import AdminPermissionsControllerMixin
 from api.admin.model.dashboard_statistics import StatisticsResponse
 from api.controller.circulation_manager import CirculationManagerController
 from api.local_analytics_exporter import LocalAnalyticsExporter
+from core.classifier.localized_names import genres as localized_genres
 from core.feed.annotator.admin import AdminAnnotator
 from core.model import (
     Admin,
@@ -308,57 +310,115 @@ class DashboardController(
         has_more = len(rows) > limit
         rows = rows[:limit]
 
-        annotator = AdminAnnotator(self.circulation, library)
-        works = []
-        for work, edition, identifier, pool_status, owned, holds, created_date in rows:
-            works.append(
-                {
-                    "id": work.id,
-                    "admin_url": annotator.permalink_for(identifier)[0].replace(
-                        "/works/", "/admin/works/", 1
-                    )
-                    if identifier
-                    else None,
-                    "title": edition.title,
-                    "author": edition.author,
-                    "published_year": edition.published.year
-                    if edition.published
-                    else None,
-                    "language": edition.language,
-                    "format": edition.medium,
-                    "license_pool_status": pool_status,
-                    "licenses_owned": owned,
-                    "patrons_in_hold_queue": holds,
-                    "series": edition.series,
-                    "series_position": edition.series_position,
-                    "duration": edition.duration,
-                    "number_of_pages": edition.number_of_pages,
-                    "awards": edition.awards or [],
-                    "title_created_date": created_date.isoformat()
-                    if created_date
-                    else None,
-                    "data_source_modified": edition.data_source_modified.isoformat() if edition.data_source_modified else None,
-                    "original_published_year": edition.original_published.year if edition.original_published else None,
-                    "original_language": edition.original_language,
-                    "original_title": edition.original_title,
-                    "keywords": work.keywords,
-                    "genres": sorted(genre.name for genre in work.genres),
-                    "fiction": work.fiction,
-                    "audience": work.audience,
-                    "target_age": work.target_age_string if work.target_age else None,
-                    "identifier": {
-                        "type": identifier.type if identifier else None,
-                        "identifier": identifier.identifier if identifier else None,
-                    },
-                }
+        available_genre_names = (
+            self._db.query(Genre.name)
+            .join(WorkGenre, WorkGenre.genre_id == Genre.id)
+            .join(LicensePool, LicensePool.work_id == WorkGenre.work_id)
+            .filter(
+                LicensePool.collection_id.in_(
+                    collection.id for collection in library.collections
+                )
             )
+            .distinct()
+            .all()
+        )
+        with force_locale("fi"):
+            genre_labels = {
+                name: str(localized_genres.get(name, name))
+                for (name,) in available_genre_names
+            }
+            annotator = AdminAnnotator(self.circulation, library)
+            works = []
+            for (
+                work,
+                edition,
+                identifier,
+                pool_status,
+                owned,
+                holds,
+                created_date,
+            ) in rows:
+                works.append(
+                    self._all_works_row(
+                        work,
+                        edition,
+                        identifier,
+                        pool_status,
+                        owned,
+                        holds,
+                        created_date,
+                        genre_labels,
+                        annotator,
+                    )
+                )
 
         return {
             "works": works,
+            "genre_options": [
+                {"value": name, "label": label}
+                for name, label in sorted(
+                    genre_labels.items(), key=lambda item: item[1].casefold()
+                )
+            ],
             "total": total,
             "offset": offset,
             "limit": limit,
             "has_more": has_more,
+        }
+
+    def _all_works_row(
+        self,
+        work,
+        edition,
+        identifier,
+        pool_status,
+        owned,
+        holds,
+        created_date,
+        genre_labels,
+        annotator,
+    ) -> dict:
+        return {
+            "id": work.id,
+            "admin_url": annotator.permalink_for(identifier)[0].replace(
+                "/works/", "/admin/works/", 1
+            )
+            if identifier
+            else None,
+            "title": edition.title,
+            "author": edition.author,
+            "published_year": edition.published.year if edition.published else None,
+            "language": edition.language,
+            "format": edition.medium,
+            "license_pool_status": pool_status,
+            "licenses_owned": owned,
+            "patrons_in_hold_queue": holds,
+            "series": edition.series,
+            "series_position": edition.series_position,
+            "duration": edition.duration,
+            "number_of_pages": edition.number_of_pages,
+            "awards": edition.awards or [],
+            "title_created_date": created_date.isoformat() if created_date else None,
+            "data_source_modified": edition.data_source_modified.isoformat()
+            if edition.data_source_modified
+            else None,
+            "original_published_year": edition.original_published.year
+            if edition.original_published
+            else None,
+            "original_language": edition.original_language,
+            "original_title": edition.original_title,
+            "keywords": work.keywords,
+            "genres": sorted(
+                (genre_labels.get(genre.name, genre.name) for genre in work.genres),
+                key=str.casefold,
+            ),
+            "fiction": work.fiction,
+            "audience": work.audience,
+            "target_age": work.target_age_string if work.target_age else None,
+            "identifier": {
+                "type": identifier.type if identifier else None,
+                "identifier": identifier.identifier if identifier else None,
+            },
         }
 
     def stats(
