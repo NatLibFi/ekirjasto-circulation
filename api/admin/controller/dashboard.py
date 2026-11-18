@@ -312,7 +312,14 @@ class DashboardController(
         )
 
         rows = (
-            query.options(selectinload(Work.work_genres).joinedload(WorkGenre.genre))
+            query.options(
+                selectinload(Work.work_genres).joinedload(WorkGenre.genre),
+                # Work.keywords traverses source editions through pool identifiers.
+                selectinload(Work.license_pools)
+                .joinedload(LicensePool.identifier)
+                .selectinload(Identifier.primarily_identifies)
+                .joinedload(Edition.data_source),
+            )
             .offset(offset)
             .limit(limit + 1)
             .all()
