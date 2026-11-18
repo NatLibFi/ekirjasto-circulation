@@ -163,9 +163,12 @@ class DashboardController(
         )
 
         requested_sort = text_argument("sort") or "title"
-        if text_argument("genres") or requested_sort == "genres":
+        if requested_sort == "genres":
             query = query.outerjoin(genres, genres.c.work_id == Work.id)
-        if text_argument("keywords") or requested_sort == "keywords":
+        if (
+            text_argument("keywords")
+            or requested_sort == "keywords"
+        ):
             query = query.outerjoin(source_editions, source_editions.c.work_id == Work.id)
 
         title = text_argument("title")
@@ -210,12 +213,21 @@ class DashboardController(
             "original_language": Edition.original_language,
             "original_title": Edition.original_title,
             "keywords": source_editions.c.names,
-            "genres": genres.c.names,
         }
         for name, column in text_filters.items():
             value = text_argument(name)
             if value:
                 query = query.filter(column.ilike(f"%{value}%"))
+
+        genre_name = text_argument("genres")
+        if genre_name:
+            query = query.filter(
+                Work.id.in_(
+                    self._db.query(WorkGenre.work_id)
+                    .join(Genre, Genre.id == WorkGenre.genre_id)
+                    .filter(Genre.name == genre_name)
+                )
+            )
 
         audience = text_argument("audience")
         if audience:
@@ -225,6 +237,7 @@ class DashboardController(
         if fiction in ("true", "false"):
             query = query.filter(Work.fiction.is_(fiction == "true"))
         for name, column in (
+            ("published_year", func.extract("year", Edition.published)),
             ("duration", Edition.duration),
             ("number_of_pages", Edition.number_of_pages),
             ("original_published_year", func.extract("year", Edition.original_published)),
