@@ -150,7 +150,7 @@ class TestWorkInventoryController:
         )
         other_library = inventory_fixture.ctrl.db.library("Other library", "other")
         other_collection = inventory_fixture.ctrl.db.collection(name="Other collection")
-        other_library.collections = [*other_library.collections, other_collection]
+        other_collection.libraries.append(other_library)
         out_of_scope = inventory_fixture.add_work(
             "Outside title", LicensePoolStatus.active
         )
