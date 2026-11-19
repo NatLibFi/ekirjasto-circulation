@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from api.admin.controller.base import AdminPermissionsControllerMixin
 from api.admin.model.dashboard_statistics import StatisticsResponse
-from api.admin.model.work_inventory import WorkInventoryRequest, inventory_genre_labels
+from api.admin.model.work_inventory import WorkInventoryRequest
 from api.admin.work_inventory import WorkInventoryQuery
 from api.controller.circulation_manager import CirculationManagerController
 from api.local_analytics_exporter import LocalAnalyticsExporter
@@ -37,8 +37,7 @@ class DashboardController(
         library = getattr(flask.request, "library")
         self.require_librarian(library)
         options = WorkInventoryRequest.from_query(flask.request.args)
-        genre_labels = inventory_genre_labels() if options.sort == "genres" else {}
-        page = WorkInventoryQuery(self._db, library, genre_labels).fetch(options)
+        page = WorkInventoryQuery(self._db, library).fetch(options)
         return page.as_dict(AdminAnnotator(self.circulation, library))
 
     def stats(

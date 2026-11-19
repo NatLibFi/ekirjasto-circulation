@@ -23,8 +23,7 @@ paths:
         numeric or date filters are ignored. Negative integer filters are treated as zero.
 
         Sorting places null values last in both directions and uses ascending work ID to
-        break ties. Genre sorting uses the displayed Finnish labels. Keyword sorting uses
-        an ordered aggregation of distinct source-edition keyword strings.
+        break ties.
       parameters:
         - {name: library, in: path, required: true, schema: {type: string}}
         - name: offset
@@ -98,8 +97,6 @@ paths:
               - original_published_year
               - original_language
               - original_title
-              - keywords
-              - genres
               - fiction
               - audience
               - target_age

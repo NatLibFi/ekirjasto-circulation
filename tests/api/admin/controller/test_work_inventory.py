@@ -93,8 +93,7 @@ class TestWorkInventoryRequest:
         assert request.count_filters == {"licenses_owned_min": 2}
         assert request.number_filters == {"number_of_pages_max": 320.0}
         assert (
-            request.date_filters["title_created_date_min"].isoformat()
-            == "2025-01-02"
+            request.date_filters["title_created_date_min"].isoformat() == "2025-01-02"
         )
         assert request.genre == "Fantasy"
         assert request.fiction is False
@@ -102,6 +101,44 @@ class TestWorkInventoryRequest:
 
 
 class TestWorkInventoryController:
+    @pytest.mark.parametrize("legacy_sort", ["genres", "keywords"])
+    def test_removed_sorts_fall_back_to_title(
+        self, inventory_fixture: WorkInventoryFixture, legacy_sort: str
+    ):
+        inventory_fixture.add_work("Zebra title", LicensePoolStatus.active)
+        inventory_fixture.add_work("Apple title", LicensePoolStatus.active)
+
+        with inventory_fixture.request_context_with_library_and_admin(
+            f"/?sort={legacy_sort}&direction=asc"
+        ):
+            page = inventory_fixture.manager.admin_dashboard_controller.all_works()
+
+        assert [row["title"] for row in page["works"]] == [
+            "Apple title",
+            "Zebra title",
+        ]
+
+    def test_genre_and_keyword_filters_remain_available(
+        self, inventory_fixture: WorkInventoryFixture
+    ):
+        matching = inventory_fixture.ctrl.db.work(
+            "Fantasy title",
+            "Inventory Author",
+            genre="Fantasy",
+            language="eng",
+            with_open_access_download=True,
+        )
+        matching.license_pools[0].collection = inventory_fixture.collection
+        matching.presentation_edition.keywords = ["wizard"]
+        inventory_fixture.add_work("Other title", LicensePoolStatus.active)
+
+        with inventory_fixture.request_context_with_library_and_admin(
+            "/?genres=Fantasy&keywords=wizard"
+        ):
+            page = inventory_fixture.manager.admin_dashboard_controller.all_works()
+
+        assert [row["id"] for row in page["works"]] == [matching.id]
+
     def test_library_scope_filter_sort_and_optional_total(
         self, inventory_fixture: WorkInventoryFixture
     ):

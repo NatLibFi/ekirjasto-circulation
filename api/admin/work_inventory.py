@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
 from typing import Any
 
 from sqlalchemy import asc, case, desc, func, literal, nullslast
@@ -30,7 +29,7 @@ class WorkInventoryQuery:
     PAGE_SIZE = 50
 
     def __init__(
-        self, session: Session, library: Library, genre_labels: Mapping[str, str]
+        self, session: Session, library: Library
     ) -> None:
         self._db = session
         # Parent collections are part of the library's inventory too.
@@ -78,37 +77,6 @@ class WorkInventoryQuery:
             self.pool_totals.c.patrons_in_hold_queue, 0
         ).label("patrons_in_hold_queue")
 
-        genre_name: Any = (
-            case(dict(genre_labels), value=Genre.name, else_=Genre.name)
-            if genre_labels
-            else Genre.name
-        )
-        genre_sort_key: Any = (
-            case(
-                {name: label.casefold() for name, label in genre_labels.items()},
-                value=Genre.name,
-                else_=func.lower(Genre.name),
-            )
-            if genre_labels
-            else func.lower(Genre.name)
-        )
-        self.genres = (
-            self._db.query(
-                WorkGenre.work_id.label("work_id"),
-                func.string_agg(
-                    genre_name,
-                    aggregate_order_by(
-                        literal(", "),
-                        genre_sort_key.collate("C"),
-                        genre_name.collate("C"),
-                        Genre.id,
-                    ),
-                ).label("names"),
-            )
-            .join(Genre, Genre.id == WorkGenre.genre_id)
-            .group_by(WorkGenre.work_id)
-            .subquery()
-        )
         keyword_names = func.array_to_string(Edition.keywords, ", ").collate("C")
         self.source_editions = (
             self._db.query(
@@ -189,10 +157,7 @@ class WorkInventoryQuery:
         return query
 
     def _apply_filters(self, query: Query, options: WorkInventoryRequest) -> Query:
-        requested_sort = options.sort
-        if requested_sort == "genres":
-            query = query.outerjoin(self.genres, self.genres.c.work_id == Work.id)
-        if options.text_filters.get("keywords") or requested_sort == "keywords":
+        if options.text_filters.get("keywords"):
             query = query.outerjoin(
                 self.source_editions, self.source_editions.c.work_id == Work.id
             )
@@ -313,8 +278,6 @@ class WorkInventoryQuery:
             "original_published_year": Edition.original_published,
             "original_language": Edition.original_language,
             "original_title": Edition.original_title,
-            "keywords": self.source_editions.c.names,
-            "genres": func.lower(self.genres.c.names).collate("C"),
             "fiction": Work.fiction,
             "audience": Work.audience,
             "target_age": func.lower(Work.target_age),
