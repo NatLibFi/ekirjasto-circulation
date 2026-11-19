@@ -124,8 +124,7 @@ paths:
                     type: object
                     description: Recognized language codes present in the library's complete inventory, before filtering and pagination, mapped to English names
                     additionalProperties:
-                      type: array
-                      items: {type: string}
+                      type: string
                   genre_options:
                     type: array
                     description: Genres associated with the library's pools before filtering and pagination; Finnish labels with canonical fallbacks and canonical filter values
