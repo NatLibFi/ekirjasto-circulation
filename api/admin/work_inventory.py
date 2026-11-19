@@ -28,9 +28,7 @@ from core.util import LanguageCodes
 class WorkInventoryQuery:
     PAGE_SIZE = 50
 
-    def __init__(
-        self, session: Session, library: Library
-    ) -> None:
+    def __init__(self, session: Session, library: Library) -> None:
         self._db = session
         # Parent collections are part of the library's inventory too.
         self._collection_ids = sorted(
