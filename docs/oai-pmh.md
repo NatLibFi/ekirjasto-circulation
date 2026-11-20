@@ -23,7 +23,7 @@ OAI-PMH settings are library settings, visible to system administrators:
   such as `oai:oai.example.org:isbn-9789146237396`.
 - `oai_pmh_admin_contact`: public email address or URL returned by `Identify`.
   The default is the E-kirjasto feedback URL.
-- `oai_pmh_page_size`: records per page, default 500, allowed range 100–5000.
+- `oai_pmh_page_size`: records per page, default 500, allowed range 10–5000.
 - `oai_pmh_token_lifetime`: continuation-token lifetime in seconds, default
   86400 (24 hours).
 - `oai_pmh_organization_code`: optional MARC organization code written to

@@ -259,7 +259,7 @@ def test_token_state_round_trip(controller, library):
         ({}, "example.org", "ListIdentifiers"),
         ({"library": 8}, "example.org", "ListRecords"),
         ({"after": 20, "upper": 10}, "example.org", "ListRecords"),
-        ({"size": 99}, "example.org", "ListRecords"),
+        ({"size": 9}, "example.org", "ListRecords"),
         ({"size": 5001}, "example.org", "ListRecords"),
     ],
 )
