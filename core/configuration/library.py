@@ -108,7 +108,7 @@ class LibrarySettings(BaseSettings):
     )
     oai_pmh_page_size: int = FormField(
         500,
-        ge=100,
+        ge=10,
         le=5000,
         form=LibraryConfFormItem(
             label="OAI-PMH records per page",
