@@ -121,7 +121,7 @@ class ResumptionTokenState:
             or not isinstance(state.filters, dict)
             or state.expires <= utc_now().timestamp()
             or not 0 <= state.after <= state.upper
-            or not 100 <= state.size <= 5000
+            or not 10 <= state.size <= 5000
         ):
             raise ValueError()
         return state
