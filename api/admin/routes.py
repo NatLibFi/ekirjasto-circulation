@@ -405,6 +405,15 @@ def licenses():
         )
 
 
+@library_route("/admin/all_works", methods=["GET"])
+@has_library
+@returns_json_or_response_or_problem_detail
+@requires_admin
+def all_works():
+    """Returns the selected library's complete work inventory."""
+    return app.manager.admin_dashboard_controller.all_works()
+
+
 @library_route("/admin/bulk_circulation_events")
 @returns_problem_detail
 @allows_library

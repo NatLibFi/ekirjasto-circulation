@@ -57,7 +57,9 @@ class WorkController(CirculationManagerController, AdminPermissionsControllerMix
         # cached, which is perfect. We want the admin interface
         # to update immediately when an admin makes a change.
         return OPDSAcquisitionFeed.entry_as_response(
-            OPDSAcquisitionFeed.single_entry(work, annotator)
+            OPDSAcquisitionFeed.single_entry(
+                work, annotator, even_if_no_license_pool=True
+            )
         )
 
     def circulation_details(self, identifier_type, identifier):
