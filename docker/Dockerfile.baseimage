@@ -24,7 +24,7 @@ RUN apt-get update && \
     /bd_build/cleanup.sh
 
 ARG POETRY_VERSION=2.2.1
-ARG NGINX_VERSION=1.30.6
+ARG NGINX_VERSION=1.30.7
 
 # Ubuntu Noble currently ships nginx 1.24. Use the signed official stable
 # repository so the image follows an upstream-supported nginx release. Verify
