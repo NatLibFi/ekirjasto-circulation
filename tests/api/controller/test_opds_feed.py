@@ -1,7 +1,7 @@
 import json
 from typing import Any
 from unittest.mock import MagicMock
-from urllib.parse import quote_plus
+from urllib.parse import parse_qs, quote_plus, urlparse
 
 import feedparser
 from flask import url_for
@@ -599,6 +599,26 @@ class TestOPDSFeedController:
                 None, feed_class=Mock
             )
             assert self.called_with["facets"].search_type == "json"
+
+        with circulation_fixture.request_context_with_library(
+            "/?q=erotiikka&search_field=title&include_summary=false"
+        ):
+            circulation_fixture.manager.opds_feeds.search(None, feed_class=Mock)
+            facets = self.called_with["facets"]
+            assert facets.search_field == "title"
+            assert facets.include_summary is False
+            arguments = parse_qs(urlparse(self.called_with["url"]).query)
+            assert arguments["q"] == ["erotiikka"]
+            assert arguments["search_field"] == ["title"]
+            assert arguments["include_summary"] == ["false"]
+
+        with circulation_fixture.request_context_with_library(
+            "/?q=erotiikka&search_field=unknown"
+        ):
+            response = circulation_fixture.manager.opds_feeds.search(
+                None, feed_class=Mock
+            )
+            assert response.status_code == 400
 
     def test_lane_search_params(
         self,
