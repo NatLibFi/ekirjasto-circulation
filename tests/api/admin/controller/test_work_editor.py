@@ -212,6 +212,22 @@ class TestWorkController:
                 lp.identifier.identifier,
             )
 
+    def test_details_for_work_without_active_license_pool(
+        self, work_fixture: WorkFixture
+    ):
+        [pool] = work_fixture.english_1.license_pools
+        pool.status = LicensePoolStatus.exhausted
+
+        with work_fixture.request_context_with_library_and_admin("/"):
+            response = work_fixture.manager.admin_work_controller.details(
+                pool.identifier.type, pool.identifier.identifier
+            )
+
+        assert response.status_code == 200
+        feed = feedparser.parse(response.get_data())
+        [entry] = feed["entries"]
+        assert entry["title"] == "Quite British"
+
     def test_roles(self, work_fixture: WorkFixture):
         roles = work_fixture.manager.admin_work_controller.roles()
         assert Contributor.Role.ILLUSTRATOR in list(roles.values())
