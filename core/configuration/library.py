@@ -144,6 +144,17 @@ class LibrarySettings(BaseSettings):
             level=Level.SYS_ADMIN_ONLY,
         ),
     )
+    oai_pmh_include_identifier_type: bool = FormField(
+        False,
+        form=LibraryConfFormItem(
+            label="Include identifier type in MARC 856 URL: true/false",
+            description=(
+                "Include the work identifier type before its value in the /book/ URL."
+            ),
+            category="OAI-PMH",
+            level=Level.SYS_ADMIN_ONLY,
+        ),
+    )
     _additional_form_fields = {
         "name": LibraryConfFormItem(
             label="Name",

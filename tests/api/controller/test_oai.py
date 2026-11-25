@@ -37,6 +37,7 @@ def library() -> SimpleNamespace:
         settings=SimpleNamespace(
             oai_pmh_namespace="example.org",
             oai_pmh_catalogue_url="https://catalogue.example",
+            oai_pmh_include_identifier_type=False,
             oai_pmh_organization_code="org",
             oai_pmh_admin_contact="mailto:admin@example.org",
             oai_pmh_page_size=2,
@@ -614,6 +615,7 @@ def test_records_builds_marc_record_and_oai_header(controller, library, header):
         modified_at=header.modified_at,
         entered_at=header.entered_at,
         isbn_identifiers={header.identifier_id: None},
+        include_identifier_type=False,
     )
     builder.annotate_work_record.assert_called_once_with(
         True, pool.work, pool, pool.presentation_edition, pool.identifier

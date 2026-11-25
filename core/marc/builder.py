@@ -84,6 +84,7 @@ class Annotator(LoggerMixin):
         modified_at: datetime | None = None,
         entered_at: datetime | None = None,
         isbn_identifiers: Mapping[int, Identifier | None] | None = None,
+        include_identifier_type: bool = False,
     ) -> None:
         """Configure MARC links, optional fields, and precomputed harvest metadata.
 
@@ -98,6 +99,7 @@ class Annotator(LoggerMixin):
         self.modified_at = modified_at
         self.entered_at = entered_at
         self.isbn_identifiers = isbn_identifiers
+        self.include_identifier_type = include_identifier_type
 
     def annotate_work_record(
         self,
@@ -164,9 +166,8 @@ class Annotator(LoggerMixin):
         self.add_web_client_urls(
             record,
             identifier,
-            self.library_short_name,
-            self.cm_url,
             self.web_client_urls,
+            self.include_identifier_type,
         )
 
         return record
@@ -619,27 +620,27 @@ class Annotator(LoggerMixin):
         cls,
         record: Record,
         identifier: Identifier,
-        library_short_name: str,
-        cm_url: str,
         web_client_urls: list[str],
+        include_identifier_type: bool = False,
     ) -> None:
-        qualified_identifier = urllib.parse.quote(
-            f"{identifier.type}/{identifier.identifier}", safe=""
-        )
+        if not web_client_urls:
+            return
+
+        identifier_value = urllib.parse.quote(str(identifier.identifier), safe="")
+        if include_identifier_type:
+            identifier_type = urllib.parse.quote(str(identifier.type), safe="")
+            identifier_value = f"{identifier_type}/{identifier_value}"
 
         for web_client_base_url in web_client_urls:
-            link = "{}/{}/works/{}".format(
-                cm_url,
-                library_short_name,
-                qualified_identifier,
-            )
-            encoded_link = urllib.parse.quote(link, safe="")
-            url = f"{web_client_base_url}/book/{encoded_link}"
+            url = f"{web_client_base_url}/book/{identifier_value}"
             record.add_field(
                 Field(
                     tag="856",
                     indicators=["4", "0"],
-                    subfields=[Subfield(code="u", value=url)],
+                    subfields=[
+                        Subfield(code="u", value=url),
+                        Subfield(code="y", value="Siirry E-kirjastoon"),
+                    ],
                 )
             )
 
