@@ -9,6 +9,8 @@ from sqlalchemy.orm import Session
 
 from api.admin.controller.base import AdminPermissionsControllerMixin
 from api.admin.model.dashboard_statistics import StatisticsResponse
+from api.admin.model.work_inventory import WorkInventoryRequest
+from api.admin.work_inventory import WorkInventoryQuery
 from api.controller.circulation_manager import CirculationManagerController
 from api.local_analytics_exporter import LocalAnalyticsExporter
 from core.feed.annotator.admin import AdminAnnotator
@@ -29,6 +31,14 @@ class DashboardController(
     def license_report(self) -> Generator[str, None, None]:
         self.require_system_admin()
         return LicenseReport(self._db).stream()
+
+    def all_works(self) -> dict:
+        """Return the selected library's complete work inventory."""
+        library = getattr(flask.request, "library")
+        self.require_librarian(library)
+        options = WorkInventoryRequest.from_query(flask.request.args)
+        page = WorkInventoryQuery(self._db, library).fetch(options)
+        return page.as_dict(AdminAnnotator(self.circulation, library))
 
     def stats(
         self, stats_function: Callable[[Admin, Session], StatisticsResponse]
