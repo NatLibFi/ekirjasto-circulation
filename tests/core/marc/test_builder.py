@@ -137,9 +137,8 @@ class TestAnnotator:
         fixture.mock_add_web_client_urls.assert_called_once_with(
             record,
             fixture.identifier,
-            fixture.short_name,
-            fixture.cm_url,
             fixture.web_client_urls,
+            False,
         )
 
     def test_annotate_work_record_no_organization_code(
@@ -604,46 +603,26 @@ class TestAnnotator:
     def test_add_web_client_urls_empty(self):
         record = MagicMock(spec=Record)
         identifier = MagicMock()
-        Annotator.add_web_client_urls(record, identifier, "", "", [])
+        Annotator.add_web_client_urls(record, identifier, [])
         assert record.add_field.call_count == 0
 
     def test_add_web_client_urls(self, db: DatabaseTransactionFixture):
         record = Record()
         identifier = db.identifier()
-        short_name = "short_name"
-        cm_url = "http://cm.url"
         web_client_urls = ["http://webclient1.url", "http://webclient2.url"]
-        Annotator.add_web_client_urls(
-            record, identifier, short_name, cm_url, web_client_urls
-        )
+        Annotator.add_web_client_urls(record, identifier, web_client_urls)
         fields = record.get_fields("856")
         assert len(fields) == 2
         [field1, field2] = fields
         assert field1.indicators == ["4", "0"]
         assert field2.indicators == ["4", "0"]
 
-        # The URL for a work is constructed as:
-        # - <cm-base>/<lib-short-name>/works/<qualified-identifier>
-        work_link_template = "{cm_base}/{lib}/works/{qid}"
-        # It is then encoded and the web client URL is constructed in this form:
-        # - <web-client-base>/book/<encoded-work-url>
-        client_url_template = "{client_base}/book/{work_link}"
+        # The URL is constructed as <web-client-base>/book/<qualified-identifier>.
 
-        qualified_identifier = urllib.parse.quote(
-            identifier.type + "/" + identifier.identifier, safe=""
-        )
+        qualified_identifier = urllib.parse.quote(identifier.identifier, safe="")
 
-        expected_work_link = work_link_template.format(
-            cm_base=cm_url, lib=short_name, qid=qualified_identifier
-        )
-        encoded_work_link = urllib.parse.quote(expected_work_link, safe="")
-
-        expected_client_url_1 = client_url_template.format(
-            client_base=web_client_urls[0], work_link=encoded_work_link
-        )
-        expected_client_url_2 = client_url_template.format(
-            client_base=web_client_urls[1], work_link=encoded_work_link
-        )
+        expected_client_url_1 = f"{web_client_urls[0]}/book/{qualified_identifier}"
+        expected_client_url_2 = f"{web_client_urls[1]}/book/{qualified_identifier}"
 
         # A few checks to ensure that our setup is useful.
         assert web_client_urls[0] != web_client_urls[1]
@@ -653,3 +632,21 @@ class TestAnnotator:
 
         assert field1.get_subfields("u")[0] == expected_client_url_1
         assert field2.get_subfields("u")[0] == expected_client_url_2
+
+    def test_add_web_client_urls_with_identifier_type(
+        self, db: DatabaseTransactionFixture
+    ):
+        record = Record()
+        identifier = db.identifier()
+        web_client_urls = ["https://webclient.example"]
+
+        Annotator.add_web_client_urls(
+            record, identifier, web_client_urls, include_identifier_type=True
+        )
+
+        expected_type = urllib.parse.quote(str(identifier.type), safe="")
+        expected_value = urllib.parse.quote(str(identifier.identifier), safe="")
+        [field] = record.get_fields("856")
+        assert field.get_subfields("u") == [
+            f"{web_client_urls[0]}/book/{expected_type}/{expected_value}"
+        ]

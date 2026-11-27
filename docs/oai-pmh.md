@@ -30,6 +30,9 @@ OAI-PMH settings are library settings, visible to system administrators:
   field 003. The default is `FI-Ekirj`.
 - `oai_pmh_catalogue_url`: optional public catalogue URL used in MARC 856
   links. If unset, no catalogue URL is added to the generated MARC records.
+- `oai_pmh_include_identifier_type`: include the work's identifier type in its
+  MARC 856 `/book/` URL. Defaults to `false`, so the URL contains only the
+  encoded identifier value.
 
 The site-wide canonical base URL must also be configured as an HTTP or HTTPS
 URL, and the library must have a UUID. The endpoint returns HTTP 503 until
@@ -98,8 +101,9 @@ reconciliation after deploying selection changes.
 
 The generated MARC record includes summaries and genres when present. The
 configured organization code is written to field 003, and the configured
-catalogue URL is used for MARC 856 links. MARC control fields use the
-catalogue's modification and entry timestamps.
+catalogue URL is used for MARC 856 links. The identifier type is included in
+those links only when `oai_pmh_include_identifier_type` is enabled. MARC control
+fields use the catalogue's modification and entry timestamps.
 
 ## Dates and continuation tokens
 

@@ -393,6 +393,7 @@ class OAIPMHController(LoggerMixin):
                 modified_at=header.modified_at,
                 entered_at=header.entered_at,
                 isbn_identifiers=isbns,
+                include_identifier_type=settings.oai_pmh_include_identifier_type,
             )
             record = annotator.annotate_work_record(
                 True, pool.work, pool, pool.presentation_edition, pool.identifier
